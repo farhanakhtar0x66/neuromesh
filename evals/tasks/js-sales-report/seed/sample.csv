@@ -1,0 +1,7 @@
+order_id,customer,item,quantity,unit_price_cents
+1,ana,pen,2,150
+1,ana,notebook,1,1299
+2,bo,desk,1,250000
+3,ana,pen,10,150
+4,cy,lamp,2,4500
+5,cy,bulb,4,1500

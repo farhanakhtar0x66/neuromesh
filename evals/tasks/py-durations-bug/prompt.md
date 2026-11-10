@@ -1,0 +1,1 @@
+`parse_duration("1h30m")` returns 9000 seconds instead of 5400, and `parse_duration("90s")` raises an error. Fix `parse_duration` in `durations.py` so it accepts any combination of `h`, `m` and `s` parts in that order (for example `2h`, `45m`, `1h5s`, `1h30m15s`) and returns the total in seconds. Anything else, including an empty string, should raise `ValueError`.

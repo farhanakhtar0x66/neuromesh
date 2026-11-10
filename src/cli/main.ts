@@ -14,7 +14,8 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { DEFAULT_PRESET, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
-import { formatEvent, formatRunList, formatSummary, green } from "./format.ts";
+import { evalDir, loadReport, loadTasks, runEval } from "../eval/eval.ts";
+import { formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
 
@@ -34,6 +35,11 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --keep                    keep the run's worktree afterwards
   neuromesh discard [run]       throw a run's changes away
   neuromesh resume [run]        continue an interrupted, paused or failed run
+  neuromesh eval                run the task suite against a preset (live model calls)
+      --preset <name>           preset to measure (default: ${DEFAULT_PRESET})
+      --tasks a,b  --kinds k,l  run only some tasks, or some kinds (bug, feature, multi, ...)
+      --name <name>             results name; rerunning a name continues where it stopped
+  neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh presets             list presets
   neuromesh doctor              check each backend with a few small live calls
 
@@ -41,7 +47,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose"]);
 
 interface Parsed {
   positional: string[];
@@ -142,6 +148,50 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
     engineContext(flags, controller.signal),
   );
   return finish(state, flags);
+}
+
+async function commandEval({ positional, flags }: Parsed): Promise<number> {
+  const home = defaultHome();
+  if (positional[0] === "compare") {
+    const names = positional.slice(1);
+    const reports = names.map((n) => {
+      const r = loadReport(home, n);
+      if (!r) throw new Error(`No eval results named "${n}" in ${join(home, "evals")}`);
+      return r;
+    });
+    process.stdout.write(formatComparison(reports) + "\n");
+    return 0;
+  }
+  const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
+  const tasks = loadTasks(undefined, {
+    names: flags.get("tasks")?.split(",").filter(Boolean),
+    kinds: flags.get("kinds")?.split(",").filter(Boolean),
+  });
+  const name = flags.get("name") ?? `${preset.name}-${new Date().toISOString().slice(0, 10)}`;
+  const controller = interruptible();
+  const ctx = engineContext(new Map(), controller.signal);
+  const verbose = flags.has("verbose");
+  ctx.onEvent = (event) => {
+    if (!verbose && (event.type === "agent.activity" || event.type === "checks.detected" || event.type === "workspace.ready")) return;
+    const line = formatEvent(event);
+    if (line !== undefined) process.stderr.write(`    ${line}\n`);
+  };
+  process.stderr.write(`Eval ${name}: ${tasks.length} task(s) on preset ${preset.name}. Results: ${evalDir(home, name)}\n`);
+  const report = await runEval({
+    name,
+    preset,
+    tasks,
+    ctx,
+    onTaskStart: (task, i, total) => process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`),
+    onTaskDone: (r) =>
+      process.stderr.write(
+        `  -> ${r.hidden === "pass" ? green("hidden tests pass") : red(`hidden tests ${r.hidden}`)} · ${r.status}` +
+          (r.reason ? ` · ${r.reason.slice(0, 160)}` : "") +
+          "\n",
+      ),
+  });
+  process.stdout.write("\n" + formatEvalReport(report) + "\n");
+  return 0;
 }
 
 async function commandResume({ positional, flags }: Parsed): Promise<number> {
@@ -273,6 +323,8 @@ async function main(): Promise<number> {
       return commandApply(parsed);
     case "discard":
       return commandDiscard(parsed);
+    case "eval":
+      return commandEval(parsed);
     case "presets":
       return commandPresets();
     case "doctor":

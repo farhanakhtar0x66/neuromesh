@@ -187,13 +187,21 @@ test("a run left 'running' by a crashed engine can be resumed", async () => {
   // Pretend the engine died mid-turn: state says running, owned by a dead process.
   const crashed = loadState(done.dir);
   crashed.status = "running";
-  crashed.step = "checks";
+  crashed.step = "agent";
   crashed.pid = 999_999;
   crashed.outcome = undefined;
+  crashed.attempts = [];
+  crashed.inFlight = { role: "worker", tier: "worker", kind: "initial", round: 0, backend: "fake", startedAt: new Date().toISOString() };
   saveState(crashed);
   const resumed = await resumeRun(loadState(done.dir), ctx);
   assert.equal(resumed.status, "finished");
   assert.equal(resumed.outcome?.checks, "passed");
+  assert.deepEqual(resumed.attempts.map((a) => [a.kind, a.stop]), [
+    ["initial", "cancelled"],
+    ["continue", "done"],
+  ]);
+  assert.deepEqual(resumed.attempts[0]!.usage, {}, "a lost turn's usage stays unknown");
+  assert.equal(resumed.inFlight, undefined);
 });
 
 test("an engine error is recorded as Neuromesh's fault and never left running", async () => {

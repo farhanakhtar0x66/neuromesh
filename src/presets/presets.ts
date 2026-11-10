@@ -33,7 +33,7 @@ function validate(raw: unknown, file: string): Preset {
     name: p.name!,
     description: p.description ?? "",
     mode: "solo",
-    worker: { backend: p.worker!.backend, model: p.worker!.model, effort: p.worker!.effort },
+    worker: { backend: p.worker!.backend, model: p.worker!.model, effort: p.worker!.effort, tier: p.worker!.tier ?? "worker" },
     repairs: typeof p.repairs === "number" && p.repairs >= 0 ? Math.floor(p.repairs) : 1,
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
   };

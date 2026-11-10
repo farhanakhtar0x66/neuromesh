@@ -4,6 +4,8 @@ import type { Usage } from "../backends/types.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { usageByModel } from "../engine/run.ts";
+import type { EvalReport } from "../eval/eval.ts";
+import { summarize, totalTokens } from "../eval/eval.ts";
 
 const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
 const paint = (code: string) => (text: string): string => (useColor ? `\x1b[${code}m${text}\x1b[0m` : text);
@@ -134,4 +136,66 @@ export function formatRunList(runs: RunState[]): string {
       return `${r.id}  ${statusColor(r.status)(r.status.padEnd(11))} ${r.preset.padEnd(14)} checks ${checks.padEnd(6)} ${files.padEnd(4)} ${oneLine(r.prompt, 60)}`;
     })
     .join("\n");
+}
+
+// ---- eval tables ----
+
+function k(tokens: number): string {
+  return tokens >= 1_000_000 ? `${(tokens / 1_000_000).toFixed(2)}M` : `${Math.round(tokens / 1000)}k`;
+}
+
+export function formatEvalReport(report: EvalReport): string {
+  const lines = [`${bold(`Eval ${report.name}`)} · preset ${report.preset}`];
+  lines.push(dim("task                  kind        status      checks  hidden  turns  time     tokens (expert / worker)"));
+  for (const r of Object.values(report.results).sort((a, b) => a.task.localeCompare(b.task))) {
+    const hidden = r.hidden === "pass" ? green("pass") : r.hidden === "fail" ? red("fail") : yellow("—");
+    lines.push(
+      `${r.task.padEnd(21)} ${r.kind.padEnd(11)} ${r.status.padEnd(11)} ${r.checks.padEnd(7)} ${hidden.padEnd(useColor ? 15 : 6)}  ${String(r.turns).padEnd(6)} ${duration(r.wallMs).padEnd(8)} ${k(r.expertTokens)} / ${k(r.workerTokens)}` +
+        (r.failure === "engine" ? red("  [engine failure]") : ""),
+    );
+  }
+  const s = summarize(report);
+  lines.push("");
+  lines.push(
+    `Passed ${s.passed}/${s.tasks}` +
+      ` · engine failures ${s.engineFailures}` +
+      (s.paused ? ` · ${s.paused} paused (quota)` : "") +
+      ` · time ${duration(s.wallMs)}` +
+      ` · tokens ${k(s.expertTokens + s.workerTokens)}` +
+      ` · expert share ${s.expertShare === undefined ? "unknown" : `${(s.expertShare * 100).toFixed(0)}%`}` +
+      (s.usageIncomplete ? yellow(" (some usage unreported)") : ""),
+  );
+  return lines.join("\n");
+}
+
+export function formatComparison(reports: EvalReport[]): string {
+  const tasks = [...new Set(reports.flatMap((r) => Object.keys(r.results)))].sort();
+  const width = 14;
+  const head = "task".padEnd(22) + reports.map((r) => r.preset.slice(0, width - 1).padEnd(width)).join("");
+  const lines = [bold(head)];
+  for (const t of tasks) {
+    const cells = reports.map((r) => {
+      const res = r.results[t];
+      if (!res) return dim("—".padEnd(width));
+      const mark = res.hidden === "pass" ? "pass" : res.hidden === "fail" ? "fail" : res.status;
+      const cell = `${mark} ${k(totalTokens({ input: res.expertTokens + res.workerTokens }))}`.padEnd(width);
+      return res.hidden === "pass" ? green(cell) : red(cell);
+    });
+    lines.push(t.padEnd(22) + cells.join(""));
+  }
+  const common = tasks.filter((t) => reports.every((r) => r.results[t]));
+  lines.push("");
+  lines.push(dim(`Totals over the ${common.length} tasks every eval ran:`));
+  for (const r of reports) {
+    const s = summarize(r, common);
+    lines.push(
+      `  ${r.preset.padEnd(16)} passed ${String(s.passed).padStart(2)}/${s.tasks}` +
+        `  tokens ${k(s.expertTokens + s.workerTokens).padStart(7)}` +
+        `  expert ${k(s.expertTokens).padStart(7)}` +
+        `  expert share ${s.expertShare === undefined ? "unknown" : `${(s.expertShare * 100).toFixed(0)}%`.padStart(4)}` +
+        `  time ${duration(s.wallMs)}` +
+        `  engine failures ${s.engineFailures}`,
+    );
+  }
+  return lines.join("\n");
 }

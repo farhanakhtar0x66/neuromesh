@@ -1,0 +1,1 @@
+`BoundedStack` in `src/lib.rs` has two bugs. `peek()` panics on an empty stack instead of returning `None`, and `push` accepts one more item than the capacity allows (a stack with capacity 2 holds 3 items). Fix both. `push` must return `Err(value)` with the rejected value when the stack is full.

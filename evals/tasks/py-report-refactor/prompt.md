@@ -1,0 +1,1 @@
+The three report functions in `reports.py` each repeat the same table-formatting code. Extract it into one helper, `format_table(headers, rows)`, and make all three reports use it. The output of every report must stay exactly the same, byte for byte.

@@ -1,0 +1,1 @@
+{"kind":"feature","language":"rust","hiddenCheck":"mkdir -p tests && cp hidden/hidden_roman.rs tests/ && cargo test --quiet --offline"}

@@ -2,11 +2,20 @@ import type { StopReason, Usage } from "../backends/types.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import type { FileChange } from "../workspace/workspace.ts";
 
+/**
+ * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
+ * cheap, fast one. Used to measure expert share: how much of a run the expert did.
+ */
+export type Tier = "expert" | "worker";
+
 export interface RoleConfig {
   backend: string;
   model?: string;
   effort?: string;
+  tier?: Tier;
 }
+
+export type Role = "worker" | "orchestrator" | "tester" | "escalation";
 
 /**
  * running      the engine is working on it right now
@@ -22,6 +31,8 @@ export type RunStatus = "running" | "interrupted" | "paused" | "failed" | "finis
 export type RunStep = "setup" | "baseline" | "agent" | "checks" | "done";
 
 export interface AttemptRecord {
+  role: Role;
+  tier: Tier;
   round: number;
   kind: "initial" | "repair" | "continue";
   backend: string;
@@ -72,6 +83,8 @@ export interface RunState {
   round: number;
   /** Process running the engine, while status is "running". */
   pid?: number;
+  /** The agent turn in progress; still set after a crash, so resume can record it. */
+  inFlight?: { role: Role; tier: Tier; kind: AttemptRecord["kind"]; round: number; backend: string; model?: string; startedAt: string };
   /** Process group of the agent tool, while a turn is in progress. */
   agentPid?: number;
   agentCommand?: string;

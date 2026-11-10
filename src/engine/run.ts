@@ -106,6 +106,18 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
     state.agentPid = undefined;
     state.agentCommand = undefined;
   }
+  // A turn the dead engine never finished: record it, with its usage unknown.
+  if (state.inFlight) {
+    const f = state.inFlight;
+    state.attempts.push({
+      ...f,
+      stop: "cancelled",
+      durationMs: Date.now() - Date.parse(f.startedAt),
+      usage: {},
+      detail: "the engine stopped during this turn",
+    });
+    state.inFlight = undefined;
+  }
   const from = state.status;
   state.status = "running";
   state.pid = process.pid;
@@ -265,6 +277,8 @@ async function agentTurn(state: RunState, ctx: EngineContext, log: EventLog, tim
     const n = state.attempts.length + 1;
     log.emit("agent.started", { round: state.round, kind, backend: backend.id, model: role.model, resumed: Boolean(resume) });
     const startedAt = new Date().toISOString();
+    state.inFlight = { role: "worker", tier: role.tier ?? "worker", kind, round: state.round, backend: backend.id, model: role.model, startedAt };
+    saveState(state);
     const result = await backend.run({
       cwd: state.worktree,
       prompt: text,
@@ -285,7 +299,10 @@ async function agentTurn(state: RunState, ctx: EngineContext, log: EventLog, tim
     });
     state.agentPid = undefined;
     state.agentCommand = undefined;
+    state.inFlight = undefined;
     state.attempts.push({
+      role: "worker",
+      tier: role.tier ?? "worker",
       round: state.round,
       kind,
       backend: backend.id,

@@ -1,0 +1,1 @@
+Rename the `cap` function in `src/strings.js` to `capitalize`, and update every place in the project that uses it. Keep `cap` exported as a deprecated alias of `capitalize` (mark it with a `@deprecated` JSDoc comment) so outside code does not break. Behaviour must not change.

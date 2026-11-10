@@ -26,7 +26,7 @@ const task = arg("task", "js-todo-remove");
 const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 const work = join(defaultHome(), "evals", `kill-resume-${signal}-${stamp}`);
 mkdirSync(work, { recursive: true });
-cpSync(join(here, "smoke", task, "seed"), work, { recursive: true });
+cpSync(join(here, "tasks", task, "seed"), work, { recursive: true });
 for (const args of [["init", "-q", "-b", "main"], ["add", "-A"], ["commit", "-q", "-m", "seed"]]) {
   spawnSync("git", ["-c", "user.name=neuromesh-eval", "-c", "user.email=eval@localhost", ...args], { cwd: work });
 }
@@ -45,7 +45,7 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 // 1. Start a run and stop it once the agent is busy.
 console.log(`Starting a run in ${repo}`);
-const child = spawn(process.execPath, [cli, "run", "--json", "--preset", preset, "--prompt-file", join(here, "smoke", task, "prompt.md")], {
+const child = spawn(process.execPath, [cli, "run", "--json", "--preset", preset, "--prompt-file", join(here, "tasks", task, "prompt.md")], {
   cwd: repo,
   stdio: ["ignore", "pipe", "inherit"],
 });
@@ -80,7 +80,12 @@ if (resume.stderr.trim()) process.stdout.write(resume.stderr.split("\n").filter(
 const final = loadState(before.dir);
 const orphanAfter = alive(agentPid);
 
-const ok = final.status === "finished" && final.outcome?.checks === "passed" && orphanAfter === undefined;
+const ok =
+  final.status === "finished" &&
+  final.outcome?.checks === "passed" &&
+  orphanAfter === undefined &&
+  final.attempts[0]?.stop === "cancelled" &&
+  final.attempts.some((a) => a.kind === "continue" && a.stop === "done");
 console.log(
   `\nResult: ${ok ? "PASS" : "FAIL"} · status ${final.status}, checks ${final.outcome?.checks ?? "-"}, ` +
     `attempts ${final.attempts.map((a) => `${a.kind}:${a.stop}`).join(" → ")}, ` +

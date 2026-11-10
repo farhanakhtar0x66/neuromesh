@@ -1,0 +1,51 @@
+# Status and handoff
+
+Kept current after every meaningful step so that work can resume in a new
+session if usage runs out. Read this first, then `docs/02-v0.1-plan.md`.
+
+## Standing instructions from the owner (2026-11-11)
+
+- Work through M2 to M6 without asking for confirmation.
+- Commit and push to `origin main` (private repo `farhanakhtar0x66/neuromesh`)
+  often, including between milestones.
+- Workers and testers: Gemini 3.8 Flash through Antigravity (`agy`). Gemini quota
+  is plentiful; use it for all development runs.
+- Expert (orchestrator, escalation) model, in this order:
+  1. Claude Opus 4.6 / Sonnet 4.6 through Antigravity (until 2026-11-18)
+  2. `gpt-6.1-sol` at medium or high effort through Codex
+  3. Claude Opus 5.5 at medium effort through Claude Code, only if both above are exhausted
+
+## Where things stand
+
+| Milestone | State |
+| --- | --- |
+| M0 backend conformance | Done. See `docs/03-m0-results.md`. |
+| M1 single agent, prompt to applied diff | Engine, CLI and tests done. Live smoke run on `solo-flash` in progress; kill-resume check next. |
+| M2 task suite and baselines | Not started |
+| M3 orchestrator and workers | Not started |
+| M4 tester, repair, escalation | Not started |
+| M5 intake and parallel work | Not started |
+| M6 hardening and release | Not started |
+
+## How to resume
+
+```bash
+cd ~/Projects/neuromesh && git pull && npm install
+```
+
+```bash
+npm test && npx tsc --noEmit
+```
+
+Live checks (spend Gemini quota only):
+
+```bash
+node evals/smoke.ts --preset solo-flash
+```
+
+```bash
+node evals/kill-resume.ts --signal SIGKILL
+```
+
+Run state lives in `~/.neuromesh/projects/<repo>-<id>/runs/`; eval output in
+`~/.neuromesh/evals/`.
