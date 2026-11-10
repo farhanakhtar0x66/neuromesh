@@ -1,0 +1,20 @@
+{
+  "name": "neuromesh",
+  "version": "0.0.1",
+  "description": "A multi-agent coding engine built like a factory floor",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "neuromesh": "node src/cli/main.ts",
+    "doctor": "node src/cli/main.ts doctor",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
