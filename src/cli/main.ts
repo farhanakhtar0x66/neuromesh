@@ -15,7 +15,7 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
-import { evalDir, loadReport, loadTasks, runEval } from "../eval/eval.ts";
+import { evalDir, loadReport, loadTasks, recheckEval, runEval } from "../eval/eval.ts";
 import { formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
@@ -43,6 +43,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --name <name>             results name; rerunning a name continues where it stopped
       --rerun a,b               run these tasks again even though they have results
   neuromesh eval compare <name> <name>...   compare saved eval results
+  neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh presets             list presets
   neuromesh doctor              check each backend with a few small live calls
@@ -165,6 +166,14 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
       return r;
     });
     process.stdout.write(formatComparison(reports) + "\n");
+    return 0;
+  }
+  if (positional[0] === "recheck") {
+    for (const n of positional.slice(1)) {
+      for (const c of recheckEval(home, n, loadTasks())) {
+        process.stdout.write(`${n}  ${c.task.padEnd(22)} ${c.before} -> ${c.after}${c.before !== c.after ? "  (changed)" : ""}\n`);
+      }
+    }
     return 0;
   }
   const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);

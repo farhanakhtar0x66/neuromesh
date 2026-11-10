@@ -256,3 +256,27 @@ export function summarize(report: EvalReport, names?: string[]): Summary {
     usageIncomplete: rows.some((r) => r.usageIncomplete),
   };
 }
+
+/**
+ * Run the hidden checks again on an eval's already-applied repositories, with
+ * the current task definitions. No model calls: for fixing a broken check.
+ */
+export function recheckEval(home: string, name: string, tasks: EvalTask[]): { task: string; before: string; after: string }[] {
+  const report = loadReport(home, name);
+  if (!report) throw new Error(`No eval results named "${name}"`);
+  const changes: { task: string; before: string; after: string }[] = [];
+  for (const task of tasks) {
+    const result = report.results[task.name];
+    const repo = join(evalDir(home, name), "repos", task.name);
+    if (!result || result.hidden === "not run" || !existsSync(repo)) continue;
+    rmSync(join(repo, "hidden"), { recursive: true, force: true });
+    cpSync(join(task.dir, "hidden"), join(repo, "hidden"), { recursive: true });
+    const check = sh(repo, task.hiddenCheck);
+    const hidden = check.code === 0 ? "pass" : "fail";
+    changes.push({ task: task.name, before: result.hidden, after: hidden });
+    result.hidden = hidden;
+    result.hiddenTail = hidden === "fail" ? check.output.split("\n").slice(-20).join("\n") : undefined;
+  }
+  saveReport(home, report);
+  return changes;
+}

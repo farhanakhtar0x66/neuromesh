@@ -1,1 +1,1 @@
-{ "kind": "bug", "language": "python", "hiddenCheck": "python3 hidden/hidden_check.py" }
+{ "kind": "bug", "language": "python", "hiddenCheck": "PYTHONPATH=. python3 hidden/hidden_check.py" }

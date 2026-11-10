@@ -1,1 +1,1 @@
-{ "kind": "refactor", "language": "python", "hiddenCheck": "python3 hidden/hidden_check.py" }
+{ "kind": "refactor", "language": "python", "hiddenCheck": "PYTHONPATH=. python3 hidden/hidden_check.py" }

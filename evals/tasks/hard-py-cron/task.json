@@ -1,0 +1,1 @@
+{ "kind": "hard", "language": "python", "hiddenCheck": "PYTHONPATH=. python3 hidden/hidden_check.py" }
