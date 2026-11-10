@@ -20,9 +20,9 @@ session if usage runs out. Read this first, then `docs/02-v0.1-plan.md`.
 | Milestone | State |
 | --- | --- |
 | M0 backend conformance | Done. See `docs/03-m0-results.md`. |
-| M1 single agent, prompt to applied diff | Engine, CLI and tests done. Live smoke run on `solo-flash` in progress; kill-resume check next. |
-| M2 task suite and baselines | Not started |
-| M3 orchestrator and workers | Not started |
+| M1 single agent, prompt to applied diff | Done. 5/5 live tasks, both kill and Ctrl-C resume pass. See `docs/04-m1-results.md`. |
+| M2 task suite and baselines | 20 tasks in `evals/tasks`, `neuromesh eval` done. Baselines `base-solo-flash` and `base-solo-opus46` running. |
+| M3 orchestrator and workers | In progress: unified team engine (plan, tasks, tester, fallback chain) |
 | M4 tester, repair, escalation | Not started |
 | M5 intake and parallel work | Not started |
 | M6 hardening and release | Not started |
@@ -40,7 +40,7 @@ npm test && npx tsc --noEmit
 Live checks (spend Gemini quota only):
 
 ```bash
-node evals/smoke.ts --preset solo-flash
+node src/cli/main.ts eval --preset solo-flash --tasks js-slugify-bug,rust-roman --name smoke
 ```
 
 ```bash
