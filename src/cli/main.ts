@@ -41,6 +41,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --preset <name>           preset to measure (default: ${DEFAULT_PRESET})
       --tasks a,b  --kinds k,l  run only some tasks, or some kinds (bug, feature, multi, ...)
       --name <name>             results name; rerunning a name continues where it stopped
+      --rerun a,b               run these tasks again even though they have results
   neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh presets             list presets
@@ -186,6 +187,7 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     preset,
     tasks,
     ctx,
+    rerun: flags.get("rerun")?.split(",").filter(Boolean),
     onTaskStart: (task, i, total) => process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`),
     onTaskDone: (r) =>
       process.stderr.write(

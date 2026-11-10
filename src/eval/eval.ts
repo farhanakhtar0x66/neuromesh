@@ -148,6 +148,8 @@ export interface EvalOptions {
   preset: Preset;
   tasks: EvalTask[];
   ctx: EngineContext;
+  /** Tasks to run again even though they have a result. */
+  rerun?: string[];
   onTaskStart?: (task: EvalTask, index: number, total: number) => void;
   onTaskDone?: (result: TaskResult) => void;
 }
@@ -169,7 +171,7 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
 
   const todo = options.tasks.filter((t) => {
     const done = report.results[t.name];
-    return !done || RETRY_STATUSES.has(done.status);
+    return !done || RETRY_STATUSES.has(done.status) || options.rerun?.includes(t.name);
   });
 
   for (const [index, task] of todo.entries()) {
