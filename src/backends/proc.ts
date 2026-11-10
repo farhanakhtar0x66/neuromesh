@@ -22,6 +22,8 @@ export interface ProcOptions {
   /** Raw standard output is appended here. */
   logPath?: string;
   onLine?: (line: string) => void;
+  /** Called with the process id once the program has started. */
+  onSpawn?: (pid: number) => void;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -123,6 +125,8 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
       detached: true, // new process group; see killGroup
       stdio: ["pipe", "pipe", "pipe"],
     });
+
+    if (child.pid !== undefined) options.onSpawn?.(child.pid);
 
     let log: ReturnType<typeof createWriteStream> | undefined;
     if (options.logPath) {

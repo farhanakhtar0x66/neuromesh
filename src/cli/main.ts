@@ -1,11 +1,205 @@
-// Command-line entry point. M0 has one command: doctor.
+#!/usr/bin/env node
+// Neuromesh command line.
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
 import type { CallName, DoctorReport } from "../doctor/doctor.ts";
+import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
+import { resumeRun, startRun } from "../engine/run.ts";
+import type { EngineContext } from "../engine/run.ts";
+import { defaultHome, findRun, listRuns } from "../engine/store.ts";
+import type { NeuromeshEvent } from "../engine/store.ts";
+import type { RunState } from "../engine/types.ts";
+import { DEFAULT_PRESET, listPresets, loadPreset } from "../presets/presets.ts";
+import { findRepo } from "../workspace/workspace.ts";
+import { formatEvent, formatRunList, formatSummary, green } from "./format.ts";
+
+const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
+
+  neuromesh run "<request>"     work on a request in the current git repository
+      --preset <name>           which models to use (default: ${DEFAULT_PRESET}); see "neuromesh presets"
+      --backend <id>            override the worker's backend (agy, claude, codex)
+      --model <id>              override the worker's model
+      --effort <level>          override the worker's effort
+      --repairs <n>             rounds allowed for fixing failing checks
+      --prompt-file <path>      read the request from a file
+      --json                    print events as JSON lines instead of progress text
+
+  neuromesh status [run]        list runs, or show one run
+  neuromesh diff [run]          print a run's changes as a patch
+  neuromesh apply [run]         apply a finished run's changes to your working tree
+      --force                   apply even if checks failed or the run did not finish
+      --keep                    keep the run's worktree afterwards
+  neuromesh discard [run]       throw a run's changes away
+  neuromesh resume [run]        continue an interrupted, paused or failed run
+  neuromesh presets             list presets
+  neuromesh doctor              check each backend with a few small live calls
+
+  [run] is a run id, the end of one, or "last" (the default).
+  --repo <path> works with any command to point at another repository.
+`;
+
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help"]);
+
+interface Parsed {
+  positional: string[];
+  flags: Map<string, string>;
+}
+
+function parseArgs(argv: string[]): Parsed {
+  const positional: string[] = [];
+  const flags = new Map<string, string>();
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    if (!arg.startsWith("--")) {
+      positional.push(arg);
+      continue;
+    }
+    const [key, inline] = arg.slice(2).split("=", 2) as [string, string | undefined];
+    if (inline !== undefined) flags.set(key, inline);
+    else if (BOOLEAN_FLAGS.has(key)) flags.set(key, "true");
+    else {
+      const value = argv[i + 1];
+      if (value === undefined) throw new Error(`--${key} needs a value`);
+      flags.set(key, value);
+      i++;
+    }
+  }
+  return { positional, flags };
+}
+
+function engineContext(flags: Map<string, string>, signal: AbortSignal): EngineContext {
+  const json = flags.has("json");
+  return {
+    home: defaultHome(),
+    backends,
+    signal,
+    onEvent: (event: NeuromeshEvent) => {
+      if (json) {
+        process.stdout.write(JSON.stringify(event) + "\n");
+        return;
+      }
+      const line = formatEvent(event);
+      if (line !== undefined) process.stderr.write(line + "\n");
+    },
+  };
+}
+
+/** First Ctrl-C stops the run cleanly so it can be resumed; a second one exits at once. */
+function interruptible(): AbortController {
+  const controller = new AbortController();
+  let count = 0;
+  const handler = (): void => {
+    count += 1;
+    if (count === 1) {
+      process.stderr.write("\nStopping the run… (press Ctrl-C again to quit immediately)\n");
+      controller.abort();
+    } else {
+      process.exit(130);
+    }
+  };
+  process.on("SIGINT", handler);
+  process.on("SIGTERM", handler);
+  return controller;
+}
+
+function exitCodeFor(state: RunState): number {
+  if (state.status === "finished") return state.outcome?.checks === "failed" ? 1 : 0;
+  if (state.status === "paused") return 3;
+  if (state.status === "interrupted") return 130;
+  return 1;
+}
+
+function finish(state: RunState, flags: Map<string, string>): number {
+  if (!flags.has("json")) process.stdout.write("\n" + formatSummary(state) + "\n");
+  return exitCodeFor(state);
+}
+
+function repoRoot(flags: Map<string, string>): string {
+  return findRepo(flags.get("repo") ?? process.cwd()).root;
+}
+
+async function commandRun({ positional, flags }: Parsed): Promise<number> {
+  const file = flags.get("prompt-file");
+  const prompt = (file ? readFileSync(file, "utf8") : positional.join(" ")).trim();
+  if (prompt === "") {
+    process.stderr.write('Give a request: neuromesh run "add a --verbose flag to the CLI"\n');
+    return 2;
+  }
+  const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
+  const repairs = flags.has("repairs") ? Number.parseInt(flags.get("repairs")!, 10) : undefined;
+  const controller = interruptible();
+  const state = await startRun(
+    {
+      cwd: flags.get("repo") ?? process.cwd(),
+      prompt,
+      preset,
+      worker: { backend: flags.get("backend"), model: flags.get("model"), effort: flags.get("effort") },
+      repairs: Number.isInteger(repairs) ? repairs : undefined,
+    },
+    engineContext(flags, controller.signal),
+  );
+  return finish(state, flags);
+}
+
+async function commandResume({ positional, flags }: Parsed): Promise<number> {
+  const state = findRun(defaultHome(), repoRoot(flags), positional[0]);
+  const controller = interruptible();
+  const result = await resumeRun(state, engineContext(flags, controller.signal));
+  return finish(result, flags);
+}
+
+function commandStatus({ positional, flags }: Parsed): number {
+  const root = repoRoot(flags);
+  if (positional[0] === undefined) {
+    const runs = listRuns(defaultHome(), root);
+    if (flags.has("json")) process.stdout.write(JSON.stringify(runs, null, 2) + "\n");
+    else process.stdout.write(formatRunList(runs) + "\n");
+    return 0;
+  }
+  const state = findRun(defaultHome(), root, positional[0]);
+  if (flags.has("json")) process.stdout.write(JSON.stringify(state, null, 2) + "\n");
+  else process.stdout.write(formatSummary(state) + "\n");
+  return 0;
+}
+
+function commandDiff({ positional, flags }: Parsed): number {
+  const state = findRun(defaultHome(), repoRoot(flags), positional[0]);
+  const patch = currentPatch(state);
+  process.stdout.write(patch === "" ? "(no changes)\n" : patch);
+  return 0;
+}
+
+function commandApply({ positional, flags }: Parsed): number {
+  const state = findRun(defaultHome(), repoRoot(flags), positional[0]);
+  const result = applyRun(state, { force: flags.has("force"), keep: flags.has("keep") });
+  if (result.method === "nothing") process.stdout.write(`Run ${state.id} made no changes; nothing to apply.\n`);
+  else {
+    process.stdout.write(
+      green(`Applied ${result.files} file${result.files === 1 ? "" : "s"} from run ${state.id}`) +
+        (result.method === "three-way" ? " (with a three-way merge; check for conflict markers)" : "") +
+        `.\nThe changes are uncommitted in ${state.repo}. Review them with "git diff".\n`,
+    );
+  }
+  return 0;
+}
+
+function commandDiscard({ positional, flags }: Parsed): number {
+  const state = findRun(defaultHome(), repoRoot(flags), positional[0]);
+  discardRun(state);
+  process.stdout.write(`Discarded run ${state.id}.\n`);
+  return 0;
+}
+
+function commandPresets(): number {
+  for (const p of listPresets()) {
+    const worker = `${p.worker.backend} ${p.worker.model ?? "(default model)"}`;
+    process.stdout.write(`${p.name.padEnd(16)} ${worker.padEnd(36)} ${p.description}\n`);
+  }
+  return 0;
+}
 
 // The cheapest model of each backend is enough to test the plumbing.
 const DOCTOR_DEFAULTS: Record<string, { model?: string; effort?: string }> = {
@@ -14,36 +208,7 @@ const DOCTOR_DEFAULTS: Record<string, { model?: string; effort?: string }> = {
   codex: { effort: "low" },
 };
 
-const HELP = `neuromesh doctor [options]
-
-Checks that each model backend can do what a role needs, using a few small
-live calls per backend (these spend subscription quota).
-
-  --backend a,b     backends to check (default: agy,claude,codex)
-  --model a=m,b=m   model to use per backend
-  --only x,y        run only these calls: ${CALLS.join(", ")}
-  --keep            keep the scratch folder and raw logs
-  --json            print the report as JSON
-`;
-
-function parseFlags(argv: string[]): Map<string, string> {
-  const flags = new Map<string, string>();
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (!arg?.startsWith("--")) continue;
-    const next = argv[i + 1];
-    if (next !== undefined && !next.startsWith("--")) {
-      flags.set(arg.slice(2), next);
-      i++;
-    } else {
-      flags.set(arg.slice(2), "true");
-    }
-  }
-  return flags;
-}
-
-async function doctor(argv: string[]): Promise<number> {
-  const flags = parseFlags(argv);
+async function commandDoctor({ flags }: Parsed): Promise<number> {
   const ids = (flags.get("backend") ?? Object.keys(backends).join(",")).split(",").filter(Boolean);
   const models = new Map<string, string>();
   for (const pair of (flags.get("model") ?? "").split(",").filter(Boolean)) {
@@ -51,53 +216,76 @@ async function doctor(argv: string[]): Promise<number> {
     if (backend && model) models.set(backend, model);
   }
   const only = flags.get("only")?.split(",").filter((c): c is CallName => (CALLS as readonly string[]).includes(c));
-
   for (const id of ids) {
     if (!backends[id]) {
-      console.error(`unknown backend "${id}". Known: ${Object.keys(backends).join(", ")}`);
+      process.stderr.write(`unknown backend "${id}". Known: ${Object.keys(backends).join(", ")}\n`);
       return 2;
     }
   }
 
-  // Not the system temp folder: Antigravity's sandbox refuses writes there, and
-  // real work will not happen there either.
-  const home = join(homedir(), ".neuromesh");
+  // Not the system temp folder: Antigravity refuses writes there.
+  const home = defaultHome();
   mkdirSync(home, { recursive: true });
   const workRoot = mkdtempSync(join(home, "doctor-"));
   const reports: DoctorReport[] = await Promise.all(
     ids.map((id) => {
-      const backend = backends[id]!;
       const defaults = DOCTOR_DEFAULTS[id] ?? {};
-      return runDoctor(backend, {
+      return runDoctor(backends[id]!, {
         model: models.get(id) ?? defaults.model,
         effort: defaults.effort,
         workRoot,
         only,
-        onProgress: (probe) => console.error(`[${id}] ${probe.status.toUpperCase()} ${probe.name}: ${probe.detail}`),
+        onProgress: (probe) => process.stderr.write(`[${id}] ${probe.status.toUpperCase()} ${probe.name}: ${probe.detail}\n`),
       });
     }),
   );
 
-  mkdirSync(".neuromesh", { recursive: true });
-  const saved = join(".neuromesh", "conformance.json");
+  const saved = join(home, "conformance.json");
   writeFileSync(saved, JSON.stringify({ checkedAt: new Date().toISOString(), reports }, null, 2) + "\n");
-
-  if (flags.has("json")) console.log(JSON.stringify(reports, null, 2));
-  else console.log(formatReports(reports));
-  console.error(`\nSaved to ${saved}.` + (flags.has("keep") ? ` Scratch folder kept at ${workRoot}` : ""));
+  if (flags.has("json")) process.stdout.write(JSON.stringify(reports, null, 2) + "\n");
+  else process.stdout.write(formatReports(reports) + "\n");
+  process.stderr.write(`\nSaved to ${saved}.` + (flags.has("keep") ? ` Scratch folder kept at ${workRoot}` : "") + "\n");
   if (!flags.has("keep")) rmSync(workRoot, { recursive: true, force: true });
-
   return reports.every(isConformant) ? 0 : 1;
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<number> {
   const [command, ...rest] = process.argv.slice(2);
-  if (command === "doctor" && !rest.includes("--help")) {
-    process.exitCode = await doctor(rest);
-    return;
+  if (command === undefined || command === "help" || command === "--help" || command === "-h") {
+    process.stdout.write(HELP);
+    return 0;
   }
-  console.log(HELP);
-  process.exitCode = command === undefined || command === "help" || rest.includes("--help") ? 0 : 2;
+  const parsed = parseArgs(rest);
+  if (parsed.flags.has("help")) {
+    process.stdout.write(HELP);
+    return 0;
+  }
+  switch (command) {
+    case "run":
+      return commandRun(parsed);
+    case "resume":
+      return commandResume(parsed);
+    case "status":
+      return commandStatus(parsed);
+    case "diff":
+      return commandDiff(parsed);
+    case "apply":
+      return commandApply(parsed);
+    case "discard":
+      return commandDiscard(parsed);
+    case "presets":
+      return commandPresets();
+    case "doctor":
+      return commandDoctor(parsed);
+    default:
+      process.stderr.write(`Unknown command "${command}".\n\n${HELP}`);
+      return 2;
+  }
 }
 
-await main();
+try {
+  process.exitCode = await main();
+} catch (error) {
+  process.stderr.write(`neuromesh: ${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
+}

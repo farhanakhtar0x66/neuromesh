@@ -42,6 +42,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     signal: request.signal,
     stdin: invocation.stdin,
     logPath: request.logPath,
+    onSpawn: request.onSpawn,
     onLine: (line) => {
       if (!line.startsWith("{")) return;
       try {

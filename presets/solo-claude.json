@@ -1,0 +1,8 @@
+{
+  "name": "solo-claude",
+  "description": "One Claude Opus 5.5 agent through Claude Code. The frontier baseline; uses the scarce Claude subscription.",
+  "mode": "solo",
+  "worker": { "backend": "claude", "model": "claude-opus-5-5", "effort": "high" },
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}

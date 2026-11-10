@@ -4,6 +4,9 @@
   "description": "A multi-agent coding engine built like a factory floor",
   "private": true,
   "type": "module",
+  "bin": {
+    "neuromesh": "src/cli/main.ts"
+  },
   "engines": {
     "node": ">=24"
   },

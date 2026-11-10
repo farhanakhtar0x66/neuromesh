@@ -1,0 +1,8 @@
+{
+  "name": "solo-opus46",
+  "description": "One Claude Opus 4.6 (thinking) agent through Antigravity, on the Google subscription. Listed until 18 Nov 2026; uses limits faster than Flash.",
+  "mode": "solo",
+  "worker": { "backend": "agy", "model": "claude-opus-4-6-thinking" },
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}

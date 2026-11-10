@@ -1,0 +1,8 @@
+{
+  "name": "solo-sonnet46",
+  "description": "One Claude Sonnet 4.6 (thinking) agent through Antigravity, on the Google subscription. Listed until 18 Nov 2026.",
+  "mode": "solo",
+  "worker": { "backend": "agy", "model": "claude-sonnet-4-6" },
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}

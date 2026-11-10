@@ -56,6 +56,8 @@ export interface AgentRequest {
   signal?: AbortSignal;
   /** Display only. Never used to make decisions. */
   onActivity?: (activity: Activity) => void;
+  /** Called with the tool's process id (also its process group) once started. */
+  onSpawn?: (pid: number) => void;
 }
 
 export interface AgentResult {

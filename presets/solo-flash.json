@@ -1,0 +1,8 @@
+{
+  "name": "solo-flash",
+  "description": "One Gemini 3.8 Flash (high) agent through Antigravity. The default while developing: Gemini quota is plentiful.",
+  "mode": "solo",
+  "worker": { "backend": "agy", "model": "gemini-3.8-flash-high" },
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}

@@ -1,0 +1,8 @@
+{
+  "name": "solo-codex",
+  "description": "One Codex agent on the ChatGPT subscription's default model. Uses the scarce ChatGPT quota.",
+  "mode": "solo",
+  "worker": { "backend": "codex", "effort": "medium" },
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}
