@@ -70,3 +70,23 @@ node src/cli/main.ts eval compare base-solo-flash base-solo-opus46 try-factory-m
 
 Rerunning an eval command with the same `--name` continues it; tasks already
 finished are skipped.
+
+## Findings so far (2026-11-11)
+
+1. **Claude 4.6 on Antigravity has a small quota.** Opus 4.6 stopped after 5
+   tasks (about 600k tokens) with "Individual quota reached ... Resets in
+   4h55m". Sonnet 4.6 shares the same pool. The expert really is the scarce
+   resource, as the factory idea assumes.
+2. **Gemini 3.8 Flash alone is strong on the standard tasks** (all passes so far
+   apart from two Gemini 503 outages). The standard suite cannot show a team
+   advantage, so four hard tasks were added (`hard-*`), each with a hidden check
+   validated against a reference implementation.
+3. **Planning costs nearly as much expert effort as doing small tasks.** On the
+   four multi-part tasks the `factory` preset passed 4/4 with about 80k expert
+   tokens per task (planning only), against about 120k for Opus doing the whole
+   task alone. Every plan was a single task. The tester added about half the
+   worker tokens and found nothing. Direction: worker first, with the expert
+   only on escalation or genuinely large requests. To be confirmed on the hard
+   tasks before changing the default.
+4. **Python hidden checks were broken** (wrong import path) until commit
+   `310fdc2`; evals run before that were re-scored with `neuromesh eval recheck`.
