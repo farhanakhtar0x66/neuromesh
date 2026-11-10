@@ -1,0 +1,1 @@
+{ "kind": "hard", "language": "rust", "hiddenCheck": "mkdir -p tests && cp hidden/hidden_diff.rs tests/ && cargo test --quiet --offline" }

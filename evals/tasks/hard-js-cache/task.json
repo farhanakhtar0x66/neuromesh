@@ -1,0 +1,1 @@
+{ "kind": "hard", "language": "javascript", "hiddenCheck": "node --test hidden/" }
