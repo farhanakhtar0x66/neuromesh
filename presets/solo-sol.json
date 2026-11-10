@@ -1,0 +1,8 @@
+{
+  "name": "solo-sol",
+  "description": "One GPT-6.1 Sol (medium) agent through Codex: the expert alone, as a baseline while the Claude 4.6 models are cooling down. Uses ChatGPT quota.",
+  "mode": "solo",
+  "worker": [{ "tier": "expert", "backend": "codex", "model": "gpt-6.1-sol", "effort": "medium" }],
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}
