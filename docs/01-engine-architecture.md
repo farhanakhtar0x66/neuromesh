@@ -1,6 +1,6 @@
 # Engine architecture (v0.1)
 
-Status: plan, nothing built yet. Decisions made with the owner on 2026-11-11:
+Status: the design rationale. For what the code does now, see [05-engine-as-built.md](05-engine-as-built.md). Decisions made with the owner on 2026-11-11:
 
 - Model access: **subscriptions only**, through the Claude Code, Codex and
   Gemini command-line tools already installed. No paid API keys.

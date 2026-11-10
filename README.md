@@ -61,6 +61,10 @@ agent); pick another with `--preset`.
    the conditions for calling v0.1 done.
 4. [docs/03-m0-results.md](docs/03-m0-results.md): what the three backends can
    and cannot do on this machine.
+5. [docs/04-m1-results.md](docs/04-m1-results.md): the single-agent engine, live.
+6. [docs/05-engine-as-built.md](docs/05-engine-as-built.md): how the team engine
+   works now.
+7. [docs/STATUS.md](docs/STATUS.md): where work stands and how to resume it.
 
 ## Decisions so far
 
