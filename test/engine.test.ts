@@ -6,12 +6,15 @@ import { dirname, join } from "node:path";
 import { after, test } from "node:test";
 import { createFakeBackend } from "../src/backends/fake.ts";
 import type { FakeScript } from "../src/backends/fake.ts";
+import type { AgentRequest } from "../src/backends/types.ts";
 import { detectChecks, failureSignature } from "../src/checks/checks.ts";
 import { applyRun, discardRun } from "../src/engine/apply.ts";
 import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
 import { loadState, saveState } from "../src/engine/store.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
+import type { RoleChain } from "../src/engine/types.ts";
+import { route } from "../src/intake/intake.ts";
 import type { Preset } from "../src/presets/presets.ts";
 
 const scratch = mkdtempSync(join(tmpdir(), "neuromesh-engine-test-"));
@@ -42,14 +45,23 @@ function fixableRepo(extra: Record<string, string> = {}): string {
   });
 }
 
-const preset: Preset = {
-  name: "test",
-  description: "",
-  mode: "solo",
-  worker: { backend: "fake", model: "fake-model" },
-  repairs: 1,
-  turnTimeoutMinutes: 1,
-};
+function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
+  return {
+    name: "test",
+    description: "",
+    mode: "solo",
+    roles: { worker: [{ backend: "fake", model: "fake-worker", tier: "worker" }], ...roles },
+    repairs: 1,
+    maxTasks: 4,
+    maxParallel: 1,
+    turnTimeoutMinutes: 1,
+    intake: false,
+    ...extra,
+  };
+}
+
+const EXPERT = { backend: "fake", model: "fake-expert", tier: "expert" as const };
+const TESTER = { backend: "fake", model: "fake-tester", tier: "worker" as const };
 
 function context(script: FakeScript, extra: Partial<EngineContext> = {}) {
   const events: NeuromeshEvent[] = [];
@@ -65,41 +77,43 @@ function context(script: FakeScript, extra: Partial<EngineContext> = {}) {
 }
 
 const report = (summary: string) => ({ structured: { status: "done", summary, notes: "" } });
+const isPlan = (r: AgentRequest): boolean => Boolean((r.outputSchema?.properties as Record<string, unknown> | undefined)?.tasks);
+const isTest = (r: AgentRequest): boolean => Boolean((r.outputSchema?.properties as Record<string, unknown> | undefined)?.verdict);
+const write = (cwd: string, file: string, text: string): void => writeFileSync(join(cwd, file), text + "\n");
 
-function writeFixed(cwd: string, text: string): void {
-  writeFileSync(join(cwd, "fixed.txt"), text + "\n");
-}
+// ---------------------------------------------------------------------------
+// Solo runs
 
-test("a run goes from prompt to a checked diff, and apply brings it home", async () => {
+test("a solo run goes from prompt to a checked diff, and apply brings it home", async () => {
   const repo = fixableRepo();
   const { ctx, fake, events } = context((req) => {
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     return report("wrote fixed.txt");
   });
-  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
 
   assert.equal(state.status, "finished");
+  assert.equal(state.mode, "solo");
   assert.equal(state.baseline?.[0]?.status, "failed");
   assert.equal(state.latest?.[0]?.status, "passed");
   assert.equal(state.outcome?.checks, "passed");
   assert.deepEqual(state.outcome?.files.map((f) => f.path), ["fixed.txt"]);
-  assert.equal(state.report?.summary, "wrote fixed.txt");
+  assert.equal(state.tasks[0]?.report?.summary, "wrote fixed.txt");
   assert.equal(fake.calls.length, 1);
-  assert.equal(fake.calls[0]!.cwd, state.worktree);
   assert.equal(fake.calls[0]!.access, "write");
   assert.match(fake.calls[0]!.prompt, /make the test pass/);
   assert.match(fake.calls[0]!.prompt, /npm test/);
   assert.ok(!existsSync(join(repo, "fixed.txt")), "the user's files are untouched during a run");
   assert.deepEqual(
     events.map((e) => e.type).filter((t) => t !== "agent.activity"),
-    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "agent.started", "agent.finished", "checks.finished", "run.finished"],
+    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "task.started", "agent.started", "agent.finished", "checks.finished", "task.merged", "run.finished"],
   );
 
   const applied = applyRun(loadState(state.dir));
   assert.equal(applied.files, 1);
   assert.equal(readFileSync(join(repo, "fixed.txt"), "utf8"), "ok\n");
   assert.ok(!existsSync(state.worktree), "the worktree is removed after apply");
-  const branches = execFileSync("git", ["branch", "--list", "neuromesh/*"], { cwd: repo, encoding: "utf8" });
+  const branches = execFileSync("git", ["branch", "--list", "neuromesh*"], { cwd: repo, encoding: "utf8" });
   assert.equal(branches.trim(), "");
   assert.equal(loadState(state.dir).status, "applied");
 });
@@ -107,32 +121,32 @@ test("a run goes from prompt to a checked diff, and apply brings it home", async
 test("failing checks get a repair turn in the same session", async () => {
   const repo = fixableRepo();
   const { ctx, fake } = context((req, i) => {
-    writeFixed(req.cwd, i === 0 ? "nope" : "ok");
+    write(req.cwd, "fixed.txt", i === 0 ? "nope" : "ok");
     return report(i === 0 ? "first try" : "fixed it");
   });
-  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
 
   assert.equal(state.status, "finished");
   assert.equal(state.outcome?.checks, "passed");
-  assert.equal(state.round, 1);
   assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "repair"]);
   assert.equal(fake.calls[1]!.resumeSessionId, "fake-session-0");
   assert.match(fake.calls[1]!.prompt, /Check "test"/);
   assert.match(fake.calls[1]!.prompt, /expected fixed.txt to say ok/);
-  assert.match(fake.calls[1]!.prompt, /already failing before you started/);
+  assert.match(fake.calls[1]!.prompt, /already failing before the work started/);
 });
 
-test("when repairs run out the run finishes with failing checks, and apply needs --force", async () => {
+test("the stagnation breaker stops a worker repeating itself; with no expert the run finishes with failing checks", async () => {
   const repo = fixableRepo();
   const { ctx, fake } = context((req) => {
-    writeFixed(req.cwd, "nope");
+    write(req.cwd, "fixed.txt", "nope");
     return report("tried");
   });
-  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset, repairs: 2 }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({}, { repairs: 5 }) }, ctx);
 
   assert.equal(state.status, "finished");
   assert.equal(state.outcome?.checks, "failed");
-  assert.equal(fake.calls.length, 3);
+  assert.equal(fake.calls.length, 2, "the second identical failure stops it, well before 5 repairs");
+  assert.match(state.tasks[0]?.error ?? "", /repeated an earlier failed state/);
   assert.throws(() => applyRun(state), /failing checks/);
   assert.equal(applyRun(state, { force: true }).files, 1);
 });
@@ -140,13 +154,12 @@ test("when repairs run out the run finishes with failing checks, and apply needs
 test("a subscription limit pauses the run; resume continues with a fresh session", async () => {
   const repo = fixableRepo();
   const first = context(() => ({ stop: "quota", detail: "You've hit your usage limit." }));
-  const paused = await startRun({ cwd: repo, prompt: "make the test pass", preset }, first.ctx);
+  const paused = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, first.ctx);
   assert.equal(paused.status, "paused");
   assert.match(paused.reason ?? "", /usage limit/);
-  assert.equal(loadState(paused.dir).status, "paused");
 
   const second = createFakeBackend((req) => {
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     return report("done after the pause");
   });
   const resumed = await resumeRun(loadState(paused.dir), { ...first.ctx, backends: { fake: second } });
@@ -163,37 +176,58 @@ test("a subscription limit pauses the run; resume continues with a fresh session
 test("cancelling interrupts the run, and it can be resumed", async () => {
   const repo = fixableRepo();
   const controller = new AbortController();
-  const first = context(() => new Promise(() => {}), { signal: controller.signal });
-  setTimeout(() => controller.abort(), 300);
-  const stopped = await startRun({ cwd: repo, prompt: "make the test pass", preset }, first.ctx);
+  const first = context(
+    () => {
+      setTimeout(() => controller.abort(), 50);
+      return new Promise(() => {});
+    },
+    { signal: controller.signal },
+  );
+  const stopped = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, first.ctx);
   assert.equal(stopped.status, "interrupted");
   assert.equal(stopped.pid, undefined);
+  assert.deepEqual(stopped.inFlight, {});
 
   const second = createFakeBackend((req) => {
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     return report("finished");
   });
   const resumed = await resumeRun(loadState(stopped.dir), { ...first.ctx, signal: undefined, backends: { fake: second } });
   assert.equal(resumed.status, "finished");
+  assert.match(second.calls[0]!.prompt, /interrupted part way/);
 });
 
-test("a run left 'running' by a crashed engine can be resumed", async () => {
+test("a run whose engine died mid-turn is resumed and the lost turn is recorded", async () => {
   const repo = fixableRepo();
-  const { ctx } = context((req) => {
-    writeFixed(req.cwd, "ok");
-    return report("ok");
-  });
-  const done = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
-  // Pretend the engine died mid-turn: state says running, owned by a dead process.
-  const crashed = loadState(done.dir);
-  crashed.status = "running";
-  crashed.step = "agent";
+  const controller = new AbortController();
+  let snapshot = "";
+  let dir = "";
+  const first = context(
+    (req) =>
+      new Promise(() => {
+        write(req.cwd, "fixed.txt", "half");
+        // Capture run.json as a killed engine would leave it: mid-turn, owned by a live process.
+        const runs = join(first.ctx.home, "projects");
+        const found = execFileSync("find", [runs, "-name", "run.json"], { encoding: "utf8" }).trim().split("\n")[0]!;
+        dir = dirname(found);
+        snapshot = readFileSync(found, "utf8");
+        controller.abort();
+      }),
+    { signal: controller.signal },
+  );
+  await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, first.ctx);
+  const crashed = JSON.parse(snapshot);
+  assert.equal(crashed.status, "running");
+  assert.equal(Object.keys(crashed.inFlight).length, 1);
   crashed.pid = 999_999;
-  crashed.outcome = undefined;
-  crashed.attempts = [];
-  crashed.inFlight = { role: "worker", tier: "worker", kind: "initial", round: 0, backend: "fake", startedAt: new Date().toISOString() };
   saveState(crashed);
-  const resumed = await resumeRun(loadState(done.dir), ctx);
+
+  const second = createFakeBackend((req) => {
+    assert.equal(readFileSync(join(req.cwd, "fixed.txt"), "utf8"), "half\n", "the half-done work is still there");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("finished it");
+  });
+  const resumed = await resumeRun(loadState(dir), { ...first.ctx, signal: undefined, backends: { fake: second } });
   assert.equal(resumed.status, "finished");
   assert.equal(resumed.outcome?.checks, "passed");
   assert.deepEqual(resumed.attempts.map((a) => [a.kind, a.stop]), [
@@ -201,13 +235,12 @@ test("a run left 'running' by a crashed engine can be resumed", async () => {
     ["continue", "done"],
   ]);
   assert.deepEqual(resumed.attempts[0]!.usage, {}, "a lost turn's usage stays unknown");
-  assert.equal(resumed.inFlight, undefined);
 });
 
 test("an engine error is recorded as Neuromesh's fault and never left running", async () => {
   const repo = fixableRepo();
   const { ctx } = context(() => report("unused"));
-  const state = await startRun({ cwd: repo, prompt: "x", preset, worker: { backend: "missing" } }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset(), worker: { backend: "missing" } }, ctx);
   assert.equal(state.status, "failed");
   assert.equal(state.failure, "engine");
   assert.match(state.reason ?? "", /unknown backend "missing"/);
@@ -217,7 +250,7 @@ test("an engine error is recorded as Neuromesh's fault and never left running", 
 test("an agent failure is recorded as the agent's fault", async () => {
   const repo = fixableRepo();
   const { ctx } = context(() => ({ stop: "permission", detail: "user denied permission to run command" }));
-  const state = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
   assert.equal(state.status, "failed");
   assert.equal(state.failure, "agent");
   assert.match(state.reason ?? "", /permission/);
@@ -233,10 +266,10 @@ test("a check whose tool is missing is skipped instead of blocking the run", asy
     }),
   });
   const { ctx, events } = context((req) => {
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     return report("ok");
   });
-  const state = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
   assert.deepEqual(state.checks.map((c) => c.name), ["test"]);
   assert.equal(state.baseline?.find((r) => r.name === "lint")?.status, "unavailable");
   assert.ok(events.some((e) => e.type === "note" && /lint/.test(String(e.message))));
@@ -251,11 +284,11 @@ test("installed dependencies are copied in but never part of the diff; uncommitt
   const { ctx, events, fake } = context((req) => {
     assert.ok(existsSync(join(req.cwd, "node_modules", "dep", "index.js")), "dependencies are present for the agent");
     assert.ok(!existsSync(join(req.cwd, "scratch.txt")), "uncommitted files are not in the run");
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     writeFileSync(join(req.cwd, "node_modules", "dep", "extra.js"), "changed by the agent\n");
     return report("ok");
   });
-  const state = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
   assert.equal(state.reason, undefined);
   assert.equal(fake.calls.length, 1);
   assert.deepEqual(state.prepared, ["node_modules"]);
@@ -267,36 +300,276 @@ test("installed dependencies are copied in but never part of the diff; uncommitt
 test("an agent that commits its work is still captured in the diff", async () => {
   const repo = fixableRepo();
   const { ctx } = context((req) => {
-    writeFixed(req.cwd, "ok");
-    execFileSync("git", ["-c", "user.name=a", "-c", "user.email=a@a", "commit", "-qam", "x", "--allow-empty"], { cwd: req.cwd });
+    write(req.cwd, "fixed.txt", "ok");
     execFileSync("git", ["add", "fixed.txt"], { cwd: req.cwd });
     execFileSync("git", ["-c", "user.name=a", "-c", "user.email=a@a", "commit", "-qm", "agent commit"], { cwd: req.cwd });
     return report("committed");
   });
-  const state = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
   assert.deepEqual(state.outcome?.files.map((f) => f.path), ["fixed.txt"]);
   applyRun(state);
   assert.equal(readFileSync(join(repo, "fixed.txt"), "utf8"), "ok\n");
 });
 
-test("discard removes the worktree and branch; finished runs cannot be resumed", async () => {
+test("discard removes the worktrees and branches; finished runs cannot be resumed", async () => {
   const repo = fixableRepo();
   const { ctx } = context((req) => {
-    writeFixed(req.cwd, "ok");
+    write(req.cwd, "fixed.txt", "ok");
     return report("ok");
   });
-  const state = await startRun({ cwd: repo, prompt: "x", preset }, ctx);
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
   await assert.rejects(resumeRun(state, ctx), /nothing to resume/);
   discardRun(state);
   assert.ok(!existsSync(state.worktree));
   assert.equal(loadState(state.dir).status, "discarded");
-  assert.ok(!existsSync(join(repo, "fixed.txt")));
+  assert.equal(execFileSync("git", ["branch", "--list", "neuromesh*"], { cwd: repo, encoding: "utf8" }).trim(), "");
 });
 
 test("a run outside a git repository explains what to do", async () => {
   const dir = mkdtempSync(join(scratch, "plain-"));
   const { ctx } = context(() => report("x"));
-  await assert.rejects(startRun({ cwd: dir, prompt: "x", preset }, ctx), /git init/);
+  await assert.rejects(startRun({ cwd: dir, prompt: "x", preset: preset() }, ctx), /git init/);
+});
+
+// ---------------------------------------------------------------------------
+// Team runs
+
+/** Passes when a.txt and b.txt both say ok. */
+function twoPartRepo(): string {
+  return makeRepo({
+    "package.json": JSON.stringify({ name: "demo", scripts: { test: "node check.js" } }),
+    "check.js": "const fs=require('fs');const r=f=>fs.existsSync(f)&&fs.readFileSync(f,'utf8').trim()==='ok';if(!(r('a.txt')&&r('b.txt'))){console.error('need a.txt and b.txt');process.exit(1)}",
+  });
+}
+
+const twoTaskPlan = (dependent: boolean) => ({
+  structured: {
+    summary: "two parts",
+    tasks: [
+      { id: "t1", title: "part a", brief: "Write a.txt containing ok.", owned: ["a.txt"], depends_on: [], owner: "worker" },
+      { id: "t2", title: "part b", brief: "Write b.txt containing ok.", owned: ["b.txt"], depends_on: dependent ? ["t1"] : [], owner: "worker" },
+    ],
+  },
+});
+
+function workerFor(req: AgentRequest): void {
+  if (/Write a\.txt/.test(req.prompt)) write(req.cwd, "a.txt", "ok");
+  if (/Write b\.txt/.test(req.prompt)) write(req.cwd, "b.txt", "ok");
+}
+
+test("a team run: the expert plans, workers build in order, each task is merged", async () => {
+  const repo = twoPartRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (isPlan(req)) return twoTaskPlan(true);
+    workerFor(req);
+    return report("done");
+  });
+  const team = preset({ orchestrator: [EXPERT] }, { mode: "team" });
+  const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.tasks.map((t) => [t.id, t.status]), [["t1", "passed"], ["t2", "passed"]]);
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.tier, a.model]), [
+    ["orchestrator", "expert", "fake-expert"],
+    ["worker", "worker", "fake-worker"],
+    ["worker", "worker", "fake-worker"],
+  ]);
+  assert.equal(fake.calls[0]!.access, "read-only");
+  assert.match(fake.calls[0]!.prompt, /build a and b/);
+  assert.match(fake.calls[1]!.prompt, /Your task: part a/);
+  assert.doesNotMatch(fake.calls[1]!.prompt, /Write b\.txt/, "a worker only sees its own brief");
+  assert.deepEqual(state.outcome?.files.map((f) => f.path).sort(), ["a.txt", "b.txt"]);
+  assert.ok(events.some((e) => e.type === "plan.ready"));
+  applyRun(state);
+  assert.equal(readFileSync(join(repo, "b.txt"), "utf8"), "ok\n");
+});
+
+test("the tester's findings go back to the worker's session, and a pass lets the task merge", async () => {
+  const repo = fixableRepo();
+  let tests = 0;
+  const { ctx, fake } = context((req) => {
+    if (isTest(req)) {
+      tests += 1;
+      return tests === 1
+        ? { structured: { verdict: "fail", summary: "not quite", findings: [{ problem: "fixed.txt lacks the word great", file: "fixed.txt", reproduce: "cat fixed.txt" }] } }
+        : { structured: { verdict: "pass", summary: "good", findings: [] } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ tester: [TESTER] }) }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.kind]), [
+    ["worker", "initial"],
+    ["tester", "test"],
+    ["worker", "review-fix"],
+    ["tester", "test"],
+  ]);
+  const fix = fake.calls[2]!;
+  assert.equal(fix.resumeSessionId, "fake-session-0");
+  assert.match(fix.prompt, /lacks the word great/);
+  assert.match(fix.prompt, /cat fixed\.txt/);
+  const testerCall = fake.calls[1]!;
+  assert.notEqual(testerCall.cwd, state.tasks[0]!.worktree, "the tester works in a throwaway copy");
+  assert.match(testerCall.prompt, /\+ok/, "the tester sees the diff");
+  assert.equal(state.tasks[0]?.verdict?.verdict, "pass");
+});
+
+test("a stuck worker is escalated: the expert starts clean and sees diffs and failures, not the chat", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (req.model === "fake-expert") {
+      assert.ok(!existsSync(join(req.cwd, "fixed.txt")), "the expert starts from the task's clean start");
+      write(req.cwd, "fixed.txt", "ok");
+      return report("expert fixed it");
+    }
+    write(req.cwd, "fixed.txt", "nope");
+    return report("SECRET-WORKER-REASONING");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 3 }) }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(state.tasks[0]?.escalated, true);
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.kind, a.tier]), [
+    ["worker", "initial", "worker"],
+    ["worker", "repair", "worker"],
+    ["escalation", "escalation", "expert"],
+  ]);
+  const expertPrompt = fake.calls[2]!.prompt;
+  assert.match(expertPrompt, /\+nope/, "the autopsy carries the attempted diff");
+  assert.match(expertPrompt, /expected fixed.txt to say ok/, "and the exact failure");
+  assert.doesNotMatch(expertPrompt, /SECRET-WORKER-REASONING/, "but none of the worker's own words");
+  assert.ok(events.some((e) => e.type === "task.escalated" && /repeated/.test(String(e.reason))));
+});
+
+test("when the expert runs out of quota the next model in its list takes over", async () => {
+  const repo = twoPartRepo();
+  const { ctx, events } = context((req) => {
+    if (req.model === "expert-a") return { stop: "quota", detail: "Individual quota reached." };
+    if (isPlan(req)) return twoTaskPlan(true);
+    workerFor(req);
+    return report("done");
+  });
+  const team = preset(
+    {
+      orchestrator: [
+        { backend: "fake", model: "expert-a", tier: "expert" },
+        { backend: "fake", model: "expert-b", tier: "expert" },
+      ],
+    },
+    { mode: "team" },
+  );
+  const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.exhausted, ["fake/expert-a"]);
+  assert.equal(state.attempts.find((a) => a.role === "orchestrator" && a.stop === "done")?.model, "expert-b");
+  assert.ok(events.some((e) => e.type === "model.exhausted" && e.next === "fake/expert-b"));
+});
+
+test("a model that is no longer offered is skipped like an exhausted one", async () => {
+  const repo = fixableRepo();
+  const { ctx } = context((req) => {
+    if (req.model === "gone") return { stop: "error", detail: "invalid model selection: model gone is not recognized as a known model" };
+    write(req.cwd, "fixed.txt", "ok");
+    return report("ok");
+  });
+  const p = preset({ worker: [{ backend: "fake", model: "gone" }, { backend: "fake", model: "fake-worker" }] });
+  const state = await startRun({ cwd: repo, prompt: "x", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.exhausted, ["fake/gone"]);
+});
+
+test("independent tasks run side by side, and the expert fixes a merged result that fails", async () => {
+  // Each task alone passes; together they need c.txt, which only the integration fix adds.
+  const repo = makeRepo({
+    "package.json": JSON.stringify({ name: "demo", scripts: { test: "node check.js" } }),
+    "check.js": "const fs=require('fs');if(fs.existsSync('a.txt')&&fs.existsSync('b.txt')&&!fs.existsSync('c.txt')){console.error('a and b need c');process.exit(1)}",
+  });
+  let running = 0;
+  let overlap = false;
+  const { ctx, events } = context(async (req) => {
+    if (isPlan(req)) return twoTaskPlan(false);
+    if (req.model === "fake-expert") {
+      write(req.cwd, "c.txt", "glue");
+      return report("added c");
+    }
+    running += 1;
+    if (running > 1) overlap = true;
+    await new Promise((r) => setTimeout(r, 300));
+    workerFor(req);
+    running -= 1;
+    return report("done");
+  });
+  const team = preset({ orchestrator: [EXPERT] }, { mode: "team", maxParallel: 2 });
+  const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.ok(overlap, "the two workers ran at the same time");
+  assert.equal(state.integrationFixes, 1);
+  assert.ok(events.some((e) => e.type === "integration.fix"));
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.outcome?.files.map((f) => f.path).sort(), ["a.txt", "b.txt", "c.txt"]);
+  const fix = state.attempts.find((a) => a.kind === "integration");
+  assert.equal(fix?.tier, "expert");
+});
+
+test("a task whose change conflicts with merged work is redone on top of it", async () => {
+  const repo = makeRepo({ "package.json": JSON.stringify({ name: "demo", scripts: { test: "node -e 0" } }) });
+  const { ctx, fake, events } = context(async (req) => {
+    if (isPlan(req)) return twoTaskPlan(false);
+    await new Promise((r) => setTimeout(r, 200));
+    workerFor(req);
+    // Both tasks also write the same file, which forces a conflict for whichever merges second.
+    const mine = /a\.txt/.test(req.prompt.split("Your task:")[1] ?? "") ? "from a" : "from b";
+    const shared = join(req.cwd, "shared.txt");
+    write(req.cwd, "shared.txt", existsSync(shared) ? `${readFileSync(shared, "utf8").trim()} + ${mine}` : mine);
+    return report("done");
+  });
+  const team = preset({ orchestrator: [EXPERT] }, { mode: "team", maxParallel: 2 });
+  const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.tasks.reduce((n, t) => n + t.conflicts, 0), 1);
+  assert.ok(events.some((e) => e.type === "task.conflict"));
+  const redo = fake.calls.find((c) => /no longer applies/.test(c.prompt));
+  assert.ok(redo, "the conflicting task is redone");
+  assert.match(redo.prompt, /shared\.txt/, "with its earlier diff for reference");
+  applyRun(state);
+  assert.match(readFileSync(join(repo, "shared.txt"), "utf8"), /from a \+ from b|from b \+ from a/, "both changes survive");
+});
+
+test("a plan that breaks the rules is sent back once for correction", async () => {
+  const repo = twoPartRepo();
+  let plans = 0;
+  const { ctx, fake } = context((req) => {
+    if (isPlan(req)) {
+      plans += 1;
+      if (plans === 1) {
+        return { structured: { summary: "loop", tasks: [{ id: "t1", title: "x", brief: "Write a.txt", owned: [], depends_on: ["t1"], owner: "worker" }] } };
+      }
+      return twoTaskPlan(true);
+    }
+    workerFor(req);
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "build a and b", preset: preset({ orchestrator: [EXPERT] }, { mode: "team" }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.match(fake.calls[1]!.prompt, /depends on itself/);
+  assert.equal(fake.calls[1]!.resumeSessionId, "fake-session-0");
+});
+
+// ---------------------------------------------------------------------------
+// Pieces
+
+test("intake sends small requests to one worker and larger ones to the team", () => {
+  assert.equal(route("Fix the spelling mistakes in README.md. Do not change anything else.").mode, "solo");
+  assert.equal(route("Change the server's default port from 3000 to 8080, including where the README mentions it.").mode, "solo");
+  assert.equal(route("add a --verbose flag").mode, "solo");
+  assert.equal(route("Add a report with three parts:\n1. money.js\n2. report.js\n3. bin/report.js").mode, "team");
+  assert.equal(route("x ".repeat(80)).mode, "team");
 });
 
 test("detectChecks finds the project's own commands", () => {

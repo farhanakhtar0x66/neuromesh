@@ -1,7 +1,7 @@
 // Ending a run: apply its diff to the user's repository, or throw it away.
 
 import { existsSync, readFileSync } from "node:fs";
-import { applyPatch, removeWorktree, snapshot, writePatch } from "../workspace/workspace.ts";
+import { applyPatch, deleteBranches, removeWorktree, snapshot, writePatch } from "../workspace/workspace.ts";
 import { EventLog, runPaths, saveState } from "./store.ts";
 import type { RunState } from "./types.ts";
 
@@ -14,6 +14,12 @@ export function currentPatch(state: RunState): string {
     return diff.patch;
   }
   return existsSync(paths.patch) ? readFileSync(paths.patch, "utf8") : "";
+}
+
+function cleanUp(state: RunState): void {
+  for (const task of state.tasks ?? []) removeWorktree(state.repo, task.worktree, task.branch);
+  removeWorktree(state.repo, state.worktree, state.branch);
+  deleteBranches(state.repo, `neuromesh-task/${state.id}/`);
 }
 
 export interface ApplyResult {
@@ -43,7 +49,7 @@ export function applyRun(state: RunState, options: { force?: boolean; keep?: boo
     result = { method, files };
   }
 
-  if (!options.keep) removeWorktree(state.repo, state.worktree, state.branch);
+  if (!options.keep) cleanUp(state);
   state.status = "applied";
   saveState(state);
   new EventLog(paths.events, state.id).emit("run.applied", { ...result });
@@ -53,7 +59,7 @@ export function applyRun(state: RunState, options: { force?: boolean; keep?: boo
 export function discardRun(state: RunState): void {
   if (state.status === "running") throw new Error(`Run ${state.id} is still running. Stop it first.`);
   if (state.status === "applied") throw new Error(`Run ${state.id} was applied; there is nothing to discard.`);
-  removeWorktree(state.repo, state.worktree, state.branch);
+  cleanUp(state);
   state.status = "discarded";
   saveState(state);
   new EventLog(runPaths(state.dir).events, state.id).emit("run.discarded");

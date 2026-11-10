@@ -1,6 +1,7 @@
 import type { StopReason, Usage } from "../backends/types.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import type { FileChange } from "../workspace/workspace.ts";
+import type { ProgressHistory } from "./progress.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -17,6 +18,9 @@ export interface RoleConfig {
 
 export type Role = "worker" | "orchestrator" | "tester" | "escalation";
 
+/** Models to try for each role, in order. A later one is used when an earlier one runs out of quota. */
+export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
+
 /**
  * running      the engine is working on it right now
  * interrupted  stopped by the user or a crash; resumable
@@ -28,13 +32,25 @@ export type Role = "worker" | "orchestrator" | "tester" | "escalation";
  */
 export type RunStatus = "running" | "interrupted" | "paused" | "failed" | "finished" | "applied" | "discarded";
 
-export type RunStep = "setup" | "baseline" | "agent" | "checks" | "done";
+export type RunStep = "setup" | "baseline" | "plan" | "tasks" | "final" | "done";
+
+export type AttemptKind =
+  | "plan"
+  | "initial"
+  | "repair"
+  | "review-fix"
+  | "redo"
+  | "continue"
+  | "test"
+  | "escalation"
+  | "integration";
 
 export interface AttemptRecord {
   role: Role;
   tier: Tier;
+  task?: string;
   round: number;
-  kind: "initial" | "repair" | "continue";
+  kind: AttemptKind;
   backend: string;
   model?: string;
   stop: StopReason;
@@ -47,10 +63,74 @@ export interface AttemptRecord {
   logPath?: string;
 }
 
+export type InFlight = Omit<AttemptRecord, "stop" | "durationMs" | "usage" | "costUsdEquivalent" | "sessionId" | "detail"> & {
+  pid?: number;
+};
+
 export interface WorkerReport {
   status: "done" | "blocked" | "unknown";
   summary: string;
   notes?: string;
+}
+
+export interface Finding {
+  problem: string;
+  file?: string;
+  reproduce?: string;
+}
+
+export interface Verdict {
+  verdict: "pass" | "fail";
+  summary: string;
+  findings: Finding[];
+}
+
+export interface PlannedTask {
+  id: string;
+  title: string;
+  brief: string;
+  owned: string[];
+  dependsOn: string[];
+  /** "expert" for work the orchestrator judged too hard to hand out. */
+  owner: "worker" | "expert";
+}
+
+export interface Plan {
+  summary: string;
+  tasks: PlannedTask[];
+}
+
+export type TaskStep = "start" | "agent" | "checks" | "test" | "escalate" | "merge" | "done";
+
+export interface TaskState extends PlannedTask {
+  status: "pending" | "active" | "passed" | "failed";
+  step: TaskStep;
+  /** Worker turns taken after the first one (repairs, review fixes, redos). */
+  round: number;
+  /** The integration commit this task started from. */
+  base?: string;
+  branch: string;
+  worktree: string;
+  prepared: string[];
+  sessionId?: string;
+  /** Which model the session belongs to; a session cannot move to another model. */
+  sessionModel?: string;
+  /** Why the next agent turn is happening. */
+  next: "initial" | "repair" | "review-fix" | "redo" | "continue";
+  latest?: CheckResult[];
+  verdict?: Verdict;
+  testRounds: number;
+  report?: WorkerReport;
+  escalated: boolean;
+  escalationReason?: string;
+  /** Diffs and failures of earlier attempts, for the autopsy. */
+  history: { diff: string; failures: string; findings?: Finding[] }[];
+  progress: ProgressHistory;
+  conflicts: number;
+  previousDiff?: string;
+  outOfScope?: string[];
+  files?: FileChange[];
+  error?: string;
 }
 
 export interface RunOutcome {
@@ -61,42 +141,44 @@ export interface RunOutcome {
 }
 
 export interface RunState {
-  version: 1;
+  version: 2;
   id: string;
   dir: string;
   repo: string;
   prompt: string;
   preset: string;
-  worker: RoleConfig;
+  mode: "solo" | "team";
+  roles: RoleChain;
   repairs: number;
+  maxTasks: number;
+  maxParallel: number;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;
   branch: string;
+  /** The integration worktree: every finished task is merged here. */
   worktree: string;
   status: RunStatus;
-  /** Why the run stopped, when it did not finish. */
   reason?: string;
-  /** Whose fault a failure was: the agent's or Neuromesh's own. */
   failure?: "agent" | "engine";
   step: RunStep;
-  round: number;
-  /** Process running the engine, while status is "running". */
   pid?: number;
-  /** The agent turn in progress; still set after a crash, so resume can record it. */
-  inFlight?: { role: Role; tier: Tier; kind: AttemptRecord["kind"]; round: number; backend: string; model?: string; startedAt: string };
-  /** Process group of the agent tool, while a turn is in progress. */
-  agentPid?: number;
-  agentCommand?: string;
-  sessionId?: string;
-  /** Dependency folders cloned into the worktree; never part of the diff. */
+  /** Agent turns in progress, keyed by task id (or "plan", "integration"). */
+  inFlight: Record<string, InFlight>;
+  /** Models that ran out of quota or are no longer offered during this run. */
+  exhausted: string[];
   prepared: string[];
   checks: CheckSpec[];
   baseline?: CheckResult[];
   latest?: CheckResult[];
+  plan?: Plan;
+  planSession?: string;
+  tasks: TaskState[];
+  integrationFixes: number;
   attempts: AttemptRecord[];
-  report?: WorkerReport;
   outcome?: RunOutcome;
+  /** Why the intake chose solo or team. */
+  route?: string;
   createdAt: string;
   updatedAt: string;
 }

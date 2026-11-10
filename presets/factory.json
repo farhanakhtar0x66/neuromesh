@@ -1,0 +1,20 @@
+{
+  "name": "factory",
+  "description": "The factory floor: an expert plans and steps in only when workers get stuck; Gemini Flash workers build and test. Expert order: Claude Opus 4.6 (Antigravity), then GPT-6.1 Sol, then Claude Opus 5.5.",
+  "mode": "team",
+  "roles": {
+    "orchestrator": [
+      { "backend": "agy", "model": "claude-opus-4-6-thinking" },
+      { "backend": "agy", "model": "claude-sonnet-4-6" },
+      { "backend": "codex", "model": "gpt-6.1-sol", "effort": "medium" },
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }
+    ],
+    "worker": [{ "backend": "agy", "model": "gemini-3.8-flash-high" }],
+    "tester": [{ "backend": "agy", "model": "gemini-3.8-flash-high" }],
+    "escalation": "orchestrator"
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 30
+}

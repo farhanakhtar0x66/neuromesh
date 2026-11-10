@@ -63,7 +63,7 @@ while (activities < 2) {
   if (child.exitCode !== null) throw new Error("the run ended before it could be interrupted");
 }
 const before = findRun(defaultHome(), repo, "last");
-const agentPid = loadState(before.dir).agentPid;
+const agentPid = Object.values(loadState(before.dir).inFlight)[0]?.pid;
 console.log(`Sending ${signal} to the engine (pid ${child.pid}); agent tool pid ${agentPid}`);
 child.kill(signal);
 const code = await exited;

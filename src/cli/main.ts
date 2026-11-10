@@ -12,7 +12,7 @@ import type { EngineContext } from "../engine/run.ts";
 import { defaultHome, findRun, listRuns } from "../engine/store.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
-import { DEFAULT_PRESET, listPresets, loadPreset } from "../presets/presets.ts";
+import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, runEval } from "../eval/eval.ts";
 import { formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
@@ -24,7 +24,8 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --backend <id>            override the worker's backend (agy, claude, codex)
       --model <id>              override the worker's model
       --effort <level>          override the worker's effort
-      --repairs <n>             rounds allowed for fixing failing checks
+      --repairs <n>             extra worker turns per task for failing checks or review findings
+      --solo / --team           with a team preset: skip the orchestrator, or always use it
       --prompt-file <path>      read the request from a file
       --json                    print events as JSON lines instead of progress text
 
@@ -47,7 +48,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team"]);
 
 interface Parsed {
   positional: string[];
@@ -144,6 +145,7 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
       preset,
       worker: { backend: flags.get("backend"), model: flags.get("model"), effort: flags.get("effort") },
       repairs: Number.isInteger(repairs) ? repairs : undefined,
+      mode: flags.has("solo") ? "solo" : flags.has("team") ? "team" : undefined,
     },
     engineContext(flags, controller.signal),
   );
@@ -245,8 +247,12 @@ function commandDiscard({ positional, flags }: Parsed): number {
 
 function commandPresets(): number {
   for (const p of listPresets()) {
-    const worker = `${p.worker.backend} ${p.worker.model ?? "(default model)"}`;
-    process.stdout.write(`${p.name.padEnd(16)} ${worker.padEnd(36)} ${p.description}\n`);
+    process.stdout.write(`${p.name} (${p.mode})\n`);
+    if (p.mode === "team") process.stdout.write(`  expert  ${describeRole(p.roles.orchestrator)}\n`);
+    process.stdout.write(`  worker  ${describeRole(p.roles.worker)}\n`);
+    if (p.roles.tester) process.stdout.write(`  tester  ${describeRole(p.roles.tester)}\n`);
+    if (p.mode === "solo" && p.roles.escalation) process.stdout.write(`  expert  ${describeRole(p.roles.escalation)}\n`);
+    process.stdout.write(`  ${p.description}\n\n`);
   }
   return 0;
 }

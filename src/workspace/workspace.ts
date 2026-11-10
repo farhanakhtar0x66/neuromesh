@@ -125,3 +125,83 @@ export function writePatch(path: string, patch: string): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, patch);
 }
+
+// ---- Team runs: task branches merged into one integration branch ----
+
+const ENGINE_IDENTITY = ["-c", "user.name=Neuromesh", "-c", "user.email=neuromesh@localhost", "-c", "commit.gpgsign=false"];
+
+export function headCommit(worktree: string): string {
+  return git(worktree, "rev-parse", "HEAD").trim();
+}
+
+/** Commit everything the agent changed (except copied dependency folders). Returns the new HEAD. */
+export function commitAll(worktree: string, message: string, exclude: string[] = []): string {
+  const notIgnored = exclude.filter((dir) => tryGit(worktree, "check-ignore", "-q", dir) === undefined);
+  git(worktree, "add", "-A", "--", ".", ...notIgnored.map((dir) => `:(exclude)${dir}`));
+  if (git(worktree, "diff", "--cached", "--name-only").trim() !== "") {
+    git(worktree, ...ENGINE_IDENTITY, "commit", "-q", "--no-verify", "-m", message);
+  }
+  return headCommit(worktree);
+}
+
+/** Merge a task branch into the integration worktree. On a conflict nothing is changed. */
+export function mergeBranch(worktree: string, branch: string, message: string): "merged" | "conflict" {
+  try {
+    git(worktree, ...ENGINE_IDENTITY, "merge", "--no-ff", "--no-verify", "-q", "-m", message, branch);
+    return "merged";
+  } catch {
+    tryGit(worktree, "merge", "--abort");
+    return "conflict";
+  }
+}
+
+/** Put a worktree back to a commit, keeping ignored files such as copied dependencies. */
+export function resetTo(worktree: string, commit: string): void {
+  git(worktree, "reset", "-q", "--hard", commit);
+  git(worktree, "clean", "-q", "-fd");
+}
+
+/** A throwaway checkout of a commit, for the tester. */
+export function createDetachedWorktree(repoRoot: string, path: string, commit: string): void {
+  if (existsSync(path)) tryGit(repoRoot, "worktree", "remove", "--force", path);
+  mkdirSync(dirname(path), { recursive: true });
+  git(repoRoot, "worktree", "add", "--quiet", "--detach", path, commit);
+}
+
+export function removeDetachedWorktree(repoRoot: string, path: string): void {
+  if (existsSync(path)) tryGit(repoRoot, "worktree", "remove", "--force", path);
+  tryGit(repoRoot, "worktree", "prune");
+}
+
+/** Delete every branch under a prefix, such as a run's task branches. */
+export function deleteBranches(repoRoot: string, prefix: string): void {
+  const list = tryGit(repoRoot, "for-each-ref", "--format=%(refname:short)", `refs/heads/${prefix}`) ?? "";
+  for (const branch of list.split("\n").filter(Boolean)) tryGit(repoRoot, "branch", "-D", branch);
+}
+
+/** Paths changed by a diff that fall outside the owned paths (prefixes or simple globs). */
+export function outsideOwned(files: string[], owned: string[]): string[] {
+  if (owned.length === 0) return [];
+  const matchers = owned.map((pattern) => {
+    const clean = pattern.replace(/^\.\//, "").replace(/\/+$/, "");
+    if (/[*?]/.test(clean)) {
+      const regex = new RegExp(
+        "^" + clean.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*/g, "\u0000").replace(/\*/g, "[^/]*").replace(/\u0000/g, ".*").replace(/\?/g, ".") + "$",
+      );
+      return (path: string) => regex.test(path);
+    }
+    return (path: string) => path === clean || path.startsWith(`${clean}/`);
+  });
+  return files.filter((f) => !matchers.some((m) => m(f)));
+}
+
+/** Do two sets of owned paths possibly touch the same files? */
+export function ownedOverlap(a: string[], b: string[]): boolean {
+  if (a.length === 0 || b.length === 0) return true;
+  const norm = (p: string): string => p.replace(/^\.\//, "").replace(/\/+$/, "").replace(/\*.*$/, "");
+  return a.some((x) => b.some((y) => {
+    const p = norm(x);
+    const q = norm(y);
+    return p === "" || q === "" || p === q || p.startsWith(q.endsWith("/") ? q : `${q}/`) || q.startsWith(p.endsWith("/") ? p : `${p}/`) || (/[*?]/.test(x) && q.startsWith(p)) || (/[*?]/.test(y) && p.startsWith(q));
+  }));
+}

@@ -1,41 +1,82 @@
-// Presets are data: which model plays which role. They live in presets/*.json.
+// Presets are data: which models play which role. They live in presets/*.json.
+//
+// A role is a list of models to try in order; the next one takes over when one
+// runs out of quota or is no longer offered. "escalation" may name another
+// role ("orchestrator") to reuse its list.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { RoleConfig } from "../engine/types.ts";
+import type { Role, RoleChain, RoleConfig, Tier } from "../engine/types.ts";
 
 export interface Preset {
   name: string;
   description: string;
-  /** "solo": one agent does the whole request. Team modes arrive in M3. */
-  mode: "solo";
-  worker: RoleConfig;
-  /** How many times the agent may fix failing checks. */
+  /** "solo": one agent does the whole request. "team": an orchestrator plans and workers build. */
+  mode: "solo" | "team";
+  roles: RoleChain;
+  /** Extra worker turns per task: repairs after failing checks or a failed review. */
   repairs: number;
+  /** Most tasks the orchestrator may plan. */
+  maxTasks: number;
+  /** Most tasks worked on at the same time. */
+  maxParallel: number;
   /** Time limit for one agent turn. */
   turnTimeoutMinutes: number;
+  /** Team presets: let small requests skip the orchestrator. */
+  intake: boolean;
 }
 
 export const DEFAULT_PRESET = "solo-flash";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 
-function validate(raw: unknown, file: string): Preset {
-  const p = raw as Partial<Preset>;
-  const problem = (what: string): never => {
-    throw new Error(`Preset ${file}: ${what}`);
-  };
-  if (typeof p.name !== "string") problem("missing name");
-  if (p.mode !== "solo") problem(`mode must be "solo" (got ${JSON.stringify(p.mode)})`);
-  if (typeof p.worker?.backend !== "string") problem("worker.backend is required");
+const DEFAULT_TIER: Record<Role, Tier> = { orchestrator: "expert", escalation: "expert", worker: "worker", tester: "worker" };
+const ROLES: Role[] = ["orchestrator", "worker", "tester", "escalation"];
+
+function chain(raw: unknown, role: Role, file: string): RoleConfig[] {
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map((entry) => {
+    const c = entry as Partial<RoleConfig>;
+    if (typeof c?.backend !== "string") throw new Error(`Preset ${file}: every ${role} entry needs a backend`);
+    return { backend: c.backend, model: c.model, effort: c.effort, tier: c.tier ?? DEFAULT_TIER[role] };
+  });
+}
+
+export function validatePreset(raw: unknown, file: string): Preset {
+  const p = raw as Partial<Preset> & { worker?: unknown; roles?: Record<string, unknown> };
+  if (typeof p.name !== "string") throw new Error(`Preset ${file}: missing name`);
+  if (p.mode !== "solo" && p.mode !== "team") throw new Error(`Preset ${file}: mode must be "solo" or "team"`);
+  const rawRoles: Record<string, unknown> = { ...(p.roles ?? {}) };
+  if (p.worker !== undefined && rawRoles.worker === undefined) rawRoles.worker = p.worker;
+  const roles: RoleChain = {};
+  for (const role of ROLES) {
+    const value = rawRoles[role];
+    if (value === undefined || typeof value === "string") continue;
+    roles[role] = chain(value, role, file);
+  }
+  for (const role of ROLES) {
+    const value = rawRoles[role];
+    if (typeof value === "string") {
+      const target = roles[value as Role];
+      if (!target) throw new Error(`Preset ${file}: ${role} refers to "${value}", which is not defined`);
+      roles[role] = target.map((c) => ({ ...c, tier: DEFAULT_TIER[role] === "expert" ? "expert" : c.tier }));
+    }
+  }
+  if (!roles.worker) throw new Error(`Preset ${file}: a worker role is required`);
+  if (p.mode === "team" && !roles.orchestrator) throw new Error(`Preset ${file}: a team preset needs an orchestrator`);
+  const int = (value: unknown, fallback: number, min: number): number =>
+    typeof value === "number" && Number.isFinite(value) && value >= min ? Math.floor(value) : fallback;
   return {
-    name: p.name!,
+    name: p.name,
     description: p.description ?? "",
-    mode: "solo",
-    worker: { backend: p.worker!.backend, model: p.worker!.model, effort: p.worker!.effort, tier: p.worker!.tier ?? "worker" },
-    repairs: typeof p.repairs === "number" && p.repairs >= 0 ? Math.floor(p.repairs) : 1,
+    mode: p.mode,
+    roles,
+    repairs: int(p.repairs, p.mode === "team" ? 2 : 1, 0),
+    maxTasks: int(p.maxTasks, 4, 1),
+    maxParallel: int(p.maxParallel, 1, 1),
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
+    intake: p.intake ?? p.mode === "team",
   };
 }
 
@@ -44,7 +85,7 @@ export function listPresets(dir = PRESET_DIR): Preset[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .sort()
-    .map((f) => validate(JSON.parse(readFileSync(join(dir, f), "utf8")), f));
+    .map((f) => validatePreset(JSON.parse(readFileSync(join(dir, f), "utf8")), f));
 }
 
 export function loadPreset(name: string, dir = PRESET_DIR): Preset {
@@ -54,4 +95,11 @@ export function loadPreset(name: string, dir = PRESET_DIR): Preset {
     throw new Error(`Unknown preset "${name}". Known presets: ${known.join(", ")}`);
   }
   return preset;
+}
+
+export function describeRole(chain: RoleConfig[] | undefined): string {
+  if (!chain || chain.length === 0) return "-";
+  const first = chain[0]!;
+  const name = `${first.backend} ${first.model ?? "(default)"}${first.effort ? ` ${first.effort}` : ""}`;
+  return chain.length > 1 ? `${name} (+${chain.length - 1} fallback)` : name;
 }

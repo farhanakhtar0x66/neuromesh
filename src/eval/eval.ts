@@ -57,6 +57,7 @@ export interface TaskResult {
   task: string;
   kind: string;
   language: string;
+  mode: "solo" | "team";
   status: RunState["status"];
   checks: "passed" | "failed" | "none" | "-";
   hidden: "pass" | "fail" | "not run";
@@ -194,6 +195,7 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
       task: task.name,
       kind: task.kind,
       language: task.language,
+      mode: state.mode,
       status: state.status,
       checks: state.outcome?.checks ?? "-",
       hidden,
@@ -202,8 +204,8 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
       insertions: state.outcome?.insertions ?? 0,
       deletions: state.outcome?.deletions ?? 0,
       turns: state.attempts.length,
-      repairs: state.attempts.filter((a) => a.kind === "repair").length,
-      escalations: state.attempts.filter((a) => a.role === "escalation").length,
+      repairs: state.attempts.filter((a) => a.kind === "repair" || a.kind === "review-fix").length,
+      escalations: state.tasks.filter((t) => t.escalated).length,
       wallMs,
       usage: usageByModel(state.attempts),
       expertTokens: tiers.expert,
