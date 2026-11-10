@@ -1,0 +1,1 @@
+Add a `--json` flag to the `wordcount.py` command. With `--json` it prints a single JSON object `{"lines": <n>, "words": <n>, "chars": <n>}` instead of the normal text output. Without the flag, behaviour stays exactly as it is now. Add a test for the new flag.

@@ -1,0 +1,1 @@
+`slugify("  Hello,   World! ")` returns `"-hello-world-"`: it leaves dashes at both ends, and repeated punctuation or spaces produce double dashes. It should return `"hello-world"`. Fix `slugify` so slugs never start or end with a dash and never contain two dashes in a row.

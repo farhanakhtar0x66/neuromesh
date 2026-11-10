@@ -1,0 +1,1 @@
+{ "hiddenCheck": "diff -u hidden/expected.md README.md" }

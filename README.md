@@ -15,6 +15,42 @@ frontier model at a fraction of the cost.
 This is a fresh start. The earlier attempt lives in `neuromesh-old` and is kept
 as a read-only archive.
 
+## Using it
+
+Needs Node 24 or newer and git. Model access comes from the CLIs you are already
+logged in to (`agy`, `claude`, `codex`).
+
+```bash
+npm install
+```
+
+```bash
+npm link
+```
+
+Then, inside any git repository with at least one commit:
+
+```bash
+neuromesh run "make slugify trim leading and trailing dashes"
+```
+
+The run works in its own copy of the repository, runs the project's own checks
+before and after the agent, and gives the agent another turn if they fail. Your
+files are untouched until you apply the result:
+
+```bash
+neuromesh diff
+```
+
+```bash
+neuromesh apply
+```
+
+Other commands: `neuromesh status`, `neuromesh resume` (after Ctrl-C, a crash or
+a subscription limit), `neuromesh discard`, `neuromesh presets`,
+`neuromesh doctor`. The default preset is `solo-flash` (one Gemini 3.8 Flash
+agent); pick another with `--preset`.
+
 ## Read in this order
 
 1. [docs/00-lessons-from-old-attempt.md](docs/00-lessons-from-old-attempt.md):

@@ -1,0 +1,1 @@
+Add a `remove <id>` command to the todo CLI. It deletes the todo with that id and prints `Removed <id>`. If no todo has that id, it prints `No todo with id <id>` to stderr and exits with code 1. Add tests for both cases, and add the new command to the usage section of README.md.
