@@ -417,6 +417,8 @@ interface TurnResult {
   config?: RoleConfig;
 }
 
+const TRANSIENT = /stream was interrupted|ECONNRESET|socket hang up|ETIMEDOUT|\b50[23]\b|overloaded|temporarily unavailable|internal server error/i;
+
 const UNAVAILABLE =
   /invalid model|not recognized as a known model|not supported when using|issue with the selected model|model .*(not found|unavailable|does not exist)|no longer (available|supported)|does not have access to (the )?model/i;
 
@@ -444,6 +446,12 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     const sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
     const prompt = sameSession ? req.prompt : (req.freshPrompt ?? req.prompt);
     let result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
+
+    // A dropped connection or an overloaded service: try the same turn once more.
+    if (result.stop === "error" && TRANSIENT.test(result.detail ?? "") && !run.signal.aborted) {
+      log.emit("note", { message: `The ${req.role}'s connection failed (${(result.detail ?? "").slice(0, 80)}); trying once more.` });
+      result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
+    }
 
     // Resuming a session can fail (an expired or unknown id): one fresh try.
     if (sameSession && result.stop === "error" && !UNAVAILABLE.test(result.detail ?? "") && !run.signal.aborted) {

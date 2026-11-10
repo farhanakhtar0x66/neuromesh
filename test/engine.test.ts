@@ -493,6 +493,18 @@ test("a model out of quota stays out for later runs until its reset time", async
   assert.ok(Math.abs(until - (Date.now() + 4 * 3_600_000 + 55 * 60_000 + 56_000)) < 60_000);
 });
 
+test("a dropped connection is retried once", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake } = context((req, i) => {
+    if (i === 0) return { stop: "error", detail: "The stream was interrupted. Please continue the task you were working on." };
+    write(req.cwd, "fixed.txt", "ok");
+    return report("ok");
+  });
+  const state = await startRun({ cwd: repo, prompt: "x", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(fake.calls.length, 2);
+});
+
 test("a model that is no longer offered is skipped like an exhausted one", async () => {
   const repo = fixableRepo();
   const { ctx } = context((req) => {
