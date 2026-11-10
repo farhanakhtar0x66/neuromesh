@@ -9,6 +9,7 @@ import type { FakeScript } from "../src/backends/fake.ts";
 import type { AgentRequest } from "../src/backends/types.ts";
 import { detectChecks, failureSignature } from "../src/checks/checks.ts";
 import { applyRun, discardRun } from "../src/engine/apply.ts";
+import { clearCooldowns } from "../src/engine/cooldown.ts";
 import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
 import { loadState, saveState } from "../src/engine/store.ts";
@@ -158,6 +159,8 @@ test("a subscription limit pauses the run; resume continues with a fresh session
   assert.equal(paused.status, "paused");
   assert.match(paused.reason ?? "", /usage limit/);
 
+  // Resuming before the reset would only pause again; pretend the limit has reset.
+  clearCooldowns(first.ctx.home);
   const second = createFakeBackend((req) => {
     write(req.cwd, "fixed.txt", "ok");
     return report("done after the pause");
@@ -467,6 +470,27 @@ test("when the expert runs out of quota the next model in its list takes over", 
   assert.deepEqual(state.exhausted, ["fake/expert-a"]);
   assert.equal(state.attempts.find((a) => a.role === "orchestrator" && a.stop === "done")?.model, "expert-b");
   assert.ok(events.some((e) => e.type === "model.exhausted" && e.next === "fake/expert-b"));
+});
+
+test("a model out of quota stays out for later runs until its reset time", async () => {
+  const repo = fixableRepo();
+  let calls = 0;
+  const { ctx, events } = context((req) => {
+    if (req.model === "limited") {
+      calls += 1;
+      return { stop: "quota", detail: "Individual quota reached. Resets in 4h55m56s." };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("ok");
+  });
+  const p = preset({ worker: [{ backend: "fake", model: "limited" }, { backend: "fake", model: "fake-worker" }] });
+  await startRun({ cwd: repo, prompt: "x", preset: p }, ctx);
+  const second = await startRun({ cwd: repo, prompt: "x", preset: p }, ctx);
+  assert.equal(second.status, "finished");
+  assert.equal(calls, 1, "the second run does not try the limited model again");
+  assert.ok(events.some((e) => e.type === "note" && /still out of quota/.test(String(e.message))));
+  const until = Date.parse(JSON.parse(readFileSync(join(ctx.home, "cooldowns.json"), "utf8"))["fake/limited"].until);
+  assert.ok(Math.abs(until - (Date.now() + 4 * 3_600_000 + 55 * 60_000 + 56_000)) < 60_000);
 });
 
 test("a model that is no longer offered is skipped like an exhausted one", async () => {

@@ -7,6 +7,7 @@ import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
 import type { CallName, DoctorReport } from "../doctor/doctor.ts";
 import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
+import { clearCooldowns, coolingModels } from "../engine/cooldown.ts";
 import { resumeRun, startRun } from "../engine/run.ts";
 import type { EngineContext } from "../engine/run.ts";
 import { defaultHome, findRun, listRuns } from "../engine/store.ts";
@@ -41,6 +42,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --tasks a,b  --kinds k,l  run only some tasks, or some kinds (bug, feature, multi, ...)
       --name <name>             results name; rerunning a name continues where it stopped
   neuromesh eval compare <name> <name>...   compare saved eval results
+  neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh presets             list presets
   neuromesh doctor              check each backend with a few small live calls
 
@@ -48,7 +50,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear"]);
 
 interface Parsed {
   positional: string[];
@@ -331,6 +333,13 @@ async function main(): Promise<number> {
       return commandDiscard(parsed);
     case "eval":
       return commandEval(parsed);
+    case "cooldowns": {
+      if (parsed.flags.has("clear")) clearCooldowns(defaultHome());
+      const cooling = coolingModels(defaultHome());
+      const rows = Object.entries(cooling);
+      process.stdout.write(rows.length === 0 ? "No model is cooling down.\n" : rows.map(([m, c]) => `${m.padEnd(36)} until ${new Date(c.until).toLocaleString()}  ${c.reason.slice(0, 80)}`).join("\n") + "\n");
+      return 0;
+    }
     case "presets":
       return commandPresets();
     case "doctor":

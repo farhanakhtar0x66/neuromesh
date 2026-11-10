@@ -42,6 +42,7 @@ import {
   snapshot,
   writePatch,
 } from "../workspace/workspace.ts";
+import { coolingModels, recordCooldown } from "./cooldown.ts";
 import { attemptFrom, newHistory, observe } from "./progress.ts";
 import {
   continuePrompt,
@@ -236,6 +237,13 @@ function newTask(state: RunState, planned: PlannedTask): TaskState {
 
 async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promise<RunState> {
   const paths = runPaths(state.dir);
+  // Models another run found out of quota stay out until they reset.
+  const cooling = coolingModels(ctx.home);
+  const skipped = Object.keys(cooling).filter((m) => !state.exhausted.includes(m) && usesModel(state, m));
+  if (skipped.length > 0) {
+    state.exhausted.push(...skipped);
+    log.emit("note", { message: `Skipping models still out of quota: ${skipped.map((m) => `${m} (until ${new Date(cooling[m]!.until).toLocaleTimeString()})`).join(", ")}` });
+  }
   // Stops every task when one of them hits a quota limit with no fallback left.
   const inner = new AbortController();
   const onOuterAbort = (): void => inner.abort();
@@ -446,6 +454,7 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     const unavailable = (result.stop === "error" || result.stop === "auth") && UNAVAILABLE.test(result.detail ?? "");
     if (result.stop === "quota" || unavailable) {
       if (!state.exhausted.includes(modelKey(config))) state.exhausted.push(modelKey(config));
+      recordCooldown(ctx.home, modelKey(config), unavailable ? `not available: ${result.detail ?? ""}` : (result.detail ?? "quota"));
       saveState(state);
       const next = roleChain(state, req.role)[0];
       log.emit("model.exhausted", {
@@ -462,6 +471,10 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     }
     return { result, config };
   }
+}
+
+function usesModel(state: RunState, key: string): boolean {
+  return Object.values(state.roles).some((chain) => chain?.some((c) => modelKey(c) === key));
 }
 
 function emptyResult(stop: AgentResult["stop"], detail: string): AgentResult {
@@ -534,7 +547,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
 /** Turn a non-finished agent result into how the run should stop. */
 function stopFor(result: AgentResult, what: string): Stop {
   if (result.stop === "cancelled") return { status: "interrupted", reason: "stopped by the user" };
-  if (result.stop === "quota") return { status: "paused", reason: `subscription limits reached for every ${what} model: ${result.detail ?? ""}`.trim() };
+  if (result.stop === "quota") {
+    return { status: "paused", reason: `subscription limits reached for every ${what} model: ${result.detail ?? ""} (see "neuromesh cooldowns" for when they reset)`.trim() };
+  }
   return { status: "failed", reason: `${what} ${result.stop}: ${result.detail ?? "no detail"}`, failure: "agent" };
 }
 
