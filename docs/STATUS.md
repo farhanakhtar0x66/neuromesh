@@ -121,3 +121,11 @@ routing, plan only clearly large requests (and then split independent parts),
 two-step escalation (advice, then takeover), expert budget 250k per run,
 tester only when the project has no checks, and stall protection (10-minute
 idle timeout, 10-second linger after a final event, one retry on network errors).
+10. **Worker ladder (owner's request, from the research's tiered effort).**
+    `factory-wf` now starts every task on Gemini Flash low and climbs to Flash
+    high when stuck, before the expert is asked. Being measured as
+    `ladder-hard` (hard and large tasks). The E1 runs started before the ladder
+    and before the tester was turned back on; they measure reliability.
+11. **The tester is back on.** A low-effort worker passed the visible checks
+    with a wrong cache implementation (hidden tests failed) and nothing stopped
+    it. The tester runs on Gemini, the cheap quota, so it stays on.

@@ -51,6 +51,30 @@ Default team preset `factory`: expert Claude Opus 4.6 → Sonnet 4.6 (both throu
 Antigravity) → GPT-6.1 Sol medium (Codex) → Claude Opus 5.5 medium (Claude
 Code); worker and tester Gemini 3.8 Flash high (Antigravity).
 
+## The escalation ladder
+
+From cheapest to most expensive, each step taken only when the one before is stuck:
+
+1. **Repair turns** on the same worker session, with the exact check failures
+   or the tester's findings.
+2. **Climb a rung** (when the preset has a `workerLadder`): the same work, a
+   stronger worker (for `factory-wf`, Gemini 3.8 Flash low, then high) in a
+   fresh session told exactly what went wrong. Each rung gets its own repairs.
+   This follows the neuromesh-research idea of tiered effort: low for ordinary
+   turns, high kept for escalation.
+3. **Expert advice**: the expert reads the current code and the autopsy
+   (read-only) and returns a short diagnosis and steps; the top-rung worker
+   applies them in its own session.
+4. **Expert takeover**: the task is reset and the expert does it from the
+   autopsy.
+5. **Give up** with the work kept and the checks reported as failing.
+
+"Stuck" is decided by the engine alone: the stagnation breaker (a repeated
+state, or two attempts without progress), running out of repair rounds, a
+reviewer who still finds problems, or a worker turn that failed outright. The
+expert budget (250k fresh tokens per run in the team presets) caps steps 3
+and 4, and planning.
+
 ## Rules the engine applies (no model involved)
 
 - **Task acceptance.** A task may not break a check that passed before the run.
