@@ -43,6 +43,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --tasks a,b  --kinds k,l  run only some tasks, or some kinds (bug, feature, multi, ...)
       --name <name>             results name; rerunning a name continues where it stopped
       --rerun a,b               run these tasks again even though they have results
+      --model <id>              use this worker model instead of the preset's
   neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
@@ -199,6 +200,7 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     tasks,
     ctx,
     rerun: flags.get("rerun")?.split(",").filter(Boolean),
+    workerModel: flags.get("model"),
     onTaskStart: (task, i, total) => process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`),
     onTaskDone: (r) =>
       process.stderr.write(

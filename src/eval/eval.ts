@@ -150,6 +150,8 @@ export interface EvalOptions {
   ctx: EngineContext;
   /** Tasks to run again even though they have a result. */
   rerun?: string[];
+  /** Replace the preset's worker model for every task. */
+  workerModel?: string;
   onTaskStart?: (task: EvalTask, index: number, total: number) => void;
   onTaskDone?: (result: TaskResult) => void;
 }
@@ -179,7 +181,7 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
     options.onTaskStart?.(task, index, todo.length);
     const repo = seedRepo(task, join(evalDir(ctx.home, options.name), "repos", task.name));
     const started = Date.now();
-    const state = await startRun({ cwd: repo, prompt: task.prompt, preset }, ctx);
+    const state = await startRun({ cwd: repo, prompt: task.prompt, preset, worker: options.workerModel ? { model: options.workerModel } : undefined }, ctx);
     const wallMs = Date.now() - started;
 
     let hidden: TaskResult["hidden"] = "not run";
