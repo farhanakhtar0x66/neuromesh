@@ -45,7 +45,12 @@ import {
 import { coolingModels, recordCooldown } from "./cooldown.ts";
 import { attemptFrom, newHistory, observe } from "./progress.ts";
 import {
+  ADVICE_SCHEMA,
+  advisedFixPrompt,
+  advisePrompt,
   continuePrompt,
+  freshAdvisedFixPrompt,
+  parseAdvice,
   escalationPrompt,
   failureSummary,
   freshFollowUpPrompt,
@@ -138,6 +143,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     repairs: options.repairs ?? preset.repairs,
     maxTasks: preset.maxTasks,
     maxParallel: preset.maxParallel,
+    advise: preset.advise ?? true,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: repo.head,
     branch: `neuromesh/${id}`,
@@ -675,6 +681,16 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
   return state.tasks.every((t) => t === task || t.status === "passed" || t.status === "failed");
 }
 
+/** Advice first, takeover second. */
+function nextEscalation(state: RunState, task: TaskState): "advise" | "escalate" {
+  return state.advise && !task.advised && task.owner !== "expert" ? "advise" : "escalate";
+}
+
+/** Worker turns allowed after the first: the repairs, plus one for following the expert's advice. */
+function repairLimit(state: RunState, task: TaskState): number {
+  return state.repairs + (task.advised ? 1 : 0);
+}
+
 function canEscalate(state: RunState): boolean {
   return roleChain(state, "escalation").length > 0;
 }
@@ -702,9 +718,10 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     if (task.step === "agent") {
       const role = roleFor(state, task);
       const kind: AttemptKind = task.escalated && task.next === "initial" ? "escalation" : task.next;
-      const followUp = task.next === "repair" || task.next === "review-fix";
+      const followUp = task.next === "repair" || task.next === "review-fix" || task.next === "advised-fix";
       const prompt =
-        task.next === "repair" ? repairPrompt(state, task)
+        task.next === "advised-fix" ? advisedFixPrompt(task)
+        : task.next === "repair" ? repairPrompt(state, task)
         : task.next === "review-fix" ? reviewFixPrompt(task)
         : task.next === "redo" ? redoPrompt(state, task)
         : task.next === "continue" ? continuePrompt(state, task)
@@ -718,7 +735,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         round: task.round,
         cwd: task.worktree,
         prompt,
-        freshPrompt: followUp ? freshFollowUpPrompt(state, task) : prompt,
+        freshPrompt: task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : prompt,
         access: "write",
         schema: REPORT_SCHEMA,
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
@@ -741,7 +758,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       task.history.push({ diff: diffOf(task), failures: `The ${role} stopped: ${result.stop}: ${result.detail ?? ""}` });
       if (!task.escalated && canEscalate(state)) {
         task.escalationReason = `the worker ${result.stop}`;
-        task.step = "escalate";
+        task.step = nextEscalation(state, task);
         saveState(state);
         continue;
       }
@@ -776,11 +793,11 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
         return failTask(run, task, "checks still fail after the expert's attempt");
       }
-      if (decision === "oscillated" || decision === "no-progress" || task.round >= state.repairs) {
+      if (decision === "oscillated" || decision === "no-progress" || task.round >= repairLimit(state, task)) {
         const why = decision === "oscillated" ? "the worker repeated an earlier failed state" : decision === "no-progress" ? "two attempts without progress" : "out of repair rounds";
         if (canEscalate(state)) {
           task.escalationReason = why;
-          task.step = "escalate";
+          task.step = nextEscalation(state, task);
           saveState(state);
           continue;
         }
@@ -830,10 +847,10 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
-      if (task.round >= state.repairs) {
+      if (task.round >= repairLimit(state, task)) {
         if (canEscalate(state)) {
           task.escalationReason = "the reviewer still found problems after the repair rounds";
-          task.step = "escalate";
+          task.step = nextEscalation(state, task);
           saveState(state);
           continue;
         }
@@ -844,6 +861,37 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       nextRound(run, task, "review-fix");
         continue;
+    }
+
+    if (task.step === "advise") {
+      const { result } = await turn(run, {
+        key: `${task.id}-advice`,
+        role: "escalation",
+        kind: "advice",
+        task: task.id,
+        round: task.round,
+        cwd: task.worktree,
+        prompt: advisePrompt(state, task),
+        access: "read-only",
+        schema: ADVICE_SCHEMA,
+      });
+      if (result.stop === "cancelled" || result.stop === "quota") return stopFor(result, "escalation");
+      task.advised = true;
+      const advice = result.stop === "done" ? parseAdvice(result) : undefined;
+      if (!advice) {
+        log.emit("note", { message: `The expert gave no usable advice for task ${task.id}; it takes the task over instead.` });
+        task.step = "escalate";
+        saveState(state);
+        continue;
+      }
+      task.advice = advice;
+      log.emit("task.advised", { task: task.id, reason: task.escalationReason, diagnosis: advice.diagnosis, steps: advice.steps });
+      task.round += 1;
+      task.next = "advised-fix";
+      task.progress = newHistory();
+      task.step = "agent";
+      saveState(state);
+      continue;
     }
 
     if (task.step === "escalate") {

@@ -43,6 +43,8 @@ export type AttemptKind =
   | "continue"
   | "test"
   | "escalation"
+  | "advice"
+  | "advised-fix"
   | "integration";
 
 export interface AttemptRecord {
@@ -85,6 +87,11 @@ export interface Verdict {
   findings: Finding[];
 }
 
+export interface Advice {
+  diagnosis: string;
+  steps: string[];
+}
+
 export interface PlannedTask {
   id: string;
   title: string;
@@ -100,7 +107,7 @@ export interface Plan {
   tasks: PlannedTask[];
 }
 
-export type TaskStep = "start" | "agent" | "checks" | "test" | "escalate" | "merge" | "done";
+export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "merge" | "done";
 
 export interface TaskState extends PlannedTask {
   status: "pending" | "active" | "passed" | "failed";
@@ -116,7 +123,10 @@ export interface TaskState extends PlannedTask {
   /** Which model the session belongs to; a session cannot move to another model. */
   sessionModel?: string;
   /** Why the next agent turn is happening. */
-  next: "initial" | "repair" | "review-fix" | "redo" | "continue";
+  next: "initial" | "repair" | "review-fix" | "redo" | "continue" | "advised-fix";
+  /** The expert's diagnosis for a stuck worker (the first, cheaper step of escalation). */
+  advice?: Advice;
+  advised?: boolean;
   latest?: CheckResult[];
   verdict?: Verdict;
   testRounds: number;
@@ -152,6 +162,8 @@ export interface RunState {
   repairs: number;
   maxTasks: number;
   maxParallel: number;
+  /** Escalate in two steps: the expert advises first, and takes over only if that fails. */
+  advise: boolean;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

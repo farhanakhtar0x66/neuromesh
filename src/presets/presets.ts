@@ -27,6 +27,8 @@ export interface Preset {
   intake: boolean;
   /** How the intake decides; see src/intake/intake.ts. */
   routing: "rules" | "worker-first";
+  /** A stuck worker first gets the expert's advice; the expert takes over only if that fails. */
+  advise: boolean;
 }
 
 export const DEFAULT_PRESET = "solo-flash";
@@ -80,6 +82,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
     intake: p.intake ?? p.mode === "team",
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
+    advise: p.advise ?? true,
   };
 }
 

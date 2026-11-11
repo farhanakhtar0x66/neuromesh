@@ -58,6 +58,7 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
     turnTimeoutMinutes: 1,
     intake: false,
     routing: "rules",
+    advise: false,
     ...extra,
   };
 }
@@ -447,6 +448,56 @@ test("a stuck worker is escalated: the expert starts clean and sees diffs and fa
   assert.match(expertPrompt, /expected fixed.txt to say ok/, "and the exact failure");
   assert.doesNotMatch(expertPrompt, /SECRET-WORKER-REASONING/, "but none of the worker's own words");
   assert.ok(events.some((e) => e.type === "task.escalated" && /repeated/.test(String(e.reason))));
+});
+
+const isAdvice = (r: AgentRequest): boolean => Boolean((r.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis);
+
+test("a stuck worker first gets the expert's advice and fixes the task itself", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (isAdvice(req)) return { structured: { diagnosis: "fixed.txt must contain exactly ok", steps: ["Write ok to fixed.txt"] } };
+    write(req.cwd, "fixed.txt", /Diagnosis: fixed\.txt must contain exactly ok/.test(req.prompt) ? "ok" : "nope");
+    return report("tried");
+  });
+  const state = await startRun(
+    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true }) },
+    ctx,
+  );
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(state.tasks[0]?.escalated, false, "the expert never took the task over");
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.kind, a.tier]), [
+    ["worker", "initial", "worker"],
+    ["worker", "repair", "worker"],
+    ["escalation", "advice", "expert"],
+    ["worker", "advised-fix", "worker"],
+  ]);
+  const adviceCall = fake.calls[2]!;
+  assert.equal(adviceCall.access, "read-only", "the expert only reads");
+  assert.match(adviceCall.prompt, /\+nope/, "and sees the failed attempt");
+  assert.equal(fake.calls[3]!.resumeSessionId, "fake-session-1", "the worker continues its latest session");
+  assert.ok(events.some((e) => e.type === "task.advised"));
+});
+
+test("when the advice does not help, the expert takes the task over", async () => {
+  const repo = fixableRepo();
+  const { ctx } = context((req) => {
+    if (isAdvice(req)) return { structured: { diagnosis: "unclear", steps: ["try harder"] } };
+    if (req.model === "fake-expert") {
+      write(req.cwd, "fixed.txt", "ok");
+      return report("expert did it");
+    }
+    write(req.cwd, "fixed.txt", "nope");
+    return report("tried");
+  });
+  const state = await startRun(
+    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true }) },
+    ctx,
+  );
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(state.tasks[0]?.escalated, true);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "repair", "advice", "advised-fix", "escalation"]);
 });
 
 test("when the expert runs out of quota the next model in its list takes over", async () => {

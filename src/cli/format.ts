@@ -49,6 +49,7 @@ function oneLine(text: string, limit: number): string {
 }
 
 const ROLE_LABEL: Record<string, string> = { orchestrator: "Expert (plan)", escalation: "Expert", worker: "Worker", tester: "Tester" };
+// An advice turn is the expert reading, not editing.
 
 function who(event: NeuromeshEvent): string {
   const role = String(event.role ?? "worker");
@@ -112,6 +113,10 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
     }
     case "repair.started":
       return `${bold("Repair")} ${dim(`[${String(event.task)}]`)} round ${String(event.round)} (${String(event.kind)})`;
+    case "task.advised": {
+      const steps = (event.steps as string[]) ?? [];
+      return `${magenta("Expert advice")} ${dim(`[${String(event.task)}]`)} (${String(event.reason)}): ${oneLine(String(event.diagnosis), 150)}${steps.map((st, i) => `\n   ${i + 1}. ${oneLine(st, 140)}`).join("")}`;
+    }
     case "task.escalated":
       return `${magenta("Escalated")} ${dim(`[${String(event.task)}]`)} to the expert: ${String(event.reason)}`;
     case "task.conflict":

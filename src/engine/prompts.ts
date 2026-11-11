@@ -4,7 +4,7 @@
 import type { AgentResult } from "../backends/types.ts";
 import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
-import type { Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
+import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
 export const REPORT_SCHEMA = {
   type: "object",
@@ -62,6 +62,16 @@ export const VERDICT_SCHEMA = {
     },
   },
   required: ["verdict", "summary", "findings"],
+  additionalProperties: false,
+};
+
+export const ADVICE_SCHEMA = {
+  type: "object",
+  properties: {
+    diagnosis: { type: "string" },
+    steps: { type: "array", items: { type: "string" } },
+  },
+  required: ["diagnosis", "steps"],
   additionalProperties: false,
 };
 
@@ -227,6 +237,63 @@ Give your answer in the required JSON format:
 - verdict: "pass" or "fail"
 - summary: one sentence
 - findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass`;
+}
+
+function attemptsText(task: TaskState): string {
+  return task.history
+    .slice(-2)
+    .map((h, i) => {
+      const reviewer = h.findings && h.findings.length > 0 ? `\nReviewer findings:\n${findingText(h.findings)}` : "";
+      return `Attempt ${i + 1}, its change:\n\`\`\`diff\n${h.diff.slice(0, 8_000)}\n\`\`\`\nWhat went wrong:\n${h.failures.slice(0, 4_000) || "(checks passed)"}${reviewer}`;
+    })
+    .join("\n\n");
+}
+
+/** The cheap first step of escalation: the expert looks, explains, and the worker fixes. */
+export function advisePrompt(state: RunState, task: TaskState): string {
+  return `You are the lead engineer. A worker on your team is stuck on the task below, and you are asked for advice, not to do the work. Do not change any files. The current directory holds the worker's latest attempt.
+
+${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
+
+The worker's last attempts and how they failed (its reasoning is left out; do not assume its approach was right):
+
+${attemptsText(task) || "(no attempt was recorded)"}
+
+Read what you need, find the real cause, and tell the worker how to fix it. The worker is capable but missed something; give it the key insight and concrete steps (which file, which function, what to change), not a full implementation. Keep it short.
+
+Give your answer in the required JSON format:
+- diagnosis: what is actually wrong, in a few sentences
+- steps: the changes to make, in order`;
+}
+
+function adviceText(advice: Advice | undefined): string {
+  if (!advice) return "";
+  return `Diagnosis: ${advice.diagnosis}\n\nWhat to do:\n${advice.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+}
+
+export function advisedFixPrompt(task: TaskState): string {
+  return `The lead engineer looked at your work and the failures.
+
+${adviceText(task.advice)}
+
+Follow this advice, run the checks again, then give your final answer in the same JSON format as before.`;
+}
+
+export function freshAdvisedFixPrompt(state: RunState, task: TaskState): string {
+  return `${taskPrompt(state, task)}
+
+An earlier attempt at this task already changed some files in this directory (\`git diff\` shows them), but it did not work. The lead engineer looked at it:
+
+${adviceText(task.advice)}
+
+Follow this advice.`;
+}
+
+export function parseAdvice(result: AgentResult): Advice | undefined {
+  const a = (result.structured ?? parseStructured(result.finalText)) as Partial<Advice> | undefined;
+  if (!a || typeof a.diagnosis !== "string" || a.diagnosis.trim() === "") return undefined;
+  const steps = Array.isArray(a.steps) ? a.steps.filter((s): s is string => typeof s === "string" && s.trim() !== "") : [];
+  return { diagnosis: a.diagnosis.trim(), steps };
 }
 
 export function escalationPrompt(state: RunState, task: TaskState): string {
