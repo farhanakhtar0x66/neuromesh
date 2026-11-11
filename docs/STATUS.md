@@ -23,10 +23,10 @@ session if usage runs out. Read this first, then `docs/02-v0.1-plan.md`.
 | M0 backend conformance | Done. See `docs/03-m0-results.md`. |
 | M1 single agent, prompt to applied diff | Done. 5/5 live tasks, both kill and Ctrl-C resume pass. See `docs/04-m1-results.md`. |
 | M2 task suite and baselines | 20 tasks in `evals/tasks`, `neuromesh eval` done. `base-solo-flash` running. `base-solo-opus46` paused after 5/5 passes: Opus 4.6 on Antigravity hit its individual quota after ~600k tokens; rerun the same command to continue once it resets. |
-| M3 orchestrator and workers | Engine done (`src/engine/run.ts`), 45 tests. First live `factory` eval on the multi-part tasks running (`try-factory-multi`). |
-| M4 tester, repair, escalation | Built into the same engine: tester, review fixes, stagnation breaker, escalation autopsy, model fallback. Needs live measurement. |
-| M5 intake and parallel work | Built: intake rules (`src/intake`), parallel scheduler with owned-path overlap, conflict redo, integration fix. Needs live measurement with `maxParallel` > 1. |
-| M6 hardening and release | Not started |
+| M3 orchestrator and workers | Done. Live: factory 4/4 on multi-part tasks. |
+| M4 tester, repair, escalation | Done. Advice-then-takeover escalation, expert budget, tester policy. Live escalation check running (`esc-check-flash-low`). |
+| M5 intake and parallel work | Done. Worker-first intake; live 4-task plan on the large shop ran two tasks in parallel (`large-factory-wf-split`). |
+| M6 hardening and release | In progress: E1 runs, results document, README. |
 
 ## How to resume
 
@@ -106,3 +106,18 @@ finished are skipped.
    showed 23% weekly left. Expert quota is the binding constraint, so the expert
    baseline stays small (`hard-solo-sol`, `large-solo-sol`) and Sol is otherwise
    spent only through the factory's advice and takeover.
+8. **Final baselines (after removing infrastructure faults and test bugs).**
+   Gemini 3.8 Flash alone: 20/20 standard, 4/4 hard, 1/1 large, about 8-12
+   minutes and 0 expert tokens per hard task. GPT-6.1 Sol alone: 4/4 hard, 1/1
+   large, 1-2 minutes and 22-42k fresh expert tokens per task. On this suite
+   the cheap worker is as capable as the expert, so the factory's job is to
+   keep the expert idle, which worker-first routing does. Escalation has not
+   been needed live; `esc-check-flash-low` runs the hard tasks with a weaker
+   worker (Flash low effort) to exercise advice and takeover for real.
+9. **E1 in progress:** `e1-factory-wf-1..3`, three full-suite runs of `factory-wf`.
+
+Current engine choices for `factory-wf` (all measured above): worker-first
+routing, plan only clearly large requests (and then split independent parts),
+two-step escalation (advice, then takeover), expert budget 250k per run,
+tester only when the project has no checks, and stall protection (10-minute
+idle timeout, 10-second linger after a final event, one retry on network errors).
