@@ -102,6 +102,7 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity">): StreamP
       }
     },
     result: () => run,
+    finished: () => run.stop !== undefined,
   };
 }
 

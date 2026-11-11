@@ -305,7 +305,15 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
 
       if (state.step === "plan") {
         const outcome = await planStep(run);
-        if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
+        if (outcome?.status === "failed" && outcome.failure === "agent") {
+          // Planning is a help, not a requirement: a worker takes the whole request,
+          // and the expert is still there if it gets stuck.
+          log.emit("note", { message: `Planning failed (${outcome.reason.slice(0, 160)}); a worker takes the whole request.` });
+          state.mode = "solo";
+          state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "worker" })];
+        } else if (outcome) {
+          return outcome.status === "interrupted" ? interrupted() : end(outcome);
+        }
         state.step = "tasks";
         saveState(state);
         continue;
@@ -417,7 +425,7 @@ interface TurnResult {
   config?: RoleConfig;
 }
 
-const TRANSIENT = /stream was interrupted|ECONNRESET|socket hang up|ETIMEDOUT|\b50[23]\b|overloaded|temporarily unavailable|internal server error/i;
+const TRANSIENT = /stream was interrupted|^interrupted$|ECONNRESET|socket hang up|ETIMEDOUT|read tcp|connection reset|request failed: Post|\b50[23]\b|UNAVAILABLE|overloaded|temporarily unavailable|internal server error/i;
 
 const UNAVAILABLE =
   /invalid model|not recognized as a known model|not supported when using|issue with the selected model|model .*(not found|unavailable|does not exist)|no longer (available|supported)|does not have access to (the )?model/i;

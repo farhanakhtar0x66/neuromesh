@@ -22,7 +22,15 @@ export interface ParsedRun {
 export interface StreamParser {
   onEvent(event: Record<string, unknown>): void;
   result(): ParsedRun;
+  /** True once the tool has sent its last event for the turn. */
+  finished?(): boolean;
 }
+
+/**
+ * After a tool sends its final event it should exit. Some versions linger
+ * instead (seen with Antigravity and Codex); after this long they are stopped.
+ */
+export const LINGER_MS = 10_000;
 
 export interface CliInvocation {
   command: string;
@@ -30,16 +38,23 @@ export interface CliInvocation {
   stdin?: string;
   request: AgentRequest;
   parser: StreamParser;
+  /** How long to wait for the tool to exit after its final event (tests shorten it). */
+  lingerMs?: number;
 }
 
 export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
   const { request, parser } = invocation;
+  // Our own stop signal, so a tool that lingers after finishing can be ended
+  // without that counting as the user cancelling.
+  const linger = new AbortController();
+  const signal = request.signal ? AbortSignal.any([request.signal, linger.signal]) : linger.signal;
+  let lingerTimer: NodeJS.Timeout | undefined;
   const proc = await runProcess({
     command: invocation.command,
     args: invocation.args,
     cwd: request.cwd,
     timeoutMs: request.timeoutMs,
-    signal: request.signal,
+    signal,
     stdin: invocation.stdin,
     logPath: request.logPath,
     onSpawn: request.onSpawn,
@@ -50,8 +65,14 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
       } catch {
         // Not JSON after all; the raw line is still in the log.
       }
+      if (!lingerTimer && parser.finished?.()) {
+        lingerTimer = setTimeout(() => linger.abort(), invocation.lingerMs ?? LINGER_MS);
+        lingerTimer.unref();
+      }
     },
   });
+  clearTimeout(lingerTimer);
+  const endedByUs = linger.signal.aborted && !request.signal?.aborted;
 
   const parsed = parser.result();
   const stderrTail = proc.stderr.trim().slice(-2_000);
@@ -61,7 +82,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
   if (proc.spawnError) {
     stop = "error";
     detail = `could not start ${invocation.command}: ${proc.spawnError}`;
-  } else if (proc.cancelled) {
+  } else if (proc.cancelled && !endedByUs) {
     stop = "cancelled";
   } else if (proc.timedOut) {
     stop = "timeout";

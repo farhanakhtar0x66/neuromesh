@@ -91,3 +91,16 @@ test("a missing program is reported, not thrown", async () => {
   });
   assert.ok(result.spawnError);
 });
+
+test("a tool that keeps running after its final event is stopped, and its result kept", async () => {
+  const { runCli } = await import("../src/backends/shared.ts");
+  const { antigravityParser } = await import("../src/backends/antigravity.ts");
+  const script =
+    "console.log(JSON.stringify({event:'result',result:{status:'SUCCESS',response:'done',usage:{input_tokens:5,output_tokens:1}}})); setTimeout(()=>{},60000)";
+  const request = { cwd: process.cwd(), prompt: "x", access: "read-only" as const, timeoutMs: 30_000 };
+  const started = Date.now();
+  const result = await runCli({ command: "node", args: ["-e", script], request, parser: antigravityParser({}), lingerMs: 300 });
+  assert.equal(result.stop, "done");
+  assert.equal(result.finalText, "done");
+  assert.ok(Date.now() - started < 10_000, "did not wait for the time limit");
+});

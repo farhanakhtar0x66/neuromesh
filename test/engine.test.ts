@@ -578,6 +578,20 @@ test("a task whose change conflicts with merged work is redone on top of it", as
   assert.match(readFileSync(join(repo, "shared.txt"), "utf8"), /from a \+ from b|from b \+ from a/, "both changes survive");
 });
 
+test("when planning fails outright, a worker takes the whole request", async () => {
+  const repo = fixableRepo();
+  const { ctx, events } = context((req) => {
+    if (isPlan(req)) return { stop: "timeout", detail: "the planner hung" };
+    write(req.cwd, "fixed.txt", "ok");
+    return report("did it alone");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ orchestrator: [EXPERT] }, { mode: "team" }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.mode, "solo");
+  assert.equal(state.outcome?.checks, "passed");
+  assert.ok(events.some((e) => e.type === "note" && /Planning failed/.test(String(e.message))));
+});
+
 test("a plan that breaks the rules is sent back once for correction", async () => {
   const repo = twoPartRepo();
   let plans = 0;

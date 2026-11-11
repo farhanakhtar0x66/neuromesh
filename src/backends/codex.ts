@@ -75,6 +75,7 @@ export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSc
         lastError = str(event.message) ?? lastError;
       }
     },
+    finished: () => completed || failed,
     result() {
       if (failed) {
         run.detail = lastError ?? "turn failed";

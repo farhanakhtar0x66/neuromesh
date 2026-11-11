@@ -88,6 +88,7 @@ export function antigravityParser(request: Pick<AgentRequest, "onActivity">): St
       }
     },
     result: () => run,
+    finished: () => run.stop !== undefined,
   };
 }
 
