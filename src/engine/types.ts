@@ -2,6 +2,7 @@ import type { StopReason, Usage } from "../backends/types.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import type { FileChange } from "../workspace/workspace.ts";
 import type { ProgressHistory } from "./progress.ts";
+import type { Brief } from "../intake/brief.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -16,7 +17,7 @@ export interface RoleConfig {
   tier?: Tier;
 }
 
-export type Role = "worker" | "orchestrator" | "tester" | "escalation";
+export type Role = "worker" | "orchestrator" | "tester" | "escalation" | "briefer";
 
 /** Models to try for each role, in order. A later one is used when an earlier one runs out of quota. */
 export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
@@ -32,9 +33,10 @@ export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
  */
 export type RunStatus = "running" | "interrupted" | "paused" | "failed" | "finished" | "applied" | "discarded";
 
-export type RunStep = "setup" | "baseline" | "plan" | "tasks" | "final" | "done";
+export type RunStep = "setup" | "baseline" | "spec" | "plan" | "tasks" | "final" | "done";
 
 export type AttemptKind =
+  | "spec"
   | "plan"
   | "initial"
   | "repair"
@@ -158,7 +160,12 @@ export interface RunState {
   id: string;
   dir: string;
   repo: string;
+  /** What the agents work from: the brief when the brief engine ran, else the request as typed. */
   prompt: string;
+  /** The request as typed, when the brief engine rewrote it. */
+  request?: string;
+  /** What the brief engine made of the request, and the staffing it chose. */
+  brief?: Brief;
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;

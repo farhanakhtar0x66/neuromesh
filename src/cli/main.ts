@@ -2,7 +2,7 @@
 // Neuromesh command line.
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
 import type { CallName, DoctorReport } from "../doctor/doctor.ts";
@@ -13,10 +13,11 @@ import type { EngineContext } from "../engine/run.ts";
 import { defaultHome, findRun, listRuns } from "../engine/store.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
+import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, runEval } from "../eval/eval.ts";
-import { formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
+import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
 
@@ -47,6 +48,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
+  neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
   neuromesh presets             list presets
   neuromesh doctor              check each backend with a few small live calls
 
@@ -159,6 +161,28 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
   return finish(state, flags);
 }
 
+/** Show what the brief engine makes of a request, without running anything. */
+function commandBrief({ positional, flags }: Parsed): number {
+  const file = flags.get("prompt-file");
+  const prompt = (file ? readFileSync(file, "utf8") : positional.join(" ")).trim();
+  if (prompt === "") {
+    process.stderr.write('Give a request: neuromesh brief "build a typing test for the terminal"\n');
+    return 2;
+  }
+  const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
+  const repo = findRepo(flags.get("repo") ?? process.cwd());
+  const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: preset.roles.briefer !== undefined });
+  const s = brief.staffing;
+  process.stdout.write(
+    `${bold("Kind")}: ${brief.kind}${brief.surface ? `, ${brief.surface}` : ""}\n` +
+      `${bold("Staffing")}: ${s.plan ? `the expert plans; up to ${s.agents} workers at once` : "one worker"}, starting on the ${s.rung === "top" ? "strongest" : "cheapest"} rung; ` +
+      `${s.tester ? "tester on" : "no tester"}${s.spec ? "; a cheap model writes a product spec first" : ""}\n` +
+      s.reasons.map((r) => `  - ${r}`).join("\n") +
+      `\n\n${bold("The brief the agents get")}:\n${renderBrief(brief)}\n`,
+  );
+  return 0;
+}
+
 async function commandEval({ positional, flags }: Parsed): Promise<number> {
   const home = defaultHome();
   if (positional[0] === "compare") {
@@ -180,7 +204,8 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     return 0;
   }
   const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
-  const tasks = loadTasks(undefined, {
+  // --suite: another folder of tasks, e.g. evals/builds for the judged build tests.
+  const tasks = loadTasks(flags.get("suite") ? resolve(flags.get("suite")!) : undefined, {
     names: flags.get("tasks")?.split(",").filter(Boolean),
     kinds: flags.get("kinds")?.split(",").filter(Boolean),
   });
@@ -349,6 +374,8 @@ async function main(): Promise<number> {
       return commandDiscard(parsed);
     case "eval":
       return commandEval(parsed);
+    case "brief":
+      return commandBrief(parsed);
     case "cooldowns": {
       if (parsed.flags.has("clear")) clearCooldowns(defaultHome());
       const cooling = coolingModels(defaultHome());

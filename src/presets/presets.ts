@@ -25,6 +25,12 @@ export interface Preset {
   turnTimeoutMinutes: number;
   /** Team presets: let small requests skip the orchestrator. */
   intake: boolean;
+  /**
+   * Run the brief engine (src/intake/brief.ts): clean and complete the request and
+   * choose the staffing by rule. On for team presets unless set; with it on, the
+   * brief engine decides about planning instead of `routing`.
+   */
+  brief: boolean;
   /** How the intake decides; see src/intake/intake.ts. */
   routing: "rules" | "worker-first";
   /** A stuck worker first gets the expert's advice; the expert takes over only if that fails. */
@@ -44,8 +50,8 @@ export const DEFAULT_PRESET = "factory-luna";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 
-const DEFAULT_TIER: Record<Role, Tier> = { orchestrator: "expert", escalation: "expert", worker: "worker", tester: "worker" };
-const ROLES: Role[] = ["orchestrator", "worker", "tester", "escalation"];
+const DEFAULT_TIER: Record<Role, Tier> = { orchestrator: "expert", escalation: "expert", worker: "worker", tester: "worker", briefer: "worker" };
+const ROLES: Role[] = ["orchestrator", "worker", "tester", "escalation", "briefer"];
 
 function chain(raw: unknown, role: Role, file: string): RoleConfig[] {
   const list = Array.isArray(raw) ? raw : [raw];
@@ -90,6 +96,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     maxParallel: int(p.maxParallel, 1, 1),
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
     intake: p.intake ?? p.mode === "team",
+    brief: p.brief ?? p.mode === "team",
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,

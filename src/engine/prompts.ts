@@ -4,6 +4,7 @@
 import type { AgentResult } from "../backends/types.ts";
 import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
+import type { Spec } from "../intake/brief.ts";
 import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
 export const REPORT_SCHEMA = {
@@ -14,6 +15,19 @@ export const REPORT_SCHEMA = {
     notes: { type: "string" },
   },
   required: ["status", "summary", "notes"],
+  additionalProperties: false,
+};
+
+export const SPEC_SCHEMA = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    summary: { type: "string" },
+    features: { type: "array", items: { type: "string" } },
+    behaviour: { type: "array", items: { type: "string" } },
+    out_of_scope: { type: "array", items: { type: "string" } },
+  },
+  required: ["name", "summary", "features", "behaviour", "out_of_scope"],
   additionalProperties: false,
 };
 
@@ -94,6 +108,41 @@ When you finish, give your final answer in the required JSON format:
 
 function isWholeRequest(state: RunState, task: TaskState): boolean {
   return state.tasks.length === 1 && task.brief === state.prompt;
+}
+
+/** A cheap model turns a request too short to build from into a product spec. */
+export function specPrompt(request: string): string {
+  return `A developer is about to build the request below, and it is too short to build from. Write the product spec they need. Do not write code and do not create or edit files.
+
+The request:
+${request}
+
+Give your answer in the required JSON format:
+- name: a short working name of your own for the product
+- summary: two or three sentences on what it is and who uses it
+- features: 8 to 14 must-have features, most important first. Include what anyone asking for this would expect without saying it. One sentence each, concrete enough to check.
+- behaviour: the exact rules that are easy to get wrong: how every number shown is calculated, what every key or command does, what happens at the edges (empty input, the end, a mistake, going back), and what each screen or output shows.
+- out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
+
+Rules:
+- Do not contradict the request, and do not choose the programming language unless the request does.
+- Where the request names an existing product as its model, describe the expected features in your own generic terms. Do not copy that product's name, texts, word lists or artwork.
+- Prefer a small product that is complete and pleasant to use over a long list of half-features.`;
+}
+
+export function parseSpec(result: AgentResult): Spec | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as Record<string, unknown> | undefined;
+  if (!raw || typeof raw !== "object") return undefined;
+  const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim()) : []);
+  const features = list(raw.features);
+  if (features.length === 0) return undefined;
+  return {
+    name: typeof raw.name === "string" ? raw.name.trim() : "",
+    summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
+    features,
+    behaviour: list(raw.behaviour),
+    outOfScope: list(raw.out_of_scope),
+  };
 }
 
 /** The first turn of a task. */

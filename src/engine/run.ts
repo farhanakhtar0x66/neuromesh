@@ -23,6 +23,8 @@ import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import type { CheckResult } from "../checks/checks.ts";
+import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
+import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
 import { git } from "../workspace/git.ts";
@@ -58,9 +60,12 @@ import {
   integrationPrompt,
   parsePlan,
   parseReport,
+  parseSpec,
   parseVerdict,
   PLAN_SCHEMA,
   plannerPrompt,
+  SPEC_SCHEMA,
+  specPrompt,
   redoPrompt,
   repairPrompt,
   REPORT_SCHEMA,
@@ -130,7 +135,17 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
 
   let mode: "solo" | "team" = options.mode ?? preset.mode;
   let why: string | undefined;
-  if (!options.mode && preset.mode === "team" && preset.intake) {
+  let brief: Brief | undefined;
+  if (preset.brief) {
+    brief = buildBrief(options.prompt, repoFacts(repo.root), {
+      team: preset.mode === "team" && options.mode !== "solo",
+      maxParallel: preset.maxParallel,
+      canSpec: roles.briefer !== undefined,
+    });
+    if (options.mode === "team") brief.staffing.plan = true;
+    mode = brief.staffing.plan ? "team" : "solo";
+    why = brief.staffing.reasons.join("; ");
+  } else if (!options.mode && preset.mode === "team" && preset.intake) {
     const decision = route(options.prompt, preset.routing);
     mode = decision.mode;
     why = decision.reason;
@@ -141,13 +156,15 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     id,
     dir,
     repo: repo.root,
-    prompt: options.prompt,
+    prompt: brief ? renderBrief(brief) : options.prompt,
+    request: brief ? options.prompt : undefined,
+    brief,
     preset: preset.name,
     mode,
     roles,
     repairs: options.repairs ?? preset.repairs,
     maxTasks: preset.maxTasks,
-    maxParallel: preset.maxParallel,
+    maxParallel: brief && !brief.staffing.plan ? 1 : preset.maxParallel,
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
     test: preset.test ?? "always",
@@ -183,7 +200,11 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     base: repo.head,
     prompt: options.prompt,
   });
-  if (why) log.emit("route", { mode, reason: why });
+  if (brief) {
+    log.emit("brief", { kind: brief.kind, surface: brief.surface, attached: brief.attached.map((a) => a.path), standards: brief.standards.length, staffing: brief.staffing });
+  } else if (why) {
+    log.emit("route", { mode, reason: why });
+  }
   if (repo.dirty) {
     log.emit("note", { message: "The repository has uncommitted changes. The run starts from the last commit and does not see them." });
   }
@@ -228,7 +249,10 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
 
 function newTask(state: RunState, planned: PlannedTask): TaskState {
   const dir = join(state.dir, "tasks", planned.id);
+  // The brief engine may start a task on the strongest worker rung.
+  const rung = state.brief?.staffing.rung === "top" && state.workerLadder ? state.workerLadder.length - 1 : undefined;
   return {
+    rung,
     id: planned.id,
     title: planned.title,
     brief: planned.brief,
@@ -308,6 +332,16 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           log.emit("note", { message: `Skipping checks that cannot run here: ${missing.join(", ")}` });
         }
         log.emit("checks.finished", { phase: "baseline", results: brief(results) });
+        state.step = "spec";
+        saveState(state);
+        continue;
+      }
+
+      if (state.step === "spec") {
+        if (state.brief?.staffing.spec && !state.brief.spec) {
+          const outcome = await specStep(run);
+          if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
+        }
         if (state.mode === "team") {
           state.step = "plan";
         } else {
@@ -610,6 +644,39 @@ function stopFor(result: AgentResult, what: string): Stop {
 // ---------------------------------------------------------------------------
 // The expert plans.
 
+/**
+ * A request too thin to build from gets a product spec from a cheap model. The
+ * spec is a help, not a requirement: when the turn fails, the work goes on from
+ * the brief as it is. Only a pause or an interruption stops the run.
+ */
+async function specStep(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const brief = state.brief!;
+  const { result, config } = await turn(run, {
+    key: "spec",
+    role: "briefer",
+    kind: "spec",
+    round: 0,
+    cwd: state.worktree,
+    prompt: specPrompt(brief.request),
+    access: "read-only",
+    schema: SPEC_SCHEMA,
+  });
+  if (result.stop === "quota" || result.stop === "cancelled") return stopFor(result, "briefer");
+  const spec = result.stop === "done" ? parseSpec(result) : undefined;
+  if (!spec) {
+    log.emit("note", { message: "No usable product spec came back; the work goes on from the request as it is." });
+    brief.staffing.spec = false;
+    saveState(state);
+    return undefined;
+  }
+  brief.spec = spec;
+  state.prompt = renderBrief(brief);
+  saveState(state);
+  log.emit("spec.ready", { model: config ? modelKey(config) : undefined, name: spec.name, features: spec.features.length, behaviour: spec.behaviour.length });
+  return undefined;
+}
+
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
   const files = git(state.worktree, "ls-files").split("\n").filter(Boolean);
@@ -716,6 +783,7 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
 /** The tester costs a full agent session; with test "no-checks" it only runs where nothing else verifies the work. */
 function wantsTester(state: RunState, task: TaskState): boolean {
   if (!state.roles.tester || task.escalated) return false;
+  if (state.brief && !state.brief.staffing.tester) return false;
   return state.test !== "no-checks" || state.checks.length === 0;
 }
 
@@ -835,7 +903,21 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "checks") {
-      const results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
+      // A project that had no checks may get some from the work itself (a new
+      // program with its own tests). From then on they gate the task.
+      if (state.checks.length === 0) {
+        const found = detectChecks(task.worktree);
+        if (found.length > 0) {
+          state.checks = found;
+          log.emit("note", { message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
+        }
+      }
+      let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
+      const cannotRun = results.filter((r) => r.status === "unavailable").map((r) => r.name);
+      if (cannotRun.length > 0) {
+        state.checks = state.checks.filter((c) => !cannotRun.includes(c.name));
+        results = results.filter((r) => r.status !== "unavailable");
+      }
       if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
       const diff = diffOf(task);
       task.latest = results;

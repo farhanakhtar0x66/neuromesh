@@ -57,6 +57,7 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
     maxParallel: 1,
     turnTimeoutMinutes: 1,
     intake: false,
+    brief: false,
     routing: "rules",
     advise: false,
     test: "always",
@@ -800,4 +801,83 @@ test("failure signatures ignore timings and paths", () => {
   const c = "FAIL test/x.test.ts (12 ms)\nat /Users/a/tmp/run-1/src/x.ts:4:2\nexpected 1 got 3";
   assert.equal(failureSignature(a), failureSignature(b));
   assert.notEqual(failureSignature(a), failureSignature(c));
+});
+
+// ---------------------------------------------------------------------------
+// The brief engine
+
+const isSpec = (r: AgentRequest): boolean => Boolean((r.outputSchema?.properties as Record<string, unknown> | undefined)?.out_of_scope);
+
+test("a thin request gets a product spec from the cheap model, and every agent works from the brief", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake, events } = context((req) => {
+    if (isSpec(req)) {
+      return { structured: { name: "Keys", summary: "A typing test.", features: ["Shows words to type"], behaviour: ["WPM is correct characters / 5 per minute"], out_of_scope: ["Accounts"] } };
+    }
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "good", findings: [] } };
+    write(req.cwd, "app.js", "console.log('hi')");
+    return report("built");
+  });
+  const LADDER2 = [
+    { backend: "fake", model: "low", tier: "worker" as const },
+    { backend: "fake", model: "high", tier: "worker" as const },
+  ];
+  const p = preset({ orchestrator: [EXPERT], tester: [TESTER], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true, workerLadder: LADDER2 });
+  const state = await startRun({ cwd: repo, prompt: "hey pls create a typing app in terminal tui", preset: p }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.kind, a.model]), [
+    ["briefer", "spec", "cheap"],
+    ["worker", "initial", "high"],
+    ["tester", "test", "fake-tester"],
+  ]);
+  assert.equal(state.request, "hey pls create a typing app in terminal tui");
+  assert.equal(fake.calls[0]!.access, "read-only");
+  const worker = fake.calls[1]!.prompt;
+  assert.match(worker, /Create a typing app in terminal tui\./);
+  assert.match(worker, /Working name: Keys/);
+  assert.match(worker, /WPM is correct characters/);
+  assert.match(worker, /Restore the terminal on every way out/);
+  assert.match(fake.calls[2]!.prompt, /Out of scope, do not build:\n- Accounts/, "the tester reviews against the same brief");
+  assert.ok(events.some((e) => e.type === "brief" && e.kind === "greenfield"));
+  assert.ok(events.some((e) => e.type === "spec.ready"));
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert").length, 0);
+});
+
+test("a failed spec turn does not stop the work, and a small change skips the tester", async () => {
+  const empty = makeRepo({ ".gitignore": "x\n" });
+  const first = context((req) => {
+    if (isSpec(req)) return { stop: "error", detail: "boom" };
+    write(req.cwd, "app.js", "1");
+    return report("built");
+  });
+  const p = preset({ orchestrator: [EXPERT], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true });
+  const built = await startRun({ cwd: empty, prompt: "create a typing app in terminal tui", preset: p }, first.ctx);
+  assert.equal(built.status, "finished", built.reason);
+  assert.doesNotMatch(first.fake.calls.at(-1)!.prompt, /Product spec/);
+
+  const repo = fixableRepo({ "src/app.js": "export const port = 3000;\n" });
+  const second = context((req) => {
+    assert.ok(!isTest(req), "no tester for a small change");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const small = preset({ orchestrator: [EXPERT], tester: [TESTER] }, { mode: "team", brief: true });
+  const state = await startRun({ cwd: repo, prompt: "Change the default port from 3000 to 8080.", preset: small }, second.ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial"]);
+});
+
+test("tests that a new project brings with it gate the work", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake } = context((req, index) => {
+    write(req.cwd, "package.json", JSON.stringify({ name: "new", scripts: { test: "node check.js" } }));
+    write(req.cwd, "check.js", index === 0 ? "console.error('one test fails');process.exit(1)" : "process.exit(0)");
+    return report("built");
+  });
+  const state = await startRun({ cwd: repo, prompt: "build it", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "repair"]);
+  assert.match(fake.calls[1]!.prompt, /one test fails/);
+  assert.equal(state.outcome?.checks, "passed");
 });
