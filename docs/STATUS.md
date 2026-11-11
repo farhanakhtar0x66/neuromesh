@@ -101,3 +101,8 @@ finished are skipped.
 6. **Two hidden checks of mine were wrong** (Python import path; an inventory
    query that matched). Both fixed and re-scored. Hard-task checks were each
    validated against a reference implementation for that reason.
+7. **Quota, as seen by the owner on 2026-11-11.** After a day of evals, Gemini
+   (Antigravity) showed 87% of its weekly limit left; ChatGPT Plus (GPT-6.1 Sol)
+   showed 23% weekly left. Expert quota is the binding constraint, so the expert
+   baseline stays small (`hard-solo-sol`, `large-solo-sol`) and Sol is otherwise
+   spent only through the factory's advice and takeover.
