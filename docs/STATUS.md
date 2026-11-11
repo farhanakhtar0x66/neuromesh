@@ -133,3 +133,11 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
 11. **The tester is back on.** A low-effort worker passed the visible checks
     with a wrong cache implementation (hidden tests failed) and nothing stopped
     it. The tester runs on Gemini, the cheap quota, so it stays on.
+12. **Tester value, measured.** Hard tasks with a Flash-low worker: 3/4 without
+    the tester (`esc-check-flash-low`), 4/4 with it
+    (`esc-check-flash-low-tester`), both with zero expert tokens.
+13. **Hidden-check ambiguity again.** `hard-js-cache` required a specific count
+    for a call that joins a load in progress, which the prompt never states.
+    The check now accepts hit, miss or neither (at most once); results
+    re-scored. The engine survived the Claude Code session quitting: evals run
+    detached and kept going.
