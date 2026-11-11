@@ -881,3 +881,22 @@ test("tests that a new project brings with it gate the work", async () => {
   assert.match(fake.calls[1]!.prompt, /one test fails/);
   assert.equal(state.outcome?.checks, "passed");
 });
+
+test("a tool that reports session totals on resume is recorded per turn", async () => {
+  const repo = fixableRepo();
+  const totals = [
+    { input: 100, cacheRead: 1_000, output: 10 },
+    { input: 150, cacheRead: 2_500, output: 25 },
+  ];
+  const { ctx } = context((req, index) => {
+    write(req.cwd, "fixed.txt", index === 0 ? "nope" : "ok");
+    return { ...report("done"), usage: totals[index], sessionId: "s1" };
+  });
+  ctx.backends.fake!.sessionTotals = true;
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => [a.kind, a.usage.input, a.usage.cacheRead, a.usage.output]), [
+    ["initial", 100, 1_000, 10],
+    ["repair", 50, 1_500, 15],
+  ]);
+});

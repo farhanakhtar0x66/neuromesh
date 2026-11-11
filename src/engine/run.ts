@@ -20,7 +20,7 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
-import { addUsage } from "../backends/types.ts";
+import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
@@ -158,6 +158,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     repo: repo.root,
     prompt: brief ? renderBrief(brief) : options.prompt,
     request: brief ? options.prompt : undefined,
+    usagePerTurn: true,
     brief,
     preset: preset.name,
     mode,
@@ -599,6 +600,13 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   });
 
   delete state.inFlight[req.key];
+  const usage =
+    backend.sessionTotals && resumeSessionId !== undefined && result.sessionId === resumeSessionId
+      ? usageSince(
+          result.usage,
+          state.attempts.filter((a) => a.sessionId === resumeSessionId && a.backend === backend.id).map((a) => a.usage),
+        )
+      : result.usage;
   const record: AttemptRecord = {
     role: req.role,
     tier,
@@ -610,7 +618,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     stop: result.stop,
     startedAt,
     durationMs: result.durationMs,
-    usage: result.usage,
+    usage,
     costUsdEquivalent: result.costUsdEquivalent,
     sessionId: result.sessionId,
     detail: result.detail,
@@ -625,7 +633,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     stop: result.stop,
     model: record.model,
     durationMs: result.durationMs,
-    usage: result.usage,
+    usage,
     detail: result.detail,
     quotaUsed: result.quotaUsed,
   });
@@ -1181,6 +1189,25 @@ export interface ModelUsage {
   durationMs: number;
   usage: Usage;
   costUsdEquivalent?: number;
+}
+
+/**
+ * A run's attempts with usage per turn. Runs recorded before usagePerTurn hold
+ * Codex's running session totals for resumed turns; those are turned into the
+ * change since the session's previous turn.
+ */
+export function perTurnAttempts(state: RunState, sessionTotals: (backend: string) => boolean): AttemptRecord[] {
+  if (state.usagePerTurn) return state.attempts;
+  const seen = new Map<string, AttemptRecord[]>();
+  return state.attempts.map((a) => {
+    if (!a.sessionId || !sessionTotals(a.backend)) return a;
+    const key = `${a.backend}/${a.sessionId}`;
+    const earlier = seen.get(key);
+    // Earlier turns as recorded: running totals. The previous total is the latest one.
+    const fixed = earlier && earlier.length > 0 ? { ...a, usage: usageSince(a.usage, [earlier[earlier.length - 1]!.usage]) } : a;
+    seen.set(key, [...(earlier ?? []), a]);
+    return fixed;
+  });
 }
 
 export function usageByModel(attempts: AttemptRecord[]): ModelUsage[] {

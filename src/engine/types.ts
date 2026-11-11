@@ -162,6 +162,12 @@ export interface RunState {
   repo: string;
   /** What the agents work from: the brief when the brief engine ran, else the request as typed. */
   prompt: string;
+  /**
+   * Usage of resumed sessions is recorded per turn. Runs made before 2026-11-11
+   * 14:45 IST lack this and hold Codex's running session totals instead; see
+   * perTurnAttempts.
+   */
+  usagePerTurn?: boolean;
   /** The request as typed, when the brief engine rewrote it. */
   request?: string;
   /** What the brief engine made of the request, and the staffing it chose. */

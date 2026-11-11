@@ -16,7 +16,7 @@ import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
-import { evalDir, loadReport, loadTasks, recheckEval, runEval } from "../eval/eval.ts";
+import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
 import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
@@ -193,6 +193,14 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
       return r;
     });
     process.stdout.write(formatComparison(reports) + "\n");
+    return 0;
+  }
+  if (positional[0] === "recount") {
+    for (const n of positional.slice(1)) {
+      for (const c of recountEval(home, n)) {
+        if (c.before !== c.after) process.stdout.write(`${n}  ${c.task.padEnd(22)} ${Math.round(c.before / 1000)}k -> ${Math.round(c.after / 1000)}k tokens\n`);
+      }
+    }
     return 0;
   }
   if (positional[0] === "recheck") {

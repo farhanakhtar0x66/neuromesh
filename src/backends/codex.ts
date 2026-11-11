@@ -94,6 +94,8 @@ export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSc
 export const codex: AgentBackend = {
   id: "codex",
   displayName: "Codex",
+  // `codex exec resume` reports the thread's running totals (seen in its own session files).
+  sessionTotals: true,
   version: () => capture("codex", ["--version"]),
   async run(request: AgentRequest): Promise<AgentResult> {
     let schemaDir: string | undefined;
