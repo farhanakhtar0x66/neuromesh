@@ -159,6 +159,12 @@ export interface RunState {
   dir: string;
   repo: string;
   prompt: string;
+  /**
+   * Usage of resumed sessions is recorded per turn. Runs made before 2026-11-11
+   * 14:45 IST lack this and hold Codex's running session totals instead; see
+   * perTurnAttempts.
+   */
+  usagePerTurn?: boolean;
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;

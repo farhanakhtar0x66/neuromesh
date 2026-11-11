@@ -87,6 +87,11 @@ export interface AgentBackend {
   /** Installed version, or undefined when the tool is not installed. */
   version(): Promise<string | undefined>;
   run(request: AgentRequest): Promise<AgentResult>;
+  /**
+   * A resumed session reports usage as running totals for the whole session,
+   * not for the turn (Codex does). The engine subtracts the earlier turns.
+   */
+  sessionTotals?: boolean;
 }
 
 export function addUsage(a: Usage, b: Usage): Usage {
@@ -98,6 +103,23 @@ export function addUsage(a: Usage, b: Usage): Usage {
     reasoning: sum(a.reasoning, b.reasoning),
     cacheRead: sum(a.cacheRead, b.cacheRead),
     cacheWrite: sum(a.cacheWrite, b.cacheWrite),
+  };
+}
+
+/**
+ * One turn's usage from a session's running totals: the totals minus what the
+ * session's earlier turns used. Never below zero (an earlier turn may have been
+ * recorded with more than the tool later counted).
+ */
+export function usageSince(totals: Usage, earlier: Usage[]): Usage {
+  const before = earlier.reduce((sum, u) => addUsage(sum, u), {} as Usage);
+  const minus = (x?: number, y?: number): number | undefined => (x === undefined ? undefined : Math.max(0, x - (y ?? 0)));
+  return {
+    input: minus(totals.input, before.input),
+    output: minus(totals.output, before.output),
+    reasoning: minus(totals.reasoning, before.reasoning),
+    cacheRead: minus(totals.cacheRead, before.cacheRead),
+    cacheWrite: minus(totals.cacheWrite, before.cacheWrite),
   };
 }
 

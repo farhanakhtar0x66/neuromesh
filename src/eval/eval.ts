@@ -12,7 +12,9 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Usage } from "../backends/types.ts";
 import { applyRun } from "../engine/apply.ts";
-import { startRun, usageByModel } from "../engine/run.ts";
+import { perTurnAttempts, startRun, usageByModel } from "../engine/run.ts";
+import { backends } from "../backends/index.ts";
+import { loadState } from "../engine/store.ts";
 import type { EngineContext, ModelUsage } from "../engine/run.ts";
 import type { AttemptRecord, RunState } from "../engine/types.ts";
 import type { Preset } from "../presets/presets.ts";
@@ -284,6 +286,33 @@ export function summarize(report: EvalReport, names?: string[]): Summary {
     expertCostEstimate: rows.reduce((s, r) => s + costOf(r).expert, 0),
     costIncomplete: rows.some((r) => costOf(r).incomplete),
   };
+}
+
+/**
+ * Recount an eval's token usage from its runs' records, with resumed Codex
+ * turns counted per turn (see perTurnAttempts). No model calls. Safe to repeat.
+ */
+export function recountEval(home: string, name: string): { task: string; before: number; after: number }[] {
+  const report = loadReport(home, name);
+  if (!report) throw new Error(`No eval results named "${name}"`);
+  const totalsBackends = new Set(Object.values(backends).filter((b) => b.sessionTotals).map((b) => b.id));
+  const projects = join(home, "projects");
+  const changes: { task: string; before: number; after: number }[] = [];
+  for (const result of Object.values(report.results)) {
+    const dir = existsSync(projects)
+      ? readdirSync(projects).map((p) => join(projects, p, "runs", result.runId)).find((d) => existsSync(join(d, "run.json")))
+      : undefined;
+    if (!dir) continue;
+    const attempts = perTurnAttempts(loadState(dir), (b) => totalsBackends.has(b));
+    const tiers = tierTokens(attempts);
+    const before = result.expertTokens + result.workerTokens;
+    result.usage = usageByModel(attempts);
+    result.expertTokens = tiers.expert;
+    result.workerTokens = tiers.worker;
+    changes.push({ task: result.task, before, after: tiers.expert + tiers.worker });
+  }
+  saveReport(home, report);
+  return changes;
 }
 
 /**
