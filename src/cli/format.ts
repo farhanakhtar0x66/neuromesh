@@ -75,6 +75,8 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
       const what = `${String(event.kind)}${event.surface ? `, ${String(event.surface)}` : ""}`;
       return dim(`Brief: ${what} · ${String(event.standards)} working standards added${attached.length > 0 ? ` · attached ${attached.join(", ")}` : ""}\n   Staffing: ${st.reasons.join("; ")}`);
     }
+    case "context.ready":
+      return dim(`Context packet: ${String(event.chars)} characters (about ${Math.round(Number(event.chars) / 4)} tokens) of repository map for the agents`);
     case "feature.failed":
       return red(`! Feature ${String(event.feature)} ${String(event.key)} failed: ${oneLine(String(event.message), 200)}\n   ${String(event.hint)}`);
     case "screens.checked":

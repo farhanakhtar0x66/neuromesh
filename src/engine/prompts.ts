@@ -4,6 +4,7 @@
 import type { AgentResult } from "../backends/types.ts";
 import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
+import { fileURLToPath } from "node:url";
 import { isOn } from "../features.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
@@ -111,6 +112,21 @@ When you finish, give your final answer in the required JSON format:
 - notes: anything the reviewer should know (assumptions, things left undone); empty if none
 - run: the shell command that starts the program from this directory, if it is a program a person runs; empty otherwise`;
 
+/** Absolute path of the agents' tool, so any CLI can run it from any directory. */
+export const NM_TOOL = fileURLToPath(new URL("../tools/nm.ts", import.meta.url));
+
+/** [F12 context-packet] The repository map for a prompt, when there is one. */
+function contextSection(state: RunState): string {
+  if (!state.contextPacket || !isOn("context-packet")) return "";
+  return `\n\nThe repository, mapped by Neuromesh before you started (no need to rediscover it; read only what you need):\n${state.contextPacket}`;
+}
+
+/** [F13 nm-tools] How to use the shared tool. */
+function toolsNote(): string {
+  if (!isOn("nm-tools")) return "";
+  return `\n\nTo find your way cheaply, use this read-only tool from your shell instead of listing directories or reading whole files: \`node ${NM_TOOL} map [words]\` (repository map), \`node ${NM_TOOL} show <file> <function or class>\` (one definition with line numbers), \`node ${NM_TOOL} find <regex> [path]\` (matches grouped by file), \`node ${NM_TOOL} checks\` (the project's checks, failures only in full).`;
+}
+
 function isWholeRequest(state: RunState, task: TaskState): boolean {
   return state.tasks.length === 1 && task.brief === state.prompt;
 }
@@ -160,7 +176,7 @@ export function taskPrompt(state: RunState, task: TaskState): string {
     return `You are working on a software project. Complete the request below by editing the files in the current directory.
 
 Request:
-${state.prompt}
+${state.prompt}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -175,7 +191,7 @@ ${state.prompt}
 Your task: ${task.title}
 ${task.brief}${owned}
 
-Other tasks of the plan are done by others. Do not do them, but do not break them either.
+Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -275,8 +291,7 @@ export function plannerPrompt(state: RunState, files: string[]): string {
 Request:
 ${state.prompt}
 
-Project files:
-${listing.join("\n")}
+${state.contextPacket && isOn("context-packet") ? `The project, mapped by Neuromesh:\n${state.contextPacket}` : `Project files:\n${listing.join("\n")}`}
 
 ${state.checks.length > 0 ? `The project's checks: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}` : "The project has no automatic checks."}
 
@@ -316,7 +331,7 @@ The change:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.${earlierReviews(task)}
+The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.${toolsNote()}${earlierReviews(task)}
 
 Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.${
     screens
@@ -351,7 +366,7 @@ ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall r
 
 The worker's last attempts and how they failed (its reasoning is left out; do not assume its approach was right):
 
-${attemptsText(task) || "(no attempt was recorded)"}
+${attemptsText(task) || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
 
 Read what you need, find the real cause, and tell the worker how to fix it. The worker is capable but missed something; give it the key insight and concrete steps (which file, which function, what to change), not a full implementation. Keep it short.
 
@@ -404,7 +419,7 @@ ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall r
 
 The worker's attempts and how they failed (its reasoning is left out on purpose; do not assume its approach was right):
 
-${attempts || "(no attempt was recorded)"}
+${attempts || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 

@@ -26,6 +26,7 @@ import { detectChecks, runChecks } from "../checks/checks.ts";
 import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
+import { buildPacket } from "../context/packet.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
@@ -357,6 +358,11 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           log.emit("note", { message: `Skipping checks that cannot run here: ${missing.join(", ")}` });
         }
         log.emit("checks.finished", { phase: "baseline", results: brief(results) });
+        // [F12 context-packet] Map the repository once, for every prompt of the run.
+        if (isOn("context-packet") && !state.contextPacket) {
+          state.contextPacket = optional(run, "context-packet", undefined, () => buildPacket(state.worktree, state.request ?? state.prompt));
+          if (state.contextPacket) log.emit("context.ready", { feature: "F12", chars: state.contextPacket.length });
+        }
         state.step = "spec";
         saveState(state);
         continue;

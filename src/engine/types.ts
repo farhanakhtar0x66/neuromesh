@@ -175,6 +175,8 @@ export interface RunState {
    * perTurnAttempts.
    */
   usagePerTurn?: boolean;
+  /** [F12 context-packet] Repository map and relevant signatures, made at the start of the run. */
+  contextPacket?: string;
   /** Features switched on for this run (src/features.ts). */
   features?: string[];
   /** Features that failed during the run; optional ones were switched off and the run went on. */

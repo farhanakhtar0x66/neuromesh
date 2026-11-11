@@ -111,7 +111,7 @@ test("a solo run goes from prompt to a checked diff, and apply brings it home", 
   assert.ok(!existsSync(join(repo, "fixed.txt")), "the user's files are untouched during a run");
   assert.deepEqual(
     events.map((e) => e.type).filter((t) => t !== "agent.activity"),
-    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "task.started", "agent.started", "agent.finished", "checks.finished", "task.merged", "run.finished"],
+    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "context.ready", "task.started", "agent.started", "agent.finished", "checks.finished", "task.merged", "run.finished"],
   );
 
   const applied = applyRun(loadState(state.dir));
@@ -980,4 +980,18 @@ test("an optional feature that fails is recorded with its id and the run goes on
   } finally {
     delete process.env.NEUROMESH_FAULT;
   }
+});
+
+test("workers get the repository map and the shared tool in their first prompt", async () => {
+  const repo = fixableRepo({ "src/cart.js": "export function cartTotal(cart) {\n  return 0;\n}\n" });
+  const { ctx, fake, events } = context((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "fix cartTotal", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.match(fake.calls[0]!.prompt, /mapped by Neuromesh/);
+  assert.match(fake.calls[0]!.prompt, /1: export function cartTotal\(cart\)/);
+  assert.match(fake.calls[0]!.prompt, /src\/tools\/nm\.ts map/);
+  assert.ok(events.some((e) => e.type === "context.ready" && e.feature === "F12"));
 });
