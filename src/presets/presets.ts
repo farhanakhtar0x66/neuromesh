@@ -31,6 +31,8 @@ export interface Preset {
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend. */
   expertBudget?: number;
+  /** When the tester reviews a task: always, or only when the project has no automatic checks. */
+  test: "always" | "no-checks";
 }
 
 export const DEFAULT_PRESET = "solo-flash";
@@ -86,6 +88,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,
+    test: p.test === "no-checks" ? "no-checks" : "always",
   };
 }
 

@@ -147,6 +147,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     maxParallel: preset.maxParallel,
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
+    test: preset.test ?? "always",
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: repo.head,
     branch: `neuromesh/${id}`,
@@ -702,6 +703,12 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
   return state.tasks.every((t) => t === task || t.status === "passed" || t.status === "failed");
 }
 
+/** The tester costs a full agent session; with test "no-checks" it only runs where nothing else verifies the work. */
+function wantsTester(state: RunState, task: TaskState): boolean {
+  if (!state.roles.tester || task.escalated) return false;
+  return state.test !== "no-checks" || state.checks.length === 0;
+}
+
 /** Advice first, takeover second. */
 function nextEscalation(state: RunState, task: TaskState): "advise" | "escalate" {
   return state.advise && !task.advised && task.owner !== "expert" ? "advise" : "escalate";
@@ -804,7 +811,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       log.emit("checks.finished", { phase: "task", task: task.id, round: task.round, results: brief(results), ok });
       const decision = observe(task.progress, attemptFrom(failing, diff), ok);
       if (ok) {
-        task.step = state.roles.tester && !task.escalated ? "test" : "merge";
+        task.step = wantsTester(state, task) ? "test" : "merge";
         saveState(state);
         continue;
       }

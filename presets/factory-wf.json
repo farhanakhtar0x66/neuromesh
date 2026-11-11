@@ -45,5 +45,6 @@
   "maxTasks": 4,
   "maxParallel": 2,
   "turnTimeoutMinutes": 30,
-  "expertBudget": 250000
+  "expertBudget": 250000,
+  "test": "no-checks"
 }

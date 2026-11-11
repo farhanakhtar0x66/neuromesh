@@ -166,6 +166,8 @@ export interface RunState {
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend; no limit when unset. */
   expertBudget?: number;
+  /** When the tester runs: always, or only when the project has no automatic checks. */
+  test?: "always" | "no-checks";
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

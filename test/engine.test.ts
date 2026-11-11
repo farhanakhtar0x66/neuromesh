@@ -59,6 +59,7 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
     intake: false,
     routing: "rules",
     advise: false,
+    test: "always",
     ...extra,
   };
 }
@@ -420,6 +421,26 @@ test("the tester's findings go back to the worker's session, and a pass lets the
   assert.notEqual(testerCall.cwd, state.tasks[0]!.worktree, "the tester works in a throwaway copy");
   assert.match(testerCall.prompt, /\+ok/, "the tester sees the diff");
   assert.equal(state.tasks[0]?.verdict?.verdict, "pass");
+});
+
+test("with test 'no-checks', the tester only runs when the project has no checks", async () => {
+  const withChecks = fixableRepo();
+  const a = context((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return report("ok");
+  });
+  const p = preset({ tester: [TESTER] }, { test: "no-checks" });
+  await startRun({ cwd: withChecks, prompt: "x", preset: p }, a.ctx);
+  assert.equal(a.fake.calls.filter(isTest).length, 0, "checks exist, so no tester");
+
+  const noChecks = makeRepo({ "notes.md": "hello\n" });
+  const b = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "fine", findings: [] } };
+    write(req.cwd, "notes.md", "hello world");
+    return report("ok");
+  });
+  await startRun({ cwd: noChecks, prompt: "x", preset: p }, b.ctx);
+  assert.equal(b.fake.calls.filter(isTest).length, 1, "no checks, so the tester reviews");
 });
 
 test("a stuck worker is escalated: the expert starts clean and sees diffs and failures, not the chat", async () => {
