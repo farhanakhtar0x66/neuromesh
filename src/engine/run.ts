@@ -143,6 +143,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       team: preset.mode === "team" && options.mode !== "solo",
       maxParallel: preset.maxParallel,
       canSpec: roles.briefer !== undefined,
+      expertSpec: roles.briefer?.[0]?.tier === "expert",
     });
     if (options.mode === "team") brief.staffing.plan = true;
     mode = brief.staffing.plan ? "team" : "solo";
@@ -668,7 +669,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
     kind: "spec",
     round: 0,
     cwd: state.worktree,
-    prompt: specPrompt(brief.request),
+    prompt: specPrompt(brief.request, renderBrief(brief)),
     access: "read-only",
     schema: SPEC_SCHEMA,
   });

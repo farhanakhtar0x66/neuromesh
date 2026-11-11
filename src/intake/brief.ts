@@ -46,6 +46,8 @@ export interface Spec {
   features: string[];
   behaviour: string[];
   outOfScope: string[];
+  /** How to build it: modules and what each does, the data model, the hard parts. */
+  design: string[];
 }
 
 export interface Brief {
@@ -65,6 +67,12 @@ export interface BriefPolicy {
   maxParallel: number;
   /** A model is available to write a spec for a thin request. */
   canSpec: boolean;
+  /**
+   * The spec writer is an expert model: it writes a spec and design for every
+   * new program, however detailed the request, because that is where a strong
+   * model's judgement pays most and costs least.
+   */
+  expertSpec?: boolean;
 }
 
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|swift|rb|php|c|cc|cpp|h|hpp|cs|lua|sh|zig|ex|exs|hs|ml|scala)$/i;
@@ -256,8 +264,10 @@ function staff(kind: Kind, request: string, everything: string, attached: number
 
   const lines = (request.match(/^\s*(?:[-*]|\d+[.)])\s/gm) ?? []).length;
   const thin = kind === "greenfield" && attached === 0 && words(request) < 60 && lines < 3;
-  const spec = thin && policy.canSpec;
-  if (thin) reasons.push(spec ? "a short request for something new: a cheap model writes a product spec first" : "a short request for something new, and no model is set up to write a spec");
+  const expertSpec = kind === "greenfield" && policy.canSpec && policy.expertSpec === true;
+  const spec = (thin && policy.canSpec) || expertSpec;
+  if (expertSpec) reasons.push("building something new: the expert writes the spec and design, workers build it");
+  else if (thin) reasons.push(spec ? "a short request for something new: a cheap model writes a product spec first" : "a short request for something new, and no model is set up to write a spec");
 
   return { plan, agents: plan ? Math.max(1, policy.maxParallel) : 1, rung, tester, spec, reasons };
 }
@@ -289,12 +299,13 @@ export function renderBrief(brief: Brief): string {
     const spec = brief.spec;
     parts.push(
       [
-        "Product spec, worked out from the short request above (the request wins wherever they differ):",
+        "Product spec and design, worked out from the request above (the request wins wherever they differ):",
         spec.name ? `Working name: ${spec.name}` : "",
         spec.summary,
         spec.features.length > 0 ? `Must have:\n${list(spec.features)}` : "",
         spec.behaviour.length > 0 ? `Exact behaviour:\n${list(spec.behaviour)}` : "",
         spec.outOfScope.length > 0 ? `Out of scope, do not build:\n${list(spec.outOfScope)}` : "",
+        spec.design.length > 0 ? `Design, follow it unless it is clearly wrong:\n${list(spec.design)}` : "",
       ]
         .filter(Boolean)
         .join("\n\n"),

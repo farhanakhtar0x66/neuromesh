@@ -78,3 +78,12 @@ test("only clearly large requests are planned, and never on a solo preset", () =
   const five = buildBrief("Add these:\n1. a\n2. b\n3. c\n4. d\n5. e", PROJECT, TEAM);
   assert.equal(five.staffing.plan, false, "five small parts are cheaper done by one worker than planned");
 });
+
+test("an expert spec writer writes the spec and design for every new program, not only thin requests", () => {
+  const detailed = "Build a typing test for the terminal. " + "It shows words, marks mistakes, has timed and word modes, and shows results with speed and accuracy. ".repeat(4);
+  const expert = buildBrief(detailed, EMPTY, { ...TEAM, expertSpec: true });
+  assert.equal(expert.staffing.spec, true);
+  assert.match(expert.staffing.reasons.join(";"), /the expert writes the spec and design/);
+  assert.equal(buildBrief(detailed, EMPTY, TEAM).staffing.spec, false, "a cheap writer only fills in thin requests");
+  assert.equal(buildBrief("Fix the bug in src/cart.js.", PROJECT, { ...TEAM, expertSpec: true }).staffing.spec, false, "never for changes to existing code");
+});

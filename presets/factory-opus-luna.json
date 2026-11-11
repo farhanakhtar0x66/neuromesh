@@ -1,0 +1,77 @@
+{
+  "name": "factory-opus-luna",
+  "description": "Claude Opus 5.5 (medium) is the lead engineer: it writes the spec and design for every new program, plans very large requests, and advises or takes over when the workers are stuck. GPT-6 Luna through Codex does the building (low effort first, high when stuck) and the reviewing. The expert reasons; the workers type.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "codex",
+      "model": "gpt-6-luna",
+      "effort": "low"
+    },
+    {
+      "backend": "codex",
+      "model": "gpt-6-luna",
+      "effort": "high"
+    }
+  ]
+}

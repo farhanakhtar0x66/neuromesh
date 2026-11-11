@@ -812,7 +812,7 @@ test("a thin request gets a product spec from the cheap model, and every agent w
   const repo = makeRepo({ ".gitignore": "node_modules\n" });
   const { ctx, fake, events } = context((req) => {
     if (isSpec(req)) {
-      return { structured: { name: "Keys", summary: "A typing test.", features: ["Shows words to type"], behaviour: ["WPM is correct characters / 5 per minute"], out_of_scope: ["Accounts"] } };
+      return { structured: { name: "Keys", summary: "A typing test.", features: ["Shows words to type"], behaviour: ["WPM is correct characters / 5 per minute"], out_of_scope: ["Accounts"], design: ["Keep scoring in score.js"] } };
     }
     if (isTest(req)) return { structured: { verdict: "pass", summary: "good", findings: [] } };
     write(req.cwd, "app.js", "console.log('hi')");
@@ -837,6 +837,7 @@ test("a thin request gets a product spec from the cheap model, and every agent w
   assert.match(worker, /Create a typing app in terminal tui\./);
   assert.match(worker, /Working name: Keys/);
   assert.match(worker, /WPM is correct characters/);
+  assert.match(worker, /Design, follow it unless it is clearly wrong:\n- Keep scoring in score.js/);
   assert.match(worker, /Restore the terminal on every way out/);
   assert.match(fake.calls[2]!.prompt, /Out of scope, do not build:\n- Accounts/, "the tester reviews against the same brief");
   assert.ok(events.some((e) => e.type === "brief" && e.kind === "greenfield"));

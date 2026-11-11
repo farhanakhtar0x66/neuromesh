@@ -171,7 +171,7 @@ function commandBrief({ positional, flags }: Parsed): number {
   }
   const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
   const repo = findRepo(flags.get("repo") ?? process.cwd());
-  const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: preset.roles.briefer !== undefined });
+  const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: preset.roles.briefer !== undefined, expertSpec: preset.roles.briefer?.[0]?.tier === "expert" });
   const s = brief.staffing;
   process.stdout.write(
     `${bold("Kind")}: ${brief.kind}${brief.surface ? `, ${brief.surface}` : ""}\n` +

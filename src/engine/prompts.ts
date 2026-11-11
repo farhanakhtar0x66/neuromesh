@@ -27,8 +27,9 @@ export const SPEC_SCHEMA = {
     features: { type: "array", items: { type: "string" } },
     behaviour: { type: "array", items: { type: "string" } },
     out_of_scope: { type: "array", items: { type: "string" } },
+    design: { type: "array", items: { type: "string" } },
   },
-  required: ["name", "summary", "features", "behaviour", "out_of_scope"],
+  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design"],
   additionalProperties: false,
 };
 
@@ -114,11 +115,13 @@ function isWholeRequest(state: RunState, task: TaskState): boolean {
 }
 
 /** A cheap model turns a request too short to build from into a product spec. */
-export function specPrompt(request: string): string {
-  return `A developer is about to build the request below, and it is too short to build from. Write the product spec they need. Do not write code and do not create or edit files.
+export function specPrompt(request: string, brief?: string): string {
+  return `You are the lead engineer. A less experienced developer is about to build the request below on their own, from what you write now; you will not see their work. Write the product spec and the design they need. Do not write code and do not create or edit files.
 
 The request:
 ${request}
+${brief && brief !== request ? `\nThe full brief they will get (the request plus standards they must meet):\n${brief}\n` : ""}
+If the request is already detailed, do not repeat it: cover only what it leaves open, and put most of your effort into the design.
 
 Give your answer in the required JSON format:
 - name: a short working name of your own for the product
@@ -126,6 +129,7 @@ Give your answer in the required JSON format:
 - features: 8 to 14 must-have features, most important first. Include what anyone asking for this would expect without saying it. One sentence each, concrete enough to check.
 - behaviour: the exact rules that are easy to get wrong: how every number shown is calculated, what every key or command does, what happens at the edges (empty input, the end, a mistake, going back), and what each screen or output shows.
 - out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
+- design: 6 to 12 points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
 
 Rules:
 - Do not contradict the request, and do not choose the programming language unless the request does.
@@ -145,6 +149,7 @@ export function parseSpec(result: AgentResult): Spec | undefined {
     features,
     behaviour: list(raw.behaviour),
     outOfScope: list(raw.out_of_scope),
+    design: list(raw.design),
   };
 }
 
