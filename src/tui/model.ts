@@ -14,6 +14,8 @@ export interface Item {
   kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome" | "diff" | "detail";
   text: string;
   tone?: Tone;
+  /** [F29 tui-motion] When it arrived, for its entrance. */
+  at?: number;
   /** For "diff": the patch lines. */
   lines?: string[];
 }
@@ -39,6 +41,8 @@ export interface AgentView {
   cost?: number;
   last?: string;
   failed?: boolean;
+  /** [F29 tui-motion] When it last finished a turn, for a brief flash. */
+  doneAt?: number;
 }
 
 export interface Model {
@@ -60,14 +64,14 @@ export interface Model {
   focus: "composer" | "outcome" | "diff";
   diff?: { lines: string[]; scroll: number };
   scroll: number;
-  toast?: { text: string; tone: Tone; until: number };
+  toast?: { text: string; tone: Tone; until: number; at?: number };
   confirm?: "stop" | "discard" | "quit";
   rating?: number;
   /** The working directory, shown in the bottom bar. */
   cwd: string;
   sessions: SessionView[];
   /** The command popup, when open: the selected row. */
-  palette?: { index: number };
+  palette?: { index: number; at?: number };
   /** Latest result of each check, by name. */
   checks: Map<string, string>;
   /** The tester's latest verdict, in its own words. */
@@ -76,6 +80,17 @@ export interface Model {
   team: { role: string; model: string }[];
   /** The preset's expert budget in estimated dollars, if any. */
   budgetUsd?: number;
+  /** [F29 tui-motion] Animations on; the app turns this on unless switched off. */
+  motion: boolean;
+  /** Time to draw at; tests set it, the app leaves it to the clock. */
+  clock?: number;
+  /** [F30 tui-intro] When the TUI opened. */
+  introAt?: number;
+  /** When the stage last changed. */
+  stageAt?: number;
+  /** Cost shown before the last change, and when it changed, for counting up. */
+  costFrom: number;
+  costAt?: number;
   /** [F26 tui-details] Show each agent's steps in the stream. */
   details: boolean;
   /** [F21 tui-slash] [F22 tui-mentions] The dropdown above the prompt. */
@@ -103,6 +118,8 @@ export interface Picker {
   kind: "sessions" | "presets";
   title: string;
   query: string;
+  /** [F29 tui-motion] When it opened. */
+  at?: number;
   all: Choice[];
   index: number;
 }
@@ -124,21 +141,38 @@ export function newModel(preset: string, repo?: string, repoError?: string): Mod
     scroll: 0,
     cwd: process.cwd(),
     details: false,
+    motion: false,
+    costFrom: 0,
     sessions: [],
     checks: new Map(),
     team: [],
   };
 }
 
+/** Add to the stream, stamped with the time it arrived. */
+export function push(m: Model, item: Item): void {
+  m.items.push({ ...item, at: item.at ?? Date.now() });
+}
+
+export function setStage(m: Model, stage: Stage): void {
+  if (m.stage !== stage) m.stageAt = Date.now();
+  m.stage = stage;
+}
+
+/** The time to draw at. */
+export function nowOf(m: Model): number {
+  return m.clock ?? Date.now();
+}
+
 export function toast(m: Model, text: string, tone: Tone = "jade", ms = 4_000): void {
-  m.toast = { text, tone, until: Date.now() + ms };
+  m.toast = { text, tone, until: Date.now() + ms, at: Date.now() };
 }
 
 /** Start a new run in the workspace: the user's words appear at once, before any model answers. */
 export function submitted(m: Model, prompt: string): void {
   m.screen = "workspace";
-  m.items.push({ kind: "you", text: prompt });
-  m.stage = "planning";
+  push(m, { kind: "you", text: prompt });
+  setStage(m, "planning");
   m.planned = false;
   m.agents = new Map();
   m.run = undefined;
@@ -146,6 +180,8 @@ export function submitted(m: Model, prompt: string): void {
   m.startedAt = Date.now();
   m.endedAt = undefined;
   m.cost = 0;
+  m.costFrom = 0;
+  m.costAt = undefined;
   m.expertCost = 0;
   m.costUnknown = false;
   m.focus = "composer";
@@ -175,7 +211,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
       const what = String(e.summary ?? e.activity ?? "");
       if (a) a.last = what;
       // [F26 tui-details] Kept for Ctrl+O; hidden unless details are on.
-      if (what) m.items.push({ kind: "detail", text: `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}: ${what}` });
+      if (what) push(m, { kind: "detail", text: `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}: ${what}` });
       return;
     }
     case "agent.started": {
@@ -193,9 +229,9 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         cost: prior?.cost,
         last: undefined,
       });
-      if (role === "tester") m.stage = "reviewing";
-      else if (role === "worker" || role === "escalation") m.stage = "building";
-      else if (role === "orchestrator" || role === "briefer") m.stage = "planning";
+      if (role === "tester") setStage(m, "reviewing");
+      else if (role === "worker" || role === "escalation") setStage(m, "building");
+      else if (role === "orchestrator" || role === "briefer") setStage(m, "planning");
       // A running agent shows on its live line; the stream records it when it finishes.
       return;
     }
@@ -210,9 +246,12 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         a.tokens += tokens;
         if (cost !== undefined) a.cost = (a.cost ?? 0) + cost;
         a.failed = e.stop !== "done";
+        a.doneAt = Date.now();
         a.last = undefined;
       }
       if (cost !== undefined) {
+        m.costFrom = m.cost;
+        m.costAt = Date.now();
         m.cost += cost;
         if (e.tier === "expert") m.expertCost += cost;
       } else if (tokens > 0) m.costUnknown = true;
@@ -223,50 +262,50 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
       const tok = tokens > 0 ? ` · ${tokens >= 1000 ? `${Math.round(tokens / 1000)}k` : tokens} tokens` : "";
       const price = cost !== undefined ? ` · ≈$${cost.toFixed(cost < 0.1 ? 3 : 2)}` : "";
       const end = e.stop === "done" ? "" : ` · ${String(e.stop)}${e.detail ? `: ${String(e.detail).slice(0, 120)}` : ""}`;
-      m.items.push({ kind: "activity", text: `${name}${what} · ${String(e.model ?? "")} · ${took}${tok}${price}${end}`, tone: e.stop === "done" ? undefined : "red" });
+      push(m, { kind: "activity", text: `${name}${what} · ${String(e.model ?? "")} · ${took}${tok}${price}${end}`, tone: e.stop === "done" ? undefined : "red" });
       return;
     }
     case "plan.ready":
       m.planned = true;
-      m.items.push({ kind: "neuromesh", text: line() });
+      push(m, { kind: "neuromesh", text: line() });
       return;
     case "brief": {
       const s = (e.staffing ?? {}) as { plan?: boolean; rung?: string; tester?: boolean; spec?: boolean };
       const kind = String(e.kind ?? "change");
       const what = `${kind === "greenfield" ? "something new" : kind}${e.surface ? `, ${String(e.surface)}` : ""}`;
       const how = [s.spec ? "spec first" : "", s.plan ? "the lead plans" : "one worker", s.rung === "top" ? "strongest worker setting" : "", s.tester ? "with a reviewer" : "no reviewer"].filter(Boolean).join(" · ");
-      m.items.push({ kind: "note", text: `Reading this as ${what}: ${how}` });
+      push(m, { kind: "note", text: `Reading this as ${what}: ${how}` });
       return;
     }
     case "task.started":
-      if (e.task !== "main") m.items.push({ kind: "note", text: line() });
+      if (e.task !== "main") push(m, { kind: "note", text: line() });
       return;
     case "spec.ready":
     case "route":
     case "context.ready":
     case "screens.checked":
-      m.items.push({ kind: "note", text: line() });
+      push(m, { kind: "note", text: line() });
       return;
     case "checks.finished":
       for (const r of (e.results as { name: string; status: string }[] | undefined) ?? []) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
-      if (e.phase !== "baseline") m.stage = "checking";
-      m.items.push({ kind: "note", text: line(), tone: e.ok === false ? "amber" : undefined });
+      if (e.phase !== "baseline") setStage(m, "checking");
+      push(m, { kind: "note", text: line(), tone: e.ok === false ? "amber" : undefined });
       return;
     case "tester.verdict":
       m.verdict = { verdict: String(e.verdict), summary: String(e.summary ?? "") };
-      m.items.push({ kind: "neuromesh", text: line(), tone: e.verdict === "pass" ? "jade" : "amber" });
+      push(m, { kind: "neuromesh", text: line(), tone: e.verdict === "pass" ? "jade" : "amber" });
       return;
     case "task.merged":
-      m.items.push({ kind: "neuromesh", text: line(), tone: "jade" });
+      push(m, { kind: "neuromesh", text: line(), tone: "jade" });
       return;
     case "task.failed":
     case "feature.failed":
-      m.items.push({ kind: "error", text: line(), tone: "red" });
+      push(m, { kind: "error", text: line(), tone: "red" });
       return;
     case "task.escalated":
     case "task.advised":
     case "task.climbed":
-      m.items.push({ kind: "neuromesh", text: line(), tone: "mauve" });
+      push(m, { kind: "neuromesh", text: line(), tone: "mauve" });
       return;
     case "run.started":
     case "run.resumed":
@@ -276,7 +315,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
       return;
     default: {
       const text = line();
-      if (text) m.items.push({ kind: "note", text });
+      if (text) push(m, { kind: "note", text });
     }
   }
 }
@@ -286,6 +325,7 @@ export function finished(m: Model, state: RunState): void {
   m.run = state;
   m.endedAt = Date.now();
   for (const a of m.agents.values()) a.working = false;
+  m.stageAt = Date.now();
   m.stage =
     state.status === "finished" ? (state.outcome?.checks === "failed" ? "failed" : "finished")
     : state.status === "paused" ? "paused"

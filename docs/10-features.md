@@ -37,3 +37,5 @@ Every capability added after v0.1.0 has an id. Its code is marked `[Fxx key]`, i
 | F26 | `tui-details` | optional | Ctrl+O shows or hides what each agent did step by step (commands, edits, messages). | `src/tui/model.ts (detail items)`, `src/tui/view.ts` |
 | F27 | `tui-diff-numbers` | optional | Diffs in the stream and the diff view show old and new line numbers per file. | `src/tui/diff.ts` |
 | F28 | `tui-notify` | optional | The terminal title shows the run's state, the bell rings when a run ends, and quitting prints what this session did. | `src/tui/app.ts (notify)`, `src/tui/term.ts (title, bell)` |
+| F29 | `tui-motion` | optional | Animations while something happens: scanner under the pipeline, pulsing steps, arrival glow, count-up numbers, decoding verbs, zooming popups, the outcome card dropping in, the diff unrolling. /motion or NEUROMESH_MOTION=off turns them off. | `src/tui/anim.ts`, `src/tui/view.ts`, `src/tui/app.ts (frame rate)` |
+| F30 | `tui-intro` | optional | On opening, the logo builds up by density from the left. | `src/tui/anim.ts (buildUp)`, `src/tui/view.ts (logo)` |

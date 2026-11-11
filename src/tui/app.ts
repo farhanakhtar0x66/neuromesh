@@ -98,8 +98,11 @@ export async function runTui(options: TuiOptions): Promise<number> {
   }
   const files = new FileIndex(repoRoot);
   const history = new History(home);
+  // [F29 tui-motion] Animations unless switched off (NEUROMESH_MOTION=off, /motion, or --disable tui-motion).
+  let motion = process.env.NEUROMESH_MOTION !== "off" && isOn("tui-motion");
   const fresh = (): Model => {
     const m = newModel(preset.name, repoRoot ? basename(repoRoot) : undefined, repoError);
+    m.motion = motion;
     m.cwd = options.cwd;
     m.team = teamOf(preset);
     m.budgetUsd = preset.expertBudgetUsd;
@@ -107,6 +110,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
     return m;
   };
   let model = fresh();
+  model.introAt = Date.now();
   const composer = new Composer();
   const term = new Terminal();
   let controller: AbortController | undefined;
@@ -137,14 +141,33 @@ export async function runTui(options: TuiOptions): Promise<number> {
       term.draw([`Neuromesh TUI drawing error: ${error instanceof Error ? error.message : String(error)}`, hint(feature("tui")), "Ctrl+Q quits."]);
     }
   };
+  // [F29 tui-motion] Frames come fast while something moves and stop when nothing does.
+  let animUntil = Date.now() + 1_500;
+  const bump = (ms = 1_500): void => {
+    animUntil = Math.max(animUntil, Date.now() + ms);
+  };
   const redraw = (): void => {
+    bump();
     if (scheduled) return;
     scheduled = true;
     setTimeout(draw, 16);
   };
+  let ticks = 0;
   const ticker = setInterval(() => {
-    if (running || (model.toast && model.toast.until > Date.now() - 200)) redraw();
-  }, 100);
+    ticks += 1;
+    const now = Date.now();
+    const toastLive = model.toast !== undefined && model.toast.until > now - 200;
+    if (model.motion && (running || now < animUntil)) {
+      if (!scheduled) {
+        scheduled = true;
+        setTimeout(draw, 0);
+      }
+    } else if ((running || toastLive) && ticks % 3 === 0 && !scheduled) {
+      // Without motion: a calm tick for the clock and spinners.
+      scheduled = true;
+      setTimeout(draw, 0);
+    }
+  }, 33);
   const layoutWidth = (): number => Math.min(term.size().cols - 8, 100);
 
   // What a finished (or reopened) run adds to the stream.
@@ -185,6 +208,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
         files.refresh();
         // [F28 tui-notify] A run can take minutes: say so when it ends.
         if (isOn("tui-notify")) term.bell();
+        bump(3_000);
       })
       .catch((error: unknown) => {
         m.items.push({ kind: "error", text: `Engine error: ${error instanceof Error ? error.message : String(error)}`, tone: "red" });
@@ -352,10 +376,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
         return { id: r.id, label: v.title, detail: `${state} · ${new Date(r.updatedAt).toLocaleString()}${v.files ? ` · ${v.files} file${v.files === 1 ? "" : "s"}` : ""} · ${r.preset}`, tone: v.status === "failed" ? "red" : undefined };
       });
       if (all.length === 0) return void toast(model, "No earlier sessions in this folder yet.", "muted");
-      model.picker = { kind, title: "Sessions in this folder", query: "", all, index: 0 };
+      model.picker = { kind, title: "Sessions in this folder", query: "", all, index: 0, at: Date.now() };
     } else {
       const all: Choice[] = listPresets().map((p) => ({ id: p.name, label: `${p.name}${p.name === preset.name ? "  (current)" : ""}`, detail: p.description.slice(0, 160) }));
-      model.picker = { kind, title: "Team presets", query: "", all, index: Math.max(0, all.findIndex((c) => c.id === preset.name)) };
+      model.picker = { kind, title: "Team presets", query: "", all, index: Math.max(0, all.findIndex((c) => c.id === preset.name)), at: Date.now() };
     }
   };
 
@@ -391,7 +415,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
     model.suggest = undefined;
     switch (cmd.action) {
       case "help":
-        model.palette = { index: 0 };
+        model.palette = { index: 0, at: Date.now() };
         return;
       case "new":
         return newSession();
@@ -412,6 +436,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
       case "details":
         model.details = !model.details;
         return void toast(model, model.details ? "Showing each agent's steps (ctrl+o hides them)" : "Agent steps hidden");
+      case "motion":
+        motion = !motion;
+        model.motion = motion;
+        return void toast(model, motion ? "Animations on" : "Animations off");
       case "usage":
         return usageSummary();
       case "features":
@@ -514,7 +542,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
       else if (key.name === "enter") runAction(commandAt(model.palette.index));
       return;
     }
-    if (key.ctrl && key.name === "p") return void (model.palette = { index: 0 });
+    if (key.ctrl && key.name === "p") return void (model.palette = { index: 0, at: Date.now() });
     if (key.ctrl && key.name === "s" && isOn("tui-sessions")) return openPicker("sessions");
     if (key.ctrl && key.name === "k" && isOn("tui-presets")) return openPicker("presets");
     if (key.ctrl && key.name === "n") return newSession();

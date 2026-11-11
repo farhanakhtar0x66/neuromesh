@@ -281,6 +281,24 @@ export const FEATURES: Feature[] = [
     what: "The terminal title shows the run's state, the bell rings when a run ends, and quitting prints what this session did.",
     optional: true,
   },
+  {
+    id: "F29",
+    key: "tui-motion",
+    name: "Motion",
+    added: "2026-11-12",
+    files: ["src/tui/anim.ts", "src/tui/view.ts", "src/tui/app.ts (frame rate)"],
+    what: "Animations while something happens: scanner under the pipeline, pulsing steps, arrival glow, count-up numbers, decoding verbs, zooming popups, the outcome card dropping in, the diff unrolling. /motion or NEUROMESH_MOTION=off turns them off.",
+    optional: true,
+  },
+  {
+    id: "F30",
+    key: "tui-intro",
+    name: "Logo intro",
+    added: "2026-11-12",
+    files: ["src/tui/anim.ts (buildUp)", "src/tui/view.ts (logo)"],
+    what: "On opening, the logo builds up by density from the left.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

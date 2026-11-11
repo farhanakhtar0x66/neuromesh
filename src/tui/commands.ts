@@ -15,6 +15,7 @@ export type Action =
   | "usage"
   | "features"
   | "stop"
+  | "motion"
   | "quit";
 
 export interface Command {
@@ -45,6 +46,7 @@ export const COMMANDS: Command[] = [
   { group: "Session", slash: "/new", keys: "ctrl+n", label: "New session", action: "new" },
   { group: "Session", slash: "/usage", keys: "", label: "Real-use summary from the usage log", action: "usage" },
   { group: "Session", slash: "/features", keys: "", label: "Features, and which are off or failed", action: "features" },
+  { group: "Session", slash: "/motion", keys: "", label: "Animations on or off", action: "motion" },
   { group: "Session", slash: "/theme", keys: "ctrl+t", label: "Theme: terminal colours or GitHub dark high contrast", action: "theme" },
   { group: "Session", slash: "/help", keys: "ctrl+p", label: "All commands", action: "help" },
   { group: "Session", slash: "/quit", keys: "ctrl+q", label: "Quit", action: "quit" },

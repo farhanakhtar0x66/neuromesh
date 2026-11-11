@@ -2,8 +2,8 @@
 
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
-engine's events and run records only. Feature ids F19 to F28
-(`docs/10-features.md`); any of F20 to F28 can be switched off with
+engine's events and run records only. Feature ids F19 to F30
+(`docs/10-features.md`); any of F20 to F30 can be switched off with
 `--disable <key>`. Ideas taken from Claude Code and opencode are noted below.
 
 ## Screens
@@ -62,6 +62,28 @@ a run it asks first, then stops the run so it can be resumed).
 When a run ends the terminal bell rings (most terminals flash or badge the tab),
 and the window title always shows the run's state. Quitting prints what the
 session did and any runs not yet applied. Every way out restores the terminal.
+
+## Motion
+
+Things move only while something happens, and the screen is not redrawn at all
+when nothing does (about 30 frames a second while animating, none when idle).
+Feature F29 `tui-motion`, plus F30 `tui-intro`:
+
+- On opening, the logo builds up by density, `:` then `+` then `#`, in a wave
+  from the left.
+- The prompt's border lights up while there is text in it.
+- While the team works: a light sweeps along under the pipeline, the active
+  step pulses and the step just finished flashes, and the working verb decodes
+  into the next one when it changes ("Cooking…" → "Wiring…").
+- New lines in the stream are bright for a moment as they arrive; agents flash
+  ✓ in the right pane as they finish; the estimated cost counts up.
+- Messages in the bottom bar type in, and dim just before they go.
+- Popups unfold from their middle.
+- When a run ends, the outcome card drops in (with a sparkle if it went well)
+  and the diff unrolls line by line.
+
+`/motion` turns animations off or on; `NEUROMESH_MOTION=off` starts without
+them; `--disable tui-motion` removes them entirely.
 
 ## Colours
 
