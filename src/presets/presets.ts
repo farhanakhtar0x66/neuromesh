@@ -29,6 +29,8 @@ export interface Preset {
   routing: "rules" | "worker-first";
   /** A stuck worker first gets the expert's advice; the expert takes over only if that fails. */
   advise: boolean;
+  /** Most expert tokens (fresh input + output) one run may spend. */
+  expertBudget?: number;
 }
 
 export const DEFAULT_PRESET = "solo-flash";
@@ -83,6 +85,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     intake: p.intake ?? p.mode === "team",
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
+    expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,
   };
 }
 

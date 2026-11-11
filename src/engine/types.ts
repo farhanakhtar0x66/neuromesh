@@ -164,6 +164,8 @@ export interface RunState {
   maxParallel: number;
   /** Escalate in two steps: the expert advises first, and takes over only if that fails. */
   advise: boolean;
+  /** Most expert tokens (fresh input + output) one run may spend; no limit when unset. */
+  expertBudget?: number;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

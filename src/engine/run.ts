@@ -91,6 +91,8 @@ export interface StartOptions {
   repairs?: number;
   /** Force solo or team; by default a team preset lets the intake decide. */
   mode?: "solo" | "team";
+  /** Override the preset's expert token budget. */
+  expertBudget?: number;
 }
 
 /** How a task or a turn ended, when it ends the whole run early. */
@@ -144,6 +146,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     maxTasks: preset.maxTasks,
     maxParallel: preset.maxParallel,
     advise: preset.advise ?? true,
+    expertBudget: options.expertBudget ?? preset.expertBudget,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: repo.head,
     branch: `neuromesh/${id}`,
@@ -445,8 +448,26 @@ function tierOf(role: Role, c: RoleConfig): Tier {
   return c.tier ?? (role === "orchestrator" || role === "escalation" ? "expert" : "worker");
 }
 
+function budgetLeft(state: RunState): boolean {
+  return state.expertBudget === undefined || expertSpend(state) < state.expertBudget;
+}
+
+/** Expert tokens that count against the budget: fresh input, cache writes and output. */
+export function expertSpend(state: RunState): number {
+  return state.attempts
+    .filter((a) => a.tier === "expert")
+    .reduce((n, a) => n + (a.usage.input ?? 0) + (a.usage.cacheWrite ?? 0) + (a.usage.output ?? 0), 0);
+}
+
 async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
   const { state, ctx, log } = run;
+  if ((req.role === "orchestrator" || req.role === "escalation") && state.expertBudget !== undefined) {
+    const spent = expertSpend(state);
+    if (spent >= state.expertBudget) {
+      log.emit("note", { message: `Expert budget reached (${spent.toLocaleString("en-US")} of ${state.expertBudget.toLocaleString("en-US")} tokens); no more ${req.role === "orchestrator" ? "planning" : "expert help"} in this run.` });
+      return { result: emptyResult("error", "expert budget reached") };
+    }
+  }
   let last: AgentResult | undefined;
   let lastConfig: RoleConfig | undefined;
   while (true) {
@@ -861,6 +882,11 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       nextRound(run, task, "review-fix");
         continue;
+    }
+
+    if ((task.step === "advise" || task.step === "escalate") && !budgetLeft(state)) {
+      log.emit("note", { message: `Expert budget reached; task ${task.id} ends without expert help.` });
+      return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert budget is spent`);
     }
 
     if (task.step === "advise") {

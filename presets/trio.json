@@ -48,5 +48,6 @@
   "repairs": 2,
   "maxTasks": 4,
   "maxParallel": 2,
-  "turnTimeoutMinutes": 30
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000
 }

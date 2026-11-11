@@ -27,6 +27,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --effort <level>          override the worker's effort
       --repairs <n>             extra worker turns per task for failing checks or review findings
       --solo / --team           with a team preset: skip the orchestrator, or always use it
+      --expert-budget <tokens>  most expert tokens (fresh input + output) this run may spend
       --prompt-file <path>      read the request from a file
       --json                    print events as JSON lines instead of progress text
 
@@ -150,6 +151,7 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
       worker: { backend: flags.get("backend"), model: flags.get("model"), effort: flags.get("effort") },
       repairs: Number.isInteger(repairs) ? repairs : undefined,
       mode: flags.has("solo") ? "solo" : flags.has("team") ? "team" : undefined,
+      expertBudget: flags.has("expert-budget") ? Number.parseInt(flags.get("expert-budget")!, 10) : undefined,
     },
     engineContext(flags, controller.signal),
   );

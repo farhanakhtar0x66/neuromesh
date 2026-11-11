@@ -500,6 +500,21 @@ test("when the advice does not help, the expert takes the task over", async () =
   assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "repair", "advice", "advised-fix", "escalation"]);
 });
 
+test("the expert budget stops expert help once spent", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (isAdvice(req)) return { structured: { diagnosis: "x", steps: ["y"] }, usage: { input: 900, output: 200 } };
+    write(req.cwd, "fixed.txt", "nope");
+    return report("tried");
+  });
+  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, expertBudget: 1_000 });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(state.status, "finished");
+  assert.equal(state.outcome?.checks, "failed");
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert").length, 1, "advice once, then the budget stops the takeover");
+  assert.ok(events.some((e) => e.type === "note" && /Expert budget reached/.test(String(e.message))));
+});
+
 test("when the expert runs out of quota the next model in its list takes over", async () => {
   const repo = twoPartRepo();
   const { ctx, events } = context((req) => {
