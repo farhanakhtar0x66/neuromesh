@@ -209,8 +209,8 @@ ${state.checks.length > 0 ? `The project's checks: ${state.checks.map((c) => `\`
 
 How the team works:
 - Workers are fast, cheap models. Each gets only your brief for its task, in a fresh copy of the project with every earlier task's work already merged in. They write the code and its tests, and run the checks.
-- Every task costs a fixed overhead for starting a worker, so use as few tasks as the work allows. If the request is one coherent change, plan exactly one task. Never plan more than ${state.maxTasks}.
-- Split only where parts are truly separate, for example different modules or files. Give each task the files or folders it owns; tasks that can run side by side must not own the same files.
+- Independent tasks are built at the same time by different workers, so splitting saves time; every task also costs a fixed overhead for starting a worker. Give parts that live in separate files and do not need each other's code their own tasks. Keep a part together when splitting it would make workers edit the same files. If the request is really one change to one place, plan exactly one task. Never plan more than ${state.maxTasks}.
+- Give each task the files or folders it owns; tasks that can run side by side must not own the same files. A task that only needs another task's interface still depends on it, unless your brief spells that interface out exactly (names, signatures, return values), in which case both can start at once.
 - A task that needs another task's result lists it in depends_on.
 - Mark a task "expert" only if it needs deep reasoning a cheap model would likely get wrong (subtle concurrency, tricky algorithms, delicate design). You will do those yourself. Everything else is "worker".
 - Each brief must stand on its own: what to build, exact names and behaviour (function signatures, formats, error cases) that other tasks rely on, which tests to add, and how to tell it is done. Copy the exact requirements from the request; do not summarise them away.
