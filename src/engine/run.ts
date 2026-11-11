@@ -27,6 +27,7 @@ import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { buildPacket } from "../context/packet.ts";
+import { estimateCost } from "../usage/prices.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
@@ -190,6 +191,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     maxParallel: brief && !brief.staffing.plan ? 1 : preset.maxParallel,
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
+    expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
@@ -530,7 +532,16 @@ function tierOf(role: Role, c: RoleConfig): Tier {
 }
 
 function budgetLeft(state: RunState): boolean {
-  return state.expertBudget === undefined || expertSpend(state) < state.expertBudget;
+  return (state.expertBudget === undefined || expertSpend(state) < state.expertBudget) && dollarsLeft(state);
+}
+
+/** [F16 dollar-budget] Estimated expert spending so far, in US dollars at API list prices. */
+export function expertDollars(state: RunState): number {
+  return state.attempts.filter((a) => a.tier === "expert").reduce((n, a) => n + (estimateCost(a.model, a.usage) ?? 0), 0);
+}
+
+function dollarsLeft(state: RunState): boolean {
+  return !isOn("dollar-budget") || state.expertBudgetUsd === undefined || expertDollars(state) < state.expertBudgetUsd;
 }
 
 /** Expert tokens that count against the budget: fresh input, cache writes and output. */
@@ -548,6 +559,10 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
       log.emit("note", { message: `Expert budget reached (${spent.toLocaleString("en-US")} of ${state.expertBudget.toLocaleString("en-US")} tokens); no more ${req.role === "orchestrator" ? "planning" : "expert help"} in this run.` });
       return { result: emptyResult("error", "expert budget reached") };
     }
+  }
+  if ((req.role === "orchestrator" || req.role === "escalation") && !dollarsLeft(state)) {
+    log.emit("note", { feature: "F16", message: `Expert budget reached ($${expertDollars(state).toFixed(2)} of $${state.expertBudgetUsd!.toFixed(2)}, estimated); no more ${req.role === "orchestrator" ? "planning" : "expert help"} in this run.` });
+    return { result: emptyResult("error", "expert budget reached") };
   }
   let last: AgentResult | undefined;
   let lastConfig: RoleConfig | undefined;
@@ -673,6 +688,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     model: record.model,
     durationMs: result.durationMs,
     usage,
+    // [F17 live-cost]
+    cost: isOn("live-cost") ? estimateCost(record.model, usage) : undefined,
     detail: result.detail,
     quotaUsed: result.quotaUsed,
   });
@@ -1149,6 +1166,13 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if ((task.step === "advise" || task.step === "escalate") && !budgetLeft(state)) {
+      // [F16 dollar-budget] Work whose checks pass is kept, with the open findings recorded.
+      if (isOn("dollar-budget") && checksPass(task) && (task.history.at(-1)?.findings?.length ?? 0) > 0) {
+        log.emit("note", { feature: "F16", message: `Expert budget reached; task ${task.id} keeps its work (the checks pass) with the reviewer's findings recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       log.emit("note", { message: `Expert budget reached; task ${task.id} ends without expert help.` });
       return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert budget is spent`);
     }

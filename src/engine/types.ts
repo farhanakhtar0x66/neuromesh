@@ -197,6 +197,8 @@ export interface RunState {
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend; no limit when unset. */
   expertBudget?: number;
+  /** [F16 dollar-budget] Most estimated expert spending (US dollars, API list prices) one run may have. */
+  expertBudgetUsd?: number;
   /** When the tester runs: always, or only when the project has no automatic checks. */
   test?: "always" | "no-checks";
   /** Worker rungs, cheapest first: a stuck worker climbs before the expert is asked. */

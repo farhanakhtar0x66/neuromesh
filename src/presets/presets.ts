@@ -39,6 +39,8 @@ export interface Preset {
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend. */
   expertBudget?: number;
+  /** [F16 dollar-budget] Most expert spending one run may have, in estimated US dollars at API list prices. */
+  expertBudgetUsd?: number;
   /** When the tester reviews a task: always, or only when the project has no automatic checks. */
   test: "always" | "no-checks";
   /**
@@ -103,6 +105,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,
+    expertBudgetUsd: typeof p.expertBudgetUsd === "number" && p.expertBudgetUsd > 0 ? p.expertBudgetUsd : undefined,
     test: p.test === "no-checks" ? "no-checks" : "always",
     workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
   };

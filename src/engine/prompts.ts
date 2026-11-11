@@ -143,15 +143,18 @@ If the request is already detailed, do not repeat it: cover only what it leaves 
 Give your answer in the required JSON format:
 - name: a short working name of your own for the product
 - summary: two or three sentences on what it is and who uses it
-- features: 8 to 14 must-have features, most important first. Include what anyone asking for this would expect without saying it. One sentence each, concrete enough to check.
+- features: ${isOn("spec-cap") ? "6 to 10" : "8 to 14"} must-have features, most important first. Include what anyone asking for this would expect without saying it. One sentence each, concrete enough to check.
 - behaviour: the exact rules that are easy to get wrong: how every number shown is calculated, what every key or command does, what happens at the edges (empty input, the end, a mistake, going back), and what each screen or output shows.
 - out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
-- design: 6 to 12 points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
+- design: ${isOn("spec-cap") ? "5 to 8" : "6 to 12"} points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
 
 Rules:
 - Do not contradict the request, and do not choose the programming language unless the request does.
 - Where the request names an existing product as its model, describe the expected features in your own generic terms. Do not copy that product's name, texts, word lists or artwork.
-- Prefer a small product that is complete and pleasant to use over a long list of half-features.`;
+- Prefer a small product that is complete and pleasant to use over a long list of half-features.${
+    // [F15 spec-cap] The spec writer's output is most of an expert spec turn's cost.
+    isOn("spec-cap") ? "\n- Be compact: one or two sentences per point, and about 900 words in all. Every word is read by the developer; say each thing once." : ""
+  }`;
 }
 
 export function parseSpec(result: AgentResult): Spec | undefined {

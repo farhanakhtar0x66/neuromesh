@@ -1020,3 +1020,29 @@ test("with passing checks and open review findings, the expert patches the worke
     delete process.env.NEUROMESH_DISABLE;
   }
 });
+
+test("the expert budget in dollars keeps passing work instead of failing it, and every turn shows its estimated cost", async () => {
+  const repo = fixableRepo();
+  const SOL = { backend: "fake", model: "gpt-6.1-sol", tier: "expert" as const };
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "still wrong", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
+      return { structured: { diagnosis: "look again", steps: ["one"] }, usage: { input: 1_000_000, output: 0 } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [SOL] }, { repairs: 1, advise: true, expertBudgetUsd: 0.5 });
+  process.env.NEUROMESH_DISABLE = "review-only-merge";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.equal(state.tasks[0]?.status, "passed", "the work is kept");
+    assert.equal(fake.calls.filter((c) => c.model === "gpt-6.1-sol").length, 1, "advice only; the $2 advice spent the budget");
+    assert.ok(events.some((e) => e.type === "note" && e.feature === "F16"));
+    const advice = events.find((e) => e.type === "agent.finished" && e.kind === "advice");
+    assert.equal(advice?.cost, 2, "1M fresh input tokens on GPT-6.1 Sol at $2 per million");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});

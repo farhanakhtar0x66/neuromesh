@@ -73,5 +73,6 @@
       "model": "gpt-6-luna",
       "effort": "high"
     }
-  ]
+  ],
+  "expertBudgetUsd": 1.0
 }
