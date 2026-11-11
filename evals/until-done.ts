@@ -3,7 +3,7 @@
 // subscription limits in between. For long measurements that span several
 // quota windows.
 //
-//   node evals/until-done.ts --preset factory-wf e1-final-1 e1-final-2 e1-final-3
+//   node evals/until-done.ts --preset factory-luna e1-luna-1 e1-luna-2 e1-luna-3
 //
 // Each name is an eval (see `neuromesh eval --name`); finished tasks are
 // skipped, paused ones are retried. Gives up after --hours (default 24).
@@ -24,7 +24,7 @@ const flag = (name: string, fallback: string): string => {
   args.splice(i, 2);
   return value;
 };
-const preset = flag("preset", "factory-wf");
+const preset = flag("preset", "factory-luna");
 const hours = Number(flag("hours", "24"));
 const names = args;
 const deadline = Date.now() + hours * 3_600_000;

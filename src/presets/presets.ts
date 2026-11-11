@@ -40,7 +40,7 @@ export interface Preset {
   workerLadder?: RoleConfig[];
 }
 
-export const DEFAULT_PRESET = "factory-wf";
+export const DEFAULT_PRESET = "factory-luna";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 

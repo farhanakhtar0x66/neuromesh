@@ -172,17 +172,24 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     apart: a harder benchmark is the main missing piece. Evals:
     `hard-solo-luna`, `base-solo-luna`, `hl-factory-luna`.
 
+17. **Default preset is now `factory-luna` (owner's decision, 2026-11-11 14:10
+    IST).** The Gemini E1 (`e1-final-1..3`) was stopped unfinished: 10 tasks
+    passed, 0 engine failures. E1 now runs on the Luna team as `e1-luna-1..3`.
+    Experiments with models and efforts go on the `neuromesh-research` branch.
+    Before any TUI work the owner wants one more test: build a typing-speed
+    test for the terminal with three prompt styles (one line, detailed, a .md of
+    steps) and beat a single Claude Opus 5.5 medium agent on cost and quality.
+    A deterministic brief engine that improves the prompt and picks the
+    staffing comes first.
+
 ## Next steps
 
-1. E1 on Gemini (`e1-final-1..3`): the driver `evals/until-done.ts` resumed at
-   13:48 IST and runs them one at a time. Check it is running; restart it with
-   the command in finding 14 if not. Then `eval recheck` the three, fill the E1
-   to E3 rows in the results, tag v0.1.0.
-2. Owner to decide after looking at the ChatGPT usage panel: make `factory-luna`
-   the default preset (cheapest by API price, but it spends ChatGPT quota, which
-   is the scarce one), or keep `factory-wf` (Gemini quota, 60 times the API
-   estimate, about six times slower).
+1. E1 on the Luna team: `node evals/until-done.ts e1-luna-1 e1-luna-2 e1-luna-3`
+   (run from a frozen copy of `main`). Then `eval recheck` the three, fill the
+   E1 to E3 rows in the results, tag v0.1.0.
+2. On `neuromesh-research`: the brief engine, then the typing-app test against
+   Opus 5.5 medium.
 3. A harder benchmark: tasks Luna fails alone, so that escalation and the tester
-   can be shown to earn their cost. Nothing in the current suite does that.
+   can be shown to earn their cost.
 4. Large requests: the Sol plan is most of the cost. Try a Luna-high planner, or
    plan only above a higher size bar.

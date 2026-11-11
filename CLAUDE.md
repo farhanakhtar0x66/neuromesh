@@ -7,7 +7,10 @@ current and what "done" means for it.
 - Models are reached only through the installed CLIs in their documented
   headless modes (`agy -p`, `claude -p`, `codex exec`). Never drive
   a tool through an internal protocol, and never add paid API calls.
-- Use Gemini (through Antigravity) the most, Claude and GPT the least.
+- The default worker is GPT-6 Luna through Codex (cheapest measured, since
+  2026-11-11). Keep the expert models (GPT-6.1 Sol, Claude Opus) to a minimum.
+- Experiments with model, effort and team combinations go on the
+  `neuromesh-research` branch; `main` holds what has been measured to work.
 - Live model calls spend the owner's subscription quota. Use the fake backend
   for engine tests. Say before starting anything that will make more than a few
   live calls.

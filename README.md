@@ -21,9 +21,14 @@ four deliberately hard tasks), measured on subscriptions:
   hard and large tasks it was given, 4 to 5 times faster, but its quota is the
   scarce one: after a day of runs ChatGPT Plus had 23% of its week left and
   Gemini 87%.
-- The default preset, `factory-wf`, starts every request with a Gemini worker
-  and keeps the expert idle unless the worker gets stuck. On this suite that
-  means close to **zero expert tokens per task** at the same pass rate.
+- GPT-6 Luna alone, the cheapest model tried, also passed **25 of 25**, in under
+  a minute per task, at about 4% of Sol's cost at API list prices (an estimate;
+  nothing is paid per token).
+- The default preset, `factory-luna`, starts every request with a Luna worker at
+  low effort, has a Luna tester review it, and keeps the expert idle unless the
+  worker gets stuck. On the hard tasks it matched Sol alone at about 12% of the
+  estimated cost. The same team on Gemini Flash (`factory-wf`) cost 6 to 8
+  times more than Sol alone.
 - Expert planning and parallel workers did not pay off at this task size: a plan
   cost the expert about as much as solving the task alone, and splitting a
   five-part task took four times longer. Planning is kept for clearly large
@@ -82,8 +87,8 @@ user interface).
 
 | Preset | Expert | Worker | Use |
 | --- | --- | --- | --- |
-| `factory-wf` (default) | GPT-6.1 Sol: advice, takeover, large plans | Gemini 3.8 Flash | The factory floor: least expert use |
-| `factory-luna` | GPT-6.1 Sol: advice, takeover, large plans | GPT-6 Luna, low then high effort | Lowest cost measured: 12% of Sol alone on hard tasks (API estimate) |
+| `factory-luna` (default) | GPT-6.1 Sol: advice, takeover, large plans | GPT-6 Luna, low then high effort | The factory floor at the lowest cost measured: 12% of Sol alone on hard tasks (API estimate) |
+| `factory-wf` | GPT-6.1 Sol: advice, takeover, large plans | Gemini 3.8 Flash, low then high effort | The same floor on Gemini quota; slower and far more tokens |
 | `factory` | GPT-6.1 Sol plans every non-trivial request | Gemini 3.8 Flash | Plan first, with a tester |
 | `google-only` | Gemini Flash high | Gemini Flash | No Claude or ChatGPT quota at all |
 | `duo`, `trio` | GPT-6.1 Sol | Gemini Flash | No tester; or a GPT tester |
