@@ -136,3 +136,47 @@ test("the diff view colours additions and removals and fits the screen", () => {
   linesFit(frame, 60, 15);
   assert.match(stripAnsi(frame.lines.join("\n")), /\+new line/);
 });
+
+test("the landing screen is only the logo and the prompt; the bottom bar shows the commands key and the folder", async () => {
+  const { setColorDepth: depth, setTheme } = await import("../src/tui/theme.ts");
+  depth("none");
+  setTheme("terminal");
+  const m = newModel("factory-opus-luna", "my-app");
+  m.cwd = "/work/projects/my-app";
+  const frame = render(m, new Composer(), 120, 35);
+  const text = frame.lines.join("\n");
+  assert.doesNotMatch(text, /Cheap agents|Alt\+Enter|Ctrl\+U/, "no slogan and no key list on the landing screen");
+  assert.match(frame.lines.at(-1)!, /^ ctrl\+p commands .*factory-opus-luna  \/work\/projects\/my-app $/);
+  assert.match(text, /╭─+╮\n.*› What should we build\?/);
+});
+
+test("the command popup lists every command over the screen, and the three panes appear on wide terminals", async () => {
+  const { setColorDepth: depth } = await import("../src/tui/theme.ts");
+  depth("256");
+  const m = newModel("factory-opus-luna", "my-app");
+  m.sessions = [{ id: "r0", title: "add a --json flag", status: "applied", at: new Date().toISOString(), files: 2 }];
+  m.team = [{ role: "lead", model: "claude-opus-5-5 medium" }];
+  submitted(m, "build a typing test");
+  m.palette = { index: 3 };
+  for (const [cols, rows] of [[160, 45], [100, 30], [60, 18]] as const) {
+    const frame = render(m, new Composer(), cols, rows);
+    linesFit(frame, cols, rows);
+    assert.match(stripAnsi(frame.lines.join("\n")), /Commands[\s\S]*› esc esc +Stop the run/);
+  }
+  m.palette = undefined;
+  const wide = stripAnsi(render(m, new Composer(), 160, 45).lines.join("\n"));
+  assert.match(wide, /Sessions[\s\S]*add a --json flag/);
+  assert.match(wide, /TEAM[\s\S]*lead +claude-opus-5-5 medium/);
+  assert.doesNotMatch(wide, /Chat +Plan +Diff/, "no tabs");
+});
+
+test("a finished run shows its diff in the stream", () => {
+  const m = newModel("p", "repo");
+  submitted(m, "fix it");
+  finished(m, { id: "r1", status: "finished", outcome: { checks: "passed", files: [{ path: "a.js", insertions: 1, deletions: 1, binary: false }], insertions: 1, deletions: 1 } } as unknown as RunState);
+  m.items.push({ kind: "diff", text: "Changes: 1 file (+1 −1)", lines: ["diff --git a/a.js b/a.js", "@@ -1 +1 @@", "-old", "+new"] });
+  const text = stripAnsi(render(m, new Composer(), 120, 35).lines.join("\n"));
+  assert.match(text, /◆ Changes: 1 file \(\+1 −1\)[^\n]*\n *diff --git a\/a\.js b\/a\.js[\s\S]*-old[^\n]*\n *\+new/);
+  assert.match(text, /CHANGES +\+1 −1[\s\S]*a\.js +\+1 −1/);
+  assert.match(text, /WAITING FOR YOU/);
+});

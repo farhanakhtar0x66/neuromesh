@@ -6,22 +6,64 @@ import { basename } from "node:path";
 import { backends } from "../backends/index.ts";
 import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
 import { startRun } from "../engine/run.ts";
-import { defaultHome } from "../engine/store.ts";
+import { defaultHome, listRuns } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { feature, hint, inFeature, isOn } from "../features.ts";
 import { DEFAULT_PRESET, loadPreset } from "../presets/presets.ts";
+import type { Preset } from "../presets/presets.ts";
 import { entryFor, recordRating, recordRun } from "../usage/log.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { Composer } from "./composer.ts";
 import { applyEvent, finished, newModel, submitted, toast } from "./model.ts";
-import type { Model } from "./model.ts";
+import type { Model, SessionView } from "./model.ts";
 import { Terminal } from "./term.ts";
 import type { Key } from "./term.ts";
-import { render } from "./view.ts";
+import { setTheme, themeName } from "./theme.ts";
+import { paletteCommand, render } from "./view.ts";
+import type { Command } from "./view.ts";
 
 export interface TuiOptions {
   cwd: string;
   preset?: string;
+}
+
+const ROLE_LABEL: Record<string, string> = { orchestrator: "lead", briefer: "spec", worker: "worker", tester: "tester", escalation: "expert" };
+
+/** Who does what in a preset, for the right pane before a run starts. */
+export function teamOf(preset: Preset): { role: string; model: string }[] {
+  const out: { role: string; model: string }[] = [];
+  const seen = new Set<string>();
+  const add = (role: string, c: { backend: string; model?: string; effort?: string } | undefined): void => {
+    if (!c) return;
+    const model = `${c.model ?? c.backend}${c.effort ? ` ${c.effort}` : ""}`;
+    if (seen.has(`${role}/${model}`)) return;
+    seen.add(`${role}/${model}`);
+    out.push({ role, model });
+  };
+  for (const role of ["orchestrator", "briefer"] as const) add(ROLE_LABEL[role]!, preset.roles[role]?.[0]);
+  if (preset.workerLadder) for (const c of preset.workerLadder) add("worker", c);
+  else add("worker", preset.roles.worker?.[0]);
+  add("tester", preset.roles.tester?.[0]);
+  add("expert", preset.roles.escalation?.[0]);
+  return out;
+}
+
+function sessionsOf(home: string, repoRoot: string | undefined): SessionView[] {
+  if (!repoRoot) return [];
+  try {
+    return listRuns(home, repoRoot)
+      .reverse()
+      .slice(0, 40)
+      .map((r) => ({
+        id: r.id,
+        title: (r.request ?? r.prompt).split("\n").find((l) => l.trim())?.trim() ?? "(empty request)",
+        status: r.status,
+        at: r.updatedAt,
+        files: r.outcome?.files.length,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export async function runTui(options: TuiOptions): Promise<number> {
@@ -29,8 +71,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
     process.stderr.write("The Neuromesh TUI needs an interactive terminal. Use `neuromesh run \"<request>\"` in scripts.\n");
     return 2;
   }
-  const presetName = options.preset ?? DEFAULT_PRESET;
-  const preset = loadPreset(presetName);
+  const home = defaultHome();
+  const preset = loadPreset(options.preset ?? DEFAULT_PRESET);
   let repoRoot: string | undefined;
   let repoError: string | undefined;
   try {
@@ -38,7 +80,15 @@ export async function runTui(options: TuiOptions): Promise<number> {
   } catch (error) {
     repoError = error instanceof Error ? error.message.split("\n")[0]! : String(error);
   }
-  const model = newModel(preset.name, repoRoot ? basename(repoRoot) : undefined, repoError);
+  const fresh = (): Model => {
+    const m = newModel(preset.name, repoRoot ? basename(repoRoot) : undefined, repoError);
+    m.cwd = options.cwd;
+    m.team = teamOf(preset);
+    m.budgetUsd = preset.expertBudgetUsd;
+    m.sessions = sessionsOf(home, repoRoot);
+    return m;
+  };
+  let model = fresh();
   const composer = new Composer();
   const term = new Terminal();
   let controller: AbortController | undefined;
@@ -68,34 +118,45 @@ export async function runTui(options: TuiOptions): Promise<number> {
   const ticker = setInterval(() => {
     if (running || (model.toast && model.toast.until > Date.now() - 200)) redraw();
   }, 120);
-
   const layoutWidth = (): number => Math.min(term.size().cols - 8, 100);
 
   const start = (prompt: string): void => {
     if (!repoRoot) {
-      toast(model, repoError ?? "Not in a git repository", "red");
+      toast(model, repoError ?? "Not in a git repository", "red", 8_000);
       return;
     }
-    submitted(model, prompt);
+    const m = model;
+    submitted(m, prompt);
     composer.clear();
     controller = new AbortController();
-    const ctx = { home: defaultHome(), backends, signal: controller.signal, onEvent: (e: Parameters<typeof applyEvent>[1]) => (applyEvent(model, e), redraw()) };
+    const ctx = { home, backends, signal: controller.signal, onEvent: (e: Parameters<typeof applyEvent>[1]) => (applyEvent(m, e), redraw()) };
     running = startRun({ cwd: repoRoot, prompt, preset }, ctx);
     running
       .then((state) => {
-        finished(model, state);
-        // [F11 usage-log] Real runs from the TUI are recorded too.
+        finished(m, state);
+        // The change itself, in the conversation.
+        try {
+          const patch = state.status === "finished" ? currentPatch(state) : "";
+          if (patch.trim()) {
+            const o = state.outcome;
+            m.items.push({ kind: "diff", text: `Changes: ${o?.files.length ?? 0} file${o?.files.length === 1 ? "" : "s"} (+${o?.insertions ?? 0} −${o?.deletions ?? 0})`, lines: patch.trimEnd().split("\n") });
+          }
+        } catch {
+          // The diff is a convenience; the outcome card still offers it.
+        }
+        // [F11 usage-log] Real runs from the TUI are recorded too; demo runs never.
         if (isOn("usage-log") && preset.name !== "demo") {
           try {
-            recordRun(defaultHome(), entryFor(state, (b) => backends[b]?.sessionTotals === true));
+            recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
           } catch (error) {
-            toast(model, `Usage log not written: ${error instanceof Error ? error.message : String(error)}`, "red");
+            toast(m, `Usage log not written: ${error instanceof Error ? error.message : String(error)}`, "red");
           }
         }
+        m.sessions = sessionsOf(home, repoRoot);
       })
       .catch((error: unknown) => {
-        model.items.push({ kind: "error", text: `Engine error: ${error instanceof Error ? error.message : String(error)}`, tone: "red" });
-        model.stage = "failed";
+        m.items.push({ kind: "error", text: `Engine error: ${error instanceof Error ? error.message : String(error)}`, tone: "red" });
+        m.stage = "failed";
       })
       .finally(() => {
         running = undefined;
@@ -103,6 +164,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
         redraw();
         if (quitting) resolveExit(0);
       });
+    m.sessions = sessionsOf(home, repoRoot);
     redraw();
   };
 
@@ -121,55 +183,114 @@ export async function runTui(options: TuiOptions): Promise<number> {
     resolveExit(0);
   };
 
+  const stop = (): void => {
+    if (!running) return;
+    if (model.confirm !== "stop") {
+      model.confirm = "stop";
+      toast(model, "Press Esc again to stop the run. It can be resumed later with `neuromesh resume`.", "amber");
+      return;
+    }
+    model.confirm = undefined;
+    controller?.abort();
+    toast(model, "Stopping…", "amber");
+  };
+
+  const showDiff = (): void => {
+    const r = model.run;
+    if (!r) return void toast(model, "No finished run to show yet.", "amber");
+    try {
+      const patch = currentPatch(r);
+      model.diff = { lines: patch ? patch.split("\n") : ["(no changes)"], scroll: 0 };
+      model.focus = "diff";
+    } catch (error) {
+      toast(model, error instanceof Error ? error.message : String(error), "red");
+    }
+  };
+
+  const apply = (): void => {
+    const r = model.run;
+    if (!r || r.status !== "finished") return void toast(model, "Nothing to apply.", "amber");
+    try {
+      const result = applyRun(r);
+      model.run = { ...r, status: "applied" };
+      model.sessions = sessionsOf(home, repoRoot);
+      toast(model, `Applied ${result.files} file${result.files === 1 ? "" : "s"} to your repository.`);
+    } catch (error) {
+      toast(model, error instanceof Error ? error.message : String(error), "red", 8_000);
+    }
+  };
+
+  const discard = (confirmed = false): void => {
+    const r = model.run;
+    if (!r || r.status !== "finished") return void toast(model, "Nothing to discard.", "amber");
+    if (!confirmed && model.confirm !== "discard") {
+      model.confirm = "discard";
+      toast(model, "Press x again to throw this run's changes away.", "amber");
+      return;
+    }
+    try {
+      discardRun(r);
+      model.run = { ...r, status: "discarded" };
+      model.sessions = sessionsOf(home, repoRoot);
+      toast(model, "Discarded.", "amber");
+    } catch (error) {
+      toast(model, error instanceof Error ? error.message : String(error), "red");
+    }
+  };
+
+  const newSession = (): void => {
+    if (running) return void toast(model, "A run is going; stop it first (Esc twice).", "amber");
+    model = fresh();
+    composer.clear();
+  };
+
+  const switchTheme = (): void => {
+    setTheme(themeName() === "terminal" ? "github" : "terminal");
+    term.invalidate();
+    toast(model, themeName() === "github" ? "Theme: GitHub dark high contrast" : "Theme: your terminal's colours");
+  };
+
+  const runCommand = (cmd: Command): void => {
+    model.palette = undefined;
+    switch (cmd.action) {
+      case "new":
+        return newSession();
+      case "diff":
+        return showDiff();
+      case "apply":
+        return apply();
+      case "discard":
+        return discard(true);
+      case "theme":
+        return switchTheme();
+      case "stop":
+        model.confirm = "stop";
+        return stop();
+      case "quit":
+        return quit();
+      default:
+        toast(model, `${cmd.keys}: ${cmd.label}`, "muted");
+    }
+  };
+
   const outcomeKey = (key: Key): boolean => {
     const r = model.run;
     if (!r) return false;
-    const ch = key.text ?? "";
-    if (key.name === "char" && /^[1-5]$/.test(ch) && model.preset !== "demo") {
+    const ch = key.name === "char" && !key.alt ? (key.text ?? "") : "";
+    if (/^[1-5]$/.test(ch)) {
+      if (preset.name === "demo") return void toast(model, "Demo runs are not rated.", "muted"), true;
       model.rating = Number(ch);
       try {
-        recordRating(defaultHome(), { run: r.id, at: new Date().toISOString(), score: model.rating });
+        recordRating(home, { run: r.id, at: new Date().toISOString(), score: model.rating });
         toast(model, `Rated ${ch}. Recorded in the usage log.`);
       } catch (error) {
         toast(model, `Rating not saved: ${error instanceof Error ? error.message : String(error)}`, "red");
       }
       return true;
     }
-    if (ch === "a" && r.status === "finished") {
-      try {
-        const result = applyRun(r);
-        model.run = { ...r, status: "applied" };
-        toast(model, `Applied ${result.files} file${result.files === 1 ? "" : "s"} to your repository.`);
-      } catch (error) {
-        toast(model, error instanceof Error ? error.message : String(error), "red", 8_000);
-      }
-      return true;
-    }
-    if (ch === "d") {
-      try {
-        const patch = currentPatch(r);
-        model.diff = { lines: patch ? patch.split("\n") : ["(no changes)"], scroll: 0 };
-        model.focus = "diff";
-      } catch (error) {
-        toast(model, error instanceof Error ? error.message : String(error), "red");
-      }
-      return true;
-    }
-    if (ch === "x" && r.status === "finished") {
-      if (model.confirm !== "discard") {
-        model.confirm = "discard";
-        toast(model, "Press x again to throw this run's changes away.", "amber");
-        return true;
-      }
-      try {
-        discardRun(r);
-        model.run = { ...r, status: "discarded" };
-        toast(model, "Discarded.", "amber");
-      } catch (error) {
-        toast(model, error instanceof Error ? error.message : String(error), "red");
-      }
-      return true;
-    }
+    if (ch === "a") return apply(), true;
+    if (ch === "d") return showDiff(), true;
+    if (ch === "x") return discard(), true;
     if (ch === "i" || key.name === "tab" || key.name === "enter") {
       model.focus = "composer";
       return true;
@@ -178,18 +299,34 @@ export async function runTui(options: TuiOptions): Promise<number> {
   };
 
   const onKey = (key: Key): void => {
-    if (key.name !== "esc" && key.name !== "q") model.confirm = model.confirm === "quit" && !(key.ctrl && key.name === "q") ? undefined : model.confirm;
-    if ((key.ctrl && key.name === "q") || (key.ctrl && key.name === "c" && !running)) return quit();
-    if (key.ctrl && key.name === "c" && running) return quit();
+    if (!(key.ctrl && key.name === "q")) model.confirm = model.confirm === "quit" ? undefined : model.confirm;
+    if ((key.ctrl && key.name === "q") || (key.ctrl && key.name === "c")) return quit();
+
+    // The command popup owns the keyboard while it is open.
+    if (model.palette) {
+      if (key.name === "esc" || (key.ctrl && key.name === "p")) model.palette = undefined;
+      else if (key.name === "down" || (key.ctrl && key.name === "n")) model.palette.index += 1;
+      else if (key.name === "up") model.palette.index -= 1;
+      else if (key.name === "enter") runCommand(paletteCommand(model.palette.index));
+      return;
+    }
+    if (key.ctrl && key.name === "p") {
+      model.palette = { index: 0 };
+      return;
+    }
+    if (key.ctrl && key.name === "n") return newSession();
+    if (key.ctrl && key.name === "t") return switchTheme();
+
     if (model.focus === "diff" && model.diff) {
       const page = term.size().rows - 3;
-      if (key.name === "esc" || key.text === "q") model.focus = "outcome";
-      else if (key.name === "down" || key.text === "j") model.diff.scroll += 1;
-      else if (key.name === "up" || key.text === "k") model.diff.scroll -= 1;
+      const ch = key.text ?? "";
+      if (key.name === "esc" || ch === "q") model.focus = model.run ? "outcome" : "composer";
+      else if (key.name === "down" || ch === "j") model.diff.scroll += 1;
+      else if (key.name === "up" || ch === "k") model.diff.scroll -= 1;
       else if (key.name === "pagedown" || key.name === "space") model.diff.scroll += page;
       else if (key.name === "pageup") model.diff.scroll -= page;
-      else if (key.name === "home" || key.text === "g") model.diff.scroll = 0;
-      else if (key.name === "end" || key.text === "G") model.diff.scroll = model.diff.lines.length;
+      else if (key.name === "home" || ch === "g") model.diff.scroll = 0;
+      else if (key.name === "end" || ch === "G") model.diff.scroll = model.diff.lines.length;
       model.diff.scroll = Math.max(0, model.diff.scroll);
       return;
     }
@@ -203,26 +340,13 @@ export async function runTui(options: TuiOptions): Promise<number> {
     }
     if (model.focus === "outcome" && outcomeKey(key)) return;
     if (key.name === "esc") {
-      if (running) {
-        if (model.confirm !== "stop") {
-          model.confirm = "stop";
-          toast(model, "Press Esc again to stop the run. It can be resumed later with `neuromesh resume`.", "amber");
-          return;
-        }
-        model.confirm = undefined;
-        controller?.abort();
-        toast(model, "Stopping…", "amber");
-        return;
-      }
+      if (running) return stop();
       if (model.run) model.focus = "outcome";
       return;
     }
     if (key.name === "enter" && !key.alt && !key.shift) {
       if (composer.isEmpty) return;
-      if (running) {
-        toast(model, "A run is going. Your draft is kept; send it when the run ends.", "amber");
-        return;
-      }
+      if (running) return void toast(model, "A run is going. Your draft is kept; send it when the run ends.", "amber");
       start(composer.text.trim());
       return;
     }
@@ -246,7 +370,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
   const code = await exited;
   clearInterval(ticker);
   term.stop();
-  if (model.run && model.run.status === "finished") {
+  if (model.run && model.run.status === "finished" && (model.run.outcome?.files.length ?? 0) > 0) {
     process.stdout.write(`Run ${model.run.id} is finished and not applied. Review it with \`neuromesh diff ${model.run.id}\`, then \`neuromesh apply ${model.run.id}\`.\n`);
   }
   return code;

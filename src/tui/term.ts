@@ -195,12 +195,17 @@ export class Terminal {
     this.input.pause();
   }
 
+  /** Forget the last frame, so the next one is drawn in full (after a theme change). */
+  invalidate(): void {
+    this.previous = [];
+  }
+
   /** Draw a frame: only lines that changed are written, inside one synchronized update. */
   draw(lines: string[], cursor?: { row: number; col: number }): void {
     if (!this.active) return;
     let out = "\x1b[?2026h";
     for (let i = 0; i < lines.length; i++) {
-      if (this.previous[i] !== lines[i]) out += `\x1b[${i + 1};1H${lines[i]}\x1b[0m\x1b[K`;
+      if (this.previous[i] !== lines[i]) out += `\x1b[${i + 1};1H${lines[i]}\x1b[K\x1b[0m`;
     }
     for (let i = lines.length; i < this.previous.length; i++) out += `\x1b[${i + 1};1H\x1b[0m\x1b[K`;
     out += cursor ? `\x1b[${cursor.row + 1};${cursor.col + 1}H\x1b[?25h` : "\x1b[?25l";

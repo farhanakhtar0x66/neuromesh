@@ -1,12 +1,15 @@
 // [F19 tui] Screens as pure functions: model and terminal size in, lines out.
-// Layout follows the Signal design: one calm landing canvas; then a workspace
-// that gains a right-hand rail of agents and cost when the terminal is wide.
+//
+// Landing: the logo and a prompt box, nothing else. Workspace: sessions on the
+// left (wide terminals), one stream in the middle (no tabs; diffs appear in it),
+// and what a person running agents needs on the right. One bottom bar
+// everywhere: the key for the command popup, the preset and the working folder.
 
 import type { Composer } from "./composer.ts";
 import { pipeline } from "./model.ts";
 import type { AgentView, Item, Model } from "./model.ts";
-import { center, padEnd, truncate, width, wrap } from "./text.ts";
-import { canvas, fg, hairline, surface } from "./theme.ts";
+import { cellWidth, graphemes, truncate, width, wrap } from "./text.ts";
+import { border, canvas, fg } from "./theme.ts";
 import type { Tone } from "./theme.ts";
 
 export interface Frame {
@@ -17,7 +20,7 @@ export interface Frame {
 type Part = [text: string, tone?: Tone | "bold" | "plain"];
 
 /** One line from styled parts, cut to `cells`. Widths are measured on the plain text. */
-function row(parts: Part[], cells: number, fill = true): string {
+export function row(parts: Part[], cells: number, fill = true): string {
   let out = "";
   let left = cells;
   for (const [text, tone] of parts) {
@@ -29,21 +32,37 @@ function row(parts: Part[], cells: number, fill = true): string {
   return out + (fill ? " ".repeat(Math.max(0, left)) : "");
 }
 
+const blank = (cells: number): string => " ".repeat(Math.max(0, cells));
+
+/** A styled line padded (never cut) to `cells`. */
+function padTo(line: string, cells: number): string {
+  const w = width(line);
+  return w < cells ? line + blank(cells - w) : line;
+}
+
 // The owner's logos: a wide one, and a small one for narrower terminals.
-const LOGO_WIDE: string[] = ["      ::::    ::: :::::::::: :::    ::: :::::::::   ::::::::    :::   :::   :::::::::: ::::::::  :::    :::", "     :+:+:   :+: :+:        :+:    :+: :+:    :+: :+:    :+:  :+:+: :+:+:  :+:       :+:    :+: :+:    :+: ", "    :+:+:+  +:+ +:+        +:+    +:+ +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+       +:+        +:+    +:+  ", "   +#+ +:+ +#+ +#++:++#   +#+    +:+ +#++:++#:  +#+    +:+ +#+  +:+  +#+ +#++:++#  +#++:++#++ +#++:++#++   ", "  +#+  +#+#+# +#+        +#+    +#+ +#+    +#+ +#+    +#+ +#+       +#+ +#+              +#+ +#+    +#+    ", " #+#   #+#+# #+#        #+#    #+# #+#    #+# #+#    #+# #+#       #+# #+#       #+#    #+# #+#    #+#     ", "###    #### ##########  ########  ###    ###  ########  ###       ### ########## ########  ###    ###      "];
+const LOGO_WIDE: string[] = [
+  "      ::::    ::: :::::::::: :::    ::: :::::::::   ::::::::    :::   :::   :::::::::: ::::::::  :::    :::",
+  "     :+:+:   :+: :+:        :+:    :+: :+:    :+: :+:    :+:  :+:+: :+:+:  :+:       :+:    :+: :+:    :+: ",
+  "    :+:+:+  +:+ +:+        +:+    +:+ +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+       +:+        +:+    +:+  ",
+  "   +#+ +:+ +#+ +#++:++#   +#+    +:+ +#++:++#:  +#+    +:+ +#+  +:+  +#+ +#++:++#  +#++:++#++ +#++:++#++   ",
+  "  +#+  +#+#+# +#+        +#+    +#+ +#+    +#+ +#+    +#+ +#+       +#+ +#+              +#+ +#+    +#+    ",
+  " #+#   #+#+# #+#        #+#    #+# #+#    #+# #+#    #+# #+#       #+# #+#       #+#    #+# #+#    #+#     ",
+  "###    #### ##########  ########  ###    ###  ########  ###       ### ########## ########  ###    ###      ",
+];
 const LOGO_SMALL: string[] = [" /|/_     __  _ _  _   _/_", "/ |/_'/_///_// / //_'_\\/ /"];
 
-/** The wide logo shaded by density: ":" quiet, "+" jade, "#" bright. */
+/** The wide logo shaded by density: ":" quiet, "+" green, "#" bright. */
 function shade(line: string): string {
   let out = "";
   let run = "";
-  let tone: "muted" | "jade" | "text" | "" = "";
+  let tone: Tone | "bold" | "" = "";
   const flush = (): void => {
-    if (run) out += tone === "" ? run : fg(tone, run, tone === "text");
+    if (run) out += tone === "" ? run : tone === "bold" ? fg("text", run, true) : fg(tone, run);
     run = "";
   };
   for (const ch of line) {
-    const t = ch === ":" ? "muted" : ch === "+" ? "jade" : ch === "#" ? "text" : "";
+    const t = ch === ":" ? "muted" : ch === "+" ? "jade" : ch === "#" ? "bold" : "";
     if (t !== tone && ch !== " ") {
       flush();
       tone = t;
@@ -54,93 +73,169 @@ function shade(line: string): string {
   return out;
 }
 
-function wordmark(cols: number, rows: number): string[] {
-  if (cols >= LOGO_WIDE[0]!.length + 4 && rows >= 26) return LOGO_WIDE.map(shade);
-  if (cols >= LOGO_SMALL[0]!.length + 4) return LOGO_SMALL.map((l) => fg("jade", l, true));
+function logo(cols: number, rows: number): string[] {
+  if (cols >= width(LOGO_WIDE[0]!) + 4 && rows >= 22) return LOGO_WIDE.map(shade);
+  if (cols >= 30) return LOGO_SMALL.map((l) => fg("jade", l, true));
   return [fg("jade", "NEUROMESH", true)];
 }
 
-/** The composer box: surface background, wrapped text, and a meta line. */
-function composerBox(c: Composer, boxW: number, placeholder: string, meta: Part[], action: Part, maxRows: number): { lines: string[]; cursorRow: number; cursorCol: number } {
-  const inner = boxW - 4;
+/** A prompt box with a rounded border: the text, wrapped, and nothing else. */
+function promptBox(c: Composer, boxW: number, placeholder: string, maxRows: number): { lines: string[]; cursorRow: number; cursorCol: number } {
+  const inner = boxW - 6;
   const { lines: text, row: crow, col: ccol } = c.layout(inner);
   const visible = Math.max(1, Math.min(maxRows, text.length));
   const first = Math.max(0, Math.min(crow - visible + 1, text.length - visible));
-  const shown = c.isEmpty && c.text === "" ? [placeholder] : text.slice(first, first + visible);
-  const body = (content: string): string => `${surface()}  ${content}  ${canvas()}`;
-  const lines = [body(" ".repeat(inner))];
+  const empty = c.text === "";
+  const shown = empty ? [placeholder] : text.slice(first, first + visible);
+  const lines = [border(`╭${"─".repeat(boxW - 2)}╮`)];
   for (const [i, t] of shown.entries()) {
-    const prompt = i === 0 ? "› " : "  ";
-    const tone: Tone | "plain" = c.isEmpty && c.text === "" ? "muted" : "plain";
-    lines.push(body(row([[prompt, "jade"], [t, tone]], inner)));
+    lines.push(border("│ ") + row([[i === 0 ? "› " : "  ", "jade"], [t, empty ? "muted" : "plain"]], boxW - 4) + border(" │"));
   }
-  lines.push(body(" ".repeat(inner)));
-  const metaW = inner - width(action[0]);
-  lines.push(body(row(meta, metaW) + row([action], width(action[0]))));
+  lines.push(border(`╰${"─".repeat(boxW - 2)}╯`));
   return { lines, cursorRow: 1 + (crow - first), cursorCol: 4 + ccol };
+}
+
+/** The bottom bar: a hint (or a message) on the left, preset and working folder on the right. */
+/** A folder path that fits: home as ~, and middle folders dropped first ("~/…/app/src"). */
+export function shortPath(path: string, max: number): string {
+  const home = process.env.HOME ?? "";
+  const p = home && (path === home || path.startsWith(`${home}/`)) ? `~${path.slice(home.length)}` : path;
+  if (width(p) <= max) return p;
+  const parts = p.split("/");
+  const head = parts[0] ?? "";
+  let tail = parts.at(-1)!;
+  for (let i = parts.length - 2; i > 0; i--) {
+    const next = `${parts[i]}/${tail}`;
+    if (width(`${head}/…/${next}`) > max) break;
+    tail = next;
+  }
+  const short = `${head}/…/${tail}`;
+  return width(short) <= max ? short : truncate(parts.at(-1)!, max);
+}
+
+/** The bottom bar: a hint (or a message) on the left, preset and working folder on the right. */
+function bottomBar(m: Model, cols: number, hint: Part[]): string {
+  const rightMax = Math.floor(cols * 0.55);
+  const cwd = shortPath(m.cwd, Math.max(8, rightMax - width(m.preset) - 3));
+  const right: Part[] = [[m.preset, "mauve"], [`  ${cwd} `, "muted"]];
+  const rightW = Math.min(rightMax, width(m.preset) + width(cwd) + 3);
+  const toast = m.toast && m.toast.until > Date.now() ? m.toast : undefined;
+  const left: Part[] = toast ? [[` ${toast.text}`, toast.tone]] : [[" "], ...hint];
+  return row(left, cols - rightW) + row(right, rightW);
+}
+
+const HINT: Part[] = [["ctrl+p", "plain"], [" commands", "muted"]];
+
+function centerText(text: string, cells: number): string {
+  const w = width(text);
+  if (w >= cells) return text;
+  const left = Math.floor((cells - w) / 2);
+  return blank(left) + text + blank(cells - w - left);
 }
 
 function tooSmall(cols: number, rows: number): Frame {
   const lines = Array.from({ length: rows }, () => canvas());
   const msg = [`Too small: ${cols}×${rows}`, "Needs 40×12.", "A run keeps going.", "Ctrl+Q quits."];
   const top = Math.max(0, Math.floor((rows - msg.length) / 2));
-  for (const [i, m] of msg.entries()) if (top + i < rows) lines[top + i] = canvas() + center(truncate(m, cols), cols);
+  for (const [i, m] of msg.entries()) if (top + i < rows) lines[top + i] = canvas() + centerText(truncate(m, cols), cols);
   return { lines };
 }
 
 export function render(m: Model, c: Composer, cols: number, rows: number): Frame {
   if (cols < 40 || rows < 12) return tooSmall(cols, rows);
-  if (m.focus === "diff" && m.diff) return diffView(m, cols, rows);
-  return m.screen === "landing" ? landing(m, c, cols, rows) : workspace(m, c, cols, rows);
+  const frame = m.focus === "diff" && m.diff ? diffView(m, cols, rows) : m.screen === "landing" ? landing(m, c, cols, rows) : workspace(m, c, cols, rows);
+  if (m.palette) return { lines: paletteOverlay(m, frame.lines, cols, rows) };
+  return frame;
 }
 
 function landing(m: Model, c: Composer, cols: number, rows: number): Frame {
-  const boxW = Math.min(78, cols - 6);
-  const mark = wordmark(cols, rows);
-  const subtitle = "Cheap agents build. One expert decides. You check the diff.";
-  const meta: Part[] = m.repoError ? [[m.repoError, "red"]] : [[`${m.preset}`, "mauve"], [`  ·  ${m.repo ?? ""}`, "muted"]];
-  const box = composerBox(c, boxW, "What should we build?", meta, ["Enter build ↵", "jade"], Math.max(1, Math.min(8, rows - 16)));
-  const hints = "Alt+Enter newline  ·  Ctrl+U clear  ·  Ctrl+Q quit";
-  const block = [...mark, "", fg("muted", truncate(subtitle, cols - 2)), "", ...box.lines, "", fg("muted", truncate(hints, cols - 2))];
-  const top = Math.max(0, Math.floor((rows - block.length) / 2) - 1);
+  const boxW = Math.min(76, cols - 6);
+  const mark = logo(cols, rows);
+  const box = promptBox(c, boxW, "What should we build?", Math.max(1, Math.min(8, rows - mark.length - 9)));
+  const block = [...mark, "", "", ...box.lines];
+  const top = Math.max(0, Math.floor((rows - 1 - block.length) / 2));
   const lines = Array.from({ length: rows }, () => canvas());
   const left = Math.max(0, Math.floor((cols - boxW) / 2));
   for (const [i, l] of block.entries()) {
     const y = top + i;
-    if (y >= rows) break;
-    const isBox = i >= mark.length + 3 && i < mark.length + 3 + box.lines.length;
-    lines[y] = canvas() + (isBox ? " ".repeat(left) + l : center(l, cols));
+    if (y >= rows - 1) break;
+    const isBox = i >= mark.length + 2;
+    lines[y] = canvas() + (isBox ? blank(left) + l : centerText(l, cols));
   }
-  const footer = row([[` ${m.toast && m.toast.until > Date.now() ? m.toast.text : ""}`, m.toast?.tone ?? "muted"]], cols - 10) + row([[`${cols}×${rows} `, "muted"]], 10);
-  lines[rows - 1] = canvas() + footer;
-  return { lines, cursor: { row: top + mark.length + 3 + box.cursorRow, col: left + box.cursorCol } };
+  if (m.repoError) lines[rows - 2] = canvas() + row([[" "], [m.repoError, "red"]], cols);
+  lines[rows - 1] = canvas() + bottomBar(m, cols, HINT);
+  return { lines, cursor: { row: top + mark.length + 2 + box.cursorRow, col: left + box.cursorCol } };
 }
 
 const SPIN = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function clock(ms: number): string {
   const s = Math.max(0, Math.round(ms / 1000));
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+  return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s` : `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+}
+
+function ago(iso: string): string {
+  const ms = Date.now() - Date.parse(iso);
+  if (!(ms >= 0)) return "";
+  const m = Math.round(ms / 60_000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 
 const money = (n: number): string => `$${n.toFixed(n < 0.1 ? 3 : 2)}`;
+
+const DIFF_LINES_INLINE = 60;
+
+function diffLine(l: string, cells: number): string {
+  const tone: Part[1] = l.startsWith("+++") || l.startsWith("---") ? "bold" : l.startsWith("+") ? "jade" : l.startsWith("-") ? "red" : l.startsWith("@@") ? "mauve" : l.startsWith("diff ") ? "blue" : "muted";
+  return row([[l.replace(/\t/g, "    "), tone]], cells);
+}
 
 function itemLines(item: Item, cells: number): string[] {
   const w = Math.max(10, cells);
   switch (item.kind) {
     case "you":
-      return ["", row([["YOU", "muted"]], w), ...wrap(item.text, w - 2).map((t) => `${surface()} ${row([[t, "bold"]], w - 2)} ${canvas()}`)];
+      return ["", ...wrap(item.text, w - 2).map((t, i) => row([[i === 0 ? "› " : "  ", "jade"], [t, "bold"]], w)), ""];
     case "neuromesh":
       return wrap(item.text, w - 2).map((t, i) => row([[i === 0 ? "◆ " : "  ", item.tone ?? "jade"], [t, item.tone ?? "plain"]], w));
     case "activity":
-      return wrap(item.text, w - 4).map((t, i) => row([[i === 0 ? "  · " : "    ", "muted"], [t, item.tone ?? "muted"]], w));
+      return wrap(item.text, w - 2).map((t) => row([["  "], [t, item.tone ?? "muted"]], w));
     case "error":
       return wrap(item.text, w - 2).map((t, i) => row([[i === 0 ? "! " : "  ", "red"], [t, "red"]], w));
+    case "diff": {
+      const lines = item.lines ?? [];
+      const shown = lines.slice(0, DIFF_LINES_INLINE).map((l) => "  " + diffLine(l, w - 2));
+      const more = lines.length > DIFF_LINES_INLINE ? [row([["  "], [`… ${lines.length - DIFF_LINES_INLINE} more lines · press d for the whole diff`, "muted"]], w)] : [];
+      return ["", row([["◆ ", "jade"], [item.text, "bold"]], w), ...shown, ...more];
+    }
     case "outcome":
       return ["", ...wrap(item.text, w - 2).map((t) => row([["  "], [t, item.tone ?? "plain"]], w))];
     default:
       return wrap(item.text, w - 2).map((t) => row([["  "], [t, item.tone ?? "muted"]], w));
   }
+}
+
+function sessionsPane(m: Model, cells: number, height: number): string[] {
+  const out: string[] = [row([[" Sessions", "bold"]], cells), ""];
+  if (m.sessions.length === 0) out.push(row([[" none yet in this folder", "muted"]], cells));
+  for (const s of m.sessions) {
+    if (out.length + 3 > height) break;
+    const current = s.id === m.runId;
+    const mark: Part =
+      s.status === "running" ? ["● ", "blue"]
+      : s.status === "applied" ? ["✓ ", "jade"]
+      : s.status === "finished" ? ["◆ ", "amber"]
+      : s.status === "failed" ? ["✗ ", "red"]
+      : s.status === "discarded" ? ["– ", "muted"]
+      : ["○ ", "amber"];
+    const label = s.status === "finished" ? "ready to review" : s.status;
+    out.push(row([[current ? "▌" : " ", "jade"], mark, [s.title, current ? "bold" : "plain"]], cells));
+    out.push(row([["   "], [`${label} · ${ago(s.at)}${s.files ? ` · ${s.files} file${s.files === 1 ? "" : "s"}` : ""}`, "muted"]], cells), "");
+  }
+  while (out.length < height) out.push(blank(cells));
+  return out.slice(0, height);
 }
 
 function agentRows(a: AgentView, cells: number, frame: number): string[] {
@@ -152,26 +247,81 @@ function agentRows(a: AgentView, cells: number, frame: number): string[] {
   return [top, row([["  "], [detail, "muted"]], cells)];
 }
 
-function rail(m: Model, cells: number, height: number, frame: number): string[] {
+/** What someone running agents needs to see at a glance. */
+function infoPane(m: Model, cells: number, height: number, frame: number): string[] {
   const out: string[] = [];
-  out.push(row([["AGENTS", "jade"]], cells));
-  if (m.agents.size === 0) out.push(row([["none yet", "muted"]], cells));
-  for (const a of m.agents.values()) out.push(...agentRows(a, cells, frame), "");
-  out.push(row([["COST, ESTIMATED", "jade"]], cells));
-  out.push(row([["All models", "muted"]], cells - 10) + row([[m.costUnknown && m.cost === 0 ? "unknown" : money(m.cost), "plain"]], 10));
-  out.push(row([["Expert", "muted"]], cells - 10) + row([[money(m.expertCost), "mauve"]], 10));
-  if (m.costUnknown) out.push(row([["some turns unpriced", "amber"]], cells));
-  out.push(row([["At API list prices; nothing is paid per token.", "muted"]], cells));
-  out.push("");
-  out.push(row([["RUN", "jade"]], cells));
-  out.push(row([[m.runId ?? "starting", "muted"]], cells));
-  out.push(row([[m.preset, "mauve"]], cells));
-  const failed = m.run?.featureErrors ?? [];
-  if (failed.length > 0) {
-    out.push("", row([["FEATURES THAT FAILED", "red"]], cells));
-    for (const f of failed) out.push(row([[`${f.id} ${f.key}`, "red"]], cells));
+  const head = (t: string): void => void out.push(row([[t, "muted"]], cells));
+  const gap = (): void => void out.push("");
+  const running = !m.run && m.stage !== "idle";
+  const r = m.run;
+
+  // What needs the person comes first.
+  if (r && r.status === "finished" && (r.outcome?.files.length ?? 0) > 0) {
+    head("WAITING FOR YOU");
+    out.push(row([["a", "bold"], [" apply  ", "muted"], ["d", "bold"], [" diff  ", "muted"], ["x", "bold"], [" discard", "muted"]], cells));
+    gap();
   }
-  return out.slice(0, height).concat(Array.from({ length: Math.max(0, height - out.length) }, () => " ".repeat(cells)));
+
+  head("STATUS");
+  const stageTone: Tone = running ? "blue" : m.stage === "finished" ? "jade" : m.stage === "idle" ? "muted" : "amber";
+  const took = m.startedAt ? clock((m.endedAt ?? Date.now()) - m.startedAt) : "";
+  out.push(row([[m.stage === "idle" ? "ready" : m.stage, stageTone], [took ? `  ${took}` : "", "muted"]], cells));
+  if (r?.reason) for (const t of wrap(r.reason, cells).slice(0, 3)) out.push(row([[t, r.failure === "engine" ? "red" : "amber"]], cells));
+  gap();
+
+  if (m.agents.size === 0) {
+    head("TEAM");
+    for (const t of m.team) out.push(row([[t.role.padEnd(9), "muted"], [t.model, "plain"]], cells));
+  } else {
+    head("AGENTS");
+    for (const a of m.agents.values()) out.push(...agentRows(a, cells, frame));
+  }
+  gap();
+
+  if (m.checks.size > 0) {
+    head("CHECKS");
+    for (const [name, status] of m.checks) {
+      const tone: Tone = status.startsWith("passed") ? "jade" : status.startsWith("failed") || status.startsWith("timeout") ? "red" : "muted";
+      out.push(row([[name, "plain"], [`  ${status}`, tone]], cells));
+    }
+    gap();
+  }
+
+  if (m.verdict) {
+    head("REVIEW");
+    out.push(row([[m.verdict.verdict === "pass" ? "✓ passed" : "✗ changes asked", m.verdict.verdict === "pass" ? "jade" : "amber"]], cells));
+    for (const t of wrap(m.verdict.summary, cells).slice(0, 2)) out.push(row([[t, "muted"]], cells));
+    gap();
+  }
+
+  const o = r?.outcome;
+  if (o && o.files.length > 0) {
+    head(`CHANGES  +${o.insertions} −${o.deletions}`);
+    for (const f of o.files.slice(0, 8)) {
+      const stat = f.binary ? "binary" : `+${f.insertions} −${f.deletions}`;
+      out.push(row([[f.path, "plain"]], cells - stat.length - 1) + " " + row([[stat, "muted"]], stat.length));
+    }
+    if (o.files.length > 8) out.push(row([[`and ${o.files.length - 8} more`, "muted"]], cells));
+    gap();
+  }
+
+  head("COST  estimated");
+  const costLine = (label: string, value: string, tone: Tone | "plain"): string => row([[label, "muted"]], cells - width(value)) + row([[value, tone]], width(value));
+  out.push(costLine("all models", m.costUnknown && m.cost === 0 ? "unknown" : money(m.cost), "plain"));
+  out.push(costLine("expert", money(m.expertCost), "mauve"));
+  if (m.budgetUsd !== undefined) out.push(costLine("expert budget", `${Math.round((m.expertCost / m.budgetUsd) * 100)}% of ${money(m.budgetUsd)}`, m.expertCost >= m.budgetUsd ? "red" : "muted"));
+  if (m.costUnknown) out.push(row([["some turns unpriced", "amber"]], cells));
+  gap();
+
+  const failed = r?.featureErrors ?? [];
+  if (failed.length > 0) {
+    head("FEATURES THAT FAILED");
+    for (const f of failed) out.push(row([[`${f.id} ${f.key}`, "red"]], cells));
+    gap();
+  }
+  if (m.runId) out.push(row([[m.runId, "muted"]], cells));
+  while (out.length < height) out.push(blank(cells));
+  return out.slice(0, height).map((l) => padTo(l, cells));
 }
 
 function outcomeCard(m: Model, cells: number): string[] {
@@ -181,98 +331,183 @@ function outcomeCard(m: Model, cells: number): string[] {
   const took = m.startedAt && m.endedAt ? clock(m.endedAt - m.startedAt) : "";
   const headTone: Tone = m.stage === "finished" ? "jade" : m.stage === "stopped" || m.stage === "paused" ? "amber" : "red";
   const head =
-    m.stage === "finished" ? "Finished, the project's checks pass"
+    r.status === "applied" ? "Applied to your repository"
+    : r.status === "discarded" ? "Discarded"
+    : m.stage === "finished" ? "Finished, the project's checks pass"
     : m.stage === "failed" && r.status === "finished" ? "Finished, but the project's checks fail"
     : m.stage === "stopped" ? "Stopped; the run can be resumed"
     : m.stage === "paused" ? "Paused at a subscription limit; resume when it resets"
     : "The run failed";
   const size = o ? `${o.files.length} file${o.files.length === 1 ? "" : "s"} (+${o.insertions} −${o.deletions})` : "no changes";
-  const lines = [row([[head, headTone]], cells), row([[`${size}  ·  ≈${money(m.cost)} estimated (expert ${money(m.expertCost)})  ·  ${took}`, "muted"]], cells)];
-  if (r.reason) for (const t of wrap(r.reason, cells).slice(0, 3)) lines.push(row([[t, r.failure === "engine" ? "red" : "amber"]], cells));
   const canApply = r.status === "finished" && (o?.files.length ?? 0) > 0;
-  const actions: Part[] = [
-    ...(canApply ? ([["a", "jade"], [" apply  ", "muted"], ["d", "jade"], [" diff  ", "muted"], ["x", "jade"], [" discard  ", "muted"]] as Part[]) : []),
-    ["1–5", "jade"],
-    [m.rating ? ` rated ${m.rating}  ` : " rate vs your usual way  ", "muted"],
-    ["i", "jade"],
+  const keys: Part[] = [
+    ...(canApply ? ([["a", "bold"], [" apply  ", "muted"], ["d", "bold"], [" diff  ", "muted"], ["x", "bold"], [" discard  ", "muted"]] as Part[]) : []),
+    ["1-5", "bold"],
+    [m.rating ? ` rated ${m.rating}  ` : " rate  ", "muted"],
+    ["i", "bold"],
     [" new instruction", "muted"],
   ];
-  lines.push(row(actions, cells));
-  return lines.map((l) => `${surface()}  ${l}  ${canvas()}`);
+  const lines = [row([[head, headTone]], cells - 4), row([[`${size}  ·  ≈${money(m.cost)} (expert ${money(m.expertCost)})  ·  ${took}`, "muted"]], cells - 4), row(keys, cells - 4)];
+  return [border(`╭${"─".repeat(cells - 2)}╮`), ...lines.map((l) => border("│ ") + l + border(" │")), border(`╰${"─".repeat(cells - 2)}╯`)];
 }
 
 function workspace(m: Model, c: Composer, cols: number, rows: number): Frame {
   const frame = Math.floor(Date.now() / 120);
-  const railW = cols >= 110 && rows >= 20 ? Math.min(40, Math.max(32, Math.floor(cols * 0.24))) : 0;
-  const centerW = cols - (railW > 0 ? railW + 1 : 0);
+  const three = cols >= 150 && rows >= 24;
+  const leftW = three ? 30 : 0;
+  const rightW = cols >= 110 && rows >= 20 ? Math.min(40, Math.max(34, Math.floor(cols * 0.22))) : 0;
+  const centerW = cols - (leftW ? leftW + 1 : 0) - (rightW ? rightW + 1 : 0);
   const pad = 2;
   const readW = Math.min(centerW - pad * 2, 100);
   const running = !m.run && m.stage !== "idle";
+  const bodyRows = rows - 1;
 
-  // Header and pipeline.
-  const status = running ? `${m.stage.toUpperCase()}  ${m.startedAt ? clock(Date.now() - m.startedAt) : ""}` : m.stage.toUpperCase();
-  const header = row([[" NEUROMESH", "bold"], [` / ${m.repo ?? ""}`, "muted"]], centerW - width(status) - 2) + row([[status, running ? "blue" : m.stage === "finished" ? "jade" : "amber"]], width(status) + 2);
+  // Center: title and pipeline, the stream, live agents, then the prompt or the outcome.
+  const title = row([[" "], [m.repo ?? "", "bold"]], centerW - 14) + row([[running ? `${SPIN[frame % SPIN.length]} working` : "", "blue"]], 14);
   const steps: Part[] = [[" "]];
   for (const [i, s] of pipeline(m).entries()) {
-    if (i > 0) steps.push([" ── ", "muted"]);
+    if (i > 0) steps.push([" ─ ", "muted"]);
     const icon = s.state === "done" ? "✓" : s.state === "active" ? "●" : s.state === "failed" ? "✗" : s.state === "skipped" ? "–" : "○";
     const tone: Tone = s.state === "done" ? "jade" : s.state === "active" ? "blue" : s.state === "failed" ? "red" : "muted";
-    steps.push([`${icon} ${s.label}`, tone]);
+    steps.push([`${icon} ${s.label.toLowerCase()}`, tone]);
   }
-  const top = [header, row(steps, centerW), hairline("─".repeat(centerW))];
+  const top = [title, row(steps, centerW), ""];
 
-  // Bottom: live agents, then the outcome card or the composer, then the footer.
   const live = [...m.agents.values()].filter((a) => a.working);
-  const liveLines = live.slice(0, 3).map((a) => row([["  "], [`${SPIN[frame % SPIN.length]} `, "blue"], [`${a.role}${a.task && a.task !== "main" ? ` ${a.task}` : ""}`, "plain"], [` · ${a.model}`, "muted"], [a.last ? ` · ${a.last}` : " · working", "muted"]], centerW));
-  const boxW = Math.min(centerW - pad * 2, readW + 4);
+  const liveLines = live.slice(0, 3).map((a) => row([["  "], [`${SPIN[frame % SPIN.length]} `, "blue"], [`${a.role}${a.task && a.task !== "main" ? ` ${a.task}` : ""}`, "plain"], [` · ${a.model}`, "muted"], [a.last ? ` · ${a.last}` : "", "muted"]], centerW));
+  const boxW = Math.min(centerW - pad * 2, readW + 2);
   const showCard = m.focus === "outcome" && m.run;
-  const placeholder = running ? "Draft the next instruction while this runs…" : "Give another instruction…";
-  const box = showCard
-    ? { lines: outcomeCard(m, boxW - 4), cursorRow: 0, cursorCol: 0 }
-    : composerBox(c, boxW, placeholder, [[running ? "Enter sends once the run ends" : m.preset, "muted"]], ["Enter send", "jade"], Math.max(1, Math.min(6, rows - 14)));
-  const toastText = m.toast && m.toast.until > Date.now() ? m.toast.text : "";
-  const hints = m.focus === "outcome" ? "i compose · Ctrl+Q quit" : running ? "Esc stop · PgUp/PgDn scroll · Ctrl+Q quit" : "Enter send · Alt+Enter newline · PgUp/PgDn scroll · Ctrl+Q quit";
-  const footer = row([[` ${toastText || hints}`, toastText ? (m.toast?.tone ?? "jade") : "muted"]], centerW - 10) + row([[`${cols}×${rows} `, "muted"]], 10);
-  const bottom = [...liveLines, "", ...box.lines.map((l) => " ".repeat(pad) + l), footer];
+  const box = showCard ? { lines: outcomeCard(m, boxW), cursorRow: 0, cursorCol: 0 } : promptBox(c, boxW, running ? "Draft the next instruction…" : "Give another instruction…", Math.max(1, Math.min(6, bodyRows - 12)));
+  const bottom = [...liveLines, ...box.lines.map((l) => blank(pad) + l)];
 
-  // The transcript fills the middle, pinned to the newest line unless scrolled.
-  const height = Math.max(1, rows - top.length - bottom.length);
-  const all = m.items.flatMap((it) => itemLines(it, readW)).map((l) => " ".repeat(pad) + l);
+  const height = Math.max(1, bodyRows - top.length - bottom.length);
+  const all = m.items.flatMap((it) => itemLines(it, readW)).map((l) => blank(pad) + l);
   const maxScroll = Math.max(0, all.length - height);
   m.scroll = Math.min(m.scroll, maxScroll);
   const end = all.length - m.scroll;
   const middle = all.slice(Math.max(0, end - height), end);
   while (middle.length < height) middle.push("");
+  const center = [...top, ...middle, ...bottom].slice(0, bodyRows);
 
-  const centerLines = [...top, ...middle, ...bottom].slice(0, rows);
-  const railLines = railW > 0 ? rail(m, railW - 2, rows, frame) : [];
-  const lines = centerLines.map((l, i) => {
-    const base = canvas() + padTo(l, centerW);
-    return railW > 0 ? base + hairline("│") + " " + railLines[i] + " " : base;
-  });
-  const boxTop = top.length + height + liveLines.length + 1;
-  const cursor = showCard ? undefined : { row: boxTop + box.cursorRow, col: pad + box.cursorCol };
+  const left = leftW ? sessionsPane(m, leftW - 1, bodyRows) : [];
+  const right = rightW ? infoPane(m, rightW - 2, bodyRows, frame) : [];
+  const sep = border("│");
+  const lines = center.map((l, i) => canvas() + (leftW ? padTo(left[i] ?? "", leftW) + sep : "") + padTo(l, centerW) + (rightW ? sep + " " + padTo(right[i] ?? "", rightW - 1) : ""));
+  const hint: Part[] = running ? [["ctrl+p", "plain"], [" commands  ", "muted"], ["esc esc", "plain"], [" stop", "muted"]] : HINT;
+  lines.push(canvas() + bottomBar(m, cols, hint));
+  const boxTop = top.length + height + liveLines.length;
+  const cursor = showCard ? undefined : { row: boxTop + box.cursorRow, col: (leftW ? leftW + 1 : 0) + pad + box.cursorCol };
   return { lines, cursor };
-}
-
-/** Pad a styled line to `cells` (measured without escape codes), cutting if needed. */
-function padTo(line: string, cells: number): string {
-  const w = width(line);
-  return w <= cells ? line + " ".repeat(cells - w) : line;
 }
 
 function diffView(m: Model, cols: number, rows: number): Frame {
   const d = m.diff!;
   const height = rows - 2;
   d.scroll = Math.max(0, Math.min(d.scroll, Math.max(0, d.lines.length - height)));
-  const head = row([[" DIFF", "jade"], [`  ${m.runId ?? ""}  ·  ${d.lines.length} lines`, "muted"]], cols - 30) + row([["j/k PgUp/PgDn scroll · q back ", "muted"]], 30);
-  const body = d.lines.slice(d.scroll, d.scroll + height).map((l) => {
-    const tone: Part[1] = l.startsWith("+++") || l.startsWith("---") ? "bold" : l.startsWith("+") ? "jade" : l.startsWith("-") ? "red" : l.startsWith("@@") ? "mauve" : l.startsWith("diff ") ? "blue" : "plain";
-    return row([[" "], [l.replace(/\t/g, "    "), tone]], cols);
-  });
+  const head = row([[" Diff", "bold"], [`  ${d.lines.length} lines`, "muted"]], cols);
+  const body = d.lines.slice(d.scroll, d.scroll + height).map((l) => " " + diffLine(l, cols - 1));
   while (body.length < height) body.push("");
   const pct = d.lines.length <= height ? "all" : `${Math.round(((d.scroll + height) / d.lines.length) * 100)}%`;
-  return { lines: [head, ...body, row([[` ${pct}`, "muted"]], cols)].map((l) => canvas() + padTo(l, cols)) };
+  const bar = row([[" j/k", "plain"], [" scroll  ", "muted"], ["q", "plain"], [" back  ", "muted"], [pct, "muted"]], cols);
+  return { lines: [head, ...body, bar].map((l) => canvas() + padTo(l, cols)) };
 }
 
-export { padEnd };
+// ---------------------------------------------------------------------------
+// The command popup (Ctrl+P): every command in one place, like opencode's.
+
+export interface Command {
+  keys: string;
+  label: string;
+  /** Present when the command can be run from the popup with Enter. */
+  action?: "new" | "diff" | "apply" | "discard" | "theme" | "stop" | "quit";
+  group: string;
+}
+
+export const COMMANDS: Command[] = [
+  { group: "Prompt", keys: "enter", label: "Send the instruction" },
+  { group: "Prompt", keys: "alt+enter", label: "New line" },
+  { group: "Prompt", keys: "ctrl+u", label: "Clear the prompt" },
+  { group: "Run", keys: "esc esc", label: "Stop the run (it can be resumed)", action: "stop" },
+  { group: "Run", keys: "pgup pgdn", label: "Scroll the conversation" },
+  { group: "Review", keys: "d", label: "View the whole diff", action: "diff" },
+  { group: "Review", keys: "a", label: "Apply the change to your repository", action: "apply" },
+  { group: "Review", keys: "x x", label: "Discard the change", action: "discard" },
+  { group: "Review", keys: "1-5", label: "Rate the run against your usual way of working" },
+  { group: "Session", keys: "ctrl+n", label: "New session", action: "new" },
+  { group: "Session", keys: "ctrl+t", label: "Theme: terminal colours or GitHub dark high contrast", action: "theme" },
+  { group: "Session", keys: "ctrl+q", label: "Quit", action: "quit" },
+];
+
+/** The command at a popup index (wrapping around). */
+export function paletteCommand(index: number): Command {
+  const n = COMMANDS.length;
+  return COMMANDS[((index % n) + n) % n]!;
+}
+
+/** Draw `insert` (styled, `insertW` cells) over `line` at cell `col`, keeping the line's colours on both sides. */
+export function overlay(line: string, col: number, insert: string, insertW: number): string {
+  let out = "";
+  let held = "";
+  let cell = 0;
+  let inserted = false;
+  const put = (): void => {
+    if (inserted) return;
+    out += `\x1b[0m${canvas()}${insert}\x1b[0m${canvas()}`;
+    inserted = true;
+  };
+  for (const tok of line.match(/\x1b\[[0-9;?]*[ -/]*[@-~]|[^\x1b]+/g) ?? []) {
+    if (tok.startsWith("\x1b")) {
+      // Colour changes inside the covered part take effect after it.
+      if (cell >= col && cell < col + insertW) held += tok;
+      else out += tok;
+      continue;
+    }
+    for (const g of graphemes(tok)) {
+      const w = cellWidth(g);
+      if (cell + w <= col) out += g;
+      else if (cell < col) out += " ";
+      else if (cell >= col + insertW) {
+        if (held) {
+          out += held;
+          held = "";
+        }
+        out += g;
+      } else put();
+      cell += w;
+      if (cell >= col) put();
+    }
+  }
+  if (!inserted) {
+    out += blank(col - cell);
+    put();
+  }
+  return out + held;
+}
+
+function paletteOverlay(m: Model, base: string[], cols: number, rows: number): string[] {
+  const w = Math.min(68, cols - 4);
+  const inner = w - 4;
+  const index = ((m.palette!.index % COMMANDS.length) + COMMANDS.length) % COMMANDS.length;
+  const body: string[] = [row([["Commands", "bold"]], inner - 3) + row([["esc", "muted"]], 3)];
+  let group = "";
+  for (const [n, cmd] of COMMANDS.entries()) {
+    if (cmd.group !== group) {
+      body.push("", row([[cmd.group, "muted"]], inner));
+      group = cmd.group;
+    }
+    const selected = n === index;
+    body.push(row([[selected ? "› " : "  ", "jade"], [cmd.keys.padEnd(11), selected ? "jade" : "plain"], [cmd.label, selected ? "bold" : "muted"]], inner));
+  }
+  body.push("", row([["↑↓ choose · enter run · esc close", "muted"]], inner));
+  const maxBody = Math.max(3, rows - 3);
+  const shown = body.length > maxBody ? body.slice(0, maxBody) : body;
+  const box = [border(`╭${"─".repeat(w - 2)}╮`), ...shown.map((l) => border("│ ") + padTo(l, inner) + border(" │")), border(`╰${"─".repeat(w - 2)}╯`)];
+  const top = Math.max(0, Math.floor((rows - box.length) / 2));
+  const left = Math.max(0, Math.floor((cols - w) / 2));
+  const out = [...base];
+  for (const [i, l] of box.entries()) {
+    const y = top + i;
+    if (y < rows) out[y] = overlay(out[y] ?? "", left, l, w);
+  }
+  return out;
+}

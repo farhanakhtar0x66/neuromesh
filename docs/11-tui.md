@@ -3,36 +3,59 @@
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
 engine's events and run records only. Feature id: F19 `tui`
-(`docs/10-features.md`).
+(`docs/10-features.md`). The Signal Studio design pack was a starting point,
+simplified on the owner's direction: no slogan, no tabs, one key for all
+commands.
 
-## Using it
+## Screens
 
-1. **Landing.** The logo, one line about Neuromesh, and the composer. Type the
-   request; Alt+Enter (or Ctrl+J) adds a line; Enter starts the run.
-2. **Workspace.** Your request appears at once. Above it, the pipeline
-   (plan, build, check, review) shows what has actually happened. The
-   transcript shows each agent turn, check and review as it happens; live agents
-   and their latest action sit above the composer. On terminals 110 columns or
-   wider, a right-hand rail lists every agent with its model, turns, tokens and
-   estimated cost, the run's estimated cost (expert separately) and any feature
-   that failed.
-3. **Outcome.** When the run ends: what happened, the size of the change, the
-   estimated cost, and the keys: `a` apply to your repository, `d` view the diff
-   (j/k, PgUp/PgDn, q back), `x` discard (press twice), `1` to `5` rate the run
-   against your usual way of working (goes into the usage log), `i` write the
-   next instruction.
+**Landing.** The logo and a prompt box. Nothing else.
 
-Esc twice stops a run (resume it later with `neuromesh resume`). Ctrl+Q quits;
-during a run it asks first, then stops the run so it can be resumed. PgUp/PgDn
-scroll the transcript. Every way out restores the terminal.
+**Workspace**, after the first request:
 
-Try it without spending any quota: `neuromesh tui --preset demo` runs scripted
-agents that write one small file. Demo runs are never recorded in the usage log.
+- Left, on terminals 150 columns or wider: the sessions in this folder, newest
+  first, with their state (ready to review, applied, failed, stopped).
+- Middle: one stream, no tabs. Your request, what Neuromesh made of it, each
+  agent turn as it finishes (model, time, tokens, estimated cost), checks,
+  reviews, and when the run ends the change itself, as a diff. The pipeline at
+  the top (plan, build, check, review) shows only what actually happened.
+  Running agents show on live lines above the prompt.
+- Right, on terminals 110 columns or wider: what needs you (apply, diff or
+  discard), status and time, the team (before a run) or the agents (during
+  one), check results, the reviewer's verdict, the changed files with line
+  counts, estimated cost (all models, the expert, and the expert budget used),
+  and any feature that failed.
+
+**Bottom bar**, everywhere: `ctrl+p commands` on the left (or a message), the
+preset and the working folder on the right.
+
+**Command popup** (Ctrl+P): every key, grouped, selectable with the arrows;
+Enter runs the selected command. Esc closes it.
+
+## Keys
+
+Enter sends; Alt+Enter (or Ctrl+J) adds a line; Ctrl+U clears. Esc twice stops a
+run (resume it later with `neuromesh resume`). After a run: `a` apply, `d` the
+whole diff (j/k, PgUp/PgDn, q back), `x` twice discard, `1` to `5` rate it
+against your usual way of working (into the usage log), `i` back to the
+prompt. PgUp/PgDn scroll the stream. Ctrl+N new session, Ctrl+T theme, Ctrl+Q
+quit (during a run it asks first, then stops the run so it can be resumed).
+Every way out restores the terminal.
+
+## Colours
+
+By default the TUI uses your terminal's own colours: no painted background,
+accents from the terminal's palette, like Claude Code and opencode. Ctrl+T (or
+`NEUROMESH_THEME=github`) switches to GitHub Dark High Contrast in true colour.
+`NO_COLOR` turns colour off. State is always in words or symbols too.
+
+## Trying it without quota
+
+`neuromesh tui --preset demo` runs scripted agents that write one small file.
+No model is called, and demo runs are never recorded in the usage log or rated.
 
 ## Not yet
 
-Planned next, from the design pack (`NEUROMESH_SIGNAL_STUDIO_MASTER_SPEC.md`,
-used as a reference): a sessions rail and resuming past runs from the TUI, a
-command palette (Ctrl+P) with a preset picker and feature switches, and the
-three graphs (task DAG, execution waterfall, usage by model). Mouse support and
-themes come after those.
+Opening a past session from the sessions pane (resume or review it), a preset
+picker and feature switches in the popup, the three graphs (task DAG, execution
+waterfall, usage by model), and mouse support.

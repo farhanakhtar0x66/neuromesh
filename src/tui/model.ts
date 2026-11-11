@@ -11,9 +11,20 @@ import type { Tone } from "./theme.ts";
 export type Stage = "idle" | "planning" | "building" | "checking" | "reviewing" | "finished" | "failed" | "stopped" | "paused";
 
 export interface Item {
-  kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome";
+  kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome" | "diff";
   text: string;
   tone?: Tone;
+  /** For "diff": the patch lines. */
+  lines?: string[];
+}
+
+/** A past run of this repository, for the sessions pane. */
+export interface SessionView {
+  id: string;
+  title: string;
+  status: string;
+  at: string;
+  files?: number;
 }
 
 export interface AgentView {
@@ -52,10 +63,41 @@ export interface Model {
   toast?: { text: string; tone: Tone; until: number };
   confirm?: "stop" | "discard" | "quit";
   rating?: number;
+  /** The working directory, shown in the bottom bar. */
+  cwd: string;
+  sessions: SessionView[];
+  /** The command popup, when open: the selected row. */
+  palette?: { index: number };
+  /** Latest result of each check, by name. */
+  checks: Map<string, string>;
+  /** The tester's latest verdict, in its own words. */
+  verdict?: { verdict: string; summary: string };
+  /** Who does what in the preset: role and model. */
+  team: { role: string; model: string }[];
+  /** The preset's expert budget in estimated dollars, if any. */
+  budgetUsd?: number;
 }
 
 export function newModel(preset: string, repo?: string, repoError?: string): Model {
-  return { screen: "landing", preset, repo, repoError, items: [], agents: new Map(), stage: "idle", planned: false, cost: 0, expertCost: 0, costUnknown: false, focus: "composer", scroll: 0 };
+  return {
+    screen: "landing",
+    preset,
+    repo,
+    repoError,
+    items: [],
+    agents: new Map(),
+    stage: "idle",
+    planned: false,
+    cost: 0,
+    expertCost: 0,
+    costUnknown: false,
+    focus: "composer",
+    scroll: 0,
+    cwd: process.cwd(),
+    sessions: [],
+    checks: new Map(),
+    team: [],
+  };
 }
 
 export function toast(m: Model, text: string, tone: Tone = "jade", ms = 4_000): void {
@@ -79,6 +121,8 @@ export function submitted(m: Model, prompt: string): void {
   m.focus = "composer";
   m.rating = undefined;
   m.scroll = 0;
+  m.checks = new Map();
+  m.verdict = undefined;
 }
 
 const ROLE_NAME: Record<string, string> = { orchestrator: "Planner", escalation: "Expert", worker: "Worker", tester: "Tester", briefer: "Spec writer" };
@@ -119,7 +163,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
       if (role === "tester") m.stage = "reviewing";
       else if (role === "worker" || role === "escalation") m.stage = "building";
       else if (role === "orchestrator" || role === "briefer") m.stage = "planning";
-      m.items.push({ kind: "activity", text: line() });
+      // A running agent shows on its live line; the stream records it when it finishes.
       return;
     }
     case "agent.finished": {
@@ -139,25 +183,44 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         m.cost += cost;
         if (e.tier === "expert") m.expertCost += cost;
       } else if (tokens > 0) m.costUnknown = true;
-      m.items.push({ kind: "activity", text: line(), tone: e.stop === "done" ? undefined : "red" });
+      const secs = Math.round(Number(e.durationMs ?? 0) / 1000);
+      const took = secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, "0")}s`;
+      const name = `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}`;
+      const what = e.kind && !["initial", "spec", "test", "plan"].includes(String(e.kind)) ? ` (${String(e.kind)})` : "";
+      const tok = tokens > 0 ? ` · ${tokens >= 1000 ? `${Math.round(tokens / 1000)}k` : tokens} tokens` : "";
+      const price = cost !== undefined ? ` · ≈$${cost.toFixed(cost < 0.1 ? 3 : 2)}` : "";
+      const end = e.stop === "done" ? "" : ` · ${String(e.stop)}${e.detail ? `: ${String(e.detail).slice(0, 120)}` : ""}`;
+      m.items.push({ kind: "activity", text: `${name}${what} · ${String(e.model ?? "")} · ${took}${tok}${price}${end}`, tone: e.stop === "done" ? undefined : "red" });
       return;
     }
     case "plan.ready":
       m.planned = true;
       m.items.push({ kind: "neuromesh", text: line() });
       return;
+    case "brief": {
+      const s = (e.staffing ?? {}) as { plan?: boolean; rung?: string; tester?: boolean; spec?: boolean };
+      const kind = String(e.kind ?? "change");
+      const what = `${kind === "greenfield" ? "something new" : kind}${e.surface ? `, ${String(e.surface)}` : ""}`;
+      const how = [s.spec ? "spec first" : "", s.plan ? "the lead plans" : "one worker", s.rung === "top" ? "strongest worker setting" : "", s.tester ? "with a reviewer" : "no reviewer"].filter(Boolean).join(" · ");
+      m.items.push({ kind: "note", text: `Reading this as ${what}: ${how}` });
+      return;
+    }
+    case "task.started":
+      if (e.task !== "main") m.items.push({ kind: "note", text: line() });
+      return;
     case "spec.ready":
-    case "brief":
     case "route":
     case "context.ready":
     case "screens.checked":
       m.items.push({ kind: "note", text: line() });
       return;
     case "checks.finished":
+      for (const r of (e.results as { name: string; status: string }[] | undefined) ?? []) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
       if (e.phase !== "baseline") m.stage = "checking";
       m.items.push({ kind: "note", text: line(), tone: e.ok === false ? "amber" : undefined });
       return;
     case "tester.verdict":
+      m.verdict = { verdict: String(e.verdict), summary: String(e.summary ?? "") };
       m.items.push({ kind: "neuromesh", text: line(), tone: e.verdict === "pass" ? "jade" : "amber" });
       return;
     case "task.merged":
