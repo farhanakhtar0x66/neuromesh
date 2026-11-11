@@ -68,7 +68,7 @@ test("requests on an existing project are read as bug, refactor or feature", () 
 });
 
 test("only clearly large requests are planned, and never on a solo preset", () => {
-  const parts = Array.from({ length: 12 }, (_, i) => `${i + 1}. Build part ${i + 1} in src/part${i + 1}.js`).join("\n");
+  const parts = Array.from({ length: 20 }, (_, i) => `${i + 1}. Build part ${i + 1} in src/part${i + 1}.js`).join("\n");
   const large = buildBrief(`Add these parts:\n${parts}`, PROJECT, TEAM);
   assert.equal(large.staffing.plan, true);
   assert.equal(large.staffing.agents, 2);

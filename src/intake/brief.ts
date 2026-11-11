@@ -220,7 +220,7 @@ function standardsFor(kind: Kind, surface: Surface | undefined, everything: stri
 }
 
 /** Sizes above which the expert plans. Measured so far: planning lost on every request below these. */
-const PLAN_NUMBERED = 12;
+const PLAN_NUMBERED = 20;
 const PLAN_WORDS = 800;
 const PLAN_FILES = 12;
 
