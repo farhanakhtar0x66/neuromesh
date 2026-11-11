@@ -181,7 +181,7 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
 2. Owner to decide after looking at the ChatGPT usage panel: make `factory-luna`
    the default preset (cheapest by API price, but it spends ChatGPT quota, which
    is the scarce one), or keep `factory-wf` (Gemini quota, 60 times the API
-   estimate, five times slower).
+   estimate, about six times slower).
 3. A harder benchmark: tasks Luna fails alone, so that escalation and the tester
    can be shown to earn their cost. Nothing in the current suite does that.
 4. Large requests: the Sol plan is most of the cost. Try a Luna-high planner, or
