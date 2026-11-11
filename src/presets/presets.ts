@@ -35,7 +35,7 @@ export interface Preset {
   test: "always" | "no-checks";
 }
 
-export const DEFAULT_PRESET = "solo-flash";
+export const DEFAULT_PRESET = "factory-wf";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 
