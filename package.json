@@ -1,6 +1,6 @@
 {
   "name": "neuromesh",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A multi-agent coding engine built like a factory floor",
   "private": true,
   "type": "module",
