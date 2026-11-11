@@ -5,6 +5,10 @@
 The first working version: an engine that turns a request into a checked diff,
 with cheap models doing the work and the expensive model kept for problems.
 
+Default preset `factory-luna`: GPT-6 Luna workers and tester, GPT-6.1 Sol as
+the expert. Exit run: 75/75 suite tasks over three runs, no engine failures,
+about 1% expert share and an estimated $0.01 per task.
+
 ### Engine
 
 - `neuromesh run` works in a git worktree outside your repository, runs the

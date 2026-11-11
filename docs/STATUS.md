@@ -26,7 +26,7 @@ session if usage runs out. Read this first, then `docs/02-v0.1-plan.md`.
 | M3 orchestrator and workers | Done. Live: factory 4/4 on multi-part tasks. |
 | M4 tester, repair, escalation | Done. Advice-then-takeover escalation, expert budget, tester policy. Live escalation check running (`esc-check-flash-low`). |
 | M5 intake and parallel work | Done. Worker-first intake; live 4-task plan on the large shop ran two tasks in parallel (`large-factory-wf-split`). |
-| M6 hardening and release | In progress: E1 runs, results document, README. |
+| M6 hardening and release | Done 2026-11-11: E1 to E5 hold (`docs/06-v0.1-results.md`), tagged `v0.1.0`. Work continues on `neuromesh-research` (experiments: brief engine, screen check, Opus as lead engineer) and `neuromesh-testing` (usage log of real runs). |
 
 ## How to resume
 
