@@ -54,6 +54,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     args: invocation.args,
     cwd: request.cwd,
     timeoutMs: request.timeoutMs,
+    idleMs: request.idleMs,
     signal,
     stdin: invocation.stdin,
     logPath: request.logPath,
@@ -84,6 +85,9 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     detail = `could not start ${invocation.command}: ${proc.spawnError}`;
   } else if (proc.cancelled && !endedByUs) {
     stop = "cancelled";
+  } else if (proc.idle) {
+    stop = "error";
+    detail = `stalled: no output for ${Math.round((request.idleMs ?? 0) / 60_000)} minutes`;
   } else if (proc.timedOut) {
     stop = "timeout";
   } else if (parsed.stop) {

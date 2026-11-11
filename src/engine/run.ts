@@ -99,6 +99,8 @@ export interface StartOptions {
 type Stop = { status: "paused" | "interrupted" | "failed"; reason: string; failure?: "agent" | "engine" };
 
 const ESCALATION_REPAIRS = 1;
+/** A tool that prints nothing for this long has stalled; the turn is stopped and retried once. */
+const IDLE_MS = 10 * 60_000;
 const MAX_CONFLICTS = 2;
 
 export function modelKey(c: RoleConfig): string {
@@ -435,7 +437,7 @@ interface TurnResult {
   config?: RoleConfig;
 }
 
-const TRANSIENT = /stream was interrupted|^interrupted$|ECONNRESET|socket hang up|ETIMEDOUT|read tcp|connection reset|request failed: Post|\b50[23]\b|UNAVAILABLE|overloaded|temporarily unavailable|internal server error/i;
+const TRANSIENT = /^stalled: |stream was interrupted|^interrupted$|ECONNRESET|socket hang up|ETIMEDOUT|read tcp|connection reset|request failed: Post|\b50[23]\b|UNAVAILABLE|overloaded|temporarily unavailable|internal server error/i;
 
 const UNAVAILABLE =
   /invalid model|not recognized as a known model|not supported when using|issue with the selected model|model .*(not found|unavailable|does not exist)|no longer (available|supported)|does not have access to (the )?model/i;
@@ -544,6 +546,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     outputSchema: req.schema,
     resumeSessionId,
     timeoutMs: state.turnTimeoutMs,
+    idleMs: IDLE_MS,
     logPath,
     signal: run.signal,
     onActivity: (a) => log.emit("agent.activity", { task: req.task, role: req.role, activity: a.kind, summary: a.summary }),

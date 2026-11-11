@@ -104,3 +104,16 @@ test("a tool that keeps running after its final event is stopped, and its result
   assert.equal(result.finalText, "done");
   assert.ok(Date.now() - started < 10_000, "did not wait for the time limit");
 });
+
+test("a program that goes quiet is stopped as idle", async () => {
+  const started = Date.now();
+  const result = await runProcess({
+    command: "node",
+    args: ["-e", "console.log('hello'); setTimeout(()=>{},60000)"],
+    cwd: process.cwd(),
+    timeoutMs: 30_000,
+    idleMs: 500,
+  });
+  assert.equal(result.idle, true);
+  assert.ok(Date.now() - started < 5_000);
+});

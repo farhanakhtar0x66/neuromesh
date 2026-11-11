@@ -16,6 +16,8 @@ export interface ProcOptions {
   args: string[];
   cwd: string;
   timeoutMs: number;
+  /** Stop the program when it prints nothing for this long. */
+  idleMs?: number;
   signal?: AbortSignal;
   /** Text to send on standard input. */
   stdin?: string;
@@ -31,6 +33,8 @@ export interface ProcResult {
   exitCode: number | null;
   stderr: string;
   timedOut: boolean;
+  /** Stopped for printing nothing for idleMs. */
+  idle: boolean;
   cancelled: boolean;
   /** Set when the program could not be started at all. */
   spawnError?: string;
@@ -110,12 +114,13 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
   const started = Date.now();
   return new Promise((resolve) => {
     let timedOut = false;
+    let idle = false;
     let cancelled = false;
     let stderr = "";
     let spawnError: string | undefined;
 
     if (options.signal?.aborted) {
-      resolve({ exitCode: null, stderr: "", timedOut: false, cancelled: true, durationMs: 0 });
+      resolve({ exitCode: null, stderr: "", timedOut: false, idle: false, cancelled: true, durationMs: 0 });
       return;
     }
 
@@ -161,6 +166,17 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
       timedOut = true;
       stop();
     }, options.timeoutMs);
+    let idleTimer: NodeJS.Timeout | undefined;
+    const touch = (): void => {
+      if (!options.idleMs) return;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        idle = true;
+        timedOut = true;
+        stop();
+      }, options.idleMs);
+    };
+    touch();
     const onAbort = (): void => {
       cancelled = true;
       stop();
@@ -177,6 +193,7 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
 
     const lines = createInterface({ input: child.stdout });
     lines.on("line", (line) => {
+      touch();
       log?.write(line + "\n");
       if (line.trim() !== "") options.onLine?.(line);
     });
@@ -186,6 +203,7 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
 
     child.on("close", (code) => {
       clearTimeout(timer);
+      clearTimeout(idleTimer);
       clearInterval(sampler);
       options.signal?.removeEventListener("abort", onAbort);
       // Children the tool left behind in its group must not outlive it.
@@ -197,6 +215,7 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
           exitCode: code,
           stderr,
           timedOut,
+          idle,
           cancelled,
           spawnError,
           durationMs: Date.now() - started,

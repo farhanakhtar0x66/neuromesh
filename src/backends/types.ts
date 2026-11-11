@@ -51,6 +51,8 @@ export interface AgentRequest {
   /** Continue an earlier session of the same backend. */
   resumeSessionId?: string;
   timeoutMs: number;
+  /** Stop the turn when the tool prints nothing for this long (a stalled connection). */
+  idleMs?: number;
   /** Where to save the raw event stream. */
   logPath?: string;
   signal?: AbortSignal;
