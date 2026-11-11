@@ -10,10 +10,11 @@ session if usage runs out. Read this first, then `docs/02-v0.1-plan.md`.
   often, including between milestones.
 - Workers and testers: Gemini 3.8 Flash through Antigravity (`agy`). Gemini quota
   is plentiful; use it for all development runs.
-- Expert (orchestrator, escalation) model, in this order:
-  1. Claude Opus 4.6 / Sonnet 4.6 through Antigravity (until 2026-11-18)
-  2. `gpt-6.1-sol` at medium or high effort through Codex
-  3. Claude Opus 5.5 at medium effort through Claude Code, only if both above are exhausted
+- Expert (orchestrator, escalation) model, in this order (updated 2026-11-11):
+  1. `gpt-6.1-sol` through Codex: medium effort to plan, high effort for escalations
+  2. Claude Opus 5.5 at medium effort through Claude Code, only if Sol is exhausted
+- Claude 4.6 through Antigravity is out: past a small free quota it needs paid
+  "AI Credits". Its presets were removed.
 
 ## Where things stand
 

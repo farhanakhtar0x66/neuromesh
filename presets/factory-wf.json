@@ -1,21 +1,26 @@
 {
   "name": "factory-wf",
-  "description": "The factory floor taken literally: a Gemini Flash worker starts on every request and the expert steps in only when the worker gets stuck (or plans clearly large requests). Same models as factory.",
+  "description": "The factory floor taken literally: a Gemini 3.8 Flash worker starts on every request and the expert (GPT-6.1 Sol through Codex) steps in only when the worker gets stuck, or plans clearly large requests. Claude Opus 5.5 medium is the last fallback.",
   "mode": "team",
+  "routing": "worker-first",
   "roles": {
     "orchestrator": [
-      {
-        "backend": "agy",
-        "model": "claude-opus-4-6-thinking"
-      },
-      {
-        "backend": "agy",
-        "model": "claude-sonnet-4-6"
-      },
       {
         "backend": "codex",
         "model": "gpt-6.1-sol",
         "effort": "medium"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
       },
       {
         "backend": "claude",
@@ -34,12 +39,10 @@
         "backend": "agy",
         "model": "gemini-3.8-flash-high"
       }
-    ],
-    "escalation": "orchestrator"
+    ]
   },
   "repairs": 2,
   "maxTasks": 4,
-  "maxParallel": 1,
-  "turnTimeoutMinutes": 30,
-  "routing": "worker-first"
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30
 }

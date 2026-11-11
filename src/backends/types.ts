@@ -102,7 +102,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
 /** Recognise quota and login failures from the text a tool printed. */
 export function classifyFailure(text: string): StopReason {
   if (
-    /usage limit|rate.?limit|quota|resource.?exhausted|too many requests|\b429\b|limit reached|out of credits/i.test(
+    /usage limit|rate.?limit|quota|resource.?exhausted|too many requests|\b429\b|limit reached|out of credits|AI Credits|purchase more|upgrade your (subscription|plan)/i.test(
       text,
     )
   ) {
