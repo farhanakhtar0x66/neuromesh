@@ -90,3 +90,13 @@ finished are skipped.
    tasks before changing the default.
 4. **Python hidden checks were broken** (wrong import path) until commit
    `310fdc2`; evals run before that were re-scored with `neuromesh eval recheck`.
+5. **The CLIs sometimes hang after finishing.** Antigravity and Codex printed
+   their final event and then did not exit, so turns ran into the 30-minute
+   limit and were recorded as timeouts. Fixed in `507148f`: the engine stops a
+   tool 10 seconds after its final event. Together with network drops to
+   Google's API (now retried once), this caused every "failure" of the first
+   `solo-flash` baseline that was not a broken hidden check. Those tasks are
+   being rerun with `--rerun`.
+6. **Two hidden checks of mine were wrong** (Python import path; an inventory
+   query that matched). Both fixed and re-scored. Hard-task checks were each
+   validated against a reference implementation for that reason.
