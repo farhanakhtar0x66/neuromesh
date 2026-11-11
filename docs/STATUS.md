@@ -141,3 +141,18 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     The check now accepts hit, miss or neither (at most once); results
     re-scored. The engine survived the Claude Code session quitting: evals run
     detached and kept going.
+14. **Gemini has limits too.** At 11:57 IST all three parallel E1 runs paused:
+    Antigravity said "Your AI credits balance is too low to continue" for both
+    Gemini rungs. The engine paused cleanly (zero engine failures, no lost
+    work). E1 now runs one eval at a time through `evals/until-done.ts`, which
+    waits out cooldowns between quota windows:
+
+    ```bash
+    node evals/until-done.ts --preset factory-wf e1-final-1 e1-final-2 e1-final-3
+    ```
+
+    It was started detached at 11:58 IST (log in the session scratchpad). If it
+    is not running, start it again with the command above; finished tasks are
+    skipped. After E1 finishes, re-score with
+    `node src/cli/main.ts eval recheck e1-final-1 e1-final-2 e1-final-3`
+    (a running eval overwrites re-scores made while it runs).
