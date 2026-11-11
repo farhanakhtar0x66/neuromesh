@@ -995,3 +995,28 @@ test("workers get the repository map and the shared tool in their first prompt",
   assert.match(fake.calls[0]!.prompt, /src\/tools\/nm\.ts map/);
   assert.ok(events.some((e) => e.type === "context.ready" && e.feature === "F12"));
 });
+
+test("with passing checks and open review findings, the expert patches the worker's code instead of starting over", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "the greeting is missing", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if (req.model === "fake-expert") {
+      assert.equal(readFileSync(join(req.cwd, "fixed.txt"), "utf8"), "ok\n", "the expert sees the worker's code");
+      return report("patched");
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [EXPERT] }, { repairs: 1, advise: false });
+  process.env.NEUROMESH_DISABLE = "review-only-merge";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    const expert = fake.calls.find((c) => c.model === "fake-expert")!;
+    assert.match(expert.prompt, /Fix these problems with the smallest changes/);
+    assert.match(expert.prompt, /the greeting is missing/);
+    assert.ok(events.some((e) => e.type === "task.escalated" && e.patch === true && e.feature === "F14"));
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});

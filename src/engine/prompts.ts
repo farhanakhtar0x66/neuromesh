@@ -405,6 +405,25 @@ export function parseAdvice(result: AgentResult): Advice | undefined {
   return { diagnosis: a.diagnosis.trim(), steps };
 }
 
+/** [F14 expert-patch] The expert fixes the reviewer's findings in the worker's code. */
+export function patchPrompt(state: RunState, task: TaskState): string {
+  const findings = task.history.flatMap((h) => h.findings ?? []).filter((f) => f.severity !== "minor");
+  const latest = task.history.at(-1)?.findings ?? [];
+  return `You are the lead engineer. A worker built the task below and the project's checks pass, but a reviewer found problems the worker could not fix. The current directory holds the worker's code.
+
+${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
+
+The reviewer's latest findings:
+${findingText(latest)}
+${findings.length > latest.length ? `\nEarlier findings, for context (some may be fixed already):\n${findingText(findings.slice(0, -latest.length).slice(-6))}\n` : ""}${contextSection(state)}${toolsNote()}
+
+Fix these problems with the smallest changes that do it. Keep the worker's structure and everything that already works; do not rewrite or restyle working code. If a finding is wrong, leave the code as it is and say why in your notes.
+
+${checkList(state.checks)}
+
+${WORKER_RULES}`;
+}
+
 export function escalationPrompt(state: RunState, task: TaskState): string {
   const attempts = task.history
     .slice(-2)

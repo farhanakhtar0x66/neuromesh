@@ -134,6 +134,8 @@ export interface TaskState extends PlannedTask {
   sessionModel?: string;
   /** Why the next agent turn is happening. */
   next: "initial" | "repair" | "review-fix" | "redo" | "continue" | "advised-fix" | "climb";
+  /** [F14 expert-patch] The expert fixes named problems in the worker's code instead of starting over. */
+  patch?: boolean;
   /** Position on the worker ladder (0 = the cheapest, lowest-effort rung). */
   rung?: number;
   /** The expert's diagnosis for a stuck worker (the first, cheaper step of escalation). */

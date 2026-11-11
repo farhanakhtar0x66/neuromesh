@@ -59,6 +59,7 @@ import {
   freshAdvisedFixPrompt,
   parseAdvice,
   escalationPrompt,
+  patchPrompt,
   failureSummary,
   freshFollowUpPrompt,
   integrationPrompt,
@@ -980,7 +981,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         : task.next === "review-fix" ? reviewFixPrompt(task)
         : task.next === "redo" ? redoPrompt(state, task)
         : task.next === "continue" ? continuePrompt(state, task)
-        : task.escalated ? escalationPrompt(state, task)
+        : task.escalated ? (task.patch ? patchPrompt(state, task) : escalationPrompt(state, task))
         : taskPrompt(state, task);
       const { result, config } = await turn(run, {
         key: task.id,
@@ -1184,7 +1185,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "escalate") {
-      resetTo(task.worktree, task.base!);
+      // [F14 expert-patch] When the checks pass and only the reviewer's findings
+      // remain, the expert fixes those in the worker's code: far cheaper than
+      // rebuilding from the start, which is what every expensive build was.
+      const lastFindings = task.history.at(-1)?.findings ?? [];
+      task.patch = isOn("expert-patch") && checksPass(task) && lastFindings.length > 0;
+      if (!task.patch) resetTo(task.worktree, task.base!);
       task.escalated = true;
       task.round = 0;
       task.next = "initial";
@@ -1193,7 +1199,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       task.progress = newHistory();
       task.step = "agent";
       saveState(state);
-      log.emit("task.escalated", { task: task.id, reason: task.escalationReason });
+      log.emit("task.escalated", { task: task.id, reason: task.escalationReason, patch: task.patch, feature: task.patch ? "F14" : undefined });
       continue;
     }
 
