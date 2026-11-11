@@ -82,6 +82,11 @@ export interface Finding {
   problem: string;
   file?: string;
   reproduce?: string;
+  /**
+   * "blocker": a stated requirement is not met, or it crashes or loses data.
+   * "minor": everything else. Unset (older testers) counts as a blocker.
+   */
+  severity?: "blocker" | "minor";
 }
 
 export interface Verdict {

@@ -998,6 +998,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       task.verdict = verdict;
       log.emit("tester.verdict", { task: task.id, verdict: verdict.verdict, summary: verdict.summary, findings: verdict.findings });
+      // Minor findings never hold a task up: they are recorded and the work merges.
+      // A reviewer can always find something more; only blockers are worth rounds.
+      if (verdict.verdict === "fail" && verdict.findings.every((f) => f.severity === "minor")) {
+        log.emit("note", { message: `Task ${task.id}: the reviewer found only minor problems; merging with them recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       if (verdict.verdict === "pass") {
         task.step = "merge";
         saveState(state);

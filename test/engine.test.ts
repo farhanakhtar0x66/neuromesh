@@ -900,3 +900,19 @@ test("a tool that reports session totals on resume is recorded per turn", async 
     ["repair", 50, 1_500, 15],
   ]);
 });
+
+test("a review with only minor findings lets the task merge without another round", async () => {
+  const repo = fixableRepo();
+  const { ctx, events } = context((req) => {
+    if (isTest(req)) {
+      return { structured: { verdict: "fail", summary: "fine, small things", findings: [{ problem: "the help text has a typo", file: "README.md", reproduce: "read it", severity: "minor" }] } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ tester: [TESTER], escalation: [EXPERT] }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "test"]);
+  assert.equal(state.tasks[0]?.verdict?.findings[0]?.severity, "minor");
+  assert.ok(events.some((e) => e.type === "note" && /only minor/.test(String(e.message))));
+});

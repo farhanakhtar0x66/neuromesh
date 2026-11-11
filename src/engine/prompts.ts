@@ -69,8 +69,9 @@ export const VERDICT_SCHEMA = {
           problem: { type: "string" },
           file: { type: "string" },
           reproduce: { type: "string" },
+          severity: { type: "string", enum: ["blocker", "minor"] },
         },
-        required: ["problem", "file", "reproduce"],
+        required: ["problem", "file", "reproduce", "severity"],
         additionalProperties: false,
       },
     },
@@ -302,7 +303,8 @@ Be strict about the request and lenient about style. Do not fail the change for 
 Give your answer in the required JSON format:
 - verdict: "pass" or "fail"
 - summary: one sentence
-- findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass`;
+- findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass
+- severity of each finding: "blocker" when something the request states is missing or wrong, or the program crashes, hangs or loses data; "minor" for everything else (polish, wording, layout details, cases the request does not mention). Fail the change only if there is at least one blocker; list minor findings with a pass.`;
 }
 
 function attemptsText(task: TaskState): string {
@@ -421,7 +423,7 @@ export function parseVerdict(result: AgentResult): Verdict | undefined {
   const findings = Array.isArray(v.findings)
     ? v.findings
         .filter((f): f is Finding => typeof f?.problem === "string" && f.problem.trim() !== "")
-        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined }))
+        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined, severity: f.severity === "minor" ? ("minor" as const) : ("blocker" as const) }))
     : [];
   // A fail without anything concrete to fix is not actionable.
   if (v.verdict === "fail" && findings.length === 0) return { verdict: "pass", summary: `${v.summary ?? ""} (no concrete findings)`, findings };
