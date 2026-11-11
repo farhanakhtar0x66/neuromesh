@@ -9,8 +9,11 @@ current and what "done" means for it.
   a tool through an internal protocol, and never add paid API calls.
 - The default worker is GPT-6 Luna through Codex (cheapest measured, since
   2026-11-11). Keep the expert models (GPT-6.1 Sol, Claude Opus) to a minimum.
-- Experiments with model, effort and team combinations go on the
-  `neuromesh-research` branch; `main` holds what has been measured to work.
+- Branches: `main` holds what has been measured to work. `neuromesh-research`
+  is for experiments, including unorthodox ones. `neuromesh-testing` is for
+  real use: every `neuromesh run` is recorded in the usage log
+  (`~/.neuromesh/usage/USAGE.md`) with the owner's rating, so presets are
+  judged on real work, not only on the synthetic suite.
 - Live model calls spend the owner's subscription quota. Use the fake backend
   for engine tests. Say before starting anything that will make more than a few
   live calls.

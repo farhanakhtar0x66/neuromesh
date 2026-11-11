@@ -14,6 +14,7 @@ import { defaultHome, findRun, listRuns } from "../engine/store.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
+import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
@@ -49,6 +50,8 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
+  neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
+  neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
   neuromesh doctor              check each backend with a few small live calls
 
@@ -127,9 +130,41 @@ function exitCodeFor(state: RunState): number {
   return 1;
 }
 
-function finish(state: RunState, flags: Map<string, string>): number {
+async function finish(state: RunState, flags: Map<string, string>): Promise<number> {
   if (!flags.has("json")) process.stdout.write("\n" + formatSummary(state) + "\n");
+  // Every real run goes into the usage log (~/.neuromesh/usage), unless --no-log.
+  if (!flags.has("no-log") && state.status !== "running") {
+    const home = defaultHome();
+    try {
+      recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
+      const ended = state.status === "finished" || state.status === "failed";
+      const rating = ended && !flags.has("json") && !flags.has("no-rate") ? await askRating(state.id) : undefined;
+      if (rating) recordRating(home, rating);
+      if (!flags.has("json")) process.stdout.write(`Recorded in ${join(usageDir(home), "USAGE.md")}\n`);
+    } catch (error) {
+      process.stderr.write(`Could not write the usage log: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
+  }
   return exitCodeFor(state);
+}
+
+/** Rate a run after trying its result: neuromesh rate <run> <1-5> [note...] */
+function commandRate({ positional, flags }: Parsed): number {
+  const [ref, scoreText, ...note] = positional;
+  const score = Number.parseInt(scoreText ?? "", 10);
+  if (!ref || !(score >= 1 && score <= 5)) {
+    process.stderr.write("Usage: neuromesh rate <run|last> <1-5> [note]   (1 much worse ... 5 much better than your usual way)\n");
+    return 2;
+  }
+  const state = findRun(defaultHome(), repoRoot(flags), ref);
+  recordRating(defaultHome(), { run: state.id, at: new Date().toISOString(), score, usual: flags.get("usual"), note: note.join(" ") || undefined });
+  process.stdout.write(`Rated run ${state.id}: ${score}. Report: ${join(usageDir(defaultHome()), "USAGE.md")}\n`);
+  return 0;
+}
+
+function commandUsage(): number {
+  process.stdout.write(report(readLog(defaultHome())));
+  return 0;
 }
 
 function repoRoot(flags: Map<string, string>): string {
@@ -384,6 +419,10 @@ async function main(): Promise<number> {
       return commandEval(parsed);
     case "brief":
       return commandBrief(parsed);
+    case "rate":
+      return commandRate(parsed);
+    case "usage":
+      return commandUsage();
     case "cooldowns": {
       if (parsed.flags.has("clear")) clearCooldowns(defaultHome());
       const cooling = coolingModels(defaultHome());
