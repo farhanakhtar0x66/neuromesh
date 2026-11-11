@@ -113,6 +113,8 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
     }
     case "repair.started":
       return `${bold("Repair")} ${dim(`[${String(event.task)}]`)} round ${String(event.round)} (${String(event.kind)})`;
+    case "task.climbed":
+      return `${blue("Climbed")} ${dim(`[${String(event.task)}]`)} ${String(event.from)} → ${String(event.to)}: ${String(event.reason)}`;
     case "task.advised": {
       const steps = (event.steps as string[]) ?? [];
       return `${magenta("Expert advice")} ${dim(`[${String(event.task)}]`)} (${String(event.reason)}): ${oneLine(String(event.diagnosis), 150)}${steps.map((st, i) => `\n   ${i + 1}. ${oneLine(st, 140)}`).join("")}`;

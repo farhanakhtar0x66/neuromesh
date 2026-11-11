@@ -1,6 +1,6 @@
 {
   "name": "factory-wf",
-  "description": "The factory floor taken literally: a Gemini 3.8 Flash worker starts on every request and the expert (GPT-6.1 Sol through Codex) steps in only when the worker gets stuck, or plans clearly large requests. Claude Opus 5.5 medium is the last fallback.",
+  "description": "The factory floor: every request starts with a Gemini 3.8 Flash worker at low effort. A stuck worker climbs to high effort with its work kept; only a stuck high-effort worker gets the expert (GPT-6.1 Sol through Codex), first as advice and only then as a takeover. The expert plans clearly large requests. Claude Opus 5.5 medium is the last expert fallback.",
   "mode": "team",
   "routing": "worker-first",
   "roles": {
@@ -46,5 +46,15 @@
   "maxParallel": 2,
   "turnTimeoutMinutes": 30,
   "expertBudget": 250000,
-  "test": "always"
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash-low"
+    },
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
 }

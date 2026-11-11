@@ -45,6 +45,7 @@ export type AttemptKind =
   | "escalation"
   | "advice"
   | "advised-fix"
+  | "climb"
   | "integration";
 
 export interface AttemptRecord {
@@ -123,7 +124,9 @@ export interface TaskState extends PlannedTask {
   /** Which model the session belongs to; a session cannot move to another model. */
   sessionModel?: string;
   /** Why the next agent turn is happening. */
-  next: "initial" | "repair" | "review-fix" | "redo" | "continue" | "advised-fix";
+  next: "initial" | "repair" | "review-fix" | "redo" | "continue" | "advised-fix" | "climb";
+  /** Position on the worker ladder (0 = the cheapest, lowest-effort rung). */
+  rung?: number;
   /** The expert's diagnosis for a stuck worker (the first, cheaper step of escalation). */
   advice?: Advice;
   advised?: boolean;
@@ -168,6 +171,8 @@ export interface RunState {
   expertBudget?: number;
   /** When the tester runs: always, or only when the project has no automatic checks. */
   test?: "always" | "no-checks";
+  /** Worker rungs, cheapest first: a stuck worker climbs before the expert is asked. */
+  workerLadder?: RoleConfig[];
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

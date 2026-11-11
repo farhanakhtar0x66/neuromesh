@@ -500,6 +500,60 @@ test("a stuck worker first gets the expert's advice and fixes the task itself", 
   assert.ok(events.some((e) => e.type === "task.advised"));
 });
 
+const LADDER = [
+  { backend: "fake", model: "flash-low", tier: "worker" as const },
+  { backend: "fake", model: "flash-high", tier: "worker" as const },
+];
+
+test("a stuck low-effort worker climbs to a stronger rung, which keeps the work; the expert is never asked", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (req.model === "flash-high") {
+      assert.equal(readFileSync(join(req.cwd, "fixed.txt"), "utf8"), "nope\n", "the stronger rung sees the earlier work");
+      write(req.cwd, "fixed.txt", "ok");
+      return report("fixed it");
+    }
+    write(req.cwd, "fixed.txt", "nope");
+    return report("tried");
+  });
+  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, workerLadder: LADDER });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.attempts.map((a) => [a.model, a.kind]), [
+    ["flash-low", "initial"],
+    ["flash-low", "repair"],
+    ["flash-high", "climb"],
+  ]);
+  const climb = fake.calls[2]!;
+  assert.equal(climb.resumeSessionId, undefined, "a fresh session for the new rung");
+  assert.match(climb.prompt, /quicker colleague/);
+  assert.match(climb.prompt, /expected fixed.txt to say ok/);
+  assert.ok(events.some((e) => e.type === "task.climbed" && e.to === "fake/flash-high"));
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert").length, 0);
+});
+
+test("only a stuck top rung reaches the expert", async () => {
+  const repo = fixableRepo();
+  const { ctx } = context((req) => {
+    if (isAdvice(req)) return { structured: { diagnosis: "fixed.txt must contain exactly ok", steps: ["Write ok"] } };
+    write(req.cwd, "fixed.txt", /Diagnosis:/.test(req.prompt) ? "ok" : "nope");
+    return report("tried");
+  });
+  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, workerLadder: LADDER });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.attempts.map((a) => `${a.model}:${a.kind}`), [
+    "flash-low:initial",
+    "flash-low:repair",
+    "flash-high:climb",
+    "flash-high:repair",
+    "fake-expert:advice",
+    "flash-high:advised-fix",
+  ]);
+});
+
 test("when the advice does not help, the expert takes the task over", async () => {
   const repo = fixableRepo();
   const { ctx } = context((req) => {

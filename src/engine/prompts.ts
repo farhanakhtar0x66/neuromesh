@@ -179,6 +179,21 @@ An earlier attempt at this task already changed some files in this directory (\`
 Fix the problem.`;
 }
 
+/** A stronger worker picks up where a quicker one got stuck, keeping its work. */
+export function climbPrompt(state: RunState, task: TaskState): string {
+  const last = task.history[task.history.length - 1];
+  const what = !last
+    ? "It stopped without finishing."
+    : last.findings && last.findings.length > 0
+      ? `A reviewer found these problems with it:\n\n${findingText(last.findings)}`
+      : `What went wrong:\n${last.failures.slice(0, 6_000)}`;
+  return `${taskPrompt(state, task)}
+
+A quicker colleague attempted this task first and got stuck. Its changes are still in the files (\`git diff\` shows them). ${what}
+
+Finish the task correctly: keep what is right in those changes and fix or replace the rest.`;
+}
+
 export function continuePrompt(state: RunState, task: TaskState): string {
   return `${taskPrompt(state, task)}
 

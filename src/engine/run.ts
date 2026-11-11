@@ -46,6 +46,7 @@ import { coolingModels, recordCooldown } from "./cooldown.ts";
 import { attemptFrom, newHistory, observe } from "./progress.ts";
 import {
   ADVICE_SCHEMA,
+  climbPrompt,
   advisedFixPrompt,
   advisePrompt,
   continuePrompt,
@@ -150,6 +151,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
     test: preset.test ?? "always",
+    // An explicitly chosen worker model replaces the ladder.
+    workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: repo.head,
     branch: `neuromesh/${id}`,
@@ -430,6 +433,8 @@ interface TurnRequest {
   access: "read-only" | "write";
   schema: Record<string, unknown>;
   resume?: { sessionId?: string; model?: string };
+  /** Models to try instead of the role's own list (the worker ladder from the task's rung up). */
+  chain?: RoleConfig[];
 }
 
 interface TurnResult {
@@ -473,8 +478,10 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
   }
   let last: AgentResult | undefined;
   let lastConfig: RoleConfig | undefined;
+  const candidates = (): RoleConfig[] =>
+    req.chain ? req.chain.filter((c) => !state.exhausted.includes(modelKey(c))) : roleChain(state, req.role);
   while (true) {
-    const config = roleChain(state, req.role)[0];
+    const config = candidates()[0];
     if (!config) {
       const detail = last?.detail ?? `no ${req.role} model is configured`;
       return { result: last ?? emptyResult("quota", detail), config: lastConfig };
@@ -502,7 +509,7 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
       if (!state.exhausted.includes(modelKey(config))) state.exhausted.push(modelKey(config));
       recordCooldown(ctx.home, modelKey(config), unavailable ? `not available: ${result.detail ?? ""}` : (result.detail ?? "quota"));
       saveState(state);
-      const next = roleChain(state, req.role)[0];
+      const next = candidates()[0];
       log.emit("model.exhausted", {
         role: req.role,
         model: modelKey(config),
@@ -712,6 +719,37 @@ function wantsTester(state: RunState, task: TaskState): boolean {
   return state.test !== "no-checks" || state.checks.length === 0;
 }
 
+function canClimb(state: RunState, task: TaskState): boolean {
+  return state.workerLadder !== undefined && !task.escalated && !task.advised && task.owner !== "expert" && (task.rung ?? 0) < state.workerLadder.length - 1;
+}
+
+/**
+ * A stuck worker climbs the ladder first (same work, a stronger rung, a fresh
+ * session told exactly what went wrong). Only from the top rung does the
+ * expert get involved: advice first, takeover second.
+ */
+function onStuck(run: RunCtx, task: TaskState, reason: string): void {
+  const { state, log } = run;
+  if (canClimb(state, task)) {
+    const ladder = state.workerLadder!;
+    const from = ladder[task.rung ?? 0]!;
+    task.rung = (task.rung ?? 0) + 1;
+    const to = ladder[task.rung]!;
+    task.round = 0;
+    task.progress = newHistory();
+    task.next = "climb";
+    task.sessionId = undefined;
+    task.sessionModel = undefined;
+    task.step = "agent";
+    saveState(state);
+    log.emit("task.climbed", { task: task.id, from: modelKey(from), to: modelKey(to), reason });
+    return;
+  }
+  task.escalationReason = reason;
+  task.step = nextEscalation(state, task);
+  saveState(state);
+}
+
 /** Advice first, takeover second. */
 function nextEscalation(state: RunState, task: TaskState): "advise" | "escalate" {
   return state.advise && !task.advised && task.owner !== "expert" ? "advise" : "escalate";
@@ -751,7 +789,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const kind: AttemptKind = task.escalated && task.next === "initial" ? "escalation" : task.next;
       const followUp = task.next === "repair" || task.next === "review-fix" || task.next === "advised-fix";
       const prompt =
-        task.next === "advised-fix" ? advisedFixPrompt(task)
+        task.next === "climb" ? climbPrompt(state, task)
+        : task.next === "advised-fix" ? advisedFixPrompt(task)
         : task.next === "repair" ? repairPrompt(state, task)
         : task.next === "review-fix" ? reviewFixPrompt(task)
         : task.next === "redo" ? redoPrompt(state, task)
@@ -770,6 +809,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         access: "write",
         schema: REPORT_SCHEMA,
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
+        chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
       });
       if (result.stop === "done") {
         task.report = parseReport(result);
@@ -787,10 +827,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       // The agent failed outright (refused, timed out, crashed): the expert takes over.
       task.history.push({ diff: diffOf(task), failures: `The ${role} stopped: ${result.stop}: ${result.detail ?? ""}` });
-      if (!task.escalated && canEscalate(state)) {
-        task.escalationReason = `the worker ${result.stop}`;
-        task.step = nextEscalation(state, task);
-        saveState(state);
+      if (!task.escalated && (canClimb(state, task) || canEscalate(state))) {
+        onStuck(run, task, `the worker ${result.stop}`);
         continue;
       }
       return failTask(run, task, `${role} ${result.stop}: ${result.detail ?? "no detail"}`, { stop: true });
@@ -826,10 +864,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       if (decision === "oscillated" || decision === "no-progress" || task.round >= repairLimit(state, task)) {
         const why = decision === "oscillated" ? "the worker repeated an earlier failed state" : decision === "no-progress" ? "two attempts without progress" : "out of repair rounds";
-        if (canEscalate(state)) {
-          task.escalationReason = why;
-          task.step = nextEscalation(state, task);
-          saveState(state);
+        if (canClimb(state, task) || canEscalate(state)) {
+          onStuck(run, task, why);
           continue;
         }
         return failTask(run, task, `checks still fail (${why})`);
@@ -879,10 +915,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
       if (task.round >= repairLimit(state, task)) {
-        if (canEscalate(state)) {
-          task.escalationReason = "the reviewer still found problems after the repair rounds";
-          task.step = nextEscalation(state, task);
-          saveState(state);
+        if (canClimb(state, task) || canEscalate(state)) {
+          onStuck(run, task, "the reviewer still found problems after the repair rounds");
           continue;
         }
         log.emit("note", { message: `Task ${task.id}: out of repair rounds; accepting it with the reviewer's findings open.` });

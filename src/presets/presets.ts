@@ -33,6 +33,11 @@ export interface Preset {
   expertBudget?: number;
   /** When the tester reviews a task: always, or only when the project has no automatic checks. */
   test: "always" | "no-checks";
+  /**
+   * Worker rungs, cheapest first (for example one model at low, then high effort).
+   * Every task starts on the first rung; a stuck worker climbs before the expert is asked.
+   */
+  workerLadder?: RoleConfig[];
 }
 
 export const DEFAULT_PRESET = "factory-wf";
@@ -89,6 +94,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,
     test: p.test === "no-checks" ? "no-checks" : "always",
+    workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
   };
 }
 
