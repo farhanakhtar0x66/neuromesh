@@ -13,8 +13,9 @@ export const REPORT_SCHEMA = {
     status: { type: "string", enum: ["done", "blocked"] },
     summary: { type: "string" },
     notes: { type: "string" },
+    run: { type: "string" },
   },
-  required: ["status", "summary", "notes"],
+  required: ["status", "summary", "notes", "run"],
   additionalProperties: false,
 };
 
@@ -105,7 +106,8 @@ const WORKER_RULES = `Rules:
 When you finish, give your final answer in the required JSON format:
 - status: "done", or "blocked" if you could not complete the task
 - summary: one or two sentences on what you changed
-- notes: anything the reviewer should know (assumptions, things left undone); empty if none`;
+- notes: anything the reviewer should know (assumptions, things left undone); empty if none
+- run: the shell command that starts the program from this directory, if it is a program a person runs; empty otherwise`;
 
 function isWholeRequest(state: RunState, task: TaskState): boolean {
   return state.tasks.length === 1 && task.brief === state.prompt;
@@ -283,7 +285,7 @@ How the team works:
 Give your answer in the required JSON format: summary (one sentence) and tasks (id, title, brief, owned, depends_on, owner). Use short ids like "t1".`;
 }
 
-export function testerPrompt(state: RunState, task: TaskState, diff: string): string {
+export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string): string {
   const what = isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
   return `You are reviewing a change made by another engineer. Decide whether it does what was asked, correctly.
 
@@ -296,7 +298,11 @@ ${diff.slice(0, 24_000)}
 
 The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.
 
-Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.
+Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.${
+    screens
+      ? `\n\nThis is a full-screen terminal program, so reading the code is not enough. ${screens}\n\nCompare these screens with the request. A garbled, cut-off or overflowing screen, a crash or stack trace, typed text that does not appear or is not marked, a key that does the wrong thing, or a program that does not quit is a blocker. Point to the screen that shows it.`
+      : ""
+  }
 
 Be strict about the request and lenient about style. Do not fail the change for things the request did not ask for.
 
@@ -411,6 +417,7 @@ export function parseReport(result: AgentResult): WorkerReport {
       status: structured.status === "done" || structured.status === "blocked" ? structured.status : "unknown",
       summary: structured.summary,
       notes: typeof structured.notes === "string" && structured.notes.trim() !== "" ? structured.notes : undefined,
+      run: typeof structured.run === "string" && structured.run.trim() !== "" ? structured.run.trim() : undefined,
     };
   }
   const text = result.finalText.trim();

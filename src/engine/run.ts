@@ -18,10 +18,12 @@
 // next model in the role's list takes over; when none is left the run pauses.
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
+import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief } from "../intake/brief.ts";
@@ -685,6 +687,31 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
   return undefined;
 }
 
+/**
+ * For a full-screen terminal program: run it in tmux and record its screens for
+ * the tester. Skipped when tmux is missing or there is no way to start it.
+ */
+function screensFor(run: RunCtx, task: TaskState, dir: string): string | undefined {
+  if (!hasTmux()) return undefined;
+  const command = task.report?.run ?? startScript(dir);
+  if (!command) {
+    run.log.emit("note", { message: `Task ${task.id}: no command to start the program, so its screens were not checked.` });
+    return undefined;
+  }
+  const check = screenCheck(dir, command);
+  run.log.emit("screens.checked", { task: task.id, command, screens: check.screens.length, stuck: check.stuck });
+  return screenText(check);
+}
+
+function startScript(dir: string): string | undefined {
+  try {
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { scripts?: Record<string, string> };
+    return pkg.scripts?.start ? "npm start --silent" : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
   const files = git(state.worktree, "ls-files").split("\n").filter(Boolean);
@@ -970,6 +997,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       createDetachedWorktree(state.repo, testerDir, candidate);
       prepareWorktree(state.repo, testerDir);
       const diff = git(task.worktree, "diff", "--binary", task.base!, candidate);
+      const screens = state.brief?.surface === "tui" ? screensFor(run, task, testerDir) : undefined;
       let outcome: TurnResult;
       try {
         outcome = await turn(run, {
@@ -979,7 +1007,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           task: task.id,
           round: task.testRounds,
           cwd: testerDir,
-          prompt: testerPrompt(state, task, diff),
+          prompt: testerPrompt(state, task, diff, screens),
           access: "write",
           schema: VERDICT_SCHEMA,
         });

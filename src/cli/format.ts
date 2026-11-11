@@ -75,6 +75,8 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
       const what = `${String(event.kind)}${event.surface ? `, ${String(event.surface)}` : ""}`;
       return dim(`Brief: ${what} · ${String(event.standards)} working standards added${attached.length > 0 ? ` · attached ${attached.join(", ")}` : ""}\n   Staffing: ${st.reasons.join("; ")}`);
     }
+    case "screens.checked":
+      return dim(`Screen check [${String(event.task)}]: ran \`${String(event.command)}\` in tmux, ${String(event.screens)} screens recorded${event.stuck ? "; it did not quit" : ""}`);
     case "spec.ready":
       return dim(`Product spec ready (${String(event.model ?? "?")}): "${String(event.name)}", ${String(event.features)} features, ${String(event.behaviour)} behaviour rules`);
     case "route":

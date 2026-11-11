@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -915,4 +915,21 @@ test("a review with only minor findings lets the task merge without another roun
   assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "test"]);
   assert.equal(state.tasks[0]?.verdict?.findings[0]?.severity, "minor");
   assert.ok(events.some((e) => e.type === "note" && /only minor/.test(String(e.message))));
+});
+
+test("a full-screen terminal program is run in tmux and the tester sees its screens", { skip: spawnSync("tmux", ["-V"]).status !== 0 }, async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "good", findings: [] } };
+    write(req.cwd, "app.js", "process.stdout.write('HELLO FROM THE APP\\n'); process.stdin.setRawMode(true); process.stdin.on('data', (d) => { if (d[0] === 27 || d[0] === 3) process.exit(0); });");
+    return { structured: { status: "done", summary: "built", notes: "", run: "node app.js" } };
+  });
+  const p = preset({ orchestrator: [EXPERT], tester: [TESTER] }, { mode: "team", brief: true });
+  const state = await startRun({ cwd: repo, prompt: "build a small app in the terminal tui. Please make it nice and do not ask questions, use defaults for everything else that is needed here.", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const tester = fake.calls.find(isTest)!;
+  assert.match(tester.prompt, /real 80x24 terminal/);
+  assert.match(tester.prompt, /HELLO FROM THE APP/);
+  assert.match(tester.prompt, /the program exited with code 0/);
+  assert.ok(events.some((e) => e.type === "screens.checked" && e.stuck === false));
 });

@@ -76,6 +76,8 @@ export interface WorkerReport {
   status: "done" | "blocked" | "unknown";
   summary: string;
   notes?: string;
+  /** How to start the program, when the worker built one. */
+  run?: string;
 }
 
 export interface Finding {

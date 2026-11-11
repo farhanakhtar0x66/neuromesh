@@ -206,7 +206,10 @@ function standardsFor(kind: Kind, surface: Surface | undefined, everything: stri
   s.push("Bad input must give a clear message, never a stack trace.");
   if (surface === "tui") {
     s.push("Restore the terminal on every way out (normal quit, Ctrl-C, an unexpected error): leave raw mode, show the cursor, leave the alternate screen.");
-    s.push("Redraw correctly when the terminal is resized. Work fully at 80x24 and do not crash at smaller sizes.");
+    s.push("Redraw correctly when the terminal is resized: clear the whole screen and draw again. Work fully at 80x24, keep working at 60x15, and never crash at smaller sizes.");
+    s.push("Never draw more lines than the terminal has or lines wider than it. Wrap text at spaces, never inside a word; when text does not fit, scroll it so the current position stays visible.");
+    s.push("While the user is typing text, every printable key is text. Put commands only on keys that cannot be typed text: Tab, Esc, Enter, arrows, function keys or Ctrl combinations.");
+    s.push("Arrow keys, function keys and a fast pasted burst of text must never crash it or garble the screen.");
     s.push("Show the available keys on screen. Every screen must offer a visible way to continue and to quit.");
     s.push("Build each screen as a function from state to text, so it can be tested without a terminal.");
     s.push("When standard input is not a terminal, exit with a clear message instead of crashing.");

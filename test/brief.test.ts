@@ -31,6 +31,8 @@ test("a one-line request for a new terminal app gets standards, a spec, the top 
   assert.match(text, /^Create a monkeytype like typing app in terminal tui\./);
   assert.match(text, /Node\.js \(26\.1\.0 is installed\)/, "names a language when the request does not");
   assert.match(text, /Restore the terminal on every way out/);
+  assert.match(text, /every printable key is text/);
+
   assert.match(text, /README\.md/);
   assert.match(text, /the request wins wherever it says otherwise/);
 

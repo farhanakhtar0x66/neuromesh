@@ -19,7 +19,11 @@ const flag = (name: string, fallback: string): string => {
 };
 const quitKey = flag("quit", "Escape");
 const restartKey = flag("restart", "Tab");
+// A key that starts a test from a menu screen, pressed after launch and after each restart.
+const startKey = flag("start", "");
 const typeSeconds = Number(flag("seconds", "33"));
+// How the app wraps the passage: at spaces (join lines with a space) or anywhere ("none").
+const joinWith = flag("join", "space") === "none" ? "" : " ";
 const [dir, command] = args;
 if (!dir || !command) {
   console.error("usage: node evals/builds/probe.ts <project dir> <run command> [--quit key] [--restart key] [--seconds n]");
@@ -51,13 +55,20 @@ function passage(): string {
   const lines = screen()
     .split("\n")
     .map((l) => l.replace(/[│┃|▏█▌_]/g, " ").trim())
-    .filter((l) => /^[a-z']+( [a-z']+){2,}$/.test(l));
-  return lines.join(" ");
+    .filter((l) => /^[a-z']+( [a-z']+){2,}$/.test(l) || /^[A-Za-z',.;:!?-]+( [A-Za-z',.;:!?-]+){4,}$/.test(l));
+  return lines.join(joinWith);
 }
 
 function launch(): void {
   key(command!, "Enter");
   sleep(2_000);
+  pressStart();
+}
+
+function pressStart(): void {
+  if (!startKey) return;
+  key(startKey);
+  sleep(800);
 }
 
 tmux("kill-session", "-t", session);
@@ -114,6 +125,7 @@ try {
 
   key(restartKey);
   sleep(1_200);
+  pressStart();
   show(`6. after the restart key (${restartKey})`, screen());
   const second = passage();
   console.log(`\n[new passage differs from the first: ${second.length >= 20 && second !== first ? "yes" : "NO or unreadable"}] foreground: ${foreground()}`);
@@ -147,6 +159,7 @@ try {
   // --- Phase 3: Ctrl-C mid-test --------------------------------------------
   key(restartKey);
   sleep(800);
+  pressStart();
   const p3 = passage();
   for (const c of (p3.length >= 5 ? p3 : target).slice(0, 5)) {
     text(c);
