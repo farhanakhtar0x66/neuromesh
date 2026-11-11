@@ -98,10 +98,10 @@ test("hidden: getOrLoad shares one load and caches the result", async () => {
   await cache.getOrLoad("k", loader);
   assert.equal(calls, 2, "an expired entry is loaded again");
   const s = cache.stats();
-  assert.equal(s.misses, 2);
-  // The prompt does not say how a call that joins a load in progress counts,
-  // so either reading is accepted: 2 hits (not counted) or 3 (counted as a hit).
-  assert.ok(s.hits === 2 || s.hits === 3, `hits ${s.hits}`);
+  // The prompt does not say how a call that joins a load in progress counts:
+  // as a hit, as a miss, or not at all are all accepted, but only once.
+  const ok = [[2, 2], [3, 2], [2, 3]].some(([h, m]) => s.hits === h && s.misses === m);
+  assert.ok(ok, `hits ${s.hits}, misses ${s.misses}`);
 });
 
 test("hidden: a failed load is shared, not cached, and retried next time", async () => {
