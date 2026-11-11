@@ -27,6 +27,31 @@ export class Composer {
     this.text = "";
   }
 
+  /** The cursor's position, in graphemes. */
+  get cursorIndex(): number {
+    return this.cursor;
+  }
+
+  /** The cursor is on the first line of the text (Up would leave the box). */
+  get onFirstLine(): boolean {
+    return !this.chars.slice(0, this.cursor).includes("\n");
+  }
+
+  /** The word the cursor is in or just after: from the last space or line break up to the cursor. */
+  wordAtCursor(): { start: number; text: string } {
+    let start = this.cursor;
+    while (start > 0 && this.chars[start - 1] !== " " && this.chars[start - 1] !== "\n") start--;
+    return { start, text: this.chars.slice(start, this.cursor).join("") };
+  }
+
+  /** Replace graphemes [start, cursor) with `text`, leaving the cursor after it. */
+  replaceBeforeCursor(start: number, text: string): void {
+    const add = graphemes(text);
+    this.chars.splice(start, this.cursor - start, ...add);
+    this.cursor = start + add.length;
+    this.goal = undefined;
+  }
+
   insert(text: string): void {
     const add = graphemes(text.replace(/\r\n?/g, "\n").replace(/\t/g, "  "));
     this.chars.splice(this.cursor, 0, ...add);

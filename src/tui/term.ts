@@ -195,6 +195,16 @@ export class Terminal {
     this.input.pause();
   }
 
+  /** [F28 tui-notify] The terminal window or tab title. */
+  title(text: string): void {
+    if (this.active) this.out.write(`\x1b]0;${text.replace(/[\x00-\x1f]/g, " ")}\x07`);
+  }
+
+  /** [F28 tui-notify] Ring the terminal bell (most terminals flash or badge the tab). */
+  bell(): void {
+    if (this.active) this.out.write("\x07");
+  }
+
   /** Forget the last frame, so the next one is drawn in full (after a theme change). */
   invalidate(): void {
     this.previous = [];

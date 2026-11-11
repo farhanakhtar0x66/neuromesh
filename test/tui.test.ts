@@ -134,7 +134,7 @@ test("the diff view colours additions and removals and fits the screen", () => {
   m.diff = { lines: ["diff --git a/x b/x", "@@ -1 +1 @@", "-old line", "+new line that is much longer than the screen ".repeat(5)], scroll: 0 };
   const frame = render(m, new Composer(), 60, 15);
   linesFit(frame, 60, 15);
-  assert.match(stripAnsi(frame.lines.join("\n")), /\+new line/);
+  assert.match(stripAnsi(frame.lines.join("\n")), /▸ x[\s\S]*1   - old line[^\n]*\n *1 \+ new line/, "file header, then old and new line numbers");
 });
 
 test("the landing screen is only the logo and the prompt; the bottom bar shows the commands key and the folder", async () => {
@@ -157,11 +157,11 @@ test("the command popup lists every command over the screen, and the three panes
   m.sessions = [{ id: "r0", title: "add a --json flag", status: "applied", at: new Date().toISOString(), files: 2 }];
   m.team = [{ role: "lead", model: "claude-opus-5-5 medium" }];
   submitted(m, "build a typing test");
-  m.palette = { index: 3 };
+  m.palette = { index: 5 };
   for (const [cols, rows] of [[160, 45], [100, 30], [60, 18]] as const) {
     const frame = render(m, new Composer(), cols, rows);
     linesFit(frame, cols, rows);
-    assert.match(stripAnsi(frame.lines.join("\n")), /Commands[\s\S]*› esc esc +Stop the run/);
+    assert.match(stripAnsi(frame.lines.join("\n")), /Commands[\s\S]*› \/stop +esc esc +Stop the run/);
   }
   m.palette = undefined;
   const wide = stripAnsi(render(m, new Composer(), 160, 45).lines.join("\n"));
@@ -176,7 +176,7 @@ test("a finished run shows its diff in the stream", () => {
   finished(m, { id: "r1", status: "finished", outcome: { checks: "passed", files: [{ path: "a.js", insertions: 1, deletions: 1, binary: false }], insertions: 1, deletions: 1 } } as unknown as RunState);
   m.items.push({ kind: "diff", text: "Changes: 1 file (+1 −1)", lines: ["diff --git a/a.js b/a.js", "@@ -1 +1 @@", "-old", "+new"] });
   const text = stripAnsi(render(m, new Composer(), 120, 35).lines.join("\n"));
-  assert.match(text, /◆ Changes: 1 file \(\+1 −1\)[^\n]*\n *diff --git a\/a\.js b\/a\.js[\s\S]*-old[^\n]*\n *\+new/);
+  assert.match(text, /◆ Changes: 1 file \(\+1 −1\)[^\n]*\n[^\n]*\n *▸ a\.js[\s\S]*1   - old[^\n]*\n *1 \+ new/);
   assert.match(text, /CHANGES +\+1 −1[\s\S]*a\.js +\+1 −1/);
   assert.match(text, /WAITING FOR YOU/);
 });

@@ -28,3 +28,12 @@ Every capability added after v0.1.0 has an id. Its code is marked `[Fxx key]`, i
 | F17 | `live-cost` | optional | Shows each turn's estimated cost as it finishes, and cost by role in the summary. | `src/engine/run.ts (once)`, `src/cli/format.ts` |
 | F18 | `screen-check-2` | optional | Waits out a countdown the program shows, so a timed run that never ends by itself is caught. | `src/checks/screen.ts (countdown wait)` |
 | F19 | `tui` | core | The full-screen interface: a landing canvas, then a live workspace with the pipeline, transcript, agents and cost, and an outcome card to apply, diff, discard and rate. | `src/tui/app.ts`, `src/tui/view.ts`, `src/tui/model.ts`, `src/tui/term.ts`, `src/tui/composer.ts`, `src/tui/text.ts`, `src/tui/theme.ts` |
+| F20 | `tui-working` | optional | While a run works: an animated glyph and a shimmering verb for the stage, with time, tokens and how to stop; one line per active agent under it. | `src/tui/view.ts (workingLines)` |
+| F21 | `tui-slash` | optional | Typing / in the prompt lists commands with autocomplete; Enter or Tab runs one. | `src/tui/commands.ts`, `src/tui/app.ts (suggestions)` |
+| F22 | `tui-mentions` | optional | Typing @ in the prompt searches the repository's files; Tab or Enter puts the path in. | `src/tui/files.ts`, `src/tui/app.ts (suggestions)` |
+| F23 | `tui-history` | optional | Up and Down in an empty or recalled prompt step through earlier requests, kept in ~/.neuromesh/history.json. | `src/tui/files.ts (history)`, `src/tui/app.ts` |
+| F24 | `tui-sessions` | optional | Ctrl+S or /sessions reopens a past run of this folder from its event log: review, apply, discard or resume it. | `src/tui/app.ts (openSession, resume)`, `src/tui/view.ts (pickerOverlay)` |
+| F25 | `tui-presets` | optional | /preset lists presets with what each does; the choice applies to the next runs in this TUI. | `src/tui/app.ts (choosePreset)`, `src/tui/view.ts (pickerOverlay)` |
+| F26 | `tui-details` | optional | Ctrl+O shows or hides what each agent did step by step (commands, edits, messages). | `src/tui/model.ts (detail items)`, `src/tui/view.ts` |
+| F27 | `tui-diff-numbers` | optional | Diffs in the stream and the diff view show old and new line numbers per file. | `src/tui/diff.ts` |
+| F28 | `tui-notify` | optional | The terminal title shows the run's state, the bell rings when a run ends, and quitting prints what this session did. | `src/tui/app.ts (notify)`, `src/tui/term.ts (title, bell)` |

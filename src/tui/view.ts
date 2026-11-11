@@ -5,9 +5,12 @@
 // and what a person running agents needs on the right. One bottom bar
 // everywhere: the key for the command popup, the preset and the working folder.
 
+import { isOn } from "../features.ts";
+import { COMMANDS } from "./commands.ts";
 import type { Composer } from "./composer.ts";
+import { diffRows, gutterWidth } from "./diff.ts";
 import { pipeline } from "./model.ts";
-import type { AgentView, Item, Model } from "./model.ts";
+import type { AgentView, Choice, Item, Model } from "./model.ts";
 import { cellWidth, graphemes, truncate, width, wrap } from "./text.ts";
 import { border, canvas, fg } from "./theme.ts";
 import type { Tone } from "./theme.ts";
@@ -95,7 +98,17 @@ function promptBox(c: Composer, boxW: number, placeholder: string, maxRows: numb
   return { lines, cursorRow: 1 + (crow - first), cursorCol: 4 + ccol };
 }
 
-/** The bottom bar: a hint (or a message) on the left, preset and working folder on the right. */
+/** [F21 tui-slash] [F22 tui-mentions] The dropdown of suggestions, drawn just above the prompt box. */
+function suggestLines(m: Model, boxW: number): string[] {
+  const s = m.suggest;
+  if (!s || s.items.length === 0) return [];
+  const labelW = Math.min(Math.max(...s.items.map((i) => width(i.label))) + 2, Math.floor(boxW * 0.6));
+  return s.items.map((it, i) => {
+    const on = i === s.index;
+    return row([["  "], [on ? "› " : "  ", "jade"], [truncate(it.label, labelW - 2).padEnd(labelW), on ? "jade" : "plain"], [it.detail ?? "", on ? "plain" : "muted"]], boxW);
+  });
+}
+
 /** A folder path that fits: home as ~, and middle folders dropped first ("~/…/app/src"). */
 export function shortPath(path: string, max: number): string {
   const home = process.env.HOME ?? "";
@@ -144,6 +157,7 @@ function tooSmall(cols: number, rows: number): Frame {
 export function render(m: Model, c: Composer, cols: number, rows: number): Frame {
   if (cols < 40 || rows < 12) return tooSmall(cols, rows);
   const frame = m.focus === "diff" && m.diff ? diffView(m, cols, rows) : m.screen === "landing" ? landing(m, c, cols, rows) : workspace(m, c, cols, rows);
+  if (m.picker) return { lines: pickerOverlay(m, frame.lines, cols, rows) };
   if (m.palette) return { lines: paletteOverlay(m, frame.lines, cols, rows) };
   return frame;
 }
@@ -152,7 +166,8 @@ function landing(m: Model, c: Composer, cols: number, rows: number): Frame {
   const boxW = Math.min(76, cols - 6);
   const mark = logo(cols, rows);
   const box = promptBox(c, boxW, "What should we build?", Math.max(1, Math.min(8, rows - mark.length - 9)));
-  const block = [...mark, "", "", ...box.lines];
+  const drop = suggestLines(m, boxW);
+  const block = [...mark, "", "", ...box.lines, ...drop];
   const top = Math.max(0, Math.floor((rows - 1 - block.length) / 2));
   const lines = Array.from({ length: rows }, () => canvas());
   const left = Math.max(0, Math.floor((cols - boxW) / 2));
@@ -186,14 +201,77 @@ function ago(iso: string): string {
 
 const money = (n: number): string => `$${n.toFixed(n < 0.1 ? 3 : 2)}`;
 
-const DIFF_LINES_INLINE = 60;
+// ---------------------------------------------------------------------------
+// [F20 tui-working] The working line: a pulsing glyph and a verb for what the
+// team is doing, with a light sweeping across it, then time, tokens and how to
+// stop. One line per active agent beneath, as Claude Code does.
 
-function diffLine(l: string, cells: number): string {
-  const tone: Part[1] = l.startsWith("+++") || l.startsWith("---") ? "bold" : l.startsWith("+") ? "jade" : l.startsWith("-") ? "red" : l.startsWith("@@") ? "mauve" : l.startsWith("diff ") ? "blue" : "muted";
-  return row([[l.replace(/\t/g, "    "), tone]], cells);
+const GLYPH = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+export const VERBS: Record<string, string[]> = {
+  planning: ["Planning", "Sketching", "Scheming", "Mapping it out", "Thinking it through"],
+  building: ["Cooking", "Building", "Wiring", "Crafting", "Hammering", "Brewing", "Tinkering"],
+  checking: ["Testing", "Checking", "Verifying", "Running the checks"],
+  reviewing: ["Reviewing", "Inspecting", "Scrutinising", "Poking at it"],
+};
+
+/** The verb for the moment: changes every few seconds, the same on every redraw in between. */
+export function verbFor(stage: string, elapsedMs: number): string {
+  const list = VERBS[stage] ?? VERBS.building!;
+  return list[Math.floor(elapsedMs / 4_500) % list.length]!;
 }
 
-function itemLines(item: Item, cells: number): string[] {
+function shimmer(text: string, frame: number, tone: Tone): string {
+  const chars = [...text];
+  const at = (frame % (chars.length + 8)) - 4;
+  let out = "";
+  for (const [i, ch] of chars.entries()) out += Math.abs(i - at) <= 1 ? fg("text", ch, true) : fg(tone, ch);
+  return out;
+}
+
+function workingLines(m: Model, cells: number, frame: number): string[] {
+  const live = [...m.agents.values()].filter((a) => a.working);
+  if (!isOn("tui-working")) {
+    return live.slice(0, 3).map((a) => row([["  "], [`${SPIN[frame % SPIN.length]} `, "blue"], [a.role, "plain"], [` · ${a.model}`, "muted"], [a.last ? ` · ${a.last}` : "", "muted"]], cells));
+  }
+  const elapsed = m.startedAt ? Date.now() - m.startedAt : 0;
+  const verb = `${verbFor(m.stage, elapsed)}…`;
+  const tokens = [...m.agents.values()].reduce((n, a) => n + a.tokens, 0);
+  const meta = ` (${clock(elapsed)}${tokens > 0 ? ` · ${Math.round(tokens / 1000)}k tokens` : ""} · esc esc to stop)`;
+  const glyph = fg("amber", GLYPH[frame % GLYPH.length]!);
+  const head = padTo(`  ${glyph} ${shimmer(verb, frame, "amber")}${fg("muted", truncate(meta, Math.max(0, cells - width(verb) - 6)))}`, cells);
+  const subs = live.slice(0, 4).map((a) => row([["    ⎿ ", "muted"], [`${a.role}${a.task && a.task !== "main" ? ` ${a.task}` : ""}`, "plain"], [` · ${a.model}`, "muted"], [a.last ? ` · ${a.last}` : " · starting", "muted"]], cells));
+  return [head, ...subs];
+}
+
+// ---------------------------------------------------------------------------
+// The stream.
+
+const DIFF_ROWS_INLINE = 60;
+
+/** [F27 tui-diff-numbers] Diff rows with old and new line numbers. */
+function diffLines(lines: string[], cells: number, limit?: number): string[] {
+  if (!isOn("tui-diff-numbers")) {
+    return lines.slice(0, limit).map((l) => row([[l, l.startsWith("+") ? "jade" : l.startsWith("-") ? "red" : l.startsWith("@@") ? "mauve" : "muted"]], cells));
+  }
+  const rows = diffRows(lines);
+  const g = gutterWidth(rows);
+  const out: string[] = [];
+  for (const r of limit === undefined ? rows : rows.slice(0, limit)) {
+    const num = (n: number | undefined): string => (n === undefined ? " ".repeat(g) : String(n).padStart(g));
+    const text = r.text.replace(/\t/g, "    ");
+    if (r.kind === "file") out.push("", row([["▸ ", "blue"], [text, "bold"]], cells));
+    else if (r.kind === "hunk") out.push(row([[" ".repeat(g * 2 + 2), "muted"], ["⋯ ", "mauve"], [text, "muted"]], cells));
+    else if (r.kind === "meta") out.push(row([[" ".repeat(g * 2 + 2)], [text, "muted"]], cells));
+    else {
+      const tone: Tone | "plain" = r.kind === "add" ? "jade" : r.kind === "del" ? "red" : "plain";
+      const sign = r.kind === "add" ? "+" : r.kind === "del" ? "-" : " ";
+      out.push(row([[`${num(r.old)} ${num(r.new)} `, "muted"], [`${sign} `, tone], [text, tone]], cells));
+    }
+  }
+  return out;
+}
+
+function itemLines(item: Item, cells: number, details: boolean): string[] {
   const w = Math.max(10, cells);
   switch (item.kind) {
     case "you":
@@ -202,13 +280,16 @@ function itemLines(item: Item, cells: number): string[] {
       return wrap(item.text, w - 2).map((t, i) => row([[i === 0 ? "◆ " : "  ", item.tone ?? "jade"], [t, item.tone ?? "plain"]], w));
     case "activity":
       return wrap(item.text, w - 2).map((t) => row([["  "], [t, item.tone ?? "muted"]], w));
+    case "detail":
+      return details ? wrap(item.text, w - 6).map((t, i) => row([[i === 0 ? "    ⎿ " : "      ", "muted"], [t, "muted"]], w)) : [];
     case "error":
       return wrap(item.text, w - 2).map((t, i) => row([[i === 0 ? "! " : "  ", "red"], [t, "red"]], w));
     case "diff": {
       const lines = item.lines ?? [];
-      const shown = lines.slice(0, DIFF_LINES_INLINE).map((l) => "  " + diffLine(l, w - 2));
-      const more = lines.length > DIFF_LINES_INLINE ? [row([["  "], [`… ${lines.length - DIFF_LINES_INLINE} more lines · press d for the whole diff`, "muted"]], w)] : [];
-      return ["", row([["◆ ", "jade"], [item.text, "bold"]], w), ...shown, ...more];
+      const rows = diffLines(lines, w - 2, DIFF_ROWS_INLINE).map((l) => "  " + l);
+      const total = isOn("tui-diff-numbers") ? diffRows(lines).length : lines.length;
+      const more = total > DIFF_ROWS_INLINE ? [row([["  "], [`… ${total - DIFF_ROWS_INLINE} more lines · d for the whole diff`, "muted"]], w)] : [];
+      return ["", row([["◆ ", "jade"], [item.text, "bold"]], w), ...rows, ...more];
     }
     case "outcome":
       return ["", ...wrap(item.text, w - 2).map((t) => row([["  "], [t, item.tone ?? "plain"]], w))];
@@ -218,7 +299,7 @@ function itemLines(item: Item, cells: number): string[] {
 }
 
 function sessionsPane(m: Model, cells: number, height: number): string[] {
-  const out: string[] = [row([[" Sessions", "bold"]], cells), ""];
+  const out: string[] = [row([[" Sessions", "bold"]], cells - 7) + row([["ctrl+s", "muted"]], 7), ""];
   if (m.sessions.length === 0) out.push(row([[" none yet in this folder", "muted"]], cells));
   for (const s of m.sessions) {
     if (out.length + 3 > height) break;
@@ -259,6 +340,10 @@ function infoPane(m: Model, cells: number, height: number, frame: number): strin
   if (r && r.status === "finished" && (r.outcome?.files.length ?? 0) > 0) {
     head("WAITING FOR YOU");
     out.push(row([["a", "bold"], [" apply  ", "muted"], ["d", "bold"], [" diff  ", "muted"], ["x", "bold"], [" discard", "muted"]], cells));
+    gap();
+  } else if (r && ["interrupted", "paused", "failed"].includes(r.status)) {
+    head("WAITING FOR YOU");
+    out.push(row([["r", "bold"], [" resume the run", "muted"]], cells));
     gap();
   }
 
@@ -340,14 +425,17 @@ function outcomeCard(m: Model, cells: number): string[] {
     : "The run failed";
   const size = o ? `${o.files.length} file${o.files.length === 1 ? "" : "s"} (+${o.insertions} −${o.deletions})` : "no changes";
   const canApply = r.status === "finished" && (o?.files.length ?? 0) > 0;
+  const canResume = ["interrupted", "paused", "failed"].includes(r.status);
   const keys: Part[] = [
     ...(canApply ? ([["a", "bold"], [" apply  ", "muted"], ["d", "bold"], [" diff  ", "muted"], ["x", "bold"], [" discard  ", "muted"]] as Part[]) : []),
+    ...(canResume ? ([["r", "bold"], [" resume  ", "muted"]] as Part[]) : []),
     ["1-5", "bold"],
     [m.rating ? ` rated ${m.rating}  ` : " rate  ", "muted"],
     ["i", "bold"],
     [" new instruction", "muted"],
   ];
-  const lines = [row([[head, headTone]], cells - 4), row([[`${size}  ·  ≈${money(m.cost)} (expert ${money(m.expertCost)})  ·  ${took}`, "muted"]], cells - 4), row(keys, cells - 4)];
+  const took2 = took ? `  ·  ${took}` : "";
+  const lines = [row([[head, headTone]], cells - 4), row([[`${size}  ·  ≈${money(m.cost)} (expert ${money(m.expertCost)})${took2}`, "muted"]], cells - 4), row(keys, cells - 4)];
   return [border(`╭${"─".repeat(cells - 2)}╮`), ...lines.map((l) => border("│ ") + l + border(" │")), border(`╰${"─".repeat(cells - 2)}╯`)];
 }
 
@@ -362,8 +450,8 @@ function workspace(m: Model, c: Composer, cols: number, rows: number): Frame {
   const running = !m.run && m.stage !== "idle";
   const bodyRows = rows - 1;
 
-  // Center: title and pipeline, the stream, live agents, then the prompt or the outcome.
-  const title = row([[" "], [m.repo ?? "", "bold"]], centerW - 14) + row([[running ? `${SPIN[frame % SPIN.length]} working` : "", "blue"]], 14);
+  // Center: title and pipeline, the stream, the working line, then the prompt or the outcome.
+  const title = row([[" "], [m.repo ?? "", "bold"], [m.details ? "   details on" : "", "muted"]], centerW);
   const steps: Part[] = [[" "]];
   for (const [i, s] of pipeline(m).entries()) {
     if (i > 0) steps.push([" ─ ", "muted"]);
@@ -373,29 +461,33 @@ function workspace(m: Model, c: Composer, cols: number, rows: number): Frame {
   }
   const top = [title, row(steps, centerW), ""];
 
-  const live = [...m.agents.values()].filter((a) => a.working);
-  const liveLines = live.slice(0, 3).map((a) => row([["  "], [`${SPIN[frame % SPIN.length]} `, "blue"], [`${a.role}${a.task && a.task !== "main" ? ` ${a.task}` : ""}`, "plain"], [` · ${a.model}`, "muted"], [a.last ? ` · ${a.last}` : "", "muted"]], centerW));
+  const working = running ? workingLines(m, centerW, frame) : [];
   const boxW = Math.min(centerW - pad * 2, readW + 2);
   const showCard = m.focus === "outcome" && m.run;
-  const box = showCard ? { lines: outcomeCard(m, boxW), cursorRow: 0, cursorCol: 0 } : promptBox(c, boxW, running ? "Draft the next instruction…" : "Give another instruction…", Math.max(1, Math.min(6, bodyRows - 12)));
-  const bottom = [...liveLines, ...box.lines.map((l) => blank(pad) + l)];
+  const box = showCard ? { lines: outcomeCard(m, boxW), cursorRow: 0, cursorCol: 0 } : promptBox(c, boxW, running ? "Draft the next instruction…" : "Give another instruction…  (/ for commands, @ for files)", Math.max(1, Math.min(6, bodyRows - 12)));
+  const drop = showCard ? [] : suggestLines(m, boxW);
 
-  const height = Math.max(1, bodyRows - top.length - bottom.length);
-  const all = m.items.flatMap((it) => itemLines(it, readW)).map((l) => blank(pad) + l);
+  const all = m.items.flatMap((it) => itemLines(it, readW, m.details)).map((l) => blank(pad) + l);
+  const fixed = top.length + working.length + box.lines.length + drop.length + (working.length ? 1 : 0);
+  let height = Math.max(1, bodyRows - fixed);
   const maxScroll = Math.max(0, all.length - height);
   m.scroll = Math.min(m.scroll, maxScroll);
+  // [F20] When scrolled up, a line says how much is below.
+  const scrollHint = m.scroll > 0 ? [row([["  "], [`↓ ${m.scroll} more line${m.scroll === 1 ? "" : "s"} below · pgdn`, "muted"]], centerW)] : [];
+  height = Math.max(1, height - scrollHint.length);
   const end = all.length - m.scroll;
   const middle = all.slice(Math.max(0, end - height), end);
   while (middle.length < height) middle.push("");
+  const bottom = [...scrollHint, ...(working.length ? ["", ...working] : []), ...box.lines.map((l) => blank(pad) + l), ...drop.map((l) => blank(pad) + l)];
   const center = [...top, ...middle, ...bottom].slice(0, bodyRows);
 
   const left = leftW ? sessionsPane(m, leftW - 1, bodyRows) : [];
   const right = rightW ? infoPane(m, rightW - 2, bodyRows, frame) : [];
   const sep = border("│");
   const lines = center.map((l, i) => canvas() + (leftW ? padTo(left[i] ?? "", leftW) + sep : "") + padTo(l, centerW) + (rightW ? sep + " " + padTo(right[i] ?? "", rightW - 1) : ""));
-  const hint: Part[] = running ? [["ctrl+p", "plain"], [" commands  ", "muted"], ["esc esc", "plain"], [" stop", "muted"]] : HINT;
+  const hint: Part[] = running ? [["ctrl+p", "plain"], [" commands  ", "muted"], ["ctrl+o", "plain"], [" details", "muted"]] : HINT;
   lines.push(canvas() + bottomBar(m, cols, hint));
-  const boxTop = top.length + height + liveLines.length;
+  const boxTop = top.length + height + scrollHint.length + (working.length ? working.length + 1 : 0);
   const cursor = showCard ? undefined : { row: boxTop + box.cursorRow, col: (leftW ? leftW + 1 : 0) + pad + box.cursorCol };
   return { lines, cursor };
 }
@@ -403,46 +495,18 @@ function workspace(m: Model, c: Composer, cols: number, rows: number): Frame {
 function diffView(m: Model, cols: number, rows: number): Frame {
   const d = m.diff!;
   const height = rows - 2;
-  d.scroll = Math.max(0, Math.min(d.scroll, Math.max(0, d.lines.length - height)));
-  const head = row([[" Diff", "bold"], [`  ${d.lines.length} lines`, "muted"]], cols);
-  const body = d.lines.slice(d.scroll, d.scroll + height).map((l) => " " + diffLine(l, cols - 1));
-  while (body.length < height) body.push("");
-  const pct = d.lines.length <= height ? "all" : `${Math.round(((d.scroll + height) / d.lines.length) * 100)}%`;
-  const bar = row([[" j/k", "plain"], [" scroll  ", "muted"], ["q", "plain"], [" back  ", "muted"], [pct, "muted"]], cols);
-  return { lines: [head, ...body, bar].map((l) => canvas() + padTo(l, cols)) };
+  const body = diffLines(d.lines, cols - 2);
+  d.scroll = Math.max(0, Math.min(d.scroll, Math.max(0, body.length - height)));
+  const head = row([[" Diff", "bold"], [`  ${m.run?.outcome ? `${m.run.outcome.files.length} files  +${m.run.outcome.insertions} −${m.run.outcome.deletions}` : ""}`, "muted"]], cols);
+  const shown = body.slice(d.scroll, d.scroll + height).map((l) => " " + l);
+  while (shown.length < height) shown.push("");
+  const pct = body.length <= height ? "all" : `${Math.round(((d.scroll + height) / body.length) * 100)}%`;
+  const bar = row([[" j/k", "plain"], [" scroll  ", "muted"], ["space", "plain"], [" page  ", "muted"], ["q", "plain"], [" back  ", "muted"], [pct, "muted"]], cols);
+  return { lines: [head, ...shown, bar].map((l) => canvas() + padTo(l, cols)) };
 }
 
 // ---------------------------------------------------------------------------
-// The command popup (Ctrl+P): every command in one place, like opencode's.
-
-export interface Command {
-  keys: string;
-  label: string;
-  /** Present when the command can be run from the popup with Enter. */
-  action?: "new" | "diff" | "apply" | "discard" | "theme" | "stop" | "quit";
-  group: string;
-}
-
-export const COMMANDS: Command[] = [
-  { group: "Prompt", keys: "enter", label: "Send the instruction" },
-  { group: "Prompt", keys: "alt+enter", label: "New line" },
-  { group: "Prompt", keys: "ctrl+u", label: "Clear the prompt" },
-  { group: "Run", keys: "esc esc", label: "Stop the run (it can be resumed)", action: "stop" },
-  { group: "Run", keys: "pgup pgdn", label: "Scroll the conversation" },
-  { group: "Review", keys: "d", label: "View the whole diff", action: "diff" },
-  { group: "Review", keys: "a", label: "Apply the change to your repository", action: "apply" },
-  { group: "Review", keys: "x x", label: "Discard the change", action: "discard" },
-  { group: "Review", keys: "1-5", label: "Rate the run against your usual way of working" },
-  { group: "Session", keys: "ctrl+n", label: "New session", action: "new" },
-  { group: "Session", keys: "ctrl+t", label: "Theme: terminal colours or GitHub dark high contrast", action: "theme" },
-  { group: "Session", keys: "ctrl+q", label: "Quit", action: "quit" },
-];
-
-/** The command at a popup index (wrapping around). */
-export function paletteCommand(index: number): Command {
-  const n = COMMANDS.length;
-  return COMMANDS[((index % n) + n) % n]!;
-}
+// Popups drawn over the screen.
 
 /** Draw `insert` (styled, `insertW` cells) over `line` at cell `col`, keeping the line's colours on both sides. */
 export function overlay(line: string, col: number, insert: string, insertW: number): string {
@@ -484,24 +548,9 @@ export function overlay(line: string, col: number, insert: string, insertW: numb
   return out + held;
 }
 
-function paletteOverlay(m: Model, base: string[], cols: number, rows: number): string[] {
-  const w = Math.min(68, cols - 4);
+function popup(base: string[], cols: number, rows: number, w: number, body: string[]): string[] {
   const inner = w - 4;
-  const index = ((m.palette!.index % COMMANDS.length) + COMMANDS.length) % COMMANDS.length;
-  const body: string[] = [row([["Commands", "bold"]], inner - 3) + row([["esc", "muted"]], 3)];
-  let group = "";
-  for (const [n, cmd] of COMMANDS.entries()) {
-    if (cmd.group !== group) {
-      body.push("", row([[cmd.group, "muted"]], inner));
-      group = cmd.group;
-    }
-    const selected = n === index;
-    body.push(row([[selected ? "› " : "  ", "jade"], [cmd.keys.padEnd(11), selected ? "jade" : "plain"], [cmd.label, selected ? "bold" : "muted"]], inner));
-  }
-  body.push("", row([["↑↓ choose · enter run · esc close", "muted"]], inner));
-  const maxBody = Math.max(3, rows - 3);
-  const shown = body.length > maxBody ? body.slice(0, maxBody) : body;
-  const box = [border(`╭${"─".repeat(w - 2)}╮`), ...shown.map((l) => border("│ ") + padTo(l, inner) + border(" │")), border(`╰${"─".repeat(w - 2)}╯`)];
+  const box = [border(`╭${"─".repeat(w - 2)}╮`), ...body.map((l) => border("│ ") + padTo(l, inner) + border(" │")), border(`╰${"─".repeat(w - 2)}╯`)];
   const top = Math.max(0, Math.floor((rows - box.length) / 2));
   const left = Math.max(0, Math.floor((cols - w) / 2));
   const out = [...base];
@@ -510,4 +559,53 @@ function paletteOverlay(m: Model, base: string[], cols: number, rows: number): s
     if (y < rows) out[y] = overlay(out[y] ?? "", left, l, w);
   }
   return out;
+}
+
+function paletteOverlay(m: Model, base: string[], cols: number, rows: number): string[] {
+  const w = Math.min(72, cols - 4);
+  const inner = w - 4;
+  const index = ((m.palette!.index % COMMANDS.length) + COMMANDS.length) % COMMANDS.length;
+  const lines: { text: string; at?: number }[] = [];
+  let group = "";
+  for (const [n, cmd] of COMMANDS.entries()) {
+    if (cmd.group !== group) {
+      lines.push({ text: "" }, { text: row([[cmd.group, "muted"]], inner) });
+      group = cmd.group;
+    }
+    const on = n === index;
+    lines.push({ text: row([[on ? "› " : "  ", "jade"], [(cmd.slash ?? "").padEnd(10), on ? "jade" : "blue"], [cmd.keys.padEnd(11), "muted"], [cmd.label, on ? "bold" : "plain"]], inner), at: n });
+  }
+  // Keep the selected row in view on short terminals.
+  const room = Math.max(3, rows - 6);
+  const sel = lines.findIndex((l) => l.at === index);
+  const start = Math.max(0, Math.min(sel - Math.floor(room / 2), lines.length - room));
+  const body = [row([["Commands", "bold"]], inner - 3) + row([["esc", "muted"]], 3), ...lines.slice(start, start + room).map((l) => l.text), "", row([["↑↓ choose · enter run · type / in the prompt for these too", "muted"]], inner)];
+  return popup(base, cols, rows, w, body);
+}
+
+/** [F24 tui-sessions] [F25 tui-presets] A list with a filter typed at the top. */
+export function pickerChoices(m: Model): Choice[] {
+  const p = m.picker!;
+  if (!p.query) return p.all;
+  const q = p.query.toLowerCase();
+  return p.all.filter((c) => `${c.label} ${c.detail ?? ""}`.toLowerCase().includes(q));
+}
+
+function pickerOverlay(m: Model, base: string[], cols: number, rows: number): string[] {
+  const p = m.picker!;
+  const w = Math.min(84, cols - 4);
+  const inner = w - 4;
+  const items = pickerChoices(m);
+  p.index = Math.max(0, Math.min(p.index, items.length - 1));
+  const room = Math.max(2, Math.floor((rows - 9) / 2));
+  const start = Math.max(0, Math.min(p.index - Math.floor(room / 2), items.length - room));
+  const body = [row([[p.title, "bold"]], inner - 3) + row([["esc", "muted"]], 3), row([["› ", "jade"], [p.query || "type to filter", p.query ? "plain" : "muted"]], inner), ""];
+  if (items.length === 0) body.push(row([["nothing matches", "muted"]], inner));
+  for (const [i, it] of items.slice(start, start + room).entries()) {
+    const on = start + i === p.index;
+    body.push(row([[on ? "› " : "  ", "jade"], [it.label, on ? "bold" : (it.tone ?? "plain")]], inner));
+    body.push(row([["    "], [it.detail ?? "", "muted"]], inner));
+  }
+  body.push("", row([["↑↓ choose · enter open · esc close", "muted"]], inner));
+  return popup(base, cols, rows, w, body);
 }

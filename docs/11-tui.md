@@ -2,10 +2,9 @@
 
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
-engine's events and run records only. Feature id: F19 `tui`
-(`docs/10-features.md`). The Signal Studio design pack was a starting point,
-simplified on the owner's direction: no slogan, no tabs, one key for all
-commands.
+engine's events and run records only. Feature ids F19 to F28
+(`docs/10-features.md`); any of F20 to F28 can be switched off with
+`--disable <key>`. Ideas taken from Claude Code and opencode are noted below.
 
 ## Screens
 
@@ -14,33 +13,55 @@ commands.
 **Workspace**, after the first request:
 
 - Left, on terminals 150 columns or wider: the sessions in this folder, newest
-  first, with their state (ready to review, applied, failed, stopped).
-- Middle: one stream, no tabs. Your request, what Neuromesh made of it, each
-  agent turn as it finishes (model, time, tokens, estimated cost), checks,
-  reviews, and when the run ends the change itself, as a diff. The pipeline at
-  the top (plan, build, check, review) shows only what actually happened.
-  Running agents show on live lines above the prompt.
-- Right, on terminals 110 columns or wider: what needs you (apply, diff or
-  discard), status and time, the team (before a run) or the agents (during
-  one), check results, the reviewer's verdict, the changed files with line
-  counts, estimated cost (all models, the expert, and the expert budget used),
-  and any feature that failed.
+  first, with their state.
+- Middle: one stream, no tabs. Your request, how Neuromesh read it, each agent
+  turn as it finishes (model, time, tokens, estimated cost), checks, reviews,
+  and when the run ends the change itself, with file headers and old and new
+  line numbers. The pipeline at the top shows only what actually happened.
+- While a run works, a working line above the prompt (from Claude Code): a
+  pulsing glyph and a verb for the stage ("Cooking…", "Reviewing…") with a
+  light sweeping across it, the time, the tokens so far and how to stop; under
+  it one `⎿` line per active agent with what it is doing right now.
+- Right, on terminals 110 columns or wider: what needs you (apply, diff,
+  discard, or resume), status and time, the team or the agents, check results,
+  the reviewer's verdict, changed files, estimated cost against the expert
+  budget, and any feature that failed.
 
 **Bottom bar**, everywhere: `ctrl+p commands` on the left (or a message), the
 preset and the working folder on the right.
 
-**Command popup** (Ctrl+P): every key, grouped, selectable with the arrows;
-Enter runs the selected command. Esc closes it.
+## Prompt
+
+- `/` lists commands as you type, with autocomplete (Claude Code, opencode):
+  `/sessions`, `/preset`, `/resume`, `/diff`, `/apply`, `/discard`, `/details`,
+  `/usage`, `/features`, `/theme`, `/new`, `/help`, `/quit`.
+- `@` searches the repository's files with fuzzy matching; Tab or Enter puts
+  the path in (Claude Code, opencode).
+- ↑ and ↓ in an empty prompt step through earlier requests, kept between
+  sessions in `~/.neuromesh/history.json` (Claude Code).
+- Alt+Enter (or Ctrl+J) adds a line. Esc twice clears the prompt (Claude Code).
+
+## Sessions and presets
+
+- Ctrl+S (or `/sessions`) opens any earlier run of this folder, replayed from
+  its event log: review its stream and diff, apply or discard it, or press `r`
+  to resume a run that was stopped, paused or failed (opencode's session list).
+- Ctrl+K (or `/preset`) chooses the team preset for the next runs, with what
+  each one does (opencode's model picker).
 
 ## Keys
 
-Enter sends; Alt+Enter (or Ctrl+J) adds a line; Ctrl+U clears. Esc twice stops a
-run (resume it later with `neuromesh resume`). After a run: `a` apply, `d` the
-whole diff (j/k, PgUp/PgDn, q back), `x` twice discard, `1` to `5` rate it
-against your usual way of working (into the usage log), `i` back to the
-prompt. PgUp/PgDn scroll the stream. Ctrl+N new session, Ctrl+T theme, Ctrl+Q
-quit (during a run it asks first, then stops the run so it can be resumed).
-Every way out restores the terminal.
+Ctrl+P lists everything. While a run works: Esc twice stops it (it can be
+resumed), Ctrl+O shows or hides each agent's steps (Claude Code). After a run:
+`a` apply, `d` the whole diff (j/k, space, PgUp/PgDn, q back), `x` twice discard,
+`r` resume, `1` to `5` rate it against your usual way of working (into the usage
+log), `i` back to the prompt. PgUp/PgDn scroll the stream; a line says how much
+is below when scrolled up. Ctrl+N new session, Ctrl+T theme, Ctrl+Q quit (during
+a run it asks first, then stops the run so it can be resumed).
+
+When a run ends the terminal bell rings (most terminals flash or badge the tab),
+and the window title always shows the run's state. Quitting prints what the
+session did and any runs not yet applied. Every way out restores the terminal.
 
 ## Colours
 
@@ -56,6 +77,5 @@ No model is called, and demo runs are never recorded in the usage log or rated.
 
 ## Not yet
 
-Opening a past session from the sessions pane (resume or review it), a preset
-picker and feature switches in the popup, the three graphs (task DAG, execution
-waterfall, usage by model), and mouse support.
+The three graphs (task DAG, execution waterfall, usage by model), mouse
+support, undoing an applied change, and running a shell command from the prompt.

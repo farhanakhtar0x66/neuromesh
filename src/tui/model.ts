@@ -11,7 +11,7 @@ import type { Tone } from "./theme.ts";
 export type Stage = "idle" | "planning" | "building" | "checking" | "reviewing" | "finished" | "failed" | "stopped" | "paused";
 
 export interface Item {
-  kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome" | "diff";
+  kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome" | "diff" | "detail";
   text: string;
   tone?: Tone;
   /** For "diff": the patch lines. */
@@ -76,6 +76,35 @@ export interface Model {
   team: { role: string; model: string }[];
   /** The preset's expert budget in estimated dollars, if any. */
   budgetUsd?: number;
+  /** [F26 tui-details] Show each agent's steps in the stream. */
+  details: boolean;
+  /** [F21 tui-slash] [F22 tui-mentions] The dropdown above the prompt. */
+  suggest?: Suggest;
+  /** [F24 tui-sessions] [F25 tui-presets] A list popup with a filter. */
+  picker?: Picker;
+}
+
+export interface Choice {
+  id: string;
+  label: string;
+  detail?: string;
+  tone?: Tone;
+}
+
+export interface Suggest {
+  kind: "slash" | "file";
+  items: Choice[];
+  index: number;
+  /** Where the word being completed starts, in graphemes. */
+  start: number;
+}
+
+export interface Picker {
+  kind: "sessions" | "presets";
+  title: string;
+  query: string;
+  all: Choice[];
+  index: number;
 }
 
 export function newModel(preset: string, repo?: string, repoError?: string): Model {
@@ -94,6 +123,7 @@ export function newModel(preset: string, repo?: string, repoError?: string): Mod
     focus: "composer",
     scroll: 0,
     cwd: process.cwd(),
+    details: false,
     sessions: [],
     checks: new Map(),
     team: [],
@@ -142,7 +172,10 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
   switch (e.type) {
     case "agent.activity": {
       const a = m.agents.get(agentKey(e));
-      if (a) a.last = String(e.summary ?? e.activity ?? "");
+      const what = String(e.summary ?? e.activity ?? "");
+      if (a) a.last = what;
+      // [F26 tui-details] Kept for Ctrl+O; hidden unless details are on.
+      if (what) m.items.push({ kind: "detail", text: `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}: ${what}` });
       return;
     }
     case "agent.started": {
