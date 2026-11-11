@@ -123,7 +123,7 @@ test("the workspace shows the request at once, then agents, cost and the outcome
   const text = stripAnsi(frame.lines.join("\n"));
   assert.match(text, /Finished, the project's checks pass/);
   assert.match(text, /1 file \(\+12 −1\)/);
-  assert.match(text, /a apply/);
+  assert.match(text, /a +Apply/);
   assert.equal(frame.cursor, undefined, "the outcome card has focus, not the composer");
 });
 
@@ -134,7 +134,7 @@ test("the diff view colours additions and removals and fits the screen", () => {
   m.diff = { lines: ["diff --git a/x b/x", "@@ -1 +1 @@", "-old line", "+new line that is much longer than the screen ".repeat(5)], scroll: 0 };
   const frame = render(m, new Composer(), 60, 15);
   linesFit(frame, 60, 15);
-  assert.match(stripAnsi(frame.lines.join("\n")), /▸ x[\s\S]*1   - old line[^\n]*\n *1 \+ new line/, "file header, then old and new line numbers");
+  assert.match(stripAnsi(frame.lines.join("\n")), /▸ x[\s\S]*1   - old line[^\n]*\n[┃ ]*1 \+ new line/, "file header, then old and new line numbers");
 });
 
 test("the landing screen is only the logo and the prompt; the bottom bar shows the commands key and the folder", async () => {
@@ -146,8 +146,10 @@ test("the landing screen is only the logo and the prompt; the bottom bar shows t
   const frame = render(m, new Composer(), 120, 35);
   const text = frame.lines.join("\n");
   assert.doesNotMatch(text, /Cheap agents|Alt\+Enter|Ctrl\+U/, "no slogan and no key list on the landing screen");
-  assert.match(frame.lines.at(-1)!, /^ ctrl\+p commands .*factory-opus-luna  \/work\/projects\/my-app $/);
-  assert.match(text, /╭─+╮\n.*› What should we build\?/);
+  assert.match(frame.lines.at(-1)!, /^┗━ \[ctrl\+p\] menu .*━ factory-opus-luna \/work\/projects\/my-app ━┛$/, "the frame's bottom edge holds the keys and the folder");
+  assert.match(frame.lines[0]!, /^┏━ NEUROMESH  my-app ━+ \[ready\] ━┓$/, "and its top edge the name, project and status");
+  for (const l of frame.lines.slice(1, -1)) assert.match(l, /^┃.*┃$/, "a heavy frame all round");
+  assert.match(text, /┏━+┓[^\n]*\n.*› What should we build\?/);
 });
 
 test("the command popup lists every command over the screen, and the three panes appear on wide terminals", async () => {
@@ -176,7 +178,7 @@ test("a finished run shows its diff in the stream", () => {
   finished(m, { id: "r1", status: "finished", outcome: { checks: "passed", files: [{ path: "a.js", insertions: 1, deletions: 1, binary: false }], insertions: 1, deletions: 1 } } as unknown as RunState);
   m.items.push({ kind: "diff", text: "Changes: 1 file (+1 −1)", lines: ["diff --git a/a.js b/a.js", "@@ -1 +1 @@", "-old", "+new"] });
   const text = stripAnsi(render(m, new Composer(), 120, 35).lines.join("\n"));
-  assert.match(text, /◆ Changes: 1 file \(\+1 −1\)[^\n]*\n[^\n]*\n *▸ a\.js[\s\S]*1   - old[^\n]*\n *1 \+ new/);
+  assert.match(text, /◆ Changes: 1 file \(\+1 −1\)[^\n]*\n[^\n]*\n[┃ ]*▸ a\.js[\s\S]*1   - old[^\n]*\n[┃ ]*1 \+ new/);
   assert.match(text, /CHANGES +\+1 −1[\s\S]*a\.js +\+1 −1/);
   assert.match(text, /WAITING FOR YOU/);
 });

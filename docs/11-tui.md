@@ -6,6 +6,18 @@ engine's events and run records only. Feature ids F19 to F31
 (`docs/10-features.md`); any of F20 to F31 can be switched off with
 `--disable <key>`. Ideas taken from Claude Code and opencode are noted below.
 
+## Look
+
+Everything sits in one heavy frame (`┏━┓`). Its top edge carries the name, the
+project and a status badge (`● building 2s`, `✓ ready to review`, `✗ failed`);
+its bottom edge carries the keys for the moment as key-caps and, on the right,
+the preset and working folder (or a message, when there is one). Panes are
+divided by heavy lines that meet the frame in `┳` and `┻`. Keys show as
+key-caps, actions as buttons (`a` Apply, `d` Diff, `x` Discard, `r` Resume),
+and section titles as badges. Buttons and badges are reverse video in the
+terminal's own colours; with `NO_COLOR` they become `[brackets]` of the same
+width.
+
 ## Screens
 
 **Landing.** The logo and a prompt box. Nothing else.
@@ -27,8 +39,8 @@ engine's events and run records only. Feature ids F19 to F31
   the reviewer's verdict, changed files, estimated cost against the expert
   budget, and any feature that failed.
 
-**Bottom bar**, everywhere: `ctrl+p commands` on the left (or a message), the
-preset and the working folder on the right.
+**Bottom edge**, everywhere: `ctrl+p` menu, `/` commands and `@` files (or
+while a run works: menu, details, stop), and the preset and working folder.
 
 ## Prompt
 

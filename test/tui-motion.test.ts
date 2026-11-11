@@ -69,7 +69,10 @@ test("every animation stays inside the screen at every moment", () => {
   m.clock = (m.startedAt ?? 0) + 300;
   assert.match(text(render(m, c, 120, 35).lines).split("\n")[2]!, /─{20,}|━/, "the scanner track runs under the pipeline while the team works");
   m.motion = false;
-  assert.equal(text(render(m, c, 120, 35).lines).split("\n")[2]!.split("│")[0]!.trim(), "", "and is gone without motion");
+  m.clock = (m.startedAt ?? 0) + 300;
+  const still1 = text(render(m, c, 120, 35).lines).split("\n")[2];
+  m.clock = (m.startedAt ?? 0) + 900;
+  assert.equal(text(render(m, c, 120, 35).lines).split("\n")[2], still1, "and is a still line without motion");
   m.motion = true;
 });
 
@@ -89,7 +92,7 @@ test("the outcome card drops in, the diff unrolls, and popups unfold", () => {
   m.clock = t0 + 1_000;
   const later = text(render(m, new Composer(), 120, 35).lines);
   assert.match(later, /Finished, the project's checks pass [✦✧⋆]/, "with a sparkle");
-  assert.match(later, /a apply  d diff  x discard  1-5 rate/);
+  assert.match(later, /a +Apply +d +Diff +x +Discard +1-5 +Rate/);
   assert.match(later, /1 \+ new/);
   m.clock = t0 + 5_000;
   assert.doesNotMatch(text(render(m, new Composer(), 120, 35).lines), /checks pass [✦✧⋆]/, "the sparkle fades");
@@ -100,5 +103,5 @@ test("the outcome card drops in, the diff unrolls, and popups unfold", () => {
   m.clock = t0 + 400;
   const open = text(render(m, new Composer(), 120, 35).lines);
   assert.doesNotMatch(opening, /↑↓ choose/, "the popup is still unfolding from its middle");
-  assert.match(open, /Commands[\s\S]*↑↓ choose/, "and then fully open");
+  assert.match(open, /Commands[\s\S]*↑↓ +choose/, "and then fully open");
 });

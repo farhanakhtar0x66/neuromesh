@@ -35,6 +35,10 @@ export function themeName(): ThemeName {
   return theme;
 }
 
+export function colourOn(): boolean {
+  return colour;
+}
+
 /** For tests: "none" switches colour off; anything else on. */
 export function setColorDepth(depth: "none" | "256" | "true"): void {
   colour = depth !== "none";
@@ -66,3 +70,25 @@ export function border(text: string): string {
   if (!colour) return text;
   return `${theme === "github" ? rgb(GITHUB.border) : "\x1b[90m"}${text}${textOn()}`;
 }
+
+/**
+ * A button or badge: the text on a filled block of the tone's colour, one
+ * space either side. In the terminal theme this is reverse video, so it uses
+ * the terminal's own palette. Without colour it is "[text]", the same width.
+ */
+export function chip(text: string, tone: Tone = "muted", strong = false): string {
+  if (!colour) return `[${text}]`;
+  if (theme === "github") {
+    const back = tone === "text" ? GITHUB.text : GITHUB[tone];
+    return `${rgb(back, true)}${rgb(GITHUB.canvas)}${strong ? "\x1b[1m" : ""} ${text} ${strong ? "\x1b[22m" : ""}${rgb(GITHUB.canvas, true)}${textOn()}`;
+  }
+  return `\x1b[7m\x1b[${ANSI[tone]}m${strong ? "\x1b[1m" : ""} ${text} ${strong ? "\x1b[22m" : ""}\x1b[27m${textOn()}`;
+}
+
+/** A key the person can press, as a key-cap. */
+export function keycap(key: string): string {
+  return chip(key, "muted", true);
+}
+
+/** Heavy box-drawing pieces, for the thicker frame and boxes. */
+export const BOX = { tl: "┏", tr: "┓", bl: "┗", br: "┛", h: "━", v: "┃", tDown: "┳", tUp: "┻", tRight: "┣", tLeft: "┫" };
