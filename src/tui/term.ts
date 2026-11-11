@@ -2,6 +2,8 @@
 // way out (normal quit, an error, a signal) puts the terminal back as it was.
 // Key decoding is a pure function so it can be tested without a terminal.
 
+import { cellWidth, graphemes } from "./text.ts";
+
 export interface Key {
   name: string;
   /** The typed text, for "char" and "paste". */
@@ -127,10 +129,144 @@ export interface Size {
   rows: number;
 }
 
+// ---------------------------------------------------------------------------
+// Frames as grids of cells. Drawing compares cells, not lines, so a spinner or
+// a light sweeping across a word rewrites those few cells only; rewriting the
+// whole row on every animation frame made rows flicker in some terminals.
+
+/** One screen cell: its text ("" for the second half of a wide character) and its style. */
+export interface Cell {
+  ch: string;
+  style: string;
+}
+
+interface Pen {
+  weight: string;
+  italic: boolean;
+  underline: boolean;
+  reverse: boolean;
+  fg: string;
+  bg: string;
+}
+
+const PLAIN: Pen = { weight: "", italic: false, underline: false, reverse: false, fg: "", bg: "" };
+
+function applySgr(pen: Pen, params: string): Pen {
+  const p = { ...pen };
+  const nums = params === "" ? ["0"] : params.split(";");
+  for (let i = 0; i < nums.length; i++) {
+    const n = Number(nums[i]);
+    if (n === 0) Object.assign(p, PLAIN);
+    else if (n === 1 || n === 2) p.weight = String(n);
+    else if (n === 22) p.weight = "";
+    else if (n === 3) p.italic = true;
+    else if (n === 23) p.italic = false;
+    else if (n === 4) p.underline = true;
+    else if (n === 24) p.underline = false;
+    else if (n === 7) p.reverse = true;
+    else if (n === 27) p.reverse = false;
+    else if (n === 39) p.fg = "";
+    else if (n === 49) p.bg = "";
+    else if ((n >= 30 && n <= 37) || (n >= 90 && n <= 97)) p.fg = String(n);
+    else if ((n >= 40 && n <= 47) || (n >= 100 && n <= 107)) p.bg = String(n);
+    else if (n === 38 || n === 48) {
+      const mode = nums[i + 1];
+      const take = mode === "2" ? 5 : mode === "5" ? 3 : 1;
+      const value = nums.slice(i, i + take).join(";");
+      if (n === 38) p.fg = value;
+      else p.bg = value;
+      i += take - 1;
+    }
+  }
+  return p;
+}
+
+function penCode(p: Pen): string {
+  const parts = ["0"];
+  if (p.weight) parts.push(p.weight);
+  if (p.italic) parts.push("3");
+  if (p.underline) parts.push("4");
+  if (p.reverse) parts.push("7");
+  if (p.fg) parts.push(p.fg);
+  if (p.bg) parts.push(p.bg);
+  return `\x1b[${parts.join(";")}m`;
+}
+
+/** A styled line as exactly `cols` cells; the rest of the row takes the line's last background. */
+export function toCells(line: string, cols: number): Cell[] {
+  const out: Cell[] = [];
+  let pen = PLAIN;
+  let style = penCode(pen);
+  for (const tok of line.match(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07]*\x07|[^\x1b]+|\x1b/g) ?? []) {
+    if (tok.startsWith("\x1b")) {
+      if (tok.endsWith("m") && tok.startsWith("\x1b[")) {
+        pen = applySgr(pen, tok.slice(2, -1));
+        style = penCode(pen);
+      }
+      continue;
+    }
+    for (const g of graphemes(tok)) {
+      const w = cellWidth(g);
+      if (w === 0) {
+        const last = out.at(-1);
+        if (last && last.ch !== "") last.ch += g;
+        continue;
+      }
+      if (out.length + w > cols) return out.concat(Array.from({ length: cols - out.length }, () => ({ ch: " ", style })));
+      out.push({ ch: g, style });
+      if (w === 2) out.push({ ch: "", style });
+    }
+  }
+  while (out.length < cols) out.push({ ch: " ", style });
+  return out;
+}
+
+/** What to write to turn the screen `prev` into `next`: only the cells that differ. */
+export function diffFrame(prev: Cell[][], next: Cell[][]): string {
+  let out = "";
+  let pen = "";
+  for (let y = 0; y < next.length; y++) {
+    const a = prev[y];
+    const b = next[y]!;
+    let x = 0;
+    while (x < b.length) {
+      if (a && a[x]?.ch === b[x]!.ch && a[x]?.style === b[x]!.style) {
+        x++;
+        continue;
+      }
+      // A run of changes; short unchanged gaps are rewritten rather than skipped over.
+      let start = x;
+      if (b[start]!.ch === "" && start > 0) start--;
+      let end = x;
+      let same = 0;
+      for (let i = x; i < b.length; i++) {
+        const changed = !a || a[i]?.ch !== b[i]!.ch || a[i]?.style !== b[i]!.style;
+        if (changed) {
+          end = i;
+          same = 0;
+        } else if (++same > 4) break;
+      }
+      if (b[end + 1]?.ch === "") end++;
+      out += `\x1b[${y + 1};${start + 1}H`;
+      for (let i = start; i <= end; i++) {
+        const c = b[i]!;
+        if (c.ch === "") continue;
+        if (c.style !== pen) {
+          out += c.style;
+          pen = c.style;
+        }
+        out += c.ch;
+      }
+      x = end + 1;
+    }
+  }
+  return pen ? `${out}\x1b[0m` : out;
+}
+
 export class Terminal {
   private readonly out: NodeJS.WriteStream;
   private readonly input: NodeJS.ReadStream;
-  private previous: string[] = [];
+  private previous: Cell[][] = [];
   private pending = "";
   private active = false;
   private readonly cleanups: (() => void)[] = [];
@@ -244,17 +380,19 @@ export class Terminal {
     this.previous = [];
   }
 
-  /** Draw a frame: only lines that changed are written, inside one synchronized update. */
+  /** Draw a frame: only cells that changed are written, inside one synchronized update. */
   draw(lines: string[], cursor?: { row: number; col: number }): void {
     if (!this.active) return;
-    let out = "\x1b[?2026h";
-    for (let i = 0; i < lines.length; i++) {
-      if (this.previous[i] !== lines[i]) out += `\x1b[${i + 1};1H${lines[i]}\x1b[K\x1b[0m`;
-    }
-    for (let i = lines.length; i < this.previous.length; i++) out += `\x1b[${i + 1};1H\x1b[0m\x1b[K`;
-    out += cursor ? `\x1b[${cursor.row + 1};${cursor.col + 1}H\x1b[?25h` : "\x1b[?25l";
+    const { cols, rows } = this.size();
+    const next = lines.slice(0, rows).map((l) => toCells(l, cols));
+    while (next.length < rows) next.push(toCells("", cols));
+    const fresh = this.previous.length === 0;
+    let out = "\x1b[?2026h\x1b[?25l";
+    if (fresh) out += "\x1b[0m\x1b[H\x1b[2J";
+    out += diffFrame(this.previous, next);
+    out += cursor ? `\x1b[${cursor.row + 1};${cursor.col + 1}H\x1b[?25h` : "";
     out += "\x1b[?2026l";
-    this.previous = lines;
+    this.previous = next;
     this.out.write(out);
   }
 }

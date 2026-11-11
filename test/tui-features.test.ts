@@ -82,7 +82,8 @@ test("while a run works: an animated verb for the stage, time, how to stop, and 
   const text = stripAnsi(render(m, new Composer(), 120, 30).lines.join("\n"));
   const verb = verbFor("building", 0);
   assert.ok(VERBS.building!.includes(verb));
-  assert.match(text, new RegExp(`${verb}… \\(\\d+s · esc esc to stop\\)`));
+  assert.match(text, new RegExp(`${verb}…  \\d+s`));
+  assert.match(text, /esc esc +stop/, "how to stop is on the frame");
   assert.match(text, /⎿ Worker · gpt-6-luna · npm test/);
   assert.doesNotMatch(text, /Worker: npm test/, "agent steps are hidden until ctrl+o");
   m.details = true;

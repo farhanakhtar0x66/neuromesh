@@ -167,7 +167,7 @@ test("the command popup lists every command over the screen, and the three panes
   }
   m.palette = undefined;
   const wide = stripAnsi(render(m, new Composer(), 160, 45).lines.join("\n"));
-  assert.match(wide, /Sessions[\s\S]*add a --json flag/);
+  assert.match(wide, /SESSIONS[\s\S]*add a --json flag/);
   assert.match(wide, /TEAM[\s\S]*lead +claude-opus-5-5 medium/);
   assert.doesNotMatch(wide, /Chat +Plan +Diff/, "no tabs");
 });

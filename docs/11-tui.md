@@ -18,6 +18,13 @@ and section titles as badges. Buttons and badges are reverse video in the
 terminal's own colours; with `NO_COLOR` they become `[brackets]` of the same
 width.
 
+Each frame is compared with the last cell by cell, and only the cells that
+changed are written, so a spinner or the light on the working verb never
+rewrites its whole row. Symbols such as `✳` count as one cell (two only with
+the emoji selector), so rows never shift as the working glyph changes. Text
+that does not fit drops whole parts (`demo-worker · 1 turn`) rather than
+ending in a cut word.
+
 ## Screens
 
 **Landing.** The logo and a prompt box. Nothing else.
@@ -32,10 +39,11 @@ width.
   line numbers. The pipeline at the top shows only what actually happened.
 - While a run works, a working line above the prompt (from Claude Code): a
   pulsing glyph and a verb for the stage ("Cooking…", "Reviewing…") with a
-  light sweeping across it, the time, the tokens so far and how to stop; under
-  it one `⎿` line per active agent with what it is doing right now.
-- Right, on terminals 110 columns or wider: what needs you (apply, diff,
-  discard, or resume), status and time, the team or the agents, check results,
+  light sweeping across it, the time and the tokens so far (how to stop is on
+  the frame); under it one `⎿` line per active agent with what it is doing
+  right now.
+- Right, on terminals 110 columns or wider: what needs you (the buttons are
+  on the card under the stream), status, time and run id, the team or the agents, check results,
   the reviewer's verdict, changed files, estimated cost against the expert
   budget, and any feature that failed.
 

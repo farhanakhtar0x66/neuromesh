@@ -272,31 +272,48 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
     case "brief": {
       const s = (e.staffing ?? {}) as { plan?: boolean; rung?: string; tester?: boolean; spec?: boolean };
       const kind = String(e.kind ?? "change");
-      const what = `${kind === "greenfield" ? "something new" : kind}${e.surface ? `, ${String(e.surface)}` : ""}`;
-      const how = [s.spec ? "spec first" : "", s.plan ? "the lead plans" : "one worker", s.rung === "top" ? "strongest worker setting" : "", s.tester ? "with a reviewer" : "no reviewer"].filter(Boolean).join(" · ");
-      push(m, { kind: "note", text: `Reading this as ${what}: ${how}` });
+      // In plain words: what kind of work this is (when it says something) and who will do it.
+      const what = kind === "greenfield" ? "Something new" : kind === "other" || kind === "change" ? "" : kind[0]!.toUpperCase() + kind.slice(1);
+      const surface = e.surface ? String(e.surface) : "";
+      const how = [s.spec ? "a spec first" : "", s.plan ? "the lead plans" : "one worker", s.rung === "top" ? "at its strongest setting" : "", s.tester ? "with a reviewer" : "no reviewer"].filter(Boolean).join(", ");
+      const lead = [what, what ? surface : surface ? surface[0]!.toUpperCase() + surface.slice(1) : ""].filter(Boolean).join(", ");
+      push(m, { kind: "note", text: lead ? `${lead} · ${how}` : how[0]!.toUpperCase() + how.slice(1) });
       return;
     }
     case "task.started":
       if (e.task !== "main") push(m, { kind: "note", text: line() });
       return;
-    case "spec.ready":
-    case "route":
     case "context.ready":
+      push(m, { kind: "note", text: `Repository map for the agents · about ${Math.max(1, Math.round(Number(e.chars ?? 0) / 4000))}k tokens` });
+      return;
+    case "spec.ready": {
+      const n = (v: unknown, one: string): string => `${Number(v)} ${one}${Number(v) === 1 ? "" : "s"}`;
+      push(m, { kind: "note", text: `Spec ready · "${String(e.name)}" · ${n(e.features, "feature")}, ${n(e.behaviour, "behaviour rule")}` });
+      return;
+    }
+    case "route":
     case "screens.checked":
       push(m, { kind: "note", text: line() });
       return;
-    case "checks.finished":
-      for (const r of (e.results as { name: string; status: string }[] | undefined) ?? []) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
+    case "checks.finished": {
+      const results = (e.results as { name: string; status: string }[] | undefined) ?? [];
+      for (const r of results) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
       if (e.phase !== "baseline") setStage(m, "checking");
-      push(m, { kind: "note", text: line(), tone: e.ok === false ? "amber" : undefined });
+      if (results.length === 0) return;
+      const label = e.phase === "baseline" ? "Checks before the change" : e.phase === "final" ? "Checks on the result" : e.task && e.task !== "main" ? `Checks for ${String(e.task)}` : "Checks";
+      push(m, { kind: "note", text: `${label}: ${results.map((r) => `${r.name} ${r.status}`).join(", ")}`, tone: e.ok === false ? "amber" : undefined });
       return;
-    case "tester.verdict":
+    }
+    case "tester.verdict": {
       m.verdict = { verdict: String(e.verdict), summary: String(e.summary ?? "") };
-      push(m, { kind: "neuromesh", text: line(), tone: e.verdict === "pass" ? "jade" : "amber" });
+      const findings = ((e.findings as { problem: string }[] | undefined) ?? []).map((f) => `\n- ${f.problem}`).join("");
+      const task = e.task && e.task !== "main" ? ` ${String(e.task)}` : "";
+      push(m, { kind: "neuromesh", text: `Review${task}: ${e.verdict === "pass" ? "passed" : "changes asked"} · ${String(e.summary ?? "")}${findings}`, tone: e.verdict === "pass" ? "jade" : "amber" });
       return;
+    }
     case "task.merged":
-      push(m, { kind: "neuromesh", text: line(), tone: "jade" });
+      // A one-task run's merge is bookkeeping; with several tasks it is progress.
+      if (e.task !== "main" || e.escalated) push(m, { kind: "neuromesh", text: line(), tone: "jade" });
       return;
     case "task.failed":
     case "feature.failed":

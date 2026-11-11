@@ -4,7 +4,9 @@
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const WIDE =
-  /\p{Extended_Pictographic}|[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1F300}-\u{1F64F}\u{1F900}-\u{1F9FF}\u{20000}-\u{3FFFD}]/u;
+  // Emoji drawn as pictures take two cells; symbols like ✳ or ✓ take one unless
+  // followed by the emoji selector (U+FE0F).
+  /\p{Emoji_Presentation}|\uFE0F|[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1F300}-\u{1F64F}\u{1F900}-\u{1F9FF}\u{20000}-\u{3FFFD}]/u;
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]/g;
 
 export function graphemes(text: string): string[] {
