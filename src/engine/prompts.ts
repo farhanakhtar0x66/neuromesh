@@ -290,6 +290,18 @@ How the team works:
 Give your answer in the required JSON format: summary (one sentence) and tasks (id, title, brief, owned, depends_on, owner). Use short ids like "t1".`;
 }
 
+/** What earlier reviews of this task asked for, so a reviewer does not reverse itself. */
+function earlierReviews(task: TaskState): string {
+  const earlier = task.history.flatMap((h) => h.findings ?? []).filter((f) => f.severity !== "minor");
+  if (earlier.length === 0) return "";
+  return `
+
+Earlier reviews of this task asked for these, and the developer has worked on them since:
+${findingText(earlier.slice(-8))}
+
+Check whether they are fixed. Do not ask for the opposite of an earlier finding, and do not fail the change over a choice the request (and its spec, if any) leaves open: there, the developer's choice stands.`;
+}
+
 export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string): string {
   const what = isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
   return `You are reviewing a change made by another engineer. Decide whether it does what was asked, correctly.
@@ -301,7 +313,7 @@ The change:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.
+The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.${earlierReviews(task)}
 
 Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.${
     screens

@@ -934,3 +934,28 @@ test("a full-screen terminal program is run in tmux and the tester sees its scre
   assert.match(tester.prompt, /the program exited with code 0/);
   assert.ok(events.some((e) => e.type === "screens.checked" && e.stuck === false));
 });
+
+test("when only the reviewer objects after the expert's advice, the task merges instead of an expert rebuild", async () => {
+  const repo = fixableRepo();
+  let reviews = 0;
+  const { ctx, fake } = context((req) => {
+    if (isTest(req)) {
+      reviews += 1;
+      return { structured: { verdict: "fail", summary: "no", findings: [{ problem: `problem ${reviews}`, file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    }
+    if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
+      return { structured: { diagnosis: "do it differently", steps: ["one"], files: ["fixed.txt"] } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [EXPERT] }, { repairs: 1, advise: true });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const kinds = state.attempts.map((a) => a.kind);
+  assert.ok(kinds.includes("advice"), kinds.join(","));
+  assert.ok(!kinds.includes("escalation"), "no expert rebuild over review-only objections");
+  const lastReview = fake.calls.filter(isTest).at(-1)!;
+  assert.match(lastReview.prompt, /Do not ask for the opposite of an earlier finding/);
+  assert.match(lastReview.prompt, /problem 1/);
+});

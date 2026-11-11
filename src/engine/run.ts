@@ -823,6 +823,11 @@ function wantsTester(state: RunState, task: TaskState): boolean {
   return state.test !== "no-checks" || state.checks.length === 0;
 }
 
+/** The task's latest checks all passed (or the project has none). */
+function checksPass(task: TaskState): boolean {
+  return (task.latest ?? []).every((r) => r.status !== "failed" && r.status !== "timeout");
+}
+
 function canClimb(state: RunState, task: TaskState): boolean {
   return state.workerLadder !== undefined && !task.escalated && !task.advised && task.owner !== "expert" && (task.rung ?? 0) < state.workerLadder.length - 1;
 }
@@ -1041,6 +1046,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
+      if (task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
+        // The project's checks pass, the expert's advice has been tried, and only the
+        // reviewer still objects. An expert rebuild costs more than that is worth.
+        log.emit("note", { message: `Task ${task.id}: the checks pass and the expert's advice was applied; merging with the reviewer's remaining findings recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       if (task.round >= repairLimit(state, task)) {
         if (canClimb(state, task) || canEscalate(state)) {
           onStuck(run, task, "the reviewer still found problems after the repair rounds");
