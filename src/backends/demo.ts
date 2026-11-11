@@ -22,7 +22,7 @@ function has(r: AgentRequest, field: string): boolean {
 export const demo = createFakeBackend(async (r) => {
   const say = async (summary: string): Promise<void> => {
     r.onActivity?.({ kind: "text", summary });
-    await wait(900, r.signal);
+    await wait(Number(process.env.NEUROMESH_DEMO_STEP_MS ?? 900) || 900, r.signal);
   };
   if (has(r, "out_of_scope")) {
     await say("Reading the request");

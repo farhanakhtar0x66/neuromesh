@@ -81,7 +81,9 @@ export function parseKeys(input: string, pending = ""): { keys: Key[]; pending: 
           continue;
         }
         const params = s.slice(i + 2, j).split(";");
-        if (final === "~") keys.push({ name: TILDE[params[0]!] ?? "unknown", ...modifiers(params[1]) });
+        // [F31 tui-screensaver] SGR mouse reports (\x1b[<b;x;yM), only sent while tracking is on.
+        if (params[0]?.startsWith("<") && (final === "M" || final === "m")) keys.push({ name: "mouse" });
+        else if (final === "~") keys.push({ name: TILDE[params[0]!] ?? "unknown", ...modifiers(params[1]) });
         else if (final === "u") {
           // Keyboard protocol: code;modifiers u (kitty and others), e.g. Shift+Enter.
           const code = Number.parseInt(params[0] ?? "", 10);
@@ -132,6 +134,7 @@ export class Terminal {
   private pending = "";
   private active = false;
   private readonly cleanups: (() => void)[] = [];
+  private onData: ((data: string) => void) | undefined;
 
   constructor(input: NodeJS.ReadStream = process.stdin, out: NodeJS.WriteStream = process.stdout) {
     this.input = input;
@@ -158,6 +161,7 @@ export class Terminal {
       this.previous = [];
       onResize();
     };
+    this.onData = onData;
     this.input.on("data", onData);
     this.out.on("resize", resize);
     this.cleanups.push(() => this.input.off("data", onData), () => this.out.off("resize", resize));
@@ -190,9 +194,18 @@ export class Terminal {
     if (!this.active) return;
     this.active = false;
     for (const c of this.cleanups.splice(0)) c();
-    this.out.write("\x1b[?2004l\x1b[0m\x1b[?25h\x1b[?1049l");
+    this.out.write("\x1b[?1003l\x1b[?1006l\x1b[?2004l\x1b[0m\x1b[?25h\x1b[?1049l");
     this.input.setRawMode?.(false);
     this.input.pause();
+  }
+
+  /**
+   * [F31 tui-screensaver] Report mouse movement (any-motion, SGR). Only while
+   * the screensaver shows: with tracking on, the terminal's own text selection
+   * needs Shift, so it stays off the rest of the time.
+   */
+  mouse(on: boolean): void {
+    if (this.active) this.out.write(on ? "\x1b[?1003h\x1b[?1006h" : "\x1b[?1003l\x1b[?1006l");
   }
 
   /** [F28 tui-notify] The terminal window or tab title. */
@@ -203,6 +216,27 @@ export class Terminal {
   /** [F28 tui-notify] Ring the terminal bell (most terminals flash or badge the tab). */
   bell(): void {
     if (this.active) this.out.write("\x07");
+  }
+
+  /**
+   * [F31 tui-screensaver] Hand the terminal to another program for a while
+   * (the owner's external screensaver), then take it back with resume().
+   */
+  suspend(): void {
+    if (!this.active || !this.onData) return;
+    this.input.off("data", this.onData);
+    this.out.write("\x1b[?1003l\x1b[?1006l\x1b[?2004l\x1b[0m");
+    this.input.setRawMode?.(false);
+    this.input.pause();
+  }
+
+  resume(): void {
+    if (!this.active || !this.onData) return;
+    this.input.setRawMode?.(true);
+    this.input.resume();
+    this.input.on("data", this.onData);
+    this.out.write("\x1b[?1049h\x1b[?25l\x1b[?2004h\x1b[H\x1b[2J");
+    this.previous = [];
   }
 
   /** Forget the last frame, so the next one is drawn in full (after a theme change). */

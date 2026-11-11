@@ -299,6 +299,15 @@ export const FEATURES: Feature[] = [
     what: "On opening, the logo builds up by density from the left.",
     optional: true,
   },
+  {
+    id: "F31",
+    key: "tui-screensaver",
+    name: "Screensaver",
+    added: "2026-11-12",
+    files: ["src/tui/screensaver.ts", "src/tui/app.ts (startSaver, stopSaver)", "src/tui/term.ts (mouse, suspend)"],
+    what: "During a long run with no key press for 4 minutes, the NEUROMESH logo plays animated effects; any key or mouse movement, or the run ending, brings the workspace back. After the owner's terminal-ascii-screensaver; NEUROMESH_SCREENSAVER=external uses that tool itself.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

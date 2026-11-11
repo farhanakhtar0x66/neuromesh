@@ -2,8 +2,10 @@
 // It drives the same engine as `neuromesh run`, through the engine's events
 // and run records only, so it works on any branch with that engine.
 
-import { existsSync, readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import { backends } from "../backends/index.ts";
 import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
 import { resumeRun, startRun } from "../engine/run.ts";
@@ -24,7 +26,9 @@ import type { Choice, Model, SessionView } from "./model.ts";
 import { Terminal } from "./term.ts";
 import type { Key } from "./term.ts";
 import { setTheme, themeName } from "./theme.ts";
-import { pickerChoices, render } from "./view.ts";
+import { newSaver, saverFrame } from "./screensaver.ts";
+import type { Paint, Saver } from "./screensaver.ts";
+import { LOGO_WIDE, pickerChoices, render } from "./view.ts";
 
 export interface TuiOptions {
   cwd: string;
@@ -117,6 +121,13 @@ export async function runTui(options: TuiOptions): Promise<number> {
   let running: Promise<RunState> | undefined;
   let quitting = false;
   let lastEsc = 0;
+  // [F31 tui-screensaver] Idle time is measured from the last key (or mouse movement while it shows).
+  let lastInput = Date.now();
+  let saver: Saver | undefined;
+  let external: ChildProcess | undefined;
+  const saverSetting = process.env.NEUROMESH_SCREENSAVER ?? "on";
+  const afterSetting = process.env.NEUROMESH_SCREENSAVER_AFTER;
+  const idleMs = afterSetting === "off" ? Infinity : Math.max(10, Number(afterSetting ?? 240) || 240) * 1_000;
   const session = { runs: 0, cost: 0, unapplied: new Set<string>() };
   let resolveExit: (code: number) => void = () => {};
   const exited = new Promise<number>((r) => (resolveExit = r));
@@ -132,7 +143,24 @@ export async function runTui(options: TuiOptions): Promise<number> {
   let scheduled = false;
   const draw = (): void => {
     scheduled = false;
+    // The owner's screensaver owns the terminal for now.
+    if (external) return;
     const { cols, rows } = term.size();
+    if (saver) {
+      try {
+        const elapsed = model.startedAt ? Date.now() - model.startedAt : 0;
+        const mins = Math.floor(elapsed / 60_000);
+        const status = running
+          ? `neuromesh is still working · ${model.stage} · ${mins > 0 ? `${mins}m ` : ""}${Math.floor((elapsed % 60_000) / 1_000)}s · move the mouse or press a key`
+          : "move the mouse or press a key";
+        const paint: Paint = process.env.NO_COLOR ? "none" : /truecolor|24bit/i.test(process.env.COLORTERM ?? "") ? "true" : "256";
+        term.draw(saverFrame(saver, LOGO_WIDE, cols, rows, Date.now(), paint, status));
+      } catch (error) {
+        stopSaver();
+        toast(model, `Screensaver failed: ${error instanceof Error ? error.message : String(error)}. ${hint(feature("tui-screensaver"))}`, "red", 8_000);
+      }
+      return;
+    }
     try {
       const frame = render(model, composer, cols, rows);
       term.draw(frame.lines, model.palette || model.picker ? undefined : frame.cursor);
@@ -157,6 +185,15 @@ export async function runTui(options: TuiOptions): Promise<number> {
     ticks += 1;
     const now = Date.now();
     const toastLive = model.toast !== undefined && model.toast.until > now - 200;
+    // [F31 tui-screensaver] A long run and nobody at the keyboard: show the screensaver.
+    if (!saver && !external && running && isOn("tui-screensaver") && saverSetting !== "off" && now - lastInput >= idleMs && !model.palette && !model.picker) startSaver();
+    if (saver) {
+      if (!scheduled) {
+        scheduled = true;
+        setTimeout(draw, 0);
+      }
+      return;
+    }
     if (model.motion && (running || now < animUntil)) {
       if (!scheduled) {
         scheduled = true;
@@ -217,6 +254,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
       .finally(() => {
         running = undefined;
         controller = undefined;
+        // The result matters more than the animation: come back when the run ends.
+        if (saver || external) stopSaver();
         setTitle();
         redraw();
         if (quitting) resolveExit(0);
@@ -436,6 +475,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
       case "details":
         model.details = !model.details;
         return void toast(model, model.details ? "Showing each agent's steps (ctrl+o hides them)" : "Agent steps hidden");
+      case "screensaver":
+        return startSaver();
       case "motion":
         motion = !motion;
         model.motion = motion;
@@ -484,6 +525,48 @@ export async function runTui(options: TuiOptions): Promise<number> {
     }
     composer.replaceBeforeCursor(s.start, `${it.id} `);
   };
+
+  // [F31 tui-screensaver] Built in by default; the owner's own screensaver with NEUROMESH_SCREENSAVER=external.
+  function startSaver(): void {
+    if (saver || external) return;
+    model.palette = undefined;
+    model.picker = undefined;
+    if (saverSetting === "external" && spawnSync("sh", ["-c", "command -v screensaver"]).status === 0) {
+      try {
+        const art = join(home, "screensaver-art.txt");
+        mkdirSync(home, { recursive: true });
+        writeFileSync(art, LOGO_WIDE.join("\n") + "\n");
+        term.suspend();
+        external = spawn("screensaver", [art], { stdio: "inherit" });
+        external.on("exit", () => {
+          external = undefined;
+          term.resume();
+          lastInput = Date.now();
+          redraw();
+        });
+        return;
+      } catch {
+        external = undefined;
+        term.resume();
+      }
+    }
+    saver = newSaver(Date.now());
+    term.mouse(true);
+    term.invalidate();
+  }
+
+  function stopSaver(): void {
+    if (external) {
+      external.kill("SIGTERM");
+      return;
+    }
+    if (!saver) return;
+    saver = undefined;
+    term.mouse(false);
+    term.invalidate();
+    lastInput = Date.now();
+    redraw();
+  }
 
   const outcomeKey = (key: Key): boolean => {
     const r = model.run;
@@ -622,7 +705,13 @@ export async function runTui(options: TuiOptions): Promise<number> {
 
   term.start(
     (keys) => {
+      lastInput = Date.now();
+      if (saver) {
+        stopSaver();
+        return;
+      }
       for (const k of keys) {
+        if (k.name === "mouse") continue;
         try {
           inFeature("tui", () => onKey(k));
         } catch (error) {

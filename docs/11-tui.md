@@ -2,8 +2,8 @@
 
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
-engine's events and run records only. Feature ids F19 to F30
-(`docs/10-features.md`); any of F20 to F30 can be switched off with
+engine's events and run records only. Feature ids F19 to F31
+(`docs/10-features.md`); any of F20 to F31 can be switched off with
 `--disable <key>`. Ideas taken from Claude Code and opencode are noted below.
 
 ## Screens
@@ -85,6 +85,32 @@ Feature F29 `tui-motion`, plus F30 `tui-intro`:
 `/motion` turns animations off or on; `NEUROMESH_MOTION=off` starts without
 them; `--disable tui-motion` removes them entirely.
 
+## Screensaver
+
+During a long run, after 4 minutes with no key press, the screen shows the
+NEUROMESH logo playing animated effects: decrypt, beams, rain, waves,
+spotlight, scatter and matrix, each once per shuffled cycle. A quiet line at the
+bottom says the run is still working, in which stage, and for how long. Any key
+or mouse movement brings the workspace back (the key is not typed), and so does
+the run ending, so you come back to the result and the bell. Feature F31
+`tui-screensaver`.
+
+It follows the owner's
+[terminal-ascii-screensaver](https://github.com/farhanakhtar0x66/terminal-ascii-screensaver):
+same idea, effects in the spirit of TerminalTextEffects, the art fitted to the
+terminal, each effect once per shuffled cycle. Here it is built in, with no
+dependencies.
+
+- `/screensaver` shows it now.
+- `NEUROMESH_SCREENSAVER_AFTER=<seconds>` changes the wait (at least 10);
+  `NEUROMESH_SCREENSAVER_AFTER=off` or `NEUROMESH_SCREENSAVER=off` turns it off.
+- `NEUROMESH_SCREENSAVER=external` hands the terminal to the owner's own
+  `screensaver` command (if installed) with the Neuromesh logo; there, a key
+  press ends it.
+- Mouse movement is only reported while the screensaver shows; the rest of the
+  time the terminal's own text selection works as usual. The idle time before it
+  starts is therefore measured from the last key press.
+
 ## Colours
 
 By default the TUI uses your terminal's own colours: no painted background,
@@ -94,7 +120,8 @@ accents from the terminal's palette, like Claude Code and opencode. Ctrl+T (or
 
 ## Trying it without quota
 
-`neuromesh tui --preset demo` runs scripted agents that write one small file.
+`neuromesh tui --preset demo` runs scripted agents that write one small file
+(`NEUROMESH_DEMO_STEP_MS` sets how long each of their steps takes).
 No model is called, and demo runs are never recorded in the usage log or rated.
 
 ## Not yet

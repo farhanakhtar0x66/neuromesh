@@ -45,7 +45,7 @@ function padTo(line: string, cells: number): string {
 }
 
 // The owner's logos: a wide one, and a small one for narrower terminals.
-const LOGO_WIDE: string[] = [
+export const LOGO_WIDE: string[] = [
   "      ::::    ::: :::::::::: :::    ::: :::::::::   ::::::::    :::   :::   :::::::::: ::::::::  :::    :::",
   "     :+:+:   :+: :+:        :+:    :+: :+:    :+: :+:    :+:  :+:+: :+:+:  :+:       :+:    :+: :+:    :+: ",
   "    :+:+:+  +:+ +:+        +:+    +:+ +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+       +:+        +:+    +:+  ",
