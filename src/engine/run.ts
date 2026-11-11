@@ -121,7 +121,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   let mode: "solo" | "team" = options.mode ?? preset.mode;
   let why: string | undefined;
   if (!options.mode && preset.mode === "team" && preset.intake) {
-    const decision = route(options.prompt);
+    const decision = route(options.prompt, preset.routing);
     mode = decision.mode;
     why = decision.reason;
   }

@@ -57,6 +57,7 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
     maxParallel: 1,
     turnTimeoutMinutes: 1,
     intake: false,
+    routing: "rules",
     ...extra,
   };
 }
@@ -606,6 +607,10 @@ test("intake sends small requests to one worker and larger ones to the team", ()
   assert.equal(route("add a --verbose flag").mode, "solo");
   assert.equal(route("Add a report with three parts:\n1. money.js\n2. report.js\n3. bin/report.js").mode, "team");
   assert.equal(route("x ".repeat(80)).mode, "team");
+  // Worker first: the expert plans only clearly large requests.
+  assert.equal(route("Add a report with three parts:\n1. money.js\n2. report.js\n3. bin/report.js", "worker-first").mode, "solo");
+  assert.equal(route("Build it:\n1. a\n2. b\n3. c\n4. d", "worker-first").mode, "team");
+  assert.equal(route("x ".repeat(300), "worker-first").mode, "team");
 });
 
 test("detectChecks finds the project's own commands", () => {
