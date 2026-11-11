@@ -9,16 +9,30 @@ import { capture } from "./proc.ts";
 import { num, obj, runCli, short, str } from "./shared.ts";
 import type { ParsedRun, StreamParser } from "./shared.ts";
 
+/**
+ * Claude Code sends its whole tool list, MCP servers, skills and settings with
+ * every new session: about 33k prompt tokens before the task (measured
+ * 2026-11-11, Claude Code 2.1.319). Neuromesh turns need few tools, so each
+ * session gets only those, and nothing from the user's own setup.
+ */
+const LEAN = ["--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--disable-slash-commands", "--setting-sources", ""];
+const READ_TOOLS = "Read,Grep,Glob";
+const WRITE_TOOLS = "Bash,Edit,Write,Read,Grep,Glob";
+/** Replaces Claude Code's long default system prompt for turns that only read. */
+export const READ_ONLY_SYSTEM_PROMPT =
+  "You are a senior software engineer. You are working in the repository in the current directory, which you can read with the Read, Grep and Glob tools but not change. Read what you need, think carefully, and answer precisely and concisely. When a JSON format is required, give your final answer in exactly that format.";
+
 export function claudeArgs(request: AgentRequest): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose"];
   if (request.model) args.push("--model", request.model);
   if (request.effort) args.push("--effort", request.effort);
   if (request.outputSchema) args.push("--json-schema", JSON.stringify(request.outputSchema));
   if (request.resumeSessionId) args.push("--resume", request.resumeSessionId);
+  args.push(...LEAN);
   if (request.access === "write") {
-    args.push("--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
+    args.push("--tools", WRITE_TOOLS, "--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
   } else {
-    args.push("--permission-mode", "plan");
+    args.push("--tools", READ_TOOLS, "--system-prompt", READ_ONLY_SYSTEM_PROMPT, "--permission-mode", "plan");
   }
   return args;
 }

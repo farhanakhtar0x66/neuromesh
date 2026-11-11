@@ -150,6 +150,11 @@ test("claude: the prompt is never placed on the command line", () => {
   const args = claudeArgs({ ...base, access: "write", prompt: "SECRET-PROMPT" });
   assert.ok(!args.includes("SECRET-PROMPT"));
   assert.deepEqual(args.slice(-4), ["--allowedTools", "Bash", "Edit", "Write"]);
+  assert.deepEqual(args.slice(args.indexOf("--tools"), args.indexOf("--tools") + 2), ["--tools", "Bash,Edit,Write,Read,Grep,Glob"]);
+  assert.ok(args.includes("--strict-mcp-config") && args.includes("--disable-slash-commands"), "no MCP servers or skills from the user's setup");
+  const read = claudeArgs(base);
+  assert.deepEqual(read.slice(read.indexOf("--tools"), read.indexOf("--tools") + 2), ["--tools", "Read,Grep,Glob"]);
+  assert.ok(read.includes("--system-prompt"), "a short system prompt for read-only turns");
 });
 
 test("codex: cached input is separated from fresh input, and the answer is parsed", () => {
