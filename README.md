@@ -83,10 +83,11 @@ user interface).
 | Preset | Expert | Worker | Use |
 | --- | --- | --- | --- |
 | `factory-wf` (default) | GPT-6.1 Sol: advice, takeover, large plans | Gemini 3.8 Flash | The factory floor: least expert use |
+| `factory-luna` | GPT-6.1 Sol: advice, takeover, large plans | GPT-6 Luna, low then high effort | Lowest cost measured: 12% of Sol alone on hard tasks (API estimate) |
 | `factory` | GPT-6.1 Sol plans every non-trivial request | Gemini 3.8 Flash | Plan first, with a tester |
 | `google-only` | Gemini Flash high | Gemini Flash | No Claude or ChatGPT quota at all |
 | `duo`, `trio` | GPT-6.1 Sol | Gemini Flash | No tester; or a GPT tester |
-| `solo-flash`, `solo-sol`, `solo-codex`, `solo-claude` | | one model | Baselines |
+| `solo-luna`, `solo-flash`, `solo-sol`, `solo-codex`, `solo-claude` | | one model | Baselines. `solo-luna` passed all 25 suite tasks at about 4% of Sol's API cost |
 
 Expert models fall back in order (GPT-6.1 Sol, then Claude Opus 5.5) when one
 runs out of quota; a run pauses when none is left and resumes later.
@@ -107,7 +108,9 @@ runs out of quota; a run pauses when none is left and resumes later.
 
 - Workers on Antigravity and Claude Code are not sandboxed to their folder; work
   happens in a throwaway git worktree and you review the diff before applying.
-- The suite is small and every task fits in one worker's head. It cannot yet
-  show escalation earning its keep, because the cheap worker rarely gets stuck.
-- Token counts are the tools' own reports; API-equivalent cost is not estimated.
+- The suite is too easy: the cheapest model tried (GPT-6 Luna) passes all 25
+  tasks alone. It cannot show a team beating one cheap model, or escalation
+  earning its keep. See `docs/06-v0.1-results.md`.
+- Token counts are the tools' own reports. API-equivalent cost is an estimate
+  from list prices (`src/usage/prices.ts`); nothing is paid per token.
 - No user interface yet; the engine prints a JSON event stream for one.

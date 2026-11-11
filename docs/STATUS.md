@@ -161,12 +161,28 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     task; `factory-wf` costs $0.70 to $0.82. The factory wins only on subscription
     quota, not on API cost. See "Cost in one unit" in `docs/06-v0.1-results.md`.
 
-## Next steps (session stopped here on a usage limit)
+16. **GPT-6 Luna is the cheap worker the prices predicted (2026-11-11, 13:30 to
+    14:00 IST).** Luna alone (`solo-luna`, Codex, medium effort): 25/25 on the
+    full suite, estimated $0.004 per task, 22 minutes for all 25. Hard tasks:
+    4/4 twice at $0.004 against Sol alone at $0.102. `factory-luna` (Luna low,
+    then high, Luna tester, Sol expert): hard 4/4 at $0.012 per task (12% of Sol
+    alone), large 1/1 at $0.094 of which the Sol plan is $0.058. The Luna tester
+    rejected two changes that passed the visible checks; both were fixed. So the
+    cost goal is met on this suite, and the suite is too easy to tell models
+    apart: a harder benchmark is the main missing piece. Evals:
+    `hard-solo-luna`, `base-solo-luna`, `hl-factory-luna`.
 
-1. E1: the driver `evals/until-done.ts` resumes `e1-final-1..3` at 13:47 IST on
-   its own. Check it is running; restart it with the command in finding 14 if not.
-   Then `eval recheck` the three, fill the E1 to E3 rows in the results, tag v0.1.0.
-2. Measure a truly cheap worker (not started):
-   `node src/cli/main.ts eval --preset solo-luna --kinds hard --name hard-solo-luna`
-   If Luna passes most hard tasks, build a preset with a Luna worker, a brief Luna
-   tester and Sol on failure, and compare its API estimate with Sol alone.
+## Next steps
+
+1. E1 on Gemini (`e1-final-1..3`): the driver `evals/until-done.ts` resumed at
+   13:48 IST and runs them one at a time. Check it is running; restart it with
+   the command in finding 14 if not. Then `eval recheck` the three, fill the E1
+   to E3 rows in the results, tag v0.1.0.
+2. Owner to decide after looking at the ChatGPT usage panel: make `factory-luna`
+   the default preset (cheapest by API price, but it spends ChatGPT quota, which
+   is the scarce one), or keep `factory-wf` (Gemini quota, 60 times the API
+   estimate, five times slower).
+3. A harder benchmark: tasks Luna fails alone, so that escalation and the tester
+   can be shown to earn their cost. Nothing in the current suite does that.
+4. Large requests: the Sol plan is most of the cost. Try a Luna-high planner, or
+   plan only above a higher size bar.
