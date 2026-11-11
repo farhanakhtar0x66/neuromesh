@@ -75,6 +75,8 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
       const what = `${String(event.kind)}${event.surface ? `, ${String(event.surface)}` : ""}`;
       return dim(`Brief: ${what} · ${String(event.standards)} working standards added${attached.length > 0 ? ` · attached ${attached.join(", ")}` : ""}\n   Staffing: ${st.reasons.join("; ")}`);
     }
+    case "feature.failed":
+      return red(`! Feature ${String(event.feature)} ${String(event.key)} failed: ${oneLine(String(event.message), 200)}\n   ${String(event.hint)}`);
     case "screens.checked":
       return dim(`Screen check [${String(event.task)}]: ran \`${String(event.command)}\` in tmux, ${String(event.screens)} screens recorded${event.stuck ? "; it did not quit" : ""}`);
     case "spec.ready":
@@ -148,7 +150,8 @@ export function formatSummary(state: RunState): string {
   const lines: string[] = [];
   lines.push(`${bold(`Run ${state.id}`)} · ${statusColor(state.status)(state.status)} · ${state.preset} (${state.mode ?? "solo"})`);
   lines.push(`  Request: ${oneLine(state.prompt, 100)}`);
-  if (state.reason) lines.push(`  Reason:  ${state.failure === "engine" ? red("[engine] ") : ""}${oneLine(state.reason, 300)}`);
+  if (state.reason) lines.push(`  Reason:  ${state.failure === "engine" ? red("[engine] ") : ""}${oneLine(state.reason, 400)}`);
+  for (const f of state.featureErrors ?? []) lines.push(red(`  Feature ${f.id} ${f.key} failed: ${oneLine(f.message, 200)}`));
   for (const t of state.tasks ?? []) {
     const label = state.tasks.length === 1 ? "Agent:  " : `Task ${t.id}:`;
     const summary = t.report ? oneLine(t.report.summary, 160) : t.error ? oneLine(t.error, 160) : t.status;

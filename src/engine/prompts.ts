@@ -4,6 +4,7 @@
 import type { AgentResult } from "../backends/types.ts";
 import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
+import { isOn } from "../features.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
@@ -292,6 +293,8 @@ Give your answer in the required JSON format: summary (one sentence) and tasks (
 
 /** What earlier reviews of this task asked for, so a reviewer does not reverse itself. */
 function earlierReviews(task: TaskState): string {
+  // [F06 review-memory]
+  if (!isOn("review-memory")) return "";
   const earlier = task.history.flatMap((h) => h.findings ?? []).filter((f) => f.severity !== "minor");
   if (earlier.length === 0) return "";
   return `

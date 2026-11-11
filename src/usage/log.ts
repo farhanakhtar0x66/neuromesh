@@ -34,6 +34,9 @@ export interface UsageEntry {
   files: number;
   insertions: number;
   deletions: number;
+  /** Features on for the run, and those that failed (src/features.ts). */
+  features?: string[];
+  featureErrors?: string[];
 }
 
 export interface Rating {
@@ -82,6 +85,8 @@ export function entryFor(state: RunState, sessionTotals: (backend: string) => bo
     minutes: Math.round(((Date.parse(state.updatedAt) - Date.parse(state.createdAt)) / 60_000) * 10) / 10,
     turns: attempts.length,
     escalated: state.tasks.some((t) => t.escalated || t.advised),
+    features: state.features,
+    featureErrors: (state.featureErrors ?? []).map((f) => `${f.id} ${f.key}: ${f.message.slice(0, 160)}`),
     models,
     tokens: {
       expert: models.filter((m) => m.tier === "expert").reduce((n, m) => n + m.tokens, 0),
@@ -162,11 +167,17 @@ export function report(log: { runs: UsageEntry[]; ratings: Map<string, Rating> }
       `| ${preset} | ${kind} | ${runs.length} | ${ok} | ${avg((r) => r.minutes)?.toFixed(1)} | ${money(avg((r) => r.cost))} | ${money(avg((r) => r.expertCost))} | ${rating === undefined ? "-" : rating.toFixed(1)} |`,
     );
   }
-  lines.push("", "## Runs", "", "| When | Repo | Preset | Kind | Status | Checks | Minutes | Tokens (expert / worker) | Cost | Rating | Request | Note |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+  const failures = new Map<string, number>();
+  for (const r of log.runs) for (const f of r.featureErrors ?? []) failures.set(f.split(":")[0]!, (failures.get(f.split(":")[0]!) ?? 0) + 1);
+  if (failures.size > 0) {
+    lines.push("", "## Features that failed", "", "Ids from `neuromesh features`. Switch one off with `--disable <key>` while it is being fixed.", "", "| Feature | Runs where it failed |", "| --- | --- |");
+    for (const [f, n] of [...failures.entries()].sort((a, b) => b[1] - a[1])) lines.push(`| ${f} | ${n} |`);
+  }
+  lines.push("", "## Runs", "", "| When | Repo | Preset | Kind | Status | Checks | Minutes | Tokens (expert / worker) | Cost | Rating | Request | Note | Features that failed |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
   for (const r of [...log.runs].sort((a, b) => b.at.localeCompare(a.at))) {
     const rating = log.ratings.get(r.run);
     lines.push(
-      `| ${r.at.slice(0, 16).replace("T", " ")} | ${cell(r.repo)} | ${r.preset} | ${r.kind ?? "-"} | ${r.status} | ${r.checks} | ${r.minutes} | ${k(r.tokens.expert)} / ${k(r.tokens.worker)} | ${money(r.cost)} | ${rating ? `${rating.score}${rating.usual ? ` vs ${cell(rating.usual)}` : ""}` : "-"} | ${cell(r.request.slice(0, 80))} | ${cell(rating?.note ?? "")} |`,
+      `| ${r.at.slice(0, 16).replace("T", " ")} | ${cell(r.repo)} | ${r.preset} | ${r.kind ?? "-"} | ${r.status} | ${r.checks} | ${r.minutes} | ${k(r.tokens.expert)} / ${k(r.tokens.worker)} | ${money(r.cost)} | ${rating ? `${rating.score}${rating.usual ? ` vs ${cell(rating.usual)}` : ""}` : "-"} | ${cell(r.request.slice(0, 80))} | ${cell(rating?.note ?? "")} | ${cell((r.featureErrors ?? []).join("; ") || "-")} |`,
     );
   }
   return lines.join("\n") + "\n";

@@ -959,3 +959,25 @@ test("when only the reviewer objects after the expert's advice, the task merges 
   assert.match(lastReview.prompt, /Do not ask for the opposite of an earlier finding/);
   assert.match(lastReview.prompt, /problem 1/);
 });
+
+test("an optional feature that fails is recorded with its id and the run goes on without it", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, events } = context((req) => {
+    write(req.cwd, "app.js", "1");
+    return report("built");
+  });
+  const p = preset({ orchestrator: [EXPERT], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true });
+  process.env.NEUROMESH_FAULT = "brief-engine";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "create a typing app in terminal tui", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.equal(state.brief, undefined, "no brief: the request went to the worker as typed");
+    assert.deepEqual(state.featureErrors?.map((f) => f.id), ["F01"]);
+    assert.ok(!state.features?.includes("brief-engine"));
+    const failed = events.find((e) => e.type === "feature.failed");
+    assert.equal(failed?.feature, "F01");
+    assert.match(String(failed?.hint), /--disable brief-engine/);
+  } finally {
+    delete process.env.NEUROMESH_FAULT;
+  }
+});

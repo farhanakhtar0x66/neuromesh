@@ -25,6 +25,7 @@ import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import type { CheckResult } from "../checks/checks.ts";
+import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
@@ -138,13 +139,27 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   let mode: "solo" | "team" = options.mode ?? preset.mode;
   let why: string | undefined;
   let brief: Brief | undefined;
-  if (preset.brief) {
-    brief = buildBrief(options.prompt, repoFacts(repo.root), {
-      team: preset.mode === "team" && options.mode !== "solo",
-      maxParallel: preset.maxParallel,
-      canSpec: roles.briefer !== undefined,
-      expertSpec: roles.briefer?.[0]?.tier === "expert",
-    });
+  resetFeatures();
+  disable(preset.disable);
+  const featureErrors: NonNullable<RunState["featureErrors"]> = [];
+  // [F01 brief-engine] Optional: if it fails, the run goes on with the request as typed.
+  if (preset.brief && isOn("brief-engine")) {
+    try {
+      brief = inFeature("brief-engine", () =>
+        buildBrief(options.prompt, repoFacts(repo.root), {
+          team: preset.mode === "team" && options.mode !== "solo",
+          maxParallel: preset.maxParallel,
+          canSpec: roles.briefer !== undefined && isOn("spec-step"),
+          // [F03 expert-spec]
+          expertSpec: roles.briefer?.[0]?.tier === "expert" && isOn("expert-spec"),
+        }),
+      );
+    } catch (error) {
+      featureErrors.push(failure(error, "brief-engine"));
+      disable("brief-engine");
+    }
+  }
+  if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
     mode = brief.staffing.plan ? "team" : "solo";
     why = brief.staffing.reasons.join("; ");
@@ -162,6 +177,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     prompt: brief ? renderBrief(brief) : options.prompt,
     request: brief ? options.prompt : undefined,
     usagePerTurn: true,
+    features: activeKeys(),
+    featureErrors,
     brief,
     preset: preset.name,
     mode,
@@ -204,6 +221,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     base: repo.head,
     prompt: options.prompt,
   });
+  for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
   if (brief) {
     log.emit("brief", { kind: brief.kind, surface: brief.surface, attached: brief.attached.map((a) => a.path), standards: brief.standards.length, staffing: brief.staffing });
   } else if (why) {
@@ -223,6 +241,9 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
     throw new Error(`Run ${state.id} is still running in process ${state.pid}.`);
   }
   const log = new EventLog(runPaths(state.dir).events, state.id, ctx.onEvent);
+  // A resumed run keeps the features it started with, less any that failed.
+  resetFeatures();
+  if (state.features) onlyThese(state.features.filter((k) => !(state.featureErrors ?? []).some((e) => e.key === k)));
 
   // Turns the engine never finished: stop any agent tool still running on its
   // own, and record the turn with its usage unknown.
@@ -342,8 +363,9 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       }
 
       if (state.step === "spec") {
-        if (state.brief?.staffing.spec && !state.brief.spec) {
-          const outcome = await specStep(run);
+        // [F02 spec-step]
+        if (state.brief?.staffing.spec && !state.brief.spec && isOn("spec-step")) {
+          const outcome = await optionalAsync(run, "spec-step", undefined, () => specStep(run));
           if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
         }
         if (state.mode === "team") {
@@ -424,6 +446,12 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
   } catch (error) {
     if (ctx.signal?.aborted) return interrupted();
     const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof FeatureError) {
+      // A core feature failed: say which, and how to run without it.
+      state.featureErrors = [...(state.featureErrors ?? []), failure(error, error.feature.key)];
+      log.emit("feature.failed", { feature: error.feature.id, key: error.feature.key, message, hint: hint(error.feature) });
+      return end({ status: "failed", reason: `engine error in ${error.feature.id} ${error.feature.key}: ${message}. ${hint(error.feature)}`, failure: "engine" });
+    }
     return end({ status: "failed", reason: `engine error: ${message}`, failure: "engine" });
   } finally {
     ctx.signal?.removeEventListener("abort", onOuterAbort);
@@ -604,7 +632,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
 
   delete state.inFlight[req.key];
   const usage =
-    backend.sessionTotals && resumeSessionId !== undefined && result.sessionId === resumeSessionId
+    // [F09 codex-session-totals]
+    backend.sessionTotals && isOn("codex-session-totals") && resumeSessionId !== undefined && result.sessionId === resumeSessionId
       ? usageSince(
           result.usage,
           state.attempts.filter((a) => a.sessionId === resumeSessionId && a.backend === backend.id).map((a) => a.usage),
@@ -693,14 +722,19 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
  * the tester. Skipped when tmux is missing or there is no way to start it.
  */
 function screensFor(run: RunCtx, task: TaskState, dir: string): string | undefined {
-  if (!hasTmux()) return undefined;
+  // [F04 screen-check]
+  if (!isOn("screen-check") || !hasTmux()) return undefined;
+  return optional(run, "screen-check", undefined, () => screensNow(run, task, dir));
+}
+
+function screensNow(run: RunCtx, task: TaskState, dir: string): string | undefined {
   const command = task.report?.run ?? startScript(dir);
   if (!command) {
     run.log.emit("note", { message: `Task ${task.id}: no command to start the program, so its screens were not checked.` });
     return undefined;
   }
   const check = screenCheck(dir, command);
-  run.log.emit("screens.checked", { task: task.id, command, screens: check.screens.length, stuck: check.stuck });
+  run.log.emit("screens.checked", { feature: "F04", task: task.id, command, screens: check.screens.length, stuck: check.stuck });
   return screenText(check);
 }
 
@@ -821,6 +855,42 @@ function wantsTester(state: RunState, task: TaskState): boolean {
   if (!state.roles.tester || task.escalated) return false;
   if (state.brief && !state.brief.staffing.tester) return false;
   return state.test !== "no-checks" || state.checks.length === 0;
+}
+
+function failure(error: unknown, key: string): { id: string; key: string; message: string; at: string } {
+  const f = error instanceof FeatureError ? error.feature : feature(key);
+  const message = error instanceof Error ? error.message : String(error);
+  return { id: f.id, key: f.key, message, at: new Date().toISOString() };
+}
+
+/**
+ * Run an optional feature. If it throws, the failure is recorded on the run,
+ * the feature is switched off for the rest of the run, and `fallback` is used.
+ */
+function optional<T>(run: RunCtx, key: string, fallback: T, fn: () => T): T {
+  try {
+    return inFeature(key, fn);
+  } catch (error) {
+    featureFailed(run, error, key);
+    return fallback;
+  }
+}
+
+async function optionalAsync<T>(run: RunCtx, key: string, fallback: T, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await inFeature(key, fn);
+  } catch (error) {
+    featureFailed(run, error, key);
+    return fallback;
+  }
+}
+
+function featureFailed(run: RunCtx, error: unknown, key: string): void {
+  const f = failure(error, key);
+  run.state.featureErrors = [...(run.state.featureErrors ?? []), f];
+  disable(key);
+  run.log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(key)) });
+  saveState(run.state);
 }
 
 /** The task's latest checks all passed (or the project has none). */
@@ -946,11 +1016,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     if (task.step === "checks") {
       // A project that had no checks may get some from the work itself (a new
       // program with its own tests). From then on they gate the task.
-      if (state.checks.length === 0) {
-        const found = detectChecks(task.worktree);
+      // [F10 work-created-checks]
+      if (state.checks.length === 0 && isOn("work-created-checks")) {
+        const found = optional(run, "work-created-checks", [], () => detectChecks(task.worktree));
         if (found.length > 0) {
           state.checks = found;
-          log.emit("note", { message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
+          log.emit("note", { feature: "F10", message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
         }
       }
       let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
@@ -1034,7 +1105,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       log.emit("tester.verdict", { task: task.id, verdict: verdict.verdict, summary: verdict.summary, findings: verdict.findings });
       // Minor findings never hold a task up: they are recorded and the work merges.
       // A reviewer can always find something more; only blockers are worth rounds.
-      if (verdict.verdict === "fail" && verdict.findings.every((f) => f.severity === "minor")) {
+      // [F05 tester-severity]
+      if (isOn("tester-severity") && verdict.verdict === "fail" && verdict.findings.every((f) => f.severity === "minor")) {
         log.emit("note", { message: `Task ${task.id}: the reviewer found only minor problems; merging with them recorded.` });
         task.step = "merge";
         saveState(state);
@@ -1046,7 +1118,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
-      if (task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
+      // [F07 review-only-merge]
+      if (isOn("review-only-merge") && task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
         // The project's checks pass, the expert's advice has been tried, and only the
         // reviewer still objects. An expert rebuild costs more than that is worth.
         log.emit("note", { message: `Task ${task.id}: the checks pass and the expert's advice was applied; merging with the reviewer's remaining findings recorded.` });

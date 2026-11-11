@@ -15,6 +15,7 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
+import { disable, feature, featureTable, hint, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
@@ -50,6 +51,8 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
+  neuromesh features            the features added since v0.1, their ids and whether they are on
+                                (--disable <id or key,...> switches features off for any command)
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
   neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
@@ -133,7 +136,8 @@ function exitCodeFor(state: RunState): number {
 async function finish(state: RunState, flags: Map<string, string>): Promise<number> {
   if (!flags.has("json")) process.stdout.write("\n" + formatSummary(state) + "\n");
   // Every real run goes into the usage log (~/.neuromesh/usage), unless --no-log.
-  if (!flags.has("no-log") && state.status !== "running") {
+  // [F11 usage-log]
+  if (!flags.has("no-log") && isOn("usage-log") && state.status !== "running") {
     const home = defaultHome();
     try {
       recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
@@ -142,7 +146,7 @@ async function finish(state: RunState, flags: Map<string, string>): Promise<numb
       if (rating) recordRating(home, rating);
       if (!flags.has("json")) process.stdout.write(`Recorded in ${join(usageDir(home), "USAGE.md")}\n`);
     } catch (error) {
-      process.stderr.write(`Could not write the usage log: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.stderr.write(`Could not write the usage log: ${error instanceof Error ? error.message : String(error)}\n${hint(feature("usage-log"))}\n`);
     }
   }
   return exitCodeFor(state);
@@ -398,6 +402,11 @@ async function main(): Promise<number> {
     return 0;
   }
   const parsed = parseArgs(rest);
+  // --disable F04,context-packet: switch features off for this command (see `neuromesh features`).
+  if (parsed.flags.get("disable")) {
+    process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
+    disable(parsed.flags.get("disable"));
+  }
   if (parsed.flags.has("help")) {
     process.stdout.write(HELP);
     return 0;
@@ -430,6 +439,9 @@ async function main(): Promise<number> {
       process.stdout.write(rows.length === 0 ? "No model is cooling down.\n" : rows.map(([m, c]) => `${m.padEnd(36)} until ${new Date(c.until).toLocaleString()}  ${c.reason.slice(0, 80)}`).join("\n") + "\n");
       return 0;
     }
+    case "features":
+      process.stdout.write(featureTable() + "\n");
+      return 0;
     case "presets":
       return commandPresets();
     case "doctor":

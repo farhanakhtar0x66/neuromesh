@@ -175,6 +175,10 @@ export interface RunState {
    * perTurnAttempts.
    */
   usagePerTurn?: boolean;
+  /** Features switched on for this run (src/features.ts). */
+  features?: string[];
+  /** Features that failed during the run; optional ones were switched off and the run went on. */
+  featureErrors?: { id: string; key: string; message: string; at: string }[];
   /** The request as typed, when the brief engine rewrote it. */
   request?: string;
   /** What the brief engine made of the request, and the staffing it chose. */

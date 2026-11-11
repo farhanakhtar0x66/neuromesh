@@ -31,6 +31,8 @@ export interface Preset {
    * brief engine decides about planning instead of `routing`.
    */
   brief: boolean;
+  /** Features to switch off for this preset (ids or keys; see src/features.ts). */
+  disable?: string[];
   /** How the intake decides; see src/intake/intake.ts. */
   routing: "rules" | "worker-first";
   /** A stuck worker first gets the expert's advice; the expert takes over only if that fails. */
@@ -97,6 +99,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
     intake: p.intake ?? p.mode === "team",
     brief: p.brief ?? p.mode === "team",
+    disable: Array.isArray(p.disable) ? p.disable.filter((d): d is string => typeof d === "string") : undefined,
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,

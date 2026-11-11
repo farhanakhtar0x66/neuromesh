@@ -4,6 +4,7 @@
 // prompt placed after it on the command line would be read as a tool name.
 
 import type { AgentBackend, AgentRequest, AgentResult } from "./types.ts";
+import { isOn } from "../features.ts";
 import { classifyFailure } from "./types.ts";
 import { capture } from "./proc.ts";
 import { num, obj, runCli, short, str } from "./shared.ts";
@@ -28,11 +29,15 @@ export function claudeArgs(request: AgentRequest): string[] {
   if (request.effort) args.push("--effort", request.effort);
   if (request.outputSchema) args.push("--json-schema", JSON.stringify(request.outputSchema));
   if (request.resumeSessionId) args.push("--resume", request.resumeSessionId);
-  args.push(...LEAN);
+  // [F08 lean-claude]
+  const lean = isOn("lean-claude");
+  if (lean) args.push(...LEAN);
   if (request.access === "write") {
-    args.push("--tools", WRITE_TOOLS, "--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
+    if (lean) args.push("--tools", WRITE_TOOLS);
+    args.push("--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
   } else {
-    args.push("--tools", READ_TOOLS, "--system-prompt", READ_ONLY_SYSTEM_PROMPT, "--permission-mode", "plan");
+    if (lean) args.push("--tools", READ_TOOLS, "--system-prompt", READ_ONLY_SYSTEM_PROMPT);
+    args.push("--permission-mode", "plan");
   }
   return args;
 }

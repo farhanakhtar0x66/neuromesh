@@ -29,3 +29,14 @@ current and what "done" means for it.
 - TypeScript strict mode, run directly by Node (no build step), no runtime
   dependencies unless a milestone needs one, no agent framework.
 - `npm test` and `npx tsc --noEmit` must pass before work is called done.
+- Every feature or behaviour change added after v0.1 is registered in
+  `src/features.ts` with an id (F01, F02, ...). Mark its code with a
+  `// [Fxx key]` comment, gate it with `isOn("key")`, run optional ones through
+  `optional()`/`inFeature()` so a failure is tagged with the id and switched off
+  instead of crashing the run, and add `feature: "Fxx"` to its events. Errors,
+  the event log and the usage log then point at the feature, and
+  `--disable <key>` works around it. `NEUROMESH_FAULT=<key>` fails one on
+  purpose to check the handling.
+- The owner's Mac runs the `neuromesh-testing` branch for real work; their
+  usage log (`~/.neuromesh/usage/USAGE.md`) is the main evidence. Do not run
+  heavy live tests unless asked.
