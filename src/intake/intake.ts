@@ -26,14 +26,17 @@ export function route(prompt: string, policy: RoutePolicy = "rules"): Route {
   return rules(prompt);
 }
 
+// Bullet points in a request are usually requirements of one change, not
+// separate parts, and every plan made on the task suite so far was a single
+// task. So the expert plans only requests that are clearly several pieces of work.
 function workerFirst(prompt: string): Route {
   const text = prompt.trim();
   const words = text.split(/\s+/).filter(Boolean).length;
-  const parts = Math.max((text.match(/^\s*\d+[.)]\s/gm) ?? []).length, (text.match(/^\s*[-*]\s/gm) ?? []).length);
+  const numbered = (text.match(/^\s*\d+[.)]\s/gm) ?? []).length;
   const files = new Set(text.match(/[\w./-]+\.(?:[jt]sx?|py|rs|go|md|json|toml|ya?ml|css|html)\b/g) ?? []).size;
-  if (parts >= 4) return { mode: "team", reason: `a large request with ${parts} parts; the expert plans it` };
-  if (words >= 250) return { mode: "team", reason: `a large request (${words} words); the expert plans it` };
-  if (files >= 6) return { mode: "team", reason: `the request names ${files} files; the expert plans it` };
+  if (numbered >= 5) return { mode: "team", reason: `a large request in ${numbered} numbered parts; the expert plans it` };
+  if (words >= 300) return { mode: "team", reason: `a large request (${words} words); the expert plans it` };
+  if (files >= 8) return { mode: "team", reason: `the request names ${files} files; the expert plans it` };
   return { mode: "solo", reason: "a worker starts; the expert steps in only if it gets stuck" };
 }
 
