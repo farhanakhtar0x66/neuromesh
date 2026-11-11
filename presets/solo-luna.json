@@ -1,0 +1,8 @@
+{
+  "name": "solo-luna",
+  "description": "One GPT-6 Luna agent through Codex: the cheapest listed model (about 20 times cheaper per token than GPT-6.1 Sol). A baseline for how far a truly cheap worker gets alone.",
+  "mode": "solo",
+  "worker": [{ "backend": "codex", "model": "gpt-6-luna", "effort": "medium" }],
+  "repairs": 1,
+  "turnTimeoutMinutes": 30
+}

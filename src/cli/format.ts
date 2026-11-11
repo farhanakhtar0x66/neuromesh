@@ -212,7 +212,8 @@ export function formatEvalReport(report: EvalReport): string {
       ` · time ${duration(s.wallMs)}` +
       ` · tokens ${k(s.expertTokens + s.workerTokens)}` +
       ` · expert share ${s.expertShare === undefined ? "unknown" : `${(s.expertShare * 100).toFixed(0)}%`}` +
-      (s.usageIncomplete ? yellow(" (some usage unreported)") : ""),
+      (s.usageIncomplete ? yellow(" (some usage unreported)") : "") +
+      ` · API-equivalent ≈ $${s.costEstimate.toFixed(2)} (estimate, not spent)`,
   );
   return lines.join("\n");
 }
@@ -243,8 +244,10 @@ export function formatComparison(reports: EvalReport[]): string {
         `  expert ${k(s.expertTokens).padStart(7)}` +
         `  expert share ${s.expertShare === undefined ? "unknown" : `${(s.expertShare * 100).toFixed(0)}%`.padStart(4)}` +
         `  time ${duration(s.wallMs)}` +
+        `  API est. $${s.costEstimate.toFixed(2)} (expert $${s.expertCostEstimate.toFixed(2)})${s.costIncomplete ? "+" : ""}` +
         `  engine failures ${s.engineFailures}`,
     );
   }
+  lines.push(dim("API est.: what the same tokens would cost at API list prices. An estimate, not money spent; runs use subscriptions."));
   return lines.join("\n");
 }

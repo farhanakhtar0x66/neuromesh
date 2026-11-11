@@ -51,3 +51,14 @@ test("a compile error is not counted as compiling", () => {
   assert.equal(attemptFrom([failing("src/a.ts(1,1): error TS2304: Cannot find name 'x'.", "typecheck")], "").compileOk, false);
   assert.equal(attemptFrom([failing("✖ adds")], "").compileOk, true);
 });
+
+test("API cost estimates use list prices and stay unknown for unknown models", async () => {
+  const { estimateCost } = await import("../src/usage/prices.ts");
+  // 1M fresh input, 1M cache reads, 1M output on Gemini 3.8 Flash: 0.75 + 0.075 + 3.75
+  assert.equal(estimateCost("gemini-3.8-flash-low", { input: 1e6, cacheRead: 1e6, output: 1e6 }), 4.575);
+  assert.equal(estimateCost("gpt-6.1-sol", { input: 1e6, output: 0 }), 2);
+  // Claude Code cache writes cost twice the input price.
+  assert.equal(estimateCost("claude-opus-5-5", { input: 0, cacheWrite: 1e6, output: 0 }), 8);
+  assert.equal(estimateCost("some-new-model", { input: 1, output: 1 }), undefined);
+  assert.equal(estimateCost("gpt-6.1-sol", { cacheRead: 5 }), undefined, "unreported input or output stays unknown");
+});

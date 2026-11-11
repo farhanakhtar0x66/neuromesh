@@ -16,6 +16,7 @@ import { startRun, usageByModel } from "../engine/run.ts";
 import type { EngineContext, ModelUsage } from "../engine/run.ts";
 import type { AttemptRecord, RunState } from "../engine/types.ts";
 import type { Preset } from "../presets/presets.ts";
+import { estimateCost } from "../usage/prices.ts";
 
 export const TASKS_DIR = fileURLToPath(new URL("../../evals/tasks/", import.meta.url));
 
@@ -240,6 +241,29 @@ export interface Summary {
   workerTokens: number;
   expertShare: number | undefined;
   usageIncomplete: boolean;
+  /** Estimated API list-price cost in USD (see src/usage/prices.ts); not money spent. */
+  costEstimate: number;
+  expertCostEstimate: number;
+  /** Some usage could not be priced (a model without a listed price). */
+  costIncomplete: boolean;
+}
+
+/** Estimated API cost of one task's usage, split by tier. */
+export function costOf(result: TaskResult): { total: number; expert: number; incomplete: boolean } {
+  let total = 0;
+  let expert = 0;
+  let incomplete = false;
+  for (const u of result.usage) {
+    const cost = estimateCost(u.model, u.usage);
+    if (cost === undefined) {
+      // A turn that never reached the model (a quota refusal) reports nothing and costs nothing.
+      if (u.usage.input !== undefined || u.usage.output !== undefined) incomplete = true;
+      continue;
+    }
+    total += cost;
+    if (u.tier === "expert") expert += cost;
+  }
+  return { total, expert, incomplete };
 }
 
 export function summarize(report: EvalReport, names?: string[]): Summary {
@@ -256,6 +280,9 @@ export function summarize(report: EvalReport, names?: string[]): Summary {
     workerTokens: worker,
     expertShare: expert + worker > 0 ? expert / (expert + worker) : undefined,
     usageIncomplete: rows.some((r) => r.usageIncomplete),
+    costEstimate: rows.reduce((s, r) => s + costOf(r).total, 0),
+    expertCostEstimate: rows.reduce((s, r) => s + costOf(r).expert, 0),
+    costIncomplete: rows.some((r) => costOf(r).incomplete),
   };
 }
 
