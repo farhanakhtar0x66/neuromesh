@@ -244,7 +244,9 @@ The change:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts or tests to try the change. Your edits here are thrown away afterwards.
+The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.
+
+Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.
 
 Be strict about the request and lenient about style. Do not fail the change for things the request did not ask for.
 
