@@ -156,3 +156,17 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     skipped. After E1 finishes, re-score with
     `node src/cli/main.ts eval recheck e1-final-1 e1-final-2 e1-final-3`
     (a running eval overwrites re-scores made while it runs).
+15. **Cost in one unit (2026-11-11, afternoon).** Evals are now priced at API list
+    prices (`src/usage/prices.ts`). GPT-6.1 Sol alone costs about $0.10 per hard
+    task; `factory-wf` costs $0.70 to $0.82. The factory wins only on subscription
+    quota, not on API cost. See "Cost in one unit" in `docs/06-v0.1-results.md`.
+
+## Next steps (session stopped here on a usage limit)
+
+1. E1: the driver `evals/until-done.ts` resumes `e1-final-1..3` at 13:47 IST on
+   its own. Check it is running; restart it with the command in finding 14 if not.
+   Then `eval recheck` the three, fill the E1 to E3 rows in the results, tag v0.1.0.
+2. Measure a truly cheap worker (not started):
+   `node src/cli/main.ts eval --preset solo-luna --kinds hard --name hard-solo-luna`
+   If Luna passes most hard tasks, build a preset with a Luna worker, a brief Luna
+   tester and Sol on failure, and compare its API estimate with Sol alone.
