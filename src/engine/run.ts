@@ -630,7 +630,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const logPath = join(runPaths(state.dir).agentLogs, `${String(n).padStart(3, "0")}-${req.key}-${req.kind}.jsonl`);
   state.inFlight[req.key] = { role: req.role, tier, task: req.task, round: req.round, kind: req.kind, backend: backend.id, model: config.model, startedAt, logPath };
   saveState(state);
-  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId) });
+  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, tier, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId) });
 
   const result = await backend.run({
     cwd: req.cwd,
@@ -690,6 +690,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     usage,
     // [F17 live-cost]
     cost: isOn("live-cost") ? estimateCost(record.model, usage) : undefined,
+    tier,
     detail: result.detail,
     quotaUsed: result.quotaUsed,
   });

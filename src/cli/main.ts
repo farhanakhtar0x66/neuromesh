@@ -51,6 +51,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
+  neuromesh                     (no command, in a terminal) open the TUI; also \`neuromesh tui\` [--preset <name>]
   neuromesh features            the features added since v0.1, their ids and whether they are on
                                 (--disable <id or key,...> switches features off for any command)
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
@@ -137,7 +138,7 @@ async function finish(state: RunState, flags: Map<string, string>): Promise<numb
   if (!flags.has("json")) process.stdout.write("\n" + formatSummary(state) + "\n");
   // Every real run goes into the usage log (~/.neuromesh/usage), unless --no-log.
   // [F11 usage-log]
-  if (!flags.has("no-log") && isOn("usage-log") && state.status !== "running") {
+  if (!flags.has("no-log") && isOn("usage-log") && state.preset !== "demo" && state.status !== "running") {
     const home = defaultHome();
     try {
       recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
@@ -355,7 +356,7 @@ const DOCTOR_DEFAULTS: Record<string, { model?: string; effort?: string }> = {
 };
 
 async function commandDoctor({ flags }: Parsed): Promise<number> {
-  const ids = (flags.get("backend") ?? Object.keys(backends).join(",")).split(",").filter(Boolean);
+  const ids = (flags.get("backend") ?? Object.keys(backends).filter((id) => id !== "demo").join(",")).split(",").filter(Boolean);
   const models = new Map<string, string>();
   for (const pair of (flags.get("model") ?? "").split(",").filter(Boolean)) {
     const [backend, model] = pair.split("=");
@@ -397,6 +398,16 @@ async function commandDoctor({ flags }: Parsed): Promise<number> {
 
 async function main(): Promise<number> {
   const [command, ...rest] = process.argv.slice(2);
+  // [F19 tui] No command in a terminal opens the TUI.
+  if ((command === undefined && process.stdin.isTTY && process.stdout.isTTY) || command === "tui") {
+    const parsed = parseArgs(command === "tui" ? rest : []);
+    if (parsed.flags.get("disable")) {
+      process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
+      disable(parsed.flags.get("disable"));
+    }
+    const { runTui } = await import("../tui/app.ts");
+    return runTui({ cwd: parsed.flags.get("repo") ?? process.cwd(), preset: parsed.flags.get("preset") });
+  }
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
     process.stdout.write(HELP);
     return 0;

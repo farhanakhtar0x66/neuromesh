@@ -1,0 +1,37 @@
+{
+  "name": "demo",
+  "description": "No models at all: scripted agents that write one small file, for trying the TUI and the run flow without spending any quota.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "demo",
+        "model": "demo-lead",
+        "tier": "expert"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "demo",
+        "model": "demo-lead",
+        "tier": "expert"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "demo",
+        "model": "demo-worker"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "demo",
+        "model": "demo-tester"
+      }
+    ]
+  },
+  "repairs": 1,
+  "turnTimeoutMinutes": 5,
+  "test": "always"
+}

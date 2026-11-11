@@ -121,6 +121,13 @@ runs out of quota; a run pauses when none is left and resumes later.
   from list prices (`src/usage/prices.ts`); nothing is paid per token.
 - No user interface yet; the engine prints a JSON event stream for one.
 
+## The TUI
+
+Run `neuromesh` with no command in a terminal (or `neuromesh tui`). Type a
+request, watch the agents work, then apply, diff, discard or rate the result.
+`neuromesh tui --preset demo` tries it with scripted agents and no quota.
+Details: `docs/11-tui.md`.
+
 ## Branches
 
 - `main`: what has been measured to work (v0.1.0).

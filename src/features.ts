@@ -191,6 +191,15 @@ export const FEATURES: Feature[] = [
     what: "Waits out a countdown the program shows, so a timed run that never ends by itself is caught.",
     optional: true,
   },
+  {
+    id: "F19",
+    key: "tui",
+    name: "Terminal UI",
+    added: "2026-11-12",
+    files: ["src/tui/app.ts", "src/tui/view.ts", "src/tui/model.ts", "src/tui/term.ts", "src/tui/composer.ts", "src/tui/text.ts", "src/tui/theme.ts"],
+    what: "The full-screen interface: a landing canvas, then a live workspace with the pipeline, transcript, agents and cost, and an outcome card to apply, diff, discard and rate.",
+    optional: false,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

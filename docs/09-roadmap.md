@@ -31,6 +31,7 @@ feature id (`docs/10-features.md`), unit-tested, not yet measured live:
 | Live cost per turn and by role in the summary | F17 |
 | Screen check waits out a countdown | F18 |
 | Lean Claude sessions (measured: spec turn $0.50 → $0.24) | F08 |
+| TUI, first phase: landing, live workspace, outcome card, diff, rating, demo preset (`docs/11-tui.md`) | F19 |
 
 Default preset on the research and testing branches: `factory-opus-luna`
 (Opus 5.5 as lead engineer, Luna workers and tester). `main` keeps

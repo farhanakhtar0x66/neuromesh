@@ -27,3 +27,4 @@ Every capability added after v0.1.0 has an id. Its code is marked `[Fxx key]`, i
 | F16 | `dollar-budget` | optional | Caps a run's expert spending by estimated API cost as well as by tokens. | `src/engine/run.ts (budgetLeft)`, `src/presets/presets.ts (expertBudgetUsd)` |
 | F17 | `live-cost` | optional | Shows each turn's estimated cost as it finishes, and cost by role in the summary. | `src/engine/run.ts (once)`, `src/cli/format.ts` |
 | F18 | `screen-check-2` | optional | Waits out a countdown the program shows, so a timed run that never ends by itself is caught. | `src/checks/screen.ts (countdown wait)` |
+| F19 | `tui` | core | The full-screen interface: a landing canvas, then a live workspace with the pipeline, transcript, agents and cost, and an outcome card to apply, diff, discard and rate. | `src/tui/app.ts`, `src/tui/view.ts`, `src/tui/model.ts`, `src/tui/term.ts`, `src/tui/composer.ts`, `src/tui/text.ts`, `src/tui/theme.ts` |

@@ -1,0 +1,68 @@
+{
+  "name": "factory-google-flash",
+  "description": "All-Google / Antigravity preset: Gemini 3.8 Flash (high effort) is the architect and worker; Gemini 3.8 Flash Thinking is the tester. Zero ChatGPT or Claude quota required; runs under Google Antigravity Individual ($0) or Google AI Pro.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash",
+        "effort": "high"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash",
+        "effort": "high",
+        "tier": "expert"
+      },
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash",
+        "effort": "low"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-thinking",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 35,
+  "expertBudget": 300000,
+  "expertBudgetUsd": 1.5,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash",
+      "effort": "low"
+    },
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash",
+      "effort": "high"
+    }
+  ]
+}

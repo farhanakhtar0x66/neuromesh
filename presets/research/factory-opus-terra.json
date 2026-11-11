@@ -1,0 +1,78 @@
+{
+  "name": "factory-opus-terra",
+  "description": "High-complexity codebase team: Claude Opus 5.5 is the lead architect and spec designer; GPT-6.1 Terra (medium effort) is the worker. Designed for typed codebases, Rust/C++ compilation, and intricate multi-module refactoring where Luna hits reasoning limits.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-terra",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-terra",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-terra",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000,
+  "expertBudgetUsd": 1.5,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "codex",
+      "model": "gpt-6.1-terra",
+      "effort": "medium"
+    },
+    {
+      "backend": "codex",
+      "model": "gpt-6.1-terra",
+      "effort": "high"
+    }
+  ]
+}
