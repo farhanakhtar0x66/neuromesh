@@ -5,6 +5,7 @@
 // themselves, and reading the code says little about what the user sees.
 
 import { spawnSync } from "node:child_process";
+import { isOn } from "../features.ts";
 
 export interface Screen {
   title: string;
@@ -21,6 +22,13 @@ export interface ScreenCheck {
 const sleep = (ms: number): void => {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 };
+
+/** [F18 screen-check-2] A countdown on a screen ("30s", "30 seconds left"), when it is short enough to wait out. */
+export function countdown(text: string): number | undefined {
+  const m = /\b(\d{1,3})\s*(?:s|sec|secs|seconds)\b/i.exec(text);
+  const n = m ? Number.parseInt(m[1]!, 10) : NaN;
+  return n >= 5 && n <= 60 ? n : undefined;
+}
 
 export function hasTmux(): boolean {
   return spawnSync("tmux", ["-V"], { encoding: "utf8" }).status === 0;
@@ -75,6 +83,14 @@ export function screenCheck(dir: string, command: string): ScreenCheck {
       send("Tab");
       sleep(800);
       shot("after Tab");
+      // [F18 screen-check-2] A program that shows a countdown must end it by itself.
+      // Start it with a few keys, wait it out, and look. Bounded to about a minute.
+      const seconds = countdown(screens[0]?.text ?? "");
+      if (isOn("screen-check-2") && seconds !== undefined && !exited()) {
+        send("-l", "the quick ");
+        sleep((seconds + 3) * 1_000);
+        shot(`after typing "the quick " and then waiting ${seconds + 3} seconds (the first screen showed a ${seconds}-second countdown)`);
+      }
     }
     let stuck = false;
     for (const key of ["Escape", "C-c", "q"]) {

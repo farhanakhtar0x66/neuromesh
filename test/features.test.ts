@@ -41,3 +41,11 @@ test("errors inside a feature carry its id, synchronously and asynchronously", a
   assert.throws(() => inFeature("F04", () => 1), /injected fault/);
   delete process.env.NEUROMESH_FAULT;
 });
+
+test("the screen check finds a countdown it can wait out", async () => {
+  const { countdown } = await import("../src/checks/screen.ts");
+  assert.equal(countdown("stillkeys  time 15 [30] 60\n  30s left   0 wpm"), 30);
+  assert.equal(countdown("30 seconds left"), 30);
+  assert.equal(countdown("Accuracy 98%  time 120s"), undefined, "too long to wait");
+  assert.equal(countdown("no timer here"), undefined);
+});
