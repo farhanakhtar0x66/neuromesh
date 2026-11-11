@@ -114,7 +114,11 @@ finished are skipped.
    keep the expert idle, which worker-first routing does. Escalation has not
    been needed live; `esc-check-flash-low` runs the hard tasks with a weaker
    worker (Flash low effort) to exercise advice and takeover for real.
-9. **E1 in progress:** `e1-factory-wf-1..3`, three full-suite runs of `factory-wf`.
+9. **E1 in progress:** `e1-final-1..3`, three full-suite runs of the final
+   `factory-wf` (ladder, tester on), started 2026-11-11 10:47 IST. The earlier
+   `e1-factory-wf-1..3` runs were stopped at about 5/25 because they measured an
+   older configuration; none of their tasks had failed. To continue E1 in a new
+   session, rerun the same three commands: finished tasks are skipped.
 
 Current engine choices for `factory-wf` (all measured above): worker-first
 routing, plan only clearly large requests (and then split independent parts),
