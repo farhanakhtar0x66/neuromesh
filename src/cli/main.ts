@@ -266,7 +266,8 @@ function commandPresets(): number {
   for (const p of listPresets()) {
     process.stdout.write(`${p.name} (${p.mode})\n`);
     if (p.mode === "team") process.stdout.write(`  expert  ${describeRole(p.roles.orchestrator)}\n`);
-    process.stdout.write(`  worker  ${describeRole(p.roles.worker)}\n`);
+    if (p.workerLadder) process.stdout.write(`  worker  ${p.workerLadder.map((c) => `${c.backend} ${c.model ?? "(default)"}`).join("  →  ")}  (climbs when stuck)\n`);
+    else process.stdout.write(`  worker  ${describeRole(p.roles.worker)}\n`);
     if (p.roles.tester) process.stdout.write(`  tester  ${describeRole(p.roles.tester)}\n`);
     if (p.mode === "solo" && p.roles.escalation) process.stdout.write(`  expert  ${describeRole(p.roles.escalation)}\n`);
     process.stdout.write(`  ${p.description}\n\n`);
