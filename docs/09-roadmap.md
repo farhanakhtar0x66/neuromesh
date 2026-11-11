@@ -12,6 +12,31 @@ controls**, with every expert call justified by evidence the engine collected.
 
 Branches: `main` holds what has been measured to work; `neuromesh-research`
 holds experiments; `neuromesh-testing` records real use (`docs/07-usage-log.md`).
+The owner's Mac runs `neuromesh-testing`, and the usage log from real work is
+the main evidence from here on; no heavy synthetic tests unless asked.
+
+## Status (2026-11-11, evening)
+
+Built on `neuromesh-research`, merged into `neuromesh-testing`, each with a
+feature id (`docs/10-features.md`), unit-tested, not yet measured live:
+
+| Item | Feature |
+| --- | --- |
+| Feature ids, kill switches and tagged errors for everything after v0.1 | `src/features.ts` |
+| Context packet: repository map and relevant signatures in every prompt, no model call | F12 |
+| Universal agent tool for any CLI: map, show, find, checks | F13 |
+| Expert patch instead of rebuild when only review findings remain | F14 |
+| Spec cap | F15 |
+| Expert budget in estimated dollars; passing work is kept when it runs out | F16 |
+| Live cost per turn and by role in the summary | F17 |
+| Screen check waits out a countdown | F18 |
+| Lean Claude sessions (measured: spec turn $0.50 → $0.24) | F08 |
+
+Default preset on the research and testing branches: `factory-opus-luna`
+(Opus 5.5 as lead engineer, Luna workers and tester). `main` keeps
+`factory-luna`. Still open from the list below: expert acceptance review,
+evidence collectors for web and command-line programs, staffing chosen from
+the usage log, harder benchmarks, local models, contract-first parallel work.
 
 ## 1. Cost: make every expert token count
 

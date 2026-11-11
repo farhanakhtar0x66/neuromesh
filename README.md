@@ -87,7 +87,8 @@ user interface).
 
 | Preset | Expert | Worker | Use |
 | --- | --- | --- | --- |
-| `factory-luna` (default) | GPT-6.1 Sol: advice, takeover, large plans | GPT-6 Luna, low then high effort | The factory floor at the lowest cost measured: 12% of Sol alone on hard tasks (API estimate) |
+| `factory-opus-luna` (default on the research and testing branches) | Claude Opus 5.5: spec and design for new programs, advice, patches, large plans | GPT-6 Luna, low then high effort | Opus decides, Luna builds: matched or beat Opus alone on two of three typing-app builds at about 30% of its cost |
+| `factory-luna` (default on `main`) | GPT-6.1 Sol: advice, takeover, large plans | GPT-6 Luna, low then high effort | The factory floor at the lowest cost measured: 12% of Sol alone on hard tasks (API estimate) |
 | `factory-wf` | GPT-6.1 Sol: advice, takeover, large plans | Gemini 3.8 Flash, low then high effort | The same floor on Gemini quota; slower and far more tokens |
 | `factory` | GPT-6.1 Sol plans every non-trivial request | Gemini 3.8 Flash | Plan first, with a tester |
 | `google-only` | Gemini Flash high | Gemini Flash | No Claude or ChatGPT quota at all |
@@ -119,3 +120,13 @@ runs out of quota; a run pauses when none is left and resumes later.
 - Token counts are the tools' own reports. API-equivalent cost is an estimate
   from list prices (`src/usage/prices.ts`); nothing is paid per token.
 - No user interface yet; the engine prints a JSON event stream for one.
+
+## Branches
+
+- `main`: what has been measured to work (v0.1.0).
+- `neuromesh-research`: experiments, including unorthodox ones.
+- `neuromesh-testing`: what the owner runs for real work. Every run is recorded in
+  `~/.neuromesh/usage/USAGE.md` with a rating (`docs/07-usage-log.md`).
+
+Every feature added after v0.1 has an id; errors name it and `--disable <key>`
+switches it off (`docs/10-features.md`, `neuromesh features`).
