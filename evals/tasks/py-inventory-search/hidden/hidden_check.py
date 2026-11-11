@@ -8,7 +8,7 @@ assert names(inv.search("bolt")) == ["bolt washer", "Carriage Bolt", "Hex Bolt"]
 assert names(inv.search("BOLT", min_quantity=1)) == ["bolt washer", "Hex Bolt"]
 assert names(inv.search()) == ["Anchor", "bolt washer", "Carriage Bolt", "Hex Bolt", "nut"]
 assert names(inv.search("", sort_by="quantity")) == ["nut", "Anchor", "Hex Bolt", "bolt washer", "Carriage Bolt"]
-assert names(inv.search("x")) == []
+assert names(inv.search("zzz")) == []
 assert names(inv.search(min_quantity=40)) == ["Anchor", "Hex Bolt", "nut"]
 try:
     inv.search(sort_by="price")
