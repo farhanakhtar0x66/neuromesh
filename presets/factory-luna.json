@@ -1,0 +1,28 @@
+{
+  "name": "factory-luna",
+  "description": "The factory floor with the cheapest listed worker: GPT-6 Luna through Codex at low effort, climbing to high effort when stuck, reviewed by a Luna tester. Only a stuck high-effort worker gets the expert (GPT-6.1 Sol), first as advice and then as a takeover. Built to test whether a truly cheap worker beats the expert alone on API cost.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      { "backend": "codex", "model": "gpt-6.1-sol", "effort": "medium" },
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }
+    ],
+    "escalation": [
+      { "backend": "codex", "model": "gpt-6.1-sol", "effort": "high" },
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }
+    ],
+    "worker": [{ "backend": "codex", "model": "gpt-6-luna", "effort": "high" }],
+    "tester": [{ "backend": "codex", "model": "gpt-6-luna", "effort": "medium" }]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000,
+  "test": "always",
+  "workerLadder": [
+    { "backend": "codex", "model": "gpt-6-luna", "effort": "low" },
+    { "backend": "codex", "model": "gpt-6-luna", "effort": "high" }
+  ]
+}
