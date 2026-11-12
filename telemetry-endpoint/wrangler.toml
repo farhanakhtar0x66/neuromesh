@@ -1,6 +1,9 @@
 name = "neuromesh-telemetry"
 main = "src/index.js"
 compatibility_date = "2026-11-01"
+# Served at https://neuromesh-telemetry.<subdomain>.workers.dev; no preview URLs.
+workers_dev = true
+preview_urls = false
 
 [[d1_databases]]
 binding = "DB"

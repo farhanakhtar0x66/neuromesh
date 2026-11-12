@@ -6,5 +6,5 @@
 //
 // Until ENDPOINT is set, reports wait in ~/.neuromesh/telemetry/outbox.
 
-export const ENDPOINT = "";
+export const ENDPOINT = "https://neuromesh-telemetry.farhanakhtar.workers.dev";
 export const INGEST_KEY = "neuromesh-testing-v1";
