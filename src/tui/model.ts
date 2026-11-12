@@ -9,6 +9,7 @@ import type { Question } from "../engine/run.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { estimateCost } from "../usage/prices.ts";
+import { tidyStep } from "./blocks.ts";
 import type { Access, Verbosity } from "./store.ts";
 import type { Tone } from "./theme.ts";
 
@@ -321,7 +322,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
   switch (e.type) {
     case "agent.activity": {
       const a = m.agents.get(agentKey(e));
-      if (a) a.last = String(e.summary ?? e.activity ?? "");
+      if (a) a.last = tidyStep(String(e.summary ?? e.activity ?? ""));
       return;
     }
     case "agent.started": {
@@ -451,8 +452,9 @@ export function finished(m: Model, state: RunState): void {
   m.stageAt = Date.now();
   m.statusAt = Date.now();
   m.ask = undefined;
+  // An applied or discarded run had finished first: its steps all happened.
   m.stage =
-    state.status === "finished" ? (state.outcome?.checks === "failed" ? "failed" : "finished")
+    state.status === "finished" || state.status === "applied" || state.status === "discarded" ? (state.outcome?.checks === "failed" ? "failed" : "finished")
     : state.status === "paused" ? "paused"
     : state.status === "interrupted" ? "stopped"
     : "failed";

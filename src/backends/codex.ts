@@ -46,7 +46,9 @@ export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSc
         } else if (item.type === "command_execution" && type === "item.started") {
           request.onActivity?.({ kind: "tool", summary: `$ ${short(item.command, 110)}` });
         } else if (item.type === "file_change" && type === "item.completed") {
-          request.onActivity?.({ kind: "tool", summary: `edit ${short(item.changes, 110)}` });
+          // The files it changed, by name: the change list itself is long JSON.
+          const changes = Array.isArray(item.changes) ? item.changes.map((c) => str(obj(c)?.path)).filter(Boolean) : [];
+          request.onActivity?.({ kind: "tool", summary: changes.length ? `edit ${changes.join(", ")}` : `edit ${short(item.changes, 110)}` });
         } else if (item.type === "error") {
           lastError = str(item.message) ?? lastError;
         }

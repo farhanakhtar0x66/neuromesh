@@ -59,6 +59,27 @@ const STAGE_OF: Record<string, Stage> = { orchestrator: "planning", briefer: "pl
 
 const plural = (n: number, one: string): string => `${n} ${one}${n === 1 ? "" : "s"}`;
 
+/**
+ * An agent's step as a person reads it: paths inside the run's own copy of the
+ * repository become repository paths, the home folder becomes ~, and an edit
+ * reported as JSON becomes the files it touched.
+ */
+export function tidyStep(text: string): string {
+  let t = text;
+  // Codex reports edits as [{"path": ..., "kind": ...}]: keep the paths.
+  const edit = /^edit \[/.exec(t);
+  if (edit) {
+    const paths = [...t.matchAll(/"path":\s*"([^"]+)/g)].map((m) => m[1]!);
+    if (paths.length) t = `edit ${paths.join(", ")}`;
+  }
+  // The run's own copy: whole, or cut short in older recorded steps.
+  t = t.replace(/\/[^\s"']*?\/runs\/[\w-]+(?:\/tasks(?:\/[\w-]*)?)?(?:\/worktree)?\/?…?/g, "");
+  t = t.replace(/^edit\s*(,\s*)*$/, "edit");
+  const home = process.env.HOME;
+  if (home) t = t.split(home).join("~");
+  return t;
+}
+
 /** The first sentence-like line of a markdown report: no headings, rules or fences. */
 export function gist(text: string): string {
   const line = text.split("\n").map((l) => l.trim()).find((l) => l && !/^(#{1,6}\s|```|~~~|[-*_]{3,}$|\|)/.test(l)) ?? "";
@@ -197,7 +218,7 @@ export function buildBlocks(m: Pick<Model, "log" | "ask">, verbose: Verbosity): 
       case "agent.activity": {
         const b = open.get(key);
         if (!b) break;
-        const summary = String(e.summary ?? e.activity ?? "");
+        const summary = tidyStep(String(e.summary ?? e.activity ?? ""));
         b.full.push({ text: `${task ? `${task} · ` : ""}${summary}`, tone: e.activity === "text" ? "text" : "muted", icon: e.activity === "tool" ? "›" : "·", iconTone: "subtle" });
         break;
       }

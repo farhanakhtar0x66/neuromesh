@@ -262,6 +262,15 @@ test("a finished run: the final report as markdown, read from its first line, th
   for (const id of ["act:apply", "act:diff", "act:discard", "rate:3"]) assert.ok(bottom.ids.includes(id), id);
 });
 
+test("a reopened session that was applied or discarded shows every step done, not failed", () => {
+  for (const status of ["applied", "discarded"]) {
+    const m = teamRun();
+    finished(m, { id: "r1", status, preset: "p", outcome: { files: [], insertions: 0, deletions: 0, checks: "passed" } } as unknown as RunState);
+    assert.equal(m.stage, "finished", status);
+    assert.ok(pipeline(m).every((s) => s.state === "done" || s.state === "skipped"), status);
+  }
+});
+
 test("the pipeline is buttons, built from what happened", () => {
   setColorDepth("true");
   const m = teamRun();
