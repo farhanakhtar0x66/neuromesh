@@ -93,7 +93,13 @@ export type Dialog =
       error?: string;
       at: number;
     }
-  | { kind: "settings"; index: number; at: number };
+  | { kind: "settings"; index: number; at: number }
+  /** [F51 tui-teams] The Custom team: a model (or none) for each place. */
+  | { kind: "team"; team: { expert: string; worker: string; tester: string }; labels: Record<string, string>; index: number; error?: string; at: number }
+  /** [F50 opencode] The four tools Neuromesh drives, and whether each is signed in. */
+  | { kind: "connect"; index: number; status: Record<string, { version?: string; state: string; tone: Tone }>; at: number }
+  /** [F52 telemetry] Asked once: share reports with the owner, or not. */
+  | { kind: "consent"; at: number };
 
 export interface Model {
   screen: "landing" | "workspace";
@@ -194,7 +200,10 @@ export interface Suggest {
 }
 
 export interface Picker {
-  kind: "sessions" | "presets";
+  /** [F51 tui-teams] "model" chooses a model for one place of the Custom team, then goes back to it. */
+  kind: "sessions" | "presets" | "allPresets" | "model";
+  role?: "expert" | "worker" | "tester";
+  back?: Dialog;
   title: string;
   query: string;
   at?: number;

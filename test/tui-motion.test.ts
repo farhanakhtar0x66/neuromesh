@@ -94,7 +94,9 @@ test("frames: fast while something moves, slow for a scrolling name, none when s
   const m = newModel("p", "app");
   m.motion = true;
   m.clock = 100_000;
-  assert.equal(motionNeeded(m, 172), "none");
+  assert.equal(motionNeeded(m, 172), "fast", "the landing logo glimmers");
+  m.log.push({ kind: "note", text: "a finished session", at: 0 });
+  assert.equal(motionNeeded(m, 172), "none", "a still workspace draws nothing");
   m.projectName = "terminal-ascii-screensaver-with-a-long-name";
   assert.equal(motionNeeded(m, 172), "slow", "the name scrolls, slowly");
   m.projectName = "app";

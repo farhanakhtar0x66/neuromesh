@@ -787,7 +787,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     durationMs: result.durationMs,
     usage,
     // [F17 live-cost]
-    cost: isOn("live-cost") ? estimateCost(record.model, usage) : undefined,
+    // An estimate at list prices; for models without one (opencode's), what the tool reported.
+    cost: isOn("live-cost") ? (estimateCost(record.model, usage) ?? (backend.id === "opencode" ? result.costUsdEquivalent : undefined)) : undefined,
     tier,
     detail: result.detail,
     quotaUsed: result.quotaUsed,

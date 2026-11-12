@@ -458,10 +458,11 @@ export class Terminal {
    * [F31 tui-screensaver] Hand the terminal to another program for a while
    * (the owner's external screensaver), then take it back with resume().
    */
-  suspend(): void {
+  suspend(normalScreen = false): void {
     if (!this.active || !this.onData) return;
     this.input.off("data", this.onData);
-    this.out.write("\x1b[?1003l\x1b[?1006l\x1b[?2004l\x1b[0m");
+    // [F50 opencode] For a tool's own login, the normal screen and a visible cursor.
+    this.out.write(`\x1b[?1003l\x1b[?1006l\x1b[?2004l\x1b[0m${normalScreen ? "\x1b[?25h\x1b[?1049l" : ""}`);
     this.input.setRawMode?.(false);
     this.input.pause();
   }

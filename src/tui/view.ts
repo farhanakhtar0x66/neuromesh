@@ -17,6 +17,7 @@ import type { Block, Line } from "./blocks.ts";
 import { Canvas, rect } from "./canvas.ts";
 import type { Rect, Region } from "./canvas.ts";
 import { COMMANDS } from "./commands.ts";
+import { NOTICE } from "../telemetry/telemetry.ts";
 import { renderMarkdown, wrapInline } from "./markdown.ts";
 import type { MdRow, Span } from "./markdown.ts";
 import type { Composer } from "./composer.ts";
@@ -574,12 +575,20 @@ function mainPane(m: Model, c: Composer, cv: Canvas, r: Rect): { cursor?: { row:
     const p = m.motion && isOn("tui-intro") ? progress(m.introAt, 1_300, now) : 1;
     const lw = width(logo[0]!);
     const lx = r.x + Math.max(0, Math.floor((r.w - lw) / 2));
+    // [F48 tui-theme] A light runs across the logo, slowly, all the time.
+    const span = lw + logo.length * 2 + 24;
+    const head = m.motion ? ((now % 4_200) / 4_200) * span - 12 : -100;
     for (const [i, raw] of logo.entries()) {
       const line = p >= 1 ? raw : buildLine(raw, i, logo.length, p);
       let col = 0;
       for (const g of graphemes(line)) {
         const t: Tone = g === ":" ? "subtle" : "jade";
-        if (g !== " ") cv.text(lx + col, top + i, g, pen(t, g === "#" || logo.length === 1));
+        if (g !== " ") {
+          const d = Math.abs(col + i * 2 - head);
+          const k = d < 7 ? (1 - d / 7) ** 2 : 0;
+          const fgc = k > 0 && colourOn() ? mix(T(t), T("text"), k * 0.9) : T(t);
+          cv.text(lx + col, top + i, g, { fg: fgc, attrs: g === "#" || logo.length === 1 || k > 0.6 ? ATTR.bold : 0 });
+        }
         col += 1;
       }
     }
@@ -1464,6 +1473,7 @@ export const SETTINGS_ROWS: { key: string; label: string; values: string[]; desc
   { key: "access", label: "Agents", values: ["normal", "turbo"], describe: (v) => (v === "turbo" ? "Turbo: go ahead on their own" : "Normal: ask before plan and expert") },
   { key: "mouse", label: "Mouse", values: ["true", "false"], describe: (v) => (v === "true" ? "on (hold Shift to select text)" : "off") },
   { key: "sidebar", label: "Sidebar", values: ["true", "false"], describe: (v) => (v === "true" ? "shown (ctrl+b)" : "hidden (ctrl+b)") },
+  { key: "telemetry", label: "Share reports", values: ["on", "off"], describe: (v) => (v === "on" ? "on: run reports go to Neuromesh's author" : v === "off" ? "off" : "not asked yet") },
   { key: "info", label: "Info pane", values: ["true", "false"], describe: (v) => (v === "true" ? "shown (ctrl+g)" : "hidden (ctrl+g)") },
 ];
 
@@ -1497,6 +1507,75 @@ function dialogPopup(m: Model, cv: Canvas): { row: number; col: number } | undef
     let bx = r.x + 2;
     bx += button(cv, bx, by, d.yes, "dlg:yes", m, { key: "enter", tone: d.danger ? "red" : "jade", strong: true }) + 2;
     button(cv, bx, by, "Cancel", "dlg:no", m, { key: "esc", tone: "muted" });
+    return undefined;
+  }
+  if (d.kind === "team") {
+    // [F51 tui-teams] A model (or none) for each place; Enter on a row opens the list.
+    const w = Math.min(70, cv.w - 6);
+    const r = popupFrame(m, cv, w, 13 + (d.error ? 1 : 0), d.at);
+    popupTitle(cv, r, "Custom team", m);
+    cv.text(r.x + 2, r.y + 2, "A model for each place, or none (not all three).", pen("subtle"), r.w - 4);
+    const rows: [string, "expert" | "worker" | "tester", string][] = [
+      ["Expert", "expert", "plans, writes the spec, steps in when stuck"],
+      ["Worker", "worker", "builds"],
+      ["Tester", "tester", "reviews the work"],
+    ];
+    for (const [i, [label, role, what]] of rows.entries()) {
+      const y = r.y + 4 + i * 2;
+      const on = d.index === i || m.hover === `team:${role}`;
+      if (on) cv.fill(rect(r.x + 1, y, r.w - 2, 2), solid("hover"));
+      cv.text(r.x + 2, y, on ? "›" : " ", pen("jade", true));
+      cv.text(r.x + 4, y, label, pen(ROLE_TONE[role === "expert" ? "orchestrator" : role] ?? "text", true));
+      const id = d.team[role];
+      cv.text(r.x + 14, y, id === "none" ? "none" : (d.labels[id] ?? id), pen(id === "none" ? "subtle" : "text", id !== "none"), r.w - 18);
+      cv.text(r.x + 14, y + 1, id === "none" ? "" : id.split("/")[0] === "opencode" ? "opencode" : what, pen("subtle"), r.w - 18);
+      cv.region(`team:${role}`, rect(r.x + 1, y, r.w - 2, 2));
+    }
+    if (d.error) cv.text(r.x + 2, r.y + r.h - 3, d.error, pen("red"), r.w - 4);
+    const by = r.y + r.h - 2;
+    let bx = r.x + 2;
+    bx += button(cv, bx, by, "Save and use", "team:save", m, { key: "s", tone: "jade", strong: true }) + 2;
+    button(cv, bx, by, "Cancel", "dlg:no", m, { key: "esc", tone: "muted" });
+    return undefined;
+  }
+  if (d.kind === "connect") {
+    // [F50 opencode] The four tools, each signed in with its own login.
+    const tools: [string, string, string][] = [
+      ["codex", "Codex", "GPT-6 Luna, GPT-6.1 Sol"],
+      ["claude", "Claude Code", "Opus, Fable, Sonnet, Haiku"],
+      ["agy", "Antigravity", "Gemini 3.8 Flash"],
+      ["opencode", "opencode", "any provider; API keys too"],
+    ];
+    const w = Math.min(76, cv.w - 6);
+    const r = popupFrame(m, cv, w, tools.length * 2 + 8, d.at);
+    popupTitle(cv, r, "Connections", m);
+    cv.text(r.x + 2, r.y + 2, "Neuromesh uses your own subscriptions through these tools.", pen("subtle"), r.w - 4);
+    for (const [i, [id, name, models]] of tools.entries()) {
+      const y = r.y + 4 + i * 2;
+      const on = d.index === i || m.hover === `conn:${id}`;
+      if (on) cv.fill(rect(r.x + 1, y, r.w - 2, 2), solid("hover"));
+      cv.text(r.x + 2, y, on ? "›" : " ", pen("jade", true));
+      const st = d.status[id] ?? { state: "checking…", tone: "muted" as Tone };
+      cv.spans(r.x + 4, y, [[name, pen("text", true)], [st.version ? `  ${st.version}` : "", pen("subtle")]], r.w - 30);
+      cv.text(r.x + 4, y + 1, models, pen("subtle"), r.w - 30);
+      cv.text(r.x + r.w - 26, y, st.state, pen(st.tone), 24);
+      const label = id === "opencode" ? "Log in / API key" : "Log in";
+      button(cv, r.x + r.w - 26, y + 1, label, `conn:${id}`, m, { tone: "blue" });
+    }
+    cv.text(r.x + 2, r.y + r.h - 2, "enter signs in with the tool's own login · r checks again", pen("subtle"), r.w - 4);
+    return undefined;
+  }
+  if (d.kind === "consent") {
+    // [F52 telemetry] Asked once, plainly.
+    const w = Math.min(74, cv.w - 6);
+    const body = NOTICE.flatMap((t, i) => [...wrap(t, w - 6), ...(i < NOTICE.length - 1 ? [""] : [])]);
+    const r = popupFrame(m, cv, w, body.length + 7, d.at);
+    cv.text(r.x + 2, r.y + 1, "Help test Neuromesh?", pen("text", true));
+    for (const [i, t] of body.entries()) cv.text(r.x + 2, r.y + 3 + i, t, pen(i === 0 ? "text" : "muted"), r.w - 4);
+    const by = r.y + r.h - 2;
+    let bx = r.x + 2;
+    bx += button(cv, bx, by, "Share reports", "consent:yes", m, { key: "y", tone: "jade", strong: true }) + 2;
+    button(cv, bx, by, "Don't share", "consent:no", m, { key: "n", tone: "muted" });
     return undefined;
   }
   // A form: labelled fields, a browse button for folders, and submit.
@@ -1533,6 +1612,8 @@ export function motionNeeded(m: Model, cols: number): "fast" | "slow" | "none" {
   const now = nowOf(m);
   const recent = (at: number | undefined, ms: number): boolean => at !== undefined && now - at < ms;
   if (!m.run && m.stage !== "idle") return "fast";
+  // The landing logo's light keeps moving.
+  if (m.log.length === 0 && isOn("tui-theme")) return "fast";
   if (
     recent(m.introAt, 1_400) ||
     recent(m.brandAt, 1_200) ||

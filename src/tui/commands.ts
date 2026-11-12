@@ -32,7 +32,9 @@ export type Action =
   | "rename"
   | "compact"
   | "context"
-  | "transparent";
+  | "transparent"
+  | "connect"
+  | "team";
 
 export interface Command {
   /** The slash command, when it can be typed as one. */
@@ -69,7 +71,9 @@ export const COMMANDS: Command[] = [
   { group: "Projects", slash: "/rename", keys: "ctrl+r", label: "Rename this project", action: "rename" },
   { group: "Projects", keys: "ctrl+e", label: "Sidebar keys: ↑↓ enter, space fold, r rename, x delete", action: "focus-sidebar" },
   { group: "View", slash: "/settings", keys: "", label: "Settings", action: "settings" },
-  { group: "View", slash: "/preset", keys: "ctrl+k", label: "Choose the team for the next runs", action: "preset" },
+  { group: "View", slash: "/preset", keys: "ctrl+k", label: "Choose the team: the favourites, or your own", action: "preset" },
+  { group: "View", slash: "/team", keys: "", label: "Build your own team: expert, worker, tester", action: "team" },
+  { group: "View", slash: "/connect", keys: "", label: "Sign in to Codex, Claude Code, Antigravity, opencode", action: "connect" },
   { group: "View", slash: "/sidebar", keys: "ctrl+b", label: "Show or hide the sidebar", action: "sidebar" },
   { group: "View", slash: "/info", keys: "ctrl+g", label: "Show or hide the info pane", action: "info" },
   { group: "View", slash: "/theme", keys: "ctrl+t", label: "Theme: neuromesh-dark, terminal's colours, GitHub", action: "theme" },

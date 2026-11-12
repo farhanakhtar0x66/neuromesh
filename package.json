@@ -1,8 +1,10 @@
 {
   "name": "neuromesh",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A multi-agent coding engine built like a factory floor",
   "private": true,
+  "license": "PolyForm-Shield-1.0.0",
+  "repository": "github:farhanakhtar0x66/neuromesh",
   "type": "module",
   "bin": {
     "neuromesh": "src/cli/main.ts"

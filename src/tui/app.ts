@@ -31,6 +31,9 @@ import type { Paint, Saver } from "./screensaver.ts";
 import { allSessions, branchOf, loadProjects, loadSettings, saveProjects, saveSettings, titleOf, trashSession } from "./store.ts";
 import type { ProjectsFile, SessionRecord, Settings } from "./store.ts";
 import { Terminal, readColourReplies } from "./term.ts";
+import { CUSTOM, FAVOURITES, modelChoices, opencodeModels, saveTeam, teamProblem } from "./team.ts";
+import type { ModelChoice, Team } from "./team.ts";
+import { allowed as telemetryAllowed, flush as flushReports, queue as queueReport, ratingReport, runReport } from "../telemetry/telemetry.ts";
 import type { Key, Mouse } from "./term.ts";
 import { setTerminalColours, setTheme, setTransparent } from "./theme.ts";
 import { LOGO_WIDE, SETTINGS_ROWS, composerWidth, layoutOf, motionNeeded, pickerChoices, render, sidebarRows } from "./view.ts";
@@ -376,7 +379,13 @@ export async function runTui(options: TuiOptions): Promise<number> {
         // [F11 usage-log] Real runs from the TUI are recorded too; demo runs never.
         if (isOn("usage-log") && preset.name !== "demo") {
           try {
-            recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
+            const entry = entryFor(state, (b) => backends[b]?.sessionTotals === true);
+            recordRun(home, entry);
+            // [F52 telemetry] With consent, the same as a report for the author.
+            if (isOn("telemetry") && telemetryAllowed(settings.telemetry)) {
+              queueReport(home, runReport(home, state, entry));
+              void flushReports(home);
+            }
           } catch (error) {
             toast(m, `Usage log not written: ${error instanceof Error ? error.message : String(error)}`, "red");
           }
@@ -566,6 +575,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
     model.rating = n;
     try {
       recordRating(home, { run: r.id, at: new Date().toISOString(), score: n });
+      if (isOn("telemetry") && telemetryAllowed(settings.telemetry)) {
+        queueReport(home, ratingReport(home, r.id, n));
+        void flushReports(home);
+      }
       toast(model, `Rated ${n}. Recorded in the usage log.`);
     } catch (error) {
       toast(model, `Rating not saved: ${error instanceof Error ? error.message : String(error)}`, "red");
@@ -676,6 +689,9 @@ export async function runTui(options: TuiOptions): Promise<number> {
       model.dialog = undefined;
       return confirmed(d.action);
     }
+    if (d.kind === "team") return saveCustomTeam();
+    if (d.kind === "connect") return login(TOOLS[d.index]!.id);
+    if (d.kind === "consent") return consent(true);
     const values = d.fields.map((f) => f.value);
     if (d.action === "new-project") {
       const error = createProject(values[0] ?? "", values[1] ?? "");
@@ -804,7 +820,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
   // ---------------------------------------------------------------------------
   // Commands.
 
-  const openPicker = (kind: "sessions" | "presets"): void => {
+  const openPicker = (kind: "sessions" | "presets" | "allPresets"): void => {
     if (kind === "sessions") {
       const all: Choice[] = allSessions(home)
         .filter((s) => s.repo === repoRoot)
@@ -814,10 +830,157 @@ export async function runTui(options: TuiOptions): Promise<number> {
         });
       if (all.length === 0) return void toast(model, "No earlier sessions in this folder yet.", "muted");
       model.picker = { kind, title: "Sessions in this folder", query: "", all, index: 0, at: Date.now() };
+    } else if (kind === "presets" && isOn("tui-teams")) {
+      // [F51 tui-teams] The two favourites, your own team, and the rest behind one entry.
+      const presets = listPresets();
+      const fav: Choice[] = FAVOURITES.flatMap((name) => {
+        const p = presets.find((x) => x.name === name);
+        return p ? [{ id: p.name, label: `★ ${p.name}${p.name === preset.name ? "  (current)" : ""}`, detail: p.description.slice(0, 160) }] : [];
+      });
+      const own = presets.find((x) => x.name === CUSTOM);
+      const all: Choice[] = [
+        ...fav,
+        { id: "@custom", label: `✎ Custom team${preset.name === CUSTOM ? "  (current)" : ""}`, detail: own ? `${own.description} Enter to change it.` : "Choose the expert, worker and tester yourself, from every model your tools offer." },
+        { id: "@others", label: "… Other presets", detail: "Every preset, including the experimental ones." },
+      ];
+      model.picker = { kind, title: "Team", query: "", all, index: Math.max(0, all.findIndex((c) => c.id === preset.name)), at: Date.now() };
     } else {
       const all: Choice[] = listPresets().map((p) => ({ id: p.name, label: `${p.name}${p.name === preset.name ? "  (current)" : ""}`, detail: p.description.slice(0, 160) }));
-      model.picker = { kind, title: "Team presets", query: "", all, index: Math.max(0, all.findIndex((c) => c.id === preset.name)), at: Date.now() };
+      model.picker = { kind: "allPresets", title: "Every preset", query: "", all, index: Math.max(0, all.findIndex((c) => c.id === preset.name)), at: Date.now() };
     }
+  };
+
+  /** What a picker's choice does. */
+  const picked = (p: NonNullable<Model["picker"]>, id: string): void => {
+    if (p.kind === "sessions") return openSession(id);
+    if (p.kind === "model") {
+      const d = p.back;
+      if (d?.kind === "team" && p.role) {
+        d.team[p.role] = id;
+        d.labels[id] = pickerLabel(id);
+        d.error = undefined;
+      }
+      model.dialog = d;
+      return;
+    }
+    if (id === "@custom") return openTeam();
+    if (id === "@others") return openPicker("allPresets");
+    choosePreset(id);
+  };
+
+  // [F51 tui-teams] The Custom team.
+  let extraModels: ModelChoice[] = [];
+  const choices = (): ModelChoice[] => modelChoices(extraModels);
+  const pickerLabel = (id: string): string => choices().find((c) => c.id === id)?.label ?? id.split("/").slice(1).join("/") ?? id;
+  const openTeam = (): void => {
+    let team: Team = { expert: "claude/claude-opus-5-5#medium", worker: "codex/gpt-6-luna#high", tester: "codex/gpt-6-luna#medium" };
+    try {
+      const saved = JSON.parse(readFileSync(join(home, "presets", `${CUSTOM}.json`), "utf8")) as { team?: Team };
+      if (saved.team) team = saved.team;
+    } catch {
+      // No custom team yet: start from the favourite.
+    }
+    const labels: Record<string, string> = {};
+    for (const id of Object.values(team)) labels[id] = pickerLabel(id);
+    openDialog({ kind: "team", team, labels, index: 0, at: Date.now() });
+    // opencode's models (API-key ones too) come in the background.
+    if (isOn("opencode") && extraModels.length === 0) {
+      void opencodeModels().then((list) => {
+        extraModels = list;
+        redraw();
+      });
+    }
+  };
+  const pickModel = (role: "expert" | "worker" | "tester"): void => {
+    const d = model.dialog;
+    if (d?.kind !== "team") return;
+    const all: Choice[] = choices().map((c) => ({ id: c.id, label: c.label, detail: c.detail }));
+    model.dialog = undefined;
+    model.picker = { kind: "model", role, back: d, title: `The ${role}`, query: "", all, index: Math.max(0, all.findIndex((c) => c.id === d.team[role])), at: Date.now() };
+  };
+  const saveCustomTeam = (): void => {
+    const d = model.dialog;
+    if (d?.kind !== "team") return;
+    const problem = teamProblem(d.team);
+    if (problem) return void (d.error = problem);
+    try {
+      saveTeam(home, d.team, choices());
+      model.dialog = undefined;
+      choosePreset(CUSTOM);
+    } catch (error) {
+      d.error = error instanceof Error ? error.message : String(error);
+    }
+  };
+
+  // [F50 opencode] Signing in: each tool's own login, with the terminal handed to it.
+  const TOOLS = [
+    { id: "codex", name: "Codex", login: ["codex", ["login"]], status: ["codex", ["login", "status"]] },
+    { id: "claude", name: "Claude Code", login: ["claude", ["auth", "login"]], status: ["claude", ["auth", "status"]] },
+    { id: "agy", name: "Antigravity", login: ["agy", []], status: ["agy", ["models"]] },
+    { id: "opencode", name: "opencode", login: ["opencode", ["auth", "login"]], status: ["opencode", ["auth", "list"]] },
+  ] as const;
+  const checkTools = (): void => {
+    const d = model.dialog;
+    if (d?.kind !== "connect") return;
+    for (const t of TOOLS) {
+      d.status[t.id] = { state: "checking…", tone: "muted" };
+      const version = spawnSync(t.id, ["--version"], { encoding: "utf8", timeout: 5_000 });
+      if (version.error || version.status !== 0) {
+        d.status[t.id] = { state: "not installed", tone: "red" };
+        continue;
+      }
+      const v = (/\d+(?:\.\d+)+/.exec(version.stdout) ?? [""])[0];
+      const child = spawn(t.status[0], [...t.status[1]], { stdio: ["ignore", "pipe", "pipe"] });
+      let out = "";
+      // Some tools say it on stderr (codex login status does).
+      child.stdout.on("data", (b: Buffer) => (out += b.toString("utf8")));
+      child.stderr.on("data", (b: Buffer) => (out += b.toString("utf8")));
+      const timer = setTimeout(() => child.kill("SIGTERM"), 20_000);
+      child.on("exit", (code) => {
+        clearTimeout(timer);
+        const ok =
+          t.id === "claude" ? /"loggedIn":\s*true/.test(out)
+          : t.id === "codex" ? code === 0 && /logged in/i.test(out)
+          : t.id === "opencode" ? true
+          : code === 0 && out.trim().length > 0;
+        const saved = (out.match(/\bstored\b|\boauth\b|\bapi\b/gi) ?? []).length;
+        const note = t.id === "opencode" ? `ready · ${saved} login${saved === 1 ? "" : "s"}` : ok ? "signed in" : "not signed in";
+        const now = model.dialog;
+        if (now?.kind === "connect") now.status[t.id] = { version: v, state: note, tone: ok ? "jade" : "amber" };
+        redraw();
+      });
+    }
+  };
+  const login = (id: string): void => {
+    const t = TOOLS.find((x) => x.id === id);
+    if (!t || running) return void toast(model, "Sign in when no run is going.", "amber");
+    term.suspend(true);
+    process.stdout.write(`\n${t.name}: ${id === "agy" ? "sign in, then type /quit to come back to Neuromesh." : "follow its steps; Neuromesh comes back when it ends."}\n\n`);
+    const child = spawn(t.login[0], [...t.login[1]], { stdio: "inherit" });
+    const back = (): void => {
+      term.resume();
+      term.invalidate();
+      checkTools();
+      extraModels = [];
+      redraw();
+    };
+    child.on("exit", back);
+    child.on("error", (error) => {
+      back();
+      toast(model, `${t.name}: ${error.message}`, "red");
+    });
+  };
+  const openConnect = (): void => {
+    openDialog({ kind: "connect", index: 0, status: {}, at: Date.now() });
+    checkTools();
+  };
+
+  // [F52 telemetry] Asked once, before the first run.
+  const consent = (yes: boolean): void => {
+    model.dialog = undefined;
+    setSetting("telemetry", yes ? "on" : "off");
+    toast(model, yes ? "Thank you: reports will be shared. /settings or `neuromesh telemetry off` stops it." : "Nothing will be shared.", yes ? "jade" : "muted", 5_000);
+    if (yes) void flushReports(home);
   };
 
   const choosePreset = (name: string): void => {
@@ -925,6 +1088,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
         return showContext();
       case "settings":
         return openDialog({ kind: "settings", index: 0, at: Date.now() });
+      case "connect":
+        return openConnect();
+      case "team":
+        return openTeam();
       case "screensaver":
         return startSaver();
       case "motion":
@@ -1032,8 +1199,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
   const click = (id: string, double: boolean): void => {
     const [kind, ...rest] = id.split(":");
     const arg = rest.join(":");
-    if (model.dialog && !id.startsWith("dlg:") && !id.startsWith("set:") && id !== "popup:inside") {
-      if (id === "popup:outside" || id === "popup:close") model.dialog = undefined;
+    if (model.dialog && !/^(dlg|set|team|conn|consent):/.test(id) && id !== "popup:inside") {
+      if ((id === "popup:outside" || id === "popup:close") && model.dialog.kind !== "consent") model.dialog = undefined;
       return;
     }
     if ((model.palette || model.picker) && !id.startsWith("pal:") && !id.startsWith("pick:") && id !== "popup:inside") {
@@ -1128,10 +1295,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
         const p = model.picker;
         const it = p ? pickerChoices(model)[Number(arg)] : undefined;
         model.picker = undefined;
-        if (p && it) {
-          if (p.kind === "sessions") openSession(it.id);
-          else choosePreset(it.id);
-        }
+        if (p && it) picked(p, it.id);
+        else if (p?.back) model.dialog = p.back;
         return;
       }
       case "popup":
@@ -1144,6 +1309,19 @@ export async function runTui(options: TuiOptions): Promise<number> {
       case "set":
         if (model.dialog?.kind === "settings") model.dialog.index = Math.max(0, SETTINGS_ROWS.findIndex((r) => r.key === arg));
         return cycleSetting(arg);
+      case "team":
+        if (arg === "save") return saveCustomTeam();
+        if (model.dialog?.kind === "team") {
+          const roles = ["expert", "worker", "tester"] as const;
+          model.dialog.index = roles.indexOf(arg as (typeof roles)[number]);
+          pickModel(arg as (typeof roles)[number]);
+        }
+        return;
+      case "conn":
+        if (model.dialog?.kind === "connect") model.dialog.index = TOOLS.findIndex((t) => t.id === arg);
+        return login(arg);
+      case "consent":
+        return consent(arg === "yes");
       case "dlg": {
         const d = model.dialog;
         if (arg === "yes") return submitDialog();
@@ -1232,7 +1410,29 @@ export async function runTui(options: TuiOptions): Promise<number> {
 
   const dialogKey = (key: Key): void => {
     const d = model.dialog!;
+    if (d.kind === "consent") {
+      if (key.name === "enter" || key.text === "y") consent(true);
+      else if (key.name === "esc" || key.text === "n") consent(false);
+      return;
+    }
     if (key.name === "esc") return void (model.dialog = undefined);
+    if (d.kind === "team") {
+      const roles = ["expert", "worker", "tester"] as const;
+      if (key.name === "down" || key.name === "tab") d.index = (d.index + 1) % 4;
+      else if (key.name === "up") d.index = (d.index + 3) % 4;
+      else if (key.name === "enter" || key.name === "space") {
+        if (d.index < 3) pickModel(roles[d.index]!);
+        else saveCustomTeam();
+      } else if (key.text === "s") saveCustomTeam();
+      return;
+    }
+    if (d.kind === "connect") {
+      if (key.name === "down" || key.name === "tab") d.index = (d.index + 1) % TOOLS.length;
+      else if (key.name === "up") d.index = (d.index - 1 + TOOLS.length) % TOOLS.length;
+      else if (key.name === "enter") login(TOOLS[d.index]!.id);
+      else if (key.text === "r") checkTools();
+      return;
+    }
     if (d.kind === "settings") {
       const n = SETTINGS_ROWS.length;
       if (key.name === "down" || key.name === "tab") d.index = (d.index + 1) % n;
@@ -1291,7 +1491,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
     // A list popup owns the keyboard: type to filter, arrows to choose, Enter to open.
     if (model.picker) {
       const p = model.picker;
-      if (key.name === "esc") model.picker = undefined;
+      if (key.name === "esc") {
+        model.picker = undefined;
+        if (p.back) model.dialog = p.back;
+      }
       else if (key.name === "down" || (key.ctrl && key.name === "n")) p.index += 1;
       else if (key.name === "up") p.index = Math.max(0, p.index - 1);
       else if (key.name === "backspace") p.query = [...p.query].slice(0, -1).join("");
@@ -1301,10 +1504,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
       } else if (key.name === "enter") {
         const it = pickerChoices(model)[p.index];
         model.picker = undefined;
-        if (it) {
-          if (p.kind === "sessions") openSession(it.id);
-          else choosePreset(it.id);
-        }
+        if (it) picked(p, it.id);
       }
       return;
     }
@@ -1458,6 +1658,11 @@ export async function runTui(options: TuiOptions): Promise<number> {
     },
   );
   term.mouse(settings.mouse && isOn("tui-mouse"));
+  // [F52 telemetry] Ask once; send anything still waiting from earlier.
+  if (isOn("telemetry")) {
+    if (settings.telemetry === "unasked" && process.env.NEUROMESH_TELEMETRY !== "off") model.dialog = { kind: "consent", at: Date.now() };
+    else if (telemetryAllowed(settings.telemetry)) void flushReports(home);
+  }
   setTitle();
   draw();
   plan();

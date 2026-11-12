@@ -12,6 +12,39 @@ to give advice.
 
 **Status: v0.1 (2026-11-11).** Results: [docs/06-v0.1-results.md](docs/06-v0.1-results.md).
 
+**v0.2 (2026-11-12): the TUI.** Run `neuromesh` in a project folder.
+
+## Install (testing build)
+
+Everyone outside the author's machine uses the testing build:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/farhanakhtar0x66/neuromesh/neuromesh-testing/install.sh | sh
+```
+
+It keeps the `neuromesh-testing` branch in `~/.neuromesh/app` and adds a
+`neuromesh` command; run it again to update. You need Node.js 24 or newer and
+git. Neuromesh uses your own subscriptions through Codex, Claude Code,
+Antigravity or opencode. In the app, `/connect` signs in to each with its own
+login, and opencode adds API-key models.
+
+## Testing: what you share
+
+The testing build asks once whether you'll share run reports with the author.
+They decide which teams and presets become the defaults.
+
+- **What a report holds:** after each real run, the preset and models, efforts,
+  turns, tokens, time, estimated cost, how it ended, checks, escalations,
+  features that failed, what you asked, the agents' final reports, and your
+  1–5 rating.
+- **What it never holds:** your code or diffs, file locations, or who you are
+  (an install is a random id).
+- **Where it goes:** reports go to the author's endpoint (`telemetry-endpoint/`).
+  Unsent ones wait in `~/.neuromesh/telemetry/outbox`, where you can read
+  them.
+- **Turning it off:** `/settings`, `neuromesh telemetry off`, or
+  `NEUROMESH_TELEMETRY=off`.
+
 ## What v0.1 showed
 
 On a 25-task suite with hidden tests (bug fixes, features, refactors, tools, and
@@ -137,3 +170,10 @@ Details: `docs/11-tui.md`.
 
 Every feature added after v0.1 has an id; errors name it and `--disable <key>`
 switches it off (`docs/10-features.md`, `neuromesh features`).
+
+## License
+
+Source-available under the [PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0):
+use it, change it and share it for anything except building a product that
+competes with Neuromesh. The name and logo are not licensed (`NOTICE.md`).
+Contributions are welcome on the terms in `CONTRIBUTING.md`.

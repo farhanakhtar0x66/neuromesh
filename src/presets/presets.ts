@@ -5,6 +5,7 @@
 // role ("orchestrator") to reuse its list.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Role, RoleChain, RoleConfig, Tier } from "../engine/types.ts";
@@ -112,11 +113,17 @@ export function validatePreset(raw: unknown, file: string): Preset {
 }
 
 export function listPresets(dir = PRESET_DIR): Preset[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .map((f) => validatePreset(JSON.parse(readFileSync(join(dir, f), "utf8")), f));
+  const read = (d: string): Preset[] =>
+    existsSync(d)
+      ? readdirSync(d)
+          .filter((f) => f.endsWith(".json"))
+          .sort()
+          .map((f) => validatePreset(JSON.parse(readFileSync(join(d, f), "utf8")), f))
+      : [];
+  // [F51 tui-teams] The owner's own presets (the Custom team) live in ~/.neuromesh/presets.
+  const own = dir === PRESET_DIR ? read(join(process.env.NEUROMESH_HOME ?? join(homedir(), ".neuromesh"), "presets")) : [];
+  const shipped = read(dir);
+  return [...shipped.filter((p) => !own.some((o) => o.name === p.name)), ...own];
 }
 
 export function loadPreset(name: string, dir = PRESET_DIR): Preset {

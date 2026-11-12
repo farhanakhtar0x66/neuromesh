@@ -2,7 +2,7 @@
 
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
-engine's events and run records only. Feature ids F19 to F49
+engine's events and run records only. Feature ids F19 to F52
 (`docs/10-features.md`); the optional ones can be switched off with
 `--disable <key>`. The design follows the owner's sketch of 2026-11-12, with
 ideas from Claude Code (the working line, /context) and btop (titled frames,
@@ -22,8 +22,9 @@ Neuromesh's own look (F48 `tui-theme`):
   dividers (`├─ Recents ─┤`), as btop does. Buttons sit in the bottom edges of
   the prompt and the result card. Only the bars, buttons, hover and popups are
   filled.
-- **The logo.** The landing screen shows the big NEUROMESH logo; where it
-  doesn't fit, a smaller one drawn in the same style.
+- **The logo.** The landing screen shows the big NEUROMESH logo, with a light
+  running slowly across it; where it doesn't fit, a smaller one drawn in the
+  same style.
 - **Transparent** (`/transparent`, or in `/settings`) paints no background at
   all, for a see-through terminal; the frames stay. `NO_COLOR` implies it.
 
@@ -167,6 +168,31 @@ the prompt.
   bar.
 
 Ctrl+G hides or shows this pane.
+
+## Teams and connections
+
+- **Teams** (F51 `tui-teams`). Ctrl+K, or a click on the preset in the prompt's
+  edge, offers:
+  - two favourites:
+    - `factory-opus-luna`: Claude Opus 5.5 medium leads, GPT-6 Luna builds
+      and reviews;
+    - `factory-sol-flash`: GPT-6.1 Sol high leads, Gemini 3.8 Flash builds
+      and reviews;
+  - **Custom team** (also `/team`): a model, or none, for the expert, the
+    worker and the tester, from every model the tools offer (opencode's
+    included). Not all three can be none, nor the expert and worker together.
+    With no expert, one agent does the work; with no worker, the expert builds;
+    with no tester, the project's checks alone judge. It's saved as
+    `~/.neuromesh/presets/custom.json`;
+  - **Other presets**: every preset, the experimental ones included.
+- **Connections** (F50 `opencode`, `/connect`). Codex, Claude Code, Antigravity
+  and opencode, each with its version and whether it's signed in. Enter or a
+  click runs that tool's own login with the terminal handed to it, and
+  Neuromesh comes back when it ends. For opencode, the same login adds
+  API-key models: the key stays with opencode.
+- **Sharing reports** (F52 `telemetry`). On first start the testing build asks
+  once whether to share run reports with the author (see README.md, "Testing").
+  It can be changed in `/settings`.
 
 ## Mouse and keys
 

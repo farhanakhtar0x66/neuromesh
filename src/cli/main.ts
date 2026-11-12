@@ -2,6 +2,8 @@
 // Neuromesh command line.
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
+import { loadSettings, saveSettings } from "../tui/store.ts";
 import { join, resolve } from "node:path";
 import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
@@ -57,6 +59,9 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
   neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
+  neuromesh telemetry [on|off|pull]
+                                share run reports with Neuromesh's author (asked once in the TUI),
+                                stop sharing, or (the author) fetch everyone's reports
   neuromesh doctor              check each backend with a few small live calls
 
   [run] is a run id, the end of one, or "last" (the default).
@@ -141,16 +146,57 @@ async function finish(state: RunState, flags: Map<string, string>): Promise<numb
   if (!flags.has("no-log") && isOn("usage-log") && state.preset !== "demo" && state.status !== "running") {
     const home = defaultHome();
     try {
-      recordRun(home, entryFor(state, (b) => backends[b]?.sessionTotals === true));
+      const entry = entryFor(state, (b) => backends[b]?.sessionTotals === true);
+      recordRun(home, entry);
       const ended = state.status === "finished" || state.status === "failed";
       const rating = ended && !flags.has("json") && !flags.has("no-rate") ? await askRating(state.id) : undefined;
       if (rating) recordRating(home, rating);
+      // [F52 telemetry] With the tester's consent, the same as a report for the owner.
+      if (isOn("telemetry") && telemetryAllowed(loadSettings(home).telemetry)) {
+        queue(home, runReport(home, state, entry));
+        if (rating) queue(home, ratingReport(home, state.id, rating.score, rating.note));
+        await flush(home);
+      }
       if (!flags.has("json")) process.stdout.write(`Recorded in ${join(usageDir(home), "USAGE.md")}\n`);
     } catch (error) {
       process.stderr.write(`Could not write the usage log: ${error instanceof Error ? error.message : String(error)}\n${hint(feature("usage-log"))}\n`);
     }
   }
   return exitCodeFor(state);
+}
+
+/** [F52 telemetry] neuromesh telemetry [on|off|pull|status] */
+async function commandTelemetry({ positional }: Parsed): Promise<number> {
+  const home = defaultHome();
+  const what = positional[0] ?? "status";
+  const settings = loadSettings(home);
+  if (what === "on" || what === "off") {
+    saveSettings(home, { ...settings, telemetry: what });
+    process.stdout.write(what === "on" ? `Sharing run reports. ${NOTICE[2]}\n` : "Not sharing run reports. Nothing more is sent.\n");
+    if (what === "on") await flush(home);
+    return 0;
+  }
+  if (what === "pull") {
+    const token = process.env.NEUROMESH_TELEMETRY_ADMIN;
+    if (!token) {
+      process.stderr.write("Set NEUROMESH_TELEMETRY_ADMIN to the endpoint's ADMIN_TOKEN.\n");
+      return 2;
+    }
+    const n = await pull(home, token);
+    process.stdout.write(`${n} report${n === 1 ? "" : "s"} saved in ${join(home, "telemetry", "inbox")}\n`);
+    return 0;
+  }
+  const waiting = outbox(home).length;
+  process.stdout.write(
+    [
+      `Sharing: ${settings.telemetry === "on" ? "on" : settings.telemetry === "off" ? "off" : "not asked yet (the TUI asks before the first run)"}${process.env.NEUROMESH_TELEMETRY === "off" ? " (but NEUROMESH_TELEMETRY=off)" : ""}`,
+      `Endpoint: ${endpoint() ?? "not set yet; reports wait in the outbox"}`,
+      `Waiting to be sent: ${waiting}`,
+      "",
+      ...NOTICE,
+    ].join("\n") + "\n",
+  );
+  return 0;
 }
 
 /** Rate a run after trying its result: neuromesh rate <run> <1-5> [note...] */
@@ -408,6 +454,11 @@ async function main(): Promise<number> {
     const { runTui } = await import("../tui/app.ts");
     return runTui({ cwd: parsed.flags.get("repo") ?? process.cwd(), preset: parsed.flags.get("preset") });
   }
+  if (command === "--version" || command === "-v" || command === "version") {
+    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+    process.stdout.write(`neuromesh ${pkg.version}\n`);
+    return 0;
+  }
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
     process.stdout.write(HELP);
     return 0;
@@ -455,6 +506,8 @@ async function main(): Promise<number> {
       return 0;
     case "presets":
       return commandPresets();
+    case "telemetry":
+      return commandTelemetry(parsed);
     case "doctor":
       return commandDoctor(parsed);
     default:

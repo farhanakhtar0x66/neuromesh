@@ -470,6 +470,33 @@ export const FEATURES: Feature[] = [
     what: "An instruction given after a run, in the same session, starts from that run's result (applied or not) and is told what was asked and done before; the session's runs show as one session in the sidebar.",
     optional: true,
   },
+  {
+    id: "F50",
+    key: "opencode",
+    name: "opencode and logins",
+    added: "2026-11-12",
+    files: ["src/backends/opencode.ts", "src/tui/app.ts (connect)"],
+    what: "opencode as a fourth backend (`opencode run --format json`), so any model opencode knows can work, including API-key models added with `opencode auth login` (the key stays with opencode; their cost is real money and shown as reported). /connect signs in to Codex, Claude Code, Antigravity and opencode through each tool's own login.",
+    optional: true,
+  },
+  {
+    id: "F51",
+    key: "tui-teams",
+    name: "Favourite and custom teams",
+    added: "2026-11-12",
+    files: ["src/tui/team.ts", "src/tui/app.ts (openPicker, team dialog)", "src/presets/presets.ts (own presets)"],
+    what: "The preset list offers two favourites (Opus 5.5 lead with GPT-6 Luna workers; GPT-6.1 Sol high with Gemini 3.8 Flash workers) and a Custom team: a model, or none, for expert, worker and tester, saved as ~/.neuromesh/presets/custom.json.",
+    optional: true,
+  },
+  {
+    id: "F52",
+    key: "telemetry",
+    name: "Testers' reports",
+    added: "2026-11-12",
+    files: ["src/telemetry/telemetry.ts", "telemetry-endpoint/src/index.js", "src/tui/app.ts (consent)"],
+    what: "With the tester's consent (asked once), each real run's numbers, request, final reports and rating go to the owner's endpoint; never code, diffs, file locations or identity. Unsent reports wait in ~/.neuromesh/telemetry/outbox. `neuromesh telemetry on|off|pull`.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

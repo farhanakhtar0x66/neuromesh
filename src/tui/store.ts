@@ -24,6 +24,8 @@ export interface Settings {
   mouse: boolean;
   sidebar: boolean;
   info: boolean;
+  /** [F52 telemetry] Whether reports go to the owner: asked on first start. */
+  telemetry: "unasked" | "on" | "off";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -36,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mouse: true,
   sidebar: true,
   info: true,
+  telemetry: "unasked",
 };
 
 const dir = (home: string): string => join(home, "tui");
@@ -63,6 +66,7 @@ export function loadSettings(home: string): Settings {
   if (!["none", "medium", "full"].includes(s.verbose)) s.verbose = "medium";
   if (s.access !== "normal" && s.access !== "turbo") s.access = "normal";
   if (!["neuromesh-dark", "terminal", "github"].includes(s.theme)) s.theme = "neuromesh-dark";
+  if (!["unasked", "on", "off"].includes(s.telemetry)) s.telemetry = "unasked";
   return s;
 }
 

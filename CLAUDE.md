@@ -5,8 +5,12 @@ current and what "done" means for it.
 
 - Build the engine only. No TUI work until the v0.1 exit criteria hold.
 - Models are reached only through the installed CLIs in their documented
-  headless modes (`agy -p`, `claude -p`, `codex exec`). Never drive
-  a tool through an internal protocol, and never add paid API calls.
+  headless modes (`agy -p`, `claude -p`, `codex exec`, `opencode run`). Never
+  drive a tool through an internal protocol. Models paid per token (API keys)
+  come only through opencode, which keeps the key (owner's decision,
+  2026-11-12); their cost is real money and shown as the tool reports it.
+- Testers' run reports (F52) are sent only with their consent, and never hold
+  code, diffs, file locations or identity.
 - The default worker is GPT-6 Luna through Codex (cheapest measured, since
   2026-11-11). Keep the expert models (GPT-6.1 Sol, Claude Opus) to a minimum.
 - Branches: `main` holds what has been measured to work. `neuromesh-research`
