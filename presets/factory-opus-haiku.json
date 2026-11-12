@@ -61,7 +61,7 @@
   "maxParallel": 2,
   "turnTimeoutMinutes": 30,
   "expertBudget": 250000,
-  "expertBudgetUsd": 1.2,
+  "expertBudgetUsd": 0.6,
   "test": "always",
   "workerLadder": [
     {
