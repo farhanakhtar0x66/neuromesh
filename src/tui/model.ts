@@ -33,6 +33,8 @@ export interface SessionView {
   files?: number;
   repo: string;
   dir: string;
+  /** [F49 follow-up] Every run of the session, oldest first. */
+  runs?: string[];
 }
 
 export interface ProjectView {

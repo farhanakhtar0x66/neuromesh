@@ -127,22 +127,24 @@ test("the landing screen: the logo, a prompt, and the bars; the cursor is in the
   assert.ok(f.cursor && rows[f.cursor.row]!.includes("What should we build"), "the cursor sits in the prompt");
 });
 
-test("layers: bars, panes, cards and the base are different shades; transparent paints nothing", () => {
+test("the look: neuromesh-dark by default, framed panes with titles in their edges; transparent paints nothing", () => {
   setColorDepth("true");
   setTransparent(false);
   const m = teamRun();
-  const { f } = screen(m);
+  const { f, text } = screen(m);
   const bg = (x: number, y: number): number => f.canvas.bg[y * f.canvas.w + x]!;
-  const base = bg(30, 20); // the gap between the sidebar and the middle
-  const pane = bg(5, 20);
-  const bar = bg(60, 0);
-  assert.ok(base >= 0 && pane >= 0 && bar >= 0);
-  assert.notEqual(base, pane);
-  assert.notEqual(pane, bar);
+  assert.equal(bg(5, 20), 0x101010, "the theme's own background, whatever the terminal's");
+  assert.equal(bg(60, 20), 0x101010, "one background for every pane");
+  assert.notEqual(bg(60, 0), 0x101010, "the bars stand out");
+  assert.match(text, /╭─ Projects ─+ ▾ {2}\+ ─╮/);
+  assert.match(text, /├─ Recents ─+/);
+  assert.match(text, /╭─ Project ─+╮/);
+  assert.match(text, /╭─ Orchestrator · Opus 5\.5 med/, "an agent's label sits in its box's top edge");
+  assert.doesNotMatch(text, /▌/, "no shaded side bars");
   setTransparent(true);
   const t = screen(teamRun());
   assert.equal(t.f.canvas.bg[20 * t.f.canvas.w + 5], DEFAULT, "the terminal's own background shows");
-  assert.match(t.text, /╭─+╮/, "boxes are drawn with lines instead");
+  assert.match(t.text, /╭─ Projects/, "the same frames");
   setTransparent(false);
 });
 
@@ -198,16 +200,16 @@ test("the right pane: project, the agent graph with usage, context, changes and 
   m.branch = "neuromesh-testing";
   m.team = [{ role: "lead", model: "claude-opus-5-5 medium" }, { role: "worker", model: "gpt-6-luna high" }, { role: "tester", model: "gpt-6-luna" }];
   const { text, ids } = screen(m);
-  assert.match(text, /PROJECT/);
+  assert.match(text, /─ Project ─/);
   assert.match(text, /⑂ neuromesh-testing/);
-  assert.match(text, /Lead\s+Worker\s+Tester/);
-  assert.match(text, /Expert/);
-  assert.match(text, /Opus 5\.5\s.*42% 5h ↻/, "Claude's usage window, with when it resets");
-  assert.match(text, /usage not reported: GPT-6 Luna/, "Codex does not report it: unknown, not zero");
-  assert.match(text, /CONTEXT\.MD/);
-  assert.match(text, /■ context\.md 1\.0k/);
+  assert.match(text, /✓ Lead\s+Opus 5\.5[\s\S]*Worker\s+GPT-6 Luna[\s\S]*Tester\s+GPT-6 Luna[\s\S]*Expert\s+none/, "the team as a chain");
+  assert.match(text, /▰+▱* 42% 5h/, "Claude's usage window as a bar");
+  assert.match(text, /Opus 5\.5 · 5h resets/, "with when it resets");
+  assert.match(text, /usage not reported/, "Codex does not report it: unknown, not zero");
+  assert.match(text, /─ context\.md ─/);
+  assert.match(text, /■ context\.md\s+1\.0k/);
   for (const id of ["node:orchestrator", "node:worker", "ctx:compact"]) assert.ok(ids.includes(id), id);
-  assert.match(text, /COST · API ESTIMATE/);
+  assert.match(text, /─ Cost · API estimate ─/);
   assert.match(text, /≈\$0\.12/);
 });
 
@@ -218,11 +220,10 @@ test("the sidebar: projects with their sessions, a dotted line, recents; long li
   m.projects = [{ name: "hayate", path: "/x/hayate", sessions: [{ id: "s1", title: "make an app", status: "applied", at: now, repo: "/x/hayate", dir: "/d/s1" }] }];
   m.recents = Array.from({ length: 50 }, (_, i) => ({ id: `r${i}`, title: `recent ${i}`, status: "finished", at: now, repo: "/y", dir: `/d/r${i}` }));
   const { f, text, ids } = screen(m);
-  assert.match(text, /PROJECTS\s+▾\s+\+/);
+  assert.match(text, /Projects ─+ ▾ {2}\+/);
   assert.match(text, /▾ hayate/);
   assert.match(text, /✓ make an app/);
-  assert.match(text, /┄┄┄/);
-  assert.match(text, /RECENTS\s+▾\s+\+/);
+  assert.match(text, /├─ Recents ─+ ▾ {2}\+ ─┤/);
   for (const id of ["side:fold:projects", "side:new:projects", "side:project:/x/hayate", "side:session:/d/s1", "side:list:recents"]) assert.ok(ids.includes(id), id);
   // The last visible recent row is faded: its text is closer to the background than a row above it.
   const rowsOf = f.canvas.toText();

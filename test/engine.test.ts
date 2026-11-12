@@ -1126,3 +1126,29 @@ test("attachments: a text file from anywhere goes into what the agents work from
   assert.match(fake.calls[0]!.prompt, /--- \/elsewhere\/notes\.md ---\nUse the word ok\./);
   assert.match(fake.calls[0]!.prompt, /Attached to the request \(read it from there\): \/elsewhere\/logo\.png/);
 });
+
+test("a follow-up starts from the earlier run's result, knows what it did, and belongs to its session", async () => {
+  const repo = makeRepo({ "package.json": JSON.stringify({ name: "demo", scripts: { test: "node -e 0" } }) });
+  const { ctx, fake } = context((req) => {
+    const firstRun = !/now make/.test(req.prompt);
+    if (firstRun) write(req.cwd, "a.txt", "one");
+    else if (/now make b/.test(req.prompt)) write(req.cwd, "b.txt", existsSync(join(req.cwd, "a.txt")) ? "saw a" : "no a");
+    else write(req.cwd, "c.txt", "three");
+    return report(firstRun ? "Wrote a.txt" : "Wrote the next file");
+  });
+  const first = await startRun({ cwd: repo, prompt: "make a.txt", preset: preset() }, ctx);
+  assert.equal(first.status, "finished", first.reason);
+  // Not applied: the follow-up still builds on it.
+  const second = await startRun({ cwd: repo, prompt: "now make b.txt", preset: preset(), follows: first }, ctx);
+  assert.equal(second.status, "finished", second.reason);
+  assert.equal(second.session, first.id);
+  assert.equal(second.follows, first.id);
+  assert.match(fake.calls[1]!.prompt, /Earlier in this session[\s\S]*Asked: make a\.txt[\s\S]*Wrote a\.txt/);
+  assert.deepEqual(second.outcome?.files.map((f) => f.path).sort(), ["a.txt", "b.txt"], "the diff holds the whole session's work");
+  applyRun(second);
+  assert.equal(readFileSync(join(repo, "b.txt"), "utf8"), "saw a\n");
+  // After an applied run, only the new work is the diff.
+  const third = await startRun({ cwd: repo, prompt: "now make c.txt", preset: preset(), follows: loadState(second.dir) }, { ...ctx });
+  assert.equal(third.session, first.id);
+  assert.ok(!third.outcome?.files.some((f) => f.path === "a.txt"), "applied work is not applied twice");
+});

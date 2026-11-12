@@ -15,7 +15,7 @@ export type Access = "normal" | "turbo";
 export interface Settings {
   /** Paint no backgrounds, for a see-through terminal. */
   transparent: boolean;
-  theme: "terminal" | "github";
+  theme: "neuromesh-dark" | "terminal" | "github";
   motion: boolean;
   fps: 60 | 120;
   verbose: Verbosity;
@@ -28,7 +28,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   transparent: false,
-  theme: "terminal",
+  theme: "neuromesh-dark",
   motion: true,
   fps: 60,
   verbose: "medium",
@@ -62,7 +62,7 @@ export function loadSettings(home: string): Settings {
   if (s.fps !== 60 && s.fps !== 120) s.fps = 60;
   if (!["none", "medium", "full"].includes(s.verbose)) s.verbose = "medium";
   if (s.access !== "normal" && s.access !== "turbo") s.access = "normal";
-  if (s.theme !== "terminal" && s.theme !== "github") s.theme = "terminal";
+  if (!["neuromesh-dark", "terminal", "github"].includes(s.theme)) s.theme = "neuromesh-dark";
   return s;
 }
 
@@ -108,16 +108,32 @@ export interface SessionRecord {
   files?: number;
   /** The repository the run worked on. */
   repo: string;
-  /** Where its record is. */
+  /** Where its record is (the latest run's, for a session of several). */
   dir: string;
   preset: string;
+  /** [F49 follow-up] The session it belongs to: the first run's id. */
+  session?: string;
+  /** The session's runs, oldest first (one for a session of one run). */
+  runs?: string[];
 }
 
 export const titleOf = (r: Pick<RunState, "request" | "prompt">): string =>
   (r.request ?? r.prompt).split("\n").find((l) => l.trim())?.trim() ?? "(empty request)";
 
+/** A run left "running" by a process that is gone was stopped (a closed terminal, a crash). */
+function alive(pid: number | undefined): boolean {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function recordOf(r: RunState): SessionRecord {
-  return { id: r.id, title: titleOf(r), status: r.status, at: r.updatedAt, files: r.outcome?.files.length, repo: r.repo, dir: r.dir, preset: r.preset };
+  const status = r.status === "running" && !alive(r.pid) ? "interrupted" : r.status;
+  return { id: r.id, title: titleOf(r), status, at: r.updatedAt, files: r.outcome?.files.length, repo: r.repo, dir: r.dir, preset: r.preset, session: r.session };
 }
 
 const cache = new Map<string, { mtime: number; record: SessionRecord }>();
@@ -134,7 +150,8 @@ export function allSessions(home: string): SessionRecord[] {
       try {
         const mtime = statSync(path).mtimeMs;
         const hit = cache.get(path);
-        if (hit && hit.mtime === mtime) {
+        // A run still marked running is read again: its process may be gone since.
+        if (hit && hit.mtime === mtime && hit.record.status !== "running") {
           out.push(hit.record);
           continue;
         }
@@ -145,6 +162,25 @@ export function allSessions(home: string): SessionRecord[] {
         // Not a run, or a damaged one: left out.
       }
     }
+  }
+  return groupSessions(out);
+}
+
+/**
+ * [F49 follow-up] Runs of one session as one entry: the first run's title,
+ * the latest run's state and record, and every run's record in order.
+ */
+export function groupSessions(records: SessionRecord[]): SessionRecord[] {
+  const byId = new Map<string, SessionRecord[]>();
+  for (const r of [...records].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+    const key = r.session ?? r.id;
+    byId.set(key, [...(byId.get(key) ?? []), r]);
+  }
+  const out: SessionRecord[] = [];
+  for (const runs of byId.values()) {
+    const first = runs[0]!;
+    const last = runs.at(-1)!;
+    out.push({ ...last, title: first.title, session: first.session ?? first.id, runs: runs.map((r) => r.dir) });
   }
   return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
 }
@@ -163,14 +199,18 @@ function safeList(path: string): string[] {
  * it can still be found.
  */
 export function trashSession(home: string, s: SessionRecord): string {
-  const state = readJson<RunState>(join(s.dir, "run.json"));
-  const trees = [state?.worktree, ...(state?.tasks ?? []).map((t) => t.worktree)].filter((w): w is string => typeof w === "string" && existsSync(w));
-  for (const w of trees) spawnSync("git", ["-C", s.repo, "worktree", "remove", "--force", w], { stdio: "ignore" });
-  const target = join(home, "trash", `${basename(dirname(dirname(s.dir)))}-${s.id}`);
-  mkdirSync(dirname(target), { recursive: true });
-  renameSync(s.dir, target);
+  let target = "";
+  // [F49 follow-up] A session of several runs goes to the trash whole.
+  for (const dir of s.runs ?? [s.dir]) {
+    const state = readJson<RunState>(join(dir, "run.json"));
+    const trees = [state?.worktree, ...(state?.tasks ?? []).map((t) => t.worktree)].filter((w): w is string => typeof w === "string" && existsSync(w));
+    for (const w of trees) spawnSync("git", ["-C", s.repo, "worktree", "remove", "--force", w], { stdio: "ignore" });
+    target = join(home, "trash", `${basename(dirname(dirname(dir)))}-${basename(dir)}`);
+    mkdirSync(dirname(target), { recursive: true });
+    renameSync(dir, target);
+    cache.delete(join(dir, "run.json"));
+  }
   spawnSync("git", ["-C", s.repo, "worktree", "prune"], { stdio: "ignore" });
-  cache.delete(join(s.dir, "run.json"));
   return target;
 }
 

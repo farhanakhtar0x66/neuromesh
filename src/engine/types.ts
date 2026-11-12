@@ -187,6 +187,10 @@ export interface RunState {
   featureErrors?: { id: string; key: string; message: string; at: string }[];
   /** The request as typed, when the brief engine rewrote it. */
   request?: string;
+  /** [F49 follow-up] The session this run belongs to (the first run's id), the run it follows, and the commit it starts from. */
+  session?: string;
+  follows?: string;
+  start?: string;
   /** What the brief engine made of the request, and the staffing it chose. */
   brief?: Brief;
   preset: string;

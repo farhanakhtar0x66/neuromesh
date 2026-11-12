@@ -189,6 +189,9 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     final report rendered as markdown. Normal mode asks before the plan and the
     expert (F39); Turbo goes ahead. Features F32 to F47; `docs/11-tui.md`.
     Checked with the demo preset only; no live run through the TUI yet.
+    Then its own look (the neuromesh-dark theme, titled frames instead of
+    opencode-like shaded panels) and follow-ups that continue a session from
+    the earlier run's result (F48, F49).
 
 ## Next steps
 

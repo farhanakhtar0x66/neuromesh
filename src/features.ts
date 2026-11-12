@@ -452,6 +452,24 @@ export const FEATURES: Feature[] = [
     what: "When a run ends, the agents' final report is shown as rendered markdown (headings, lists, code, tables) and the stream scrolls to its first line, so it reads from the top.",
     optional: true,
   },
+  {
+    id: "F48",
+    key: "tui-theme",
+    name: "Neuromesh look",
+    added: "2026-11-12",
+    files: ["src/tui/theme.ts (NEUROMESH_DARK)", "src/tui/view.ts (box, divider, LOGO_MID)"],
+    what: "Neuromesh's own look: the neuromesh-dark theme (from the owner's Obsidian Bloom, neutral black) by default, panes and boxes drawn as rounded frames with their titles set into the top edge, the big logo with a smaller one drawn in its style for narrow panes.",
+    optional: true,
+  },
+  {
+    id: "F49",
+    key: "follow-up",
+    name: "Follow-ups in a session",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (followFrom)", "src/tui/app.ts (start)", "src/tui/store.ts (sessions)"],
+    what: "An instruction given after a run, in the same session, starts from that run's result (applied or not) and is told what was asked and done before; the session's runs show as one session in the sidebar.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

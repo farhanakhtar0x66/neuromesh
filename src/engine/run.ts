@@ -18,7 +18,7 @@
 // next model in the role's list takes over; when none is left the run pauses.
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
@@ -80,6 +80,7 @@ import {
   testerPrompt,
   VERDICT_SCHEMA,
 } from "./prompts.ts";
+import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
 import type { AttemptKind, AttemptRecord, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier } from "./types.ts";
@@ -126,6 +127,43 @@ export interface StartOptions {
   expertBudget?: number;
   /** [F38 attachments] Files from anywhere that go with the request; `text` for text files. */
   attachments?: { path: string; text?: string }[];
+  /** [F49 follow-up] The run this one follows in the same session: it starts from that run's result. */
+  follows?: RunState;
+}
+
+/**
+ * [F49 follow-up] Where a follow-up starts: the earlier run's changes on top of
+ * its base, committed in a scratch checkout. The diff stays measured from the
+ * session's base, so applying the follow-up brings the whole session's work;
+ * after an applied run (its changes are already in the repository) it is
+ * measured from the new start, so only the new work is applied.
+ */
+function followFrom(repoRoot: string, head: string, prev: RunState, dir: string): { base: string; start: string; session: string; context: string } {
+  const patch = prev.status === "discarded" ? "" : currentPatch(prev);
+  let start = prev.status === "applied" && head !== prev.base ? head : prev.base;
+  if (patch.trim() && start === prev.base) {
+    const scratch = join(dir, "start");
+    createDetachedWorktree(repoRoot, scratch, prev.base);
+    try {
+      const file = join(dir, "previous.patch");
+      writeFileSync(file, patch.endsWith("\n") ? patch : `${patch}\n`);
+      git(scratch, "apply", "--binary", "--whitespace=nowarn", file);
+      start = commitAll(scratch, `neuromesh: earlier in session ${prev.session ?? prev.id}`, prev.prepared);
+    } finally {
+      removeDetachedWorktree(repoRoot, scratch);
+    }
+  }
+  const reports = (prev.tasks ?? []).map((t) => t.report?.summary?.trim()).filter((r): r is string => Boolean(r));
+  const asked = (prev.request ?? prev.prompt).trim().slice(0, 1_500);
+  const told = reports.join("\n\n").slice(0, 2_500);
+  const where = prev.status === "applied" ? "and its changes are in the repository" : prev.status === "discarded" ? "and its changes were thrown away" : "and its changes are already in your working copy";
+  const context = [
+    "Earlier in this session (this is a follow-up; build on it rather than starting again):",
+    `- Asked: ${asked}`,
+    `- That run ${prev.status === "finished" ? "finished" : prev.status}, ${where}.`,
+    ...(told ? [`- What the agents reported:\n${told}`] : []),
+  ].join("\n");
+  return { base: prev.status === "applied" ? start : prev.base, start, session: prev.session ?? prev.id, context };
 }
 
 /** How a task or a turn ended, when it ends the whole run early. */
@@ -183,6 +221,16 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       disable("brief-engine");
     }
   }
+  // [F49 follow-up] A follow-up starts from the earlier run's result and knows what it did.
+  let follow: ReturnType<typeof followFrom> | undefined;
+  if (options.follows && isOn("follow-up")) {
+    try {
+      follow = inFeature("follow-up", () => followFrom(repo.root, repo.head, options.follows!, dir));
+    } catch (error) {
+      featureErrors.push(failure(error, "follow-up"));
+      disable("follow-up");
+    }
+  }
   // [F38 attachments] Text files are added to the brief like documents the request names; others by path.
   const attachedNote: string[] = [];
   if (options.attachments?.length && isOn("attachments")) {
@@ -214,7 +262,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     id,
     dir,
     repo: repo.root,
-    prompt: [brief ? renderBrief(brief) : options.prompt, ...attachedNote].join("\n\n"),
+    prompt: [brief ? renderBrief(brief) : options.prompt, ...attachedNote, ...(follow ? [follow.context] : [])].join("\n\n"),
+    session: follow?.session,
+    follows: follow ? options.follows!.id : undefined,
+    start: follow?.start,
     request: brief ? options.prompt : undefined,
     usagePerTurn: true,
     features: activeKeys(),
@@ -233,7 +284,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
-    base: repo.head,
+    base: follow?.base ?? repo.head,
     branch: `neuromesh/${id}`,
     worktree: paths.worktree,
     status: "running",
@@ -268,7 +319,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   } else if (why) {
     log.emit("route", { mode, reason: why });
   }
-  if (repo.dirty) {
+  // A follow-up of an applied run sees those changes already; anything else uncommitted it does not.
+  if (repo.dirty && !(follow && options.follows?.status === "applied")) {
     log.emit("note", { message: "The repository has uncommitted changes. The run starts from the last commit and does not see them." });
   }
   return drive(state, ctx, log);
@@ -378,7 +430,7 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       if (ctx.signal?.aborted) return interrupted();
 
       if (state.step === "setup") {
-        createWorktree(state.repo, state.worktree, state.branch, state.base);
+        createWorktree(state.repo, state.worktree, state.branch, state.start ?? state.base);
         state.prepared = prepareWorktree(state.repo, state.worktree);
         state.checks = detectChecks(state.worktree);
         state.step = "baseline";

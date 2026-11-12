@@ -77,7 +77,7 @@ function readEvents(state: RunState): NeuromeshEvent[] {
   return out;
 }
 
-const view = (s: SessionRecord): SessionView => ({ id: s.id, title: s.title, status: s.status, at: s.at, files: s.files, repo: s.repo, dir: s.dir });
+const view = (s: SessionRecord): SessionView => ({ id: s.id, title: s.title, status: s.status, at: s.at, files: s.files, repo: s.repo, dir: s.dir, runs: s.runs });
 
 /** [F38 attachments] A file's text, when it is a text file of a sensible size. */
 function readAttachment(path: string): string | undefined {
@@ -408,36 +408,50 @@ export async function runTui(options: TuiOptions): Promise<number> {
     const m = model;
     if (isOn("tui-history")) history.add(prompt);
     const attached = m.attachments.map((a) => ({ path: a.path, text: readAttachment(a.path) }));
+    // [F49 follow-up] The run this one follows: the session's latest, read before the new one clears it.
+    const previous = m.runId;
     submitted(m, prompt, m.attachments.map((a) => a.path));
     m.attachments = [];
     composer.clear();
     model.suggest = undefined;
     const root = repoRoot;
-    drive(m, (ctx) => startRun({ cwd: root, prompt, preset, attachments: attached.length ? attached : undefined }, ctx));
+    // [F49 follow-up] In a session that already has a run, this one follows it.
+    let follows: RunState | undefined;
+    if (isOn("follow-up") && previous) {
+      try {
+        follows = loadState(join(runsDir(home, root), previous));
+      } catch {
+        follows = undefined;
+      }
+    }
+    drive(m, (ctx) => startRun({ cwd: root, prompt, preset, attachments: attached.length ? attached : undefined, follows }, ctx));
   };
 
-  // [F24 tui-sessions] Reopen an earlier run (of any folder) from its record and event log.
+  // [F24 tui-sessions] [F49 follow-up] Reopen an earlier session (of any folder): each of its runs, in order.
   const openSession = (dir: string): void => {
     if (running) return void toast(model, "A run is going; stop it before opening another session.", "amber");
-    let state: RunState;
+    const group = [...model.recents, ...model.projects.flatMap((p) => p.sessions)].find((s) => s.dir === dir || s.runs?.includes(dir));
+    let states: RunState[];
     try {
-      state = loadState(dir);
+      states = (group?.runs ?? [dir]).map((d) => loadState(d));
     } catch {
       return void toast(model, "That session is gone.", "red");
     }
+    const state = states.at(-1)!;
     if (state.repo !== repoRoot) {
       setRepo(state.repo);
       cwd = repoRoot ?? state.repo;
     }
     const m = fresh();
-    submitted(m, titleOf(state));
-    m.log = [{ kind: "you", text: state.request ?? state.prompt, at: Date.now() }];
-    for (const e of readEvents(state)) applyEvent(m, e);
-    m.runId = state.id;
-    m.startedAt = Date.parse(state.createdAt);
-    settle(m, state);
+    for (const s of states) {
+      submitted(m, s.request ?? s.prompt);
+      for (const e of readEvents(s)) applyEvent(m, e);
+      m.runId = s.id;
+      m.startedAt = Date.parse(s.createdAt);
+      settle(m, s);
+      m.endedAt = Date.parse(s.updatedAt);
+    }
     m.brandAt = undefined;
-    m.endedAt = Date.parse(state.updatedAt);
     if (state.status === "running") toast(m, "This run is still going in another process; this is a snapshot.", "amber", 8_000);
     model = m;
     composer.clear();
@@ -877,10 +891,10 @@ export async function runTui(options: TuiOptions): Promise<number> {
         return openDialog({ kind: "confirm", title: "Discard this run's changes?", body: ["They are thrown away; your repository is not touched."], yes: "Discard", danger: true, action: "discard", at: Date.now() });
       case "theme":
         cycleSetting("theme");
-        return void toast(model, settings.theme === "github" ? "Colours: GitHub dark high contrast" : "Colours: your terminal's");
+        return void toast(model, `Theme: ${settings.theme === "github" ? "GitHub dark high contrast" : settings.theme === "terminal" ? "your terminal's colours" : "neuromesh-dark"}`);
       case "transparent":
         cycleSetting("transparent");
-        return void toast(model, settings.transparent ? "Transparent: no backgrounds painted" : "Layered: shaded surfaces");
+        return void toast(model, settings.transparent ? "Transparent: the terminal's own background shows" : "The theme's background");
       case "details":
         return cycleVerbose();
       case "verbose-none":

@@ -2,27 +2,33 @@
 
 `neuromesh` with no command, in a terminal, opens it (also `neuromesh tui
 [--preset <name>]`). It drives the same engine as `neuromesh run`, through the
-engine's events and run records only. Feature ids F19 to F47
+engine's events and run records only. Feature ids F19 to F49
 (`docs/10-features.md`); the optional ones can be switched off with
 `--disable <key>`. The design follows the owner's sketch of 2026-11-12, with
-ideas from opencode (layers), Claude Code (the working line, /context) and btop
-(scrollbars, fading lists).
+ideas from Claude Code (the working line, /context) and btop (titled frames,
+scrollbars, fading lists).
 
 ## Look
 
-Everything sits on layers. The base is the terminal's own background. The panes
-are a step lighter, the bars and cards lighter again, and popups lighter still,
-with a soft shadow under raised boxes. The shades come from the terminal: at
-start the TUI asks for its foreground, background and 16 colours (OSC 10, 11
-and 4), so it fits the terminal's theme. When the terminal doesn't answer,
-GitHub Dark High Contrast stands in. Feature F32 `tui-layers`.
+Neuromesh's own look (F48 `tui-theme`):
+- **The theme.** By default it uses its own theme, `neuromesh-dark`, made from
+  the owner's Obsidian Bloom (neutral black): background `#101010`, text
+  `#F2F2F2`, jade, coral, gold, blue, lavender and cyan accents. It doesn't
+  depend on the terminal's palette, so it looks the same in any terminal.
+  `/theme` (Ctrl+T) also offers the terminal's own colours (asked from the
+  terminal at start) and GitHub Dark High Contrast.
+- **Frames.** Panes and boxes are rounded frames on one background, with their
+  titles set into the top edge (`╭─ Agents ─`) and section titles set into
+  dividers (`├─ Recents ─┤`), as btop does. Buttons sit in the bottom edges of
+  the prompt and the result card. Only the bars, buttons, hover and popups are
+  filled.
+- **The logo.** The landing screen shows the big NEUROMESH logo; where it
+  doesn't fit, a smaller one drawn in the same style.
+- **Transparent** (`/transparent`, or in `/settings`) paints no background at
+  all, for a see-through terminal; the frames stay. `NO_COLOR` implies it.
 
-**Transparent mode** (`/transparent`, or in `/settings`) paints no backgrounds,
-for a see-through terminal. Boxes are drawn with lines instead, and only buttons
-are filled. `NO_COLOR` implies it.
-
-The screen is drawn as a grid of cells, and only cells that changed are written,
-so animations never rewrite whole rows.
+The screen is drawn as a grid of cells, and only cells that changed are written
+(about 0.3 ms a frame), so animations never rewrite whole rows.
 
 ## The bars
 
@@ -74,12 +80,20 @@ Plan, Build, Check, Review.
 - The line after a finished step grows into an arrow.
 - Clicking a step scrolls to its first box.
 
-**The stream** (F35 `tui-agent-boxes`) is one box per agent, labelled with its
-role and model (`Orchestrator · Opus 5.5 med`).
+**The stream** (F35 `tui-agent-boxes`) is one framed box per agent, its role
+and model set into the top edge (`╭─ Orchestrator · Opus 5.5 med ─`).
 - The label shimmers while the agent works.
 - Turns of the same role, one after another, share a box: parallel workers list
   their tasks in one.
 - Your messages appear just above the prompt, and older ones move up.
+- **Follow-ups** (F49 `follow-up`): an instruction given after a run continues
+  the same session.
+  - It starts from that run's result, whether it was applied or not, and is
+    told what was asked and what the agents reported.
+  - Before you apply, its diff holds the whole session's work; after an applied
+    run, only the new work.
+  - The sidebar shows the session once, and opening it replays every run.
+  - Ctrl+N starts a new session.
 
 What a box says depends on the **verbosity** (`/verbose none|medium|full`,
 Ctrl+O cycles, kept in settings):
@@ -114,7 +128,8 @@ Discard, Resume, and Rate 1 to 5.
 a verb for the stage with a light running along it, the time and the tokens so
 far.
 
-**The prompt.** A box for the text, with a brighter bar under it holding:
+**The prompt.** A slim framed box for the text, with its buttons set into the
+bottom edge:
 - `+`: attach files from anywhere (F38 `attachments`; the system's file picker,
   or Ctrl+F). Text files go into the brief every agent works from; other files
   go in by path.
@@ -128,10 +143,10 @@ the prompt.
 ## Right: the team and its numbers
 
 - **Project:** name, branch and folder.
-- **Agents** (F40 `tui-agent-graph`): Lead → Worker → Tester, with the Expert
-  under the Worker.
-  - The node working now pulses, and light runs along the edge into it. A
-    tester sending work back runs the other way.
+- **Agents** (F40 `tui-agent-graph`): the team as a chain, top to bottom:
+  Lead, Worker, Tester, and the Expert (called in when the work is stuck).
+  - The one working now is lit, and light runs down the line into it. A tester
+    sending work back lights the line upwards.
   - Each node shows its model and its subscription usage where the tool reports
     it, or the estimated API cost.
   - Under the graph: each model's fullest usage window, as a bar, with when it
