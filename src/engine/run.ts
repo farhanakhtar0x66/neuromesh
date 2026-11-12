@@ -707,6 +707,26 @@ export function expertDollars(state: RunState): number {
   return state.attempts.filter((a) => a.tier === "expert").reduce((n, a) => n + (estimateCost(a.model, a.usage) ?? 0), 0);
 }
 
+/**
+ * [F69 budget-handoff] Whether the expert budget left can pay for one more
+ * expert turn: this run's average expert turn so far, and at least $0.15 (the
+ * cache write of a fresh Opus prompt alone is about that).
+ */
+export function expertCanTake(state: RunState): boolean {
+  if (!budgetLeft(state)) return false;
+  if (!isOn("dollar-budget") || state.expertBudgetUsd === undefined) return true;
+  const costs = state.attempts.filter((a) => a.tier === "expert").flatMap((a) => estimateCost(a.model, a.usage) ?? []);
+  const turnCost = Math.max(0.15, costs.length > 0 ? costs.reduce((n, c) => n + c, 0) / costs.length : 0);
+  return state.expertBudgetUsd - expertDollars(state) >= turnCost;
+}
+
+/** [F69 budget-handoff] The expert cannot pay for this task's part: it goes to the top worker rung. */
+function handToWorker(run: RunCtx, task: TaskState, why: string): void {
+  task.owner = "worker";
+  task.rung = run.state.workerLadder ? run.state.workerLadder.length - 1 : undefined;
+  run.log.emit("note", { feature: "F69", message: `Task ${task.id}: ${why}; a worker builds it instead.` });
+}
+
 function dollarsLeft(state: RunState): boolean {
   return !isOn("dollar-budget") || state.expertBudgetUsd === undefined || expertDollars(state) < state.expertBudgetUsd;
 }
@@ -716,6 +736,16 @@ export function expertSpend(state: RunState): number {
   return state.attempts
     .filter((a) => a.tier === "expert")
     .reduce((n, a) => n + (a.usage.input ?? 0) + (a.usage.cacheWrite ?? 0) + (a.usage.output ?? 0), 0);
+}
+
+/**
+ * [F70 cut-usage] A turn that stopped before reporting its usage keeps what its
+ * stream reported: input and cache counts are exact, output is an estimate.
+ */
+export function keptUsage(reported: Usage, streamed: Usage | undefined): Usage {
+  if (!isOn("cut-usage") || !streamed || reported.input !== undefined || reported.output !== undefined) return reported;
+  if ((streamed.input ?? 0) + (streamed.cacheRead ?? 0) + (streamed.cacheWrite ?? 0) + (streamed.output ?? 0) === 0) return reported;
+  return { ...streamed, estimated: true };
 }
 
 async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
@@ -818,6 +848,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   let cut = false;
   const watch = tier === "expert" && isOn("no-rebuild") && isOn("dollar-budget") && state.expertBudgetUsd !== undefined;
   const spentBefore = watch ? expertDollars(state) : 0;
+  let streamed: Usage | undefined;
   let result = await backend.run({
     cwd: req.cwd,
     prompt,
@@ -828,14 +859,14 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     env: isOn("work-env") && req.access === "write" ? envVars(req.cwd) : undefined,
     // [F55 worker-network] New programs (their packages, their real data), and the scout.
     network: req.access === "write" && ((isOn("worker-network") && state.brief?.kind === "greenfield") || (req.kind === "scout" && isOn("scout-facts"))),
-    onUsage: watch
-      ? (u) => {
-          if (cut || spentBefore + (estimateCost(config.model, u) ?? 0) < state.expertBudgetUsd!) return;
-          cut = true;
-          log.emit("note", { feature: "F60", message: `Expert budget reached during the ${req.role}'s turn (about $${(spentBefore + (estimateCost(config.model, u) ?? 0)).toFixed(2)} of $${state.expertBudgetUsd!.toFixed(2)}, estimated); stopping it.` });
-          turnStop.abort();
-        }
-      : undefined,
+    onUsage: (u) => {
+      // [F70 cut-usage] Kept in case the turn stops before its final usage report.
+      streamed = u;
+      if (!watch || cut || spentBefore + (estimateCost(config.model, u) ?? 0) < state.expertBudgetUsd!) return;
+      cut = true;
+      log.emit("note", { feature: "F60", message: `Expert budget reached during the ${req.role}'s turn (about $${(spentBefore + (estimateCost(config.model, u) ?? 0)).toFixed(2)} of $${state.expertBudgetUsd!.toFixed(2)}, estimated); stopping it.` });
+      turnStop.abort();
+    },
     // [F53 write-sandbox] A writing turn may write in its own copy and git's shared objects; a reading turn nowhere of ours.
     writable: isOn("write-sandbox") ? (req.access === "write" ? [req.cwd, join(state.repo, ".git", "worktrees"), join(state.repo, ".git", "objects")] : []) : undefined,
     outputSchema: req.schema,
@@ -861,7 +892,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
           result.usage,
           state.attempts.filter((a) => a.sessionId === resumeSessionId && a.backend === backend.id).map((a) => a.usage),
         )
-      : result.usage;
+      : keptUsage(result.usage, streamed);
   const record: AttemptRecord = {
     role: req.role,
     tier,
@@ -879,6 +910,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     detail: result.detail,
     logPath,
     peakPrompt: result.peakPrompt,
+    // [F72 quota-log]
+    quotaUsed: isOn("quota-log") ? result.quotaUsed : undefined,
   };
   state.attempts.push(record);
   saveState(state);
@@ -972,6 +1005,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
       state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: undefined }));
       state.mode = "team";
       state.maxParallel = state.parallelLimit ?? 1;
+      state.planFromSpec = true;
       saveState(state);
       log.emit("plan.ready", { feature: "F65", summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
     });
@@ -1201,7 +1235,21 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
 function wantsTester(state: RunState, task: TaskState): boolean {
   if (!state.roles.tester || task.escalated) return false;
   if (state.brief && !state.brief.staffing.tester) return false;
+  // [F71 one-review] A new program built in parts is reviewed once, when it is whole.
+  if (reviewsWhole(state) && task !== state.tasks.at(-1) && !isLastOpen(state, task)) return false;
   return state.test !== "no-checks" || state.checks.length === 0;
+}
+
+/** [F71 one-review] The spec split a new program into parts: one review, of the whole, at the end. */
+function reviewsWhole(state: RunState): boolean {
+  return isOn("one-review") && state.planFromSpec === true && state.tasks.length > 1;
+}
+
+/** [F71 one-review] What the final reviewer sees: every file of the program, then the last part's change. */
+function wholeProgramDiff(state: RunState, task: TaskState, candidate: string): string {
+  const stat = git(task.worktree, "diff", "--stat=120", state.base, candidate);
+  const last = git(task.worktree, "diff", "--binary", task.base!, candidate);
+  return `# The whole program, against the start of the run\n${stat}\n# The last part's change (${task.title})\n${last}`;
 }
 
 function failure(error: unknown, key: string): { id: string; key: string; message: string; at: string } {
@@ -1326,6 +1374,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // [F54 work-env] Before the first turn, so the worker can run what it writes.
       await prepareEnv(run, task.worktree, task.prepared, task.id);
       task.step = "agent";
+      // [F69 budget-handoff]
+      if (task.owner === "expert" && isOn("budget-handoff") && !expertCanTake(state)) handToWorker(run, task, "the expert budget left cannot pay for an expert turn");
       saveState(state);
       log.emit("task.started", { task: task.id, title: task.title, owner: task.owner, owned: task.owned });
       continue;
@@ -1367,6 +1417,20 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       if (result.detail === BUDGET_CUT && task.escalated) {
         log.emit("note", { feature: "F60", message: `Task ${task.id}: the expert's turn was stopped at the expert budget; its changes are kept and checked.` });
         task.step = "checks";
+        saveState(state);
+        continue;
+      }
+      // [F69 budget-handoff] The expert's own part was stopped at the budget: its work stays,
+      // the checks decide, and any more turns are the worker's (never a second expert turn).
+      if (result.detail === BUDGET_CUT && task.owner === "expert" && isOn("budget-handoff")) {
+        handToWorker(run, task, "the expert's turn was stopped at the expert budget (its changes are kept and checked)");
+        task.next = "continue";
+        task.step = "checks";
+        saveState(state);
+        continue;
+      }
+      if (result.detail === "expert budget reached" && task.owner === "expert" && !task.escalated && isOn("budget-handoff")) {
+        handToWorker(run, task, "no expert budget is left");
         saveState(state);
         continue;
       }
@@ -1485,7 +1549,9 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const testerPrepared = prepareWorktree(state.repo, testerDir);
       // [F54 work-env] The copy gets the same environment, for the tester and the runs below.
       await prepareEnv(run, testerDir, testerPrepared, task.id);
-      const diff = git(task.worktree, "diff", "--binary", task.base!, candidate);
+      // [F71 one-review]
+      const whole = reviewsWhole(state);
+      const diff = whole ? wholeProgramDiff(state, task, candidate) : git(task.worktree, "diff", "--binary", task.base!, candidate);
       const screens = state.brief?.surface === "tui" ? screensFor(run, task, testerDir) : undefined;
       // [F58 acceptance-runs] The program used for real, before the tester looks.
       const acceptance = await acceptanceFor(run, task, testerDir);
@@ -1499,7 +1565,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           task: task.id,
           round: task.testRounds,
           cwd: testerDir,
-          prompt: testerPrompt(state, task, diff, screens, acceptance),
+          prompt: testerPrompt(state, task, diff, screens, acceptance, whole),
           access: "write",
           schema: VERDICT_SCHEMA,
         });

@@ -641,6 +641,42 @@ export const FEATURES: Feature[] = [
     what: "A worker that finds its task too big for one session, or too hard to get right, answers status \"split\". The expert divides it into worker-sized parts, keeping for itself only what needs deep reasoning (built before the parts that depend on it). The work so far is kept; whatever depended on the task depends on all the parts. Once per task; parts cannot be split again.",
     optional: true,
   },
+  {
+    id: "F69",
+    key: "budget-handoff",
+    name: "Expert parts go to a worker when the budget is spent",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (expertCanTake, driveTask)"],
+    what: "A task the plan gives the expert goes to the top worker rung when the expert budget left cannot pay for one expert turn (estimated from this run's expert turns, at least $0.15). An expert-owned turn stopped at the budget keeps its work; the checks decide, and any further turns on that task are the worker's, never a second expert turn.",
+    optional: true,
+  },
+  {
+    id: "F70",
+    key: "cut-usage",
+    name: "A stopped turn keeps the usage it streamed",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (once)", "src/backends/types.ts (Usage.estimated)"],
+    what: "A Claude Code turn stopped before its final event (budget cut, timeout, stop) records the usage its stream reported so far: exact input and cache counts, output estimated from the text written and the thinking counts, marked estimated. It was recorded as unknown, which hid real spending.",
+    optional: true,
+  },
+  {
+    id: "F71",
+    key: "one-review",
+    name: "A planned build is reviewed once, as a whole",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (wantsTester, test step)", "src/engine/prompts.ts (testerPrompt)"],
+    what: "When the spec split a new program into tasks (F65), the parts merge on their own checks and only the last one gets the tester, who reviews the whole program against the request with the acceptance runs. The earlier parts' testers could not run the unfinished program and found nothing (bookshelf run, 2026-11-12).",
+    optional: true,
+  },
+  {
+    id: "F72",
+    key: "quota-log",
+    name: "The usage log records the subscription quota used",
+    added: "2026-11-12",
+    files: ["src/usage/log.ts (quotaSpan, quotaText)", "src/engine/run.ts (once)"],
+    what: "Each run records, per tool that reports it, the 5-hour and weekly quota readings at its first and last turn (Claude Code's rate-limit events), and the usage log shows them. Quota, not the API-price estimate, is what a subscription run costs.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

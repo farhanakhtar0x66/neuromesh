@@ -34,6 +34,11 @@ export interface Usage {
    * shared out by number of calls (an estimate).
    */
   long?: Usage;
+  /**
+   * [F70 cut-usage] Counted from a turn's stream because it stopped before its
+   * final report: input and cache counts are exact, output is estimated.
+   */
+  estimated?: boolean;
 }
 
 /** [F66 tier-pricing] Prompt size above which a call is priced at a model's long-context rates. */

@@ -9,6 +9,7 @@ import { basename, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { perTurnAttempts, usageByModel } from "../engine/run.ts";
 import type { RunState } from "../engine/types.ts";
+import { isOn } from "../features.ts";
 import { estimateCost } from "./prices.ts";
 
 export interface UsageEntry {
@@ -37,6 +38,36 @@ export interface UsageEntry {
   /** Features on for the run, and those that failed (src/features.ts). */
   features?: string[];
   featureErrors?: string[];
+  /**
+   * [F72 quota-log] Subscription quota per tool and window: the readings at the
+   * run's first and last turn, as fractions. A reading comes at the start of a
+   * turn, so the last turn's own use is not in it.
+   */
+  quota?: Record<string, Record<string, { first: number; last: number }>>;
+}
+
+/** [F72 quota-log] First and last quota reading of each tool's windows over a run's turns. */
+export function quotaSpan(attempts: { backend: string; quotaUsed?: Record<string, number> }[]): UsageEntry["quota"] {
+  const out: NonNullable<UsageEntry["quota"]> = {};
+  for (const a of attempts) {
+    for (const [window, used] of Object.entries(a.quotaUsed ?? {})) {
+      const tool = (out[a.backend] ??= {});
+      const span = tool[window];
+      if (span) span.last = used;
+      else tool[window] = { first: used, last: used };
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+/** [F72 quota-log] "claude 5h 27→36% · week 44→45%", or "-" when no tool reported a quota. */
+export function quotaText(quota: UsageEntry["quota"]): string {
+  if (!quota) return "-";
+  const pct = (n: number): string => `${Math.round(n * 100)}`;
+  const name = (w: string): string => (w === "five_hour" ? "5h" : w === "seven_day" ? "week" : w);
+  return Object.entries(quota)
+    .map(([tool, windows]) => `${tool} ${Object.entries(windows).map(([w, s]) => `${name(w)} ${pct(s.first)}→${pct(s.last)}%`).join(" · ")}`)
+    .join("; ");
 }
 
 export interface Rating {
@@ -97,6 +128,8 @@ export function entryFor(state: RunState, sessionTotals: (backend: string) => bo
     files: state.outcome?.files.length ?? 0,
     insertions: state.outcome?.insertions ?? 0,
     deletions: state.outcome?.deletions ?? 0,
+    // [F72 quota-log]
+    quota: isOn("quota-log") ? quotaSpan(state.attempts) : undefined,
   };
 }
 
@@ -173,11 +206,11 @@ export function report(log: { runs: UsageEntry[]; ratings: Map<string, Rating> }
     lines.push("", "## Features that failed", "", "Ids from `neuromesh features`. Switch one off with `--disable <key>` while it is being fixed.", "", "| Feature | Runs where it failed |", "| --- | --- |");
     for (const [f, n] of [...failures.entries()].sort((a, b) => b[1] - a[1])) lines.push(`| ${f} | ${n} |`);
   }
-  lines.push("", "## Runs", "", "| When | Repo | Preset | Kind | Status | Checks | Minutes | Tokens (expert / worker) | Cost | Rating | Request | Note | Features that failed |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+  lines.push("", "## Runs", "", "| When | Repo | Preset | Kind | Status | Checks | Minutes | Tokens (expert / worker) | Cost | Quota (first → last turn) | Rating | Request | Note | Features that failed |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
   for (const r of [...log.runs].sort((a, b) => b.at.localeCompare(a.at))) {
     const rating = log.ratings.get(r.run);
     lines.push(
-      `| ${r.at.slice(0, 16).replace("T", " ")} | ${cell(r.repo)} | ${r.preset} | ${r.kind ?? "-"} | ${r.status} | ${r.checks} | ${r.minutes} | ${k(r.tokens.expert)} / ${k(r.tokens.worker)} | ${money(r.cost)} | ${rating ? `${rating.score}${rating.usual ? ` vs ${cell(rating.usual)}` : ""}` : "-"} | ${cell(r.request.slice(0, 80))} | ${cell(rating?.note ?? "")} | ${cell((r.featureErrors ?? []).join("; ") || "-")} |`,
+      `| ${r.at.slice(0, 16).replace("T", " ")} | ${cell(r.repo)} | ${r.preset} | ${r.kind ?? "-"} | ${r.status} | ${r.checks} | ${r.minutes} | ${k(r.tokens.expert)} / ${k(r.tokens.worker)} | ${money(r.cost)} | ${quotaText(r.quota)} | ${rating ? `${rating.score}${rating.usual ? ` vs ${cell(rating.usual)}` : ""}` : "-"} | ${cell(r.request.slice(0, 80))} | ${cell(rating?.note ?? "")} | ${cell((r.featureErrors ?? []).join("; ") || "-")} |`,
     );
   }
   return lines.join("\n") + "\n";

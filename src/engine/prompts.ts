@@ -429,8 +429,12 @@ ${findingText(earlier.slice(-8))}
 Check whether they are fixed. Do not ask for the opposite of an earlier finding, and do not fail the change over a choice the request (and its spec, if any) leaves open: there, the developer's choice stands.`;
 }
 
-export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string, acceptance?: string): string {
-  const what = isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
+export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string, acceptance?: string, whole?: boolean): string {
+  const what =
+    // [F71 one-review] The program was built in parts and is reviewed once, as a whole.
+    whole
+      ? `The request:\n${state.prompt}\n\nThe program was built in parts, and this is its only review: the earlier parts were checked by their own tests, not reviewed. Review the finished program as a whole against the request. The change below lists every file of the program, then shows the last part (${task.title}) in full; read whichever other files you need.`
+      : isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
   return `You are reviewing a change made by another engineer. Decide whether it does what was asked, correctly.
 
 ${what}

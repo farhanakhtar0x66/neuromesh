@@ -303,6 +303,8 @@ export async function runTui(options: TuiOptions): Promise<number> {
     // The last report of each task is the one that counts.
     const byTask = new Map<string, NeuromeshEvent>();
     for (const r of reports) byTask.set(String(r.task ?? "main"), r);
+    // [F68 split-ask] A task that was split has no work of its own to report: its parts report it.
+    for (const [id, r] of byTask) if (r.status === "split" && [...byTask.keys()].some((other) => other.startsWith(`${id}.`))) byTask.delete(id);
     if (byTask.size === 0) return undefined;
     const last = [...byTask.values()].at(-1)!;
     const role = String(last.role ?? "worker");

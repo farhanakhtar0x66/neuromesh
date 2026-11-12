@@ -11,7 +11,8 @@ import { claudeParser } from "../src/backends/claude.ts";
 import { createFakeBackend } from "../src/backends/fake.ts";
 import type { FakeScript } from "../src/backends/fake.ts";
 import type { AgentRequest } from "../src/backends/types.ts";
-import { startRun } from "../src/engine/run.ts";
+import { keptUsage, startRun } from "../src/engine/run.ts";
+import { quotaSpan, quotaText } from "../src/usage/log.ts";
 import type { EngineContext } from "../src/engine/run.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
 import type { RoleChain } from "../src/engine/types.ts";
@@ -122,9 +123,116 @@ test("Opus's spec turn plans the build: each task gets its own small worker sess
   assert.equal(builds.length, 3, "one fresh session per task");
   assert.ok(builds.every((c) => c.model === "worker-medium" && c.resumeSessionId === undefined), "small tasks start on the first rung");
   assert.match(builds[0]!.prompt, /Build plan \(each task is built by one developer/);
+  // [F71 one-review] The parts merge on their checks; the finished program gets one review.
+  const reviews = fake.calls.filter(isTest);
+  assert.equal(reviews.length, 1, "one review, of the whole program");
+  assert.match(reviews[0]!.prompt, /this is its only review/);
+  assert.match(reviews[0]!.prompt, /a\.txt[\s\S]*b\.txt[\s\S]*fixed\.txt/, "it lists every file of the program");
+  assert.match(reviews[0]!.prompt, /Run 1: `cat fixed\.txt`/, "with the acceptance runs");
+});
+
+test("with one-review off, every part of a planned build gets its own review", async () => {
+  const repo = threePartRepo();
+  process.env.NEUROMESH_DISABLE = "one-review";
+  const { ctx, fake } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if (isSpec(req)) return { structured: SPEC };
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "ok", findings: [] } };
+    if (/Your task: part a/.test(req.prompt)) write(req.cwd, "a.txt", "a");
+    else if (/Your task: part b/.test(req.prompt)) write(req.cwd, "b.txt", "b");
+    else if (/Your task: finish/.test(req.prompt)) write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "build a command-line tool that writes three files", preset: preset({ briefer: [EXPERT], tester: [TESTER] }, { brief: true }) }, ctx).finally(() => delete process.env.NEUROMESH_DISABLE);
+  assert.equal(state.status, "finished", state.reason);
   const reviews = fake.calls.filter(isTest);
   assert.equal(reviews.length, 3);
   assert.ok(!/Run 1:/.test(reviews[0]!.prompt) && /Run 1: `cat fixed\.txt`/.test(reviews[2]!.prompt), "acceptance runs only once the program is whole");
+});
+
+// [F69 budget-handoff] Opus priced for real, so the dollar budget applies.
+const OPUS = { backend: "fake", model: "claude-opus-5-5", tier: "expert" as const };
+const SPLIT = {
+  summary: "hard part first",
+  tasks: [
+    { id: "x", title: "the hard part", brief: "Write b.txt", owned: ["b.txt"], depends_on: [], owner: "expert" },
+    { id: "y", title: "the rest", brief: "Write fixed.txt saying ok", owned: ["fixed.txt"], depends_on: ["x"], owner: "worker" },
+  ],
+};
+
+test("a part the plan gives the expert goes to the top worker rung when the budget left cannot pay for it", async () => {
+  const repo = threePartRepo();
+  let asked = false;
+  const { ctx, fake, events } = context((req) => {
+    // The split turn alone costs $0.50 of the $0.60 budget.
+    if (isPlan(req)) return { structured: SPLIT, usage: { input: 0, cacheRead: 0, cacheWrite: 0, output: 25_000 } };
+    if (!asked) {
+      asked = true;
+      write(req.cwd, "a.txt", "a");
+      return report("too big", "split", "two parts");
+    }
+    if (/Write b\.txt/.test(req.prompt)) write(req.cwd, "b.txt", "b");
+    else write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ orchestrator: [OPUS], escalation: [OPUS] }, { expertBudgetUsd: 0.6 }), mode: "solo" }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.tasks.map((t) => [t.id, t.owner, t.status]), [["main", "worker", "passed"], ["main.x", "worker", "passed"], ["main.y", "worker", "passed"]]);
+  assert.deepEqual(fake.calls.filter((c) => !isPlan(c)).map((c) => c.model), ["worker-medium", "worker-high", "worker-medium"], "the expert's part went to the top rung");
+  assert.ok(events.some((e) => e.type === "note" && e.feature === "F69"));
+});
+
+test("an expert part stopped at the budget keeps its work and its usage, and is never escalated to the expert again", async () => {
+  const repo = threePartRepo();
+  let asked = false;
+  const { ctx, fake, events } = context((req) => {
+    if (isPlan(req)) return { structured: SPLIT, usage: { input: 0, cacheRead: 0, cacheWrite: 0, output: 1_000 } };
+    if (req.model === "claude-opus-5-5") {
+      write(req.cwd, "b.txt", "b");
+      // Mid-turn: the stream reports $0.82 so far, past the $0.60 budget.
+      req.onUsage?.({ input: 10, cacheRead: 0, cacheWrite: 100_000, output: 1_000 });
+      return {};
+    }
+    if (!asked) {
+      asked = true;
+      write(req.cwd, "a.txt", "a");
+      return report("too big", "split", "two parts");
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ orchestrator: [OPUS], escalation: [OPUS] }, { expertBudgetUsd: 0.6 }), mode: "solo" }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(fake.calls.filter((c) => c.model === "claude-opus-5-5" && !isPlan(c)).length, 1, "one expert turn on the part, no escalation after the cut");
+  const cut = state.attempts.find((a) => a.task === "main.x" && a.model === "claude-opus-5-5")!;
+  assert.equal(cut.detail, "stopped: the expert budget was reached during this turn");
+  // [F70 cut-usage]
+  assert.deepEqual(cut.usage, { input: 10, cacheRead: 0, cacheWrite: 100_000, output: 1_000, estimated: true });
+  assert.equal(state.tasks.find((t) => t.id === "main.x")?.owner, "worker");
+  assert.ok(events.some((e) => e.type === "note" && e.feature === "F69"));
+});
+
+test("a stopped turn keeps the usage it streamed, marked estimated; a finished one keeps its report", () => {
+  const streamed = { input: 5, cacheRead: 100, cacheWrite: 2_000, output: 300 };
+  assert.deepEqual(keptUsage({}, streamed), { ...streamed, estimated: true });
+  assert.deepEqual(keptUsage({ input: 7, output: 9 }, streamed), { input: 7, output: 9 });
+  assert.deepEqual(keptUsage({}, undefined), {}, "nothing streamed stays unknown");
+  assert.deepEqual(keptUsage({}, { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 }), {}, "an empty stream stays unknown");
+});
+
+test("the usage log records each tool's quota at the run's first and last turn", () => {
+  const span = quotaSpan([
+    { backend: "claude", quotaUsed: { five_hour: 0.27, seven_day: 0.44 } },
+    { backend: "codex" },
+    { backend: "claude", quotaUsed: { five_hour: 0.33, seven_day: 0.44 } },
+    { backend: "claude", quotaUsed: { five_hour: 0.36, seven_day: 0.45 } },
+  ]);
+  assert.deepEqual(span, { claude: { five_hour: { first: 0.27, last: 0.36 }, seven_day: { first: 0.44, last: 0.45 } } });
+  assert.equal(quotaText(span), "claude 5h 27→36% · week 44→45%");
+  assert.equal(quotaSpan([{ backend: "codex" }]), undefined);
+  assert.equal(quotaText(undefined), "-");
 });
 
 test("a spec with a single task stays one worker task, as before", async () => {

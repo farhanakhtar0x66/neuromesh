@@ -222,11 +222,21 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     (F68), sessions past 90K start fresh (F67), long calls are priced right
     (F66), and a revoked login pauses (F64). `docs/14-sitewatch-and-plan-first.md`.
 
+23. **Bookshelf TUI: Neuromesh used 9 points of the 5-hour quota, Opus alone 5
+    (2026-11-12).** Opus's app was also better: closest match and duplicates.
+    Measured across runs, Haiku is only about 5 to 7 times cheaper than Opus per
+    token on the Claude quota, not 40 times, and it wrote 220k tokens. So Opus
+    and Haiku on one Claude plan cannot beat Opus alone; the worker needs its
+    own plan (Luna). Engine fixes: expert parts go to a worker when the budget
+    cannot pay (F69); a stopped turn keeps its usage (F70); a planned build is
+    reviewed once, as a whole (F71); the usage log records quota (F72).
+    `docs/15-bookshelf-run.md`.
+
 ## Next steps
 
-0. Built 2026-11-12: the python-bot changes, F54 to F63
-   (`docs/12-python-bot-run.md`, "Built"). Next: the role tests on a prompt
-   the owner gives, then rerun the python-bot request. Not yet checked live.
+0. Next live run: the bookshelf prompt on `factory-opus-luna`, with both quota
+   bars before and after (Claude for Opus, ChatGPT for Luna). F69 to F72 are
+   not yet checked live. Then the role tests on a prompt the owner gives.
 1. Done 2026-11-12: the telemetry endpoint is live at
    `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
    requests without keys are refused). `neuromesh telemetry pull` reads it.

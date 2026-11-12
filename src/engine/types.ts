@@ -70,6 +70,8 @@ export interface AttemptRecord {
   logPath?: string;
   /** [F67 session-cap] The largest prompt of the turn, when the tool reports it per call. */
   peakPrompt?: number;
+  /** [F72 quota-log] The tool's subscription quota readings (fraction used per window), when it reports them. */
+  quotaUsed?: Record<string, number>;
 }
 
 export type InFlight = Omit<AttemptRecord, "stop" | "durationMs" | "usage" | "costUsdEquivalent" | "sessionId" | "detail"> & {
@@ -215,6 +217,8 @@ export interface RunState {
   brief?: Brief;
   /** [F63 scout-facts] Facts a cheap scout checked on this machine before the spec was written. */
   facts?: string[];
+  /** [F65 spec-plan] The tasks are the spec's build plan for a new program. */
+  planFromSpec?: boolean;
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;
