@@ -6,4 +6,4 @@ compatibility_date = "2026-11-01"
 binding = "DB"
 database_name = "neuromesh-telemetry"
 # Put the id that `npx wrangler d1 create neuromesh-telemetry` prints here.
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "8572c299-5543-438e-a0b2-ddc94dcdec03"

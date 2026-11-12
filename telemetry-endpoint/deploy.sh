@@ -45,8 +45,15 @@ $W secret put ADMIN_TOKEN < "$TOKEN_FILE" >/dev/null
 echo "Secrets set (admin token kept in $TOKEN_FILE)"
 
 # Deploy, and point the code at it.
-URL=$($W deploy 2>&1 | grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' | head -1)
-[ -n "$URL" ] || { echo "Deployed, but could not read the URL; put it in src/telemetry/config.ts by hand."; exit 1; }
+OUT=$($W deploy 2>&1 || true)
+if printf %s "$OUT" | grep -q "register a workers.dev subdomain"; then
+  echo "Your Cloudflare account has no workers.dev subdomain yet (a one-time, account-wide name)."
+  echo "Pick one in the Cloudflare dashboard: Workers & Pages, then your workers.dev subdomain."
+  echo "Then run this script again."
+  exit 1
+fi
+URL=$(printf %s "$OUT" | grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' | head -1)
+[ -n "$URL" ] || { printf %s "$OUT" | tail -5; echo "Deployed, but could not read the URL; put it in src/telemetry/config.ts by hand."; exit 1; }
 sed -i.bak "s|^export const ENDPOINT = \".*\";|export const ENDPOINT = \"$URL\";|" "$ROOT/src/telemetry/config.ts" && rm -f "$ROOT/src/telemetry/config.ts.bak"
 curl -fsS "$URL/v1/health" >/dev/null && echo "Live: $URL"
 echo
