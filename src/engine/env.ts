@@ -20,6 +20,8 @@ import { spawnSync } from "node:child_process";
 import { runProcess } from "../backends/proc.ts";
 
 export const VENV = ".venv";
+/** Python bytecode never belongs in the diff (the logstat run applied two .pyc files). */
+export const BYTECODE = "*.pyc";
 export const NODE_MODULES = "node_modules";
 const MARKER = ".neuromesh-installed";
 const INSTALL_TIMEOUT_MS = 6 * 60_000;
@@ -142,7 +144,7 @@ export async function ensureEnv(dir: string, options: { python?: boolean; signal
       const made = hasUv() ? await run("uv", ["venv", "--quiet", "--python", "python3", VENV], dir, options.signal) : await run("python3", ["-m", "venv", VENV], dir, options.signal);
       if (!made.ok || !existsSync(python)) return { ...outcome, failed: `could not create ${VENV}: ${made.tail}` };
     }
-    outcome.folders.push(VENV);
+    outcome.folders.push(VENV, BYTECODE);
     const decl = pythonDeclarations(dir);
     const marker = join(venv, MARKER);
     if (decl.args.length > 0 && read(marker) !== decl.key) {
@@ -171,8 +173,9 @@ export async function ensureEnv(dir: string, options: { python?: boolean; signal
 /** Environment variables that put the work folder's environment first, for checks and acceptance runs. */
 export function envVars(dir: string): Record<string, string> {
   const bin = join(dir, VENV, "bin");
-  if (!existsSync(bin)) return {};
-  return { PATH: `${bin}:${process.env.PATH ?? ""}`, VIRTUAL_ENV: join(dir, VENV) };
+  // No __pycache__ folders from the agents, the checks or the acceptance runs.
+  if (!existsSync(bin)) return { PYTHONDONTWRITEBYTECODE: "1" };
+  return { PATH: `${bin}:${process.env.PATH ?? ""}`, VIRTUAL_ENV: join(dir, VENV), PYTHONDONTWRITEBYTECODE: "1" };
 }
 
 /** The note every writing agent gets, so it uses the environment instead of fighting the system's Python. */

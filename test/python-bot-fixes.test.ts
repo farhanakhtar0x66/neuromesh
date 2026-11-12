@@ -384,7 +384,7 @@ test("a Python work folder gets its own .venv, put first on PATH and named in th
   writeFileSync(join(dir, "main.py"), "print(1)\n");
   const outcome = await ensureEnv(dir);
   assert.equal(outcome.failed, undefined, outcome.failed);
-  assert.deepEqual(outcome.folders, [".venv"]);
+  assert.deepEqual(outcome.folders, [".venv", "*.pyc"]);
   assert.ok(existsSync(join(dir, ".venv", "bin", "python")));
   assert.match(envVars(dir).PATH ?? "", /\.venv\/bin:/);
   assert.match(envNote(dir), /\.venv\/bin\/python/);
@@ -397,11 +397,15 @@ test("the environment is made before the first turn and never enters the diff", 
     assert.ok(existsSync(join(req.cwd, ".venv", "bin", "python")), "the worker's first turn has the environment");
     write(req.cwd, "fixed.txt", "ok");
     write(req.cwd, "main.py", "print('hi')");
+    // Bytecode an agent's own Python run left behind never reaches the diff.
+    mkdirSync(join(req.cwd, "__pycache__"), { recursive: true });
+    writeFileSync(join(req.cwd, "__pycache__", "main.cpython-312.pyc"), "x");
+    assert.equal(req.env?.PYTHONDONTWRITEBYTECODE, "1");
     return report("done");
   });
   const state = await startRun({ cwd: repo, prompt: "make the test pass with a small python script", preset: preset() }, ctx);
   assert.equal(state.status, "finished", state.reason);
   assert.match(fake.calls[0]!.prompt, /\.venv\/bin\/python/);
-  assert.ok(!state.outcome!.files.some((f) => f.path.startsWith(".venv")), state.outcome!.files.map((f) => f.path).join(","));
+  assert.ok(!state.outcome!.files.some((f) => f.path.startsWith(".venv") || f.path.endsWith(".pyc")), state.outcome!.files.map((f) => f.path).join(","));
   assert.ok(state.outcome!.files.some((f) => f.path === "main.py"));
 });

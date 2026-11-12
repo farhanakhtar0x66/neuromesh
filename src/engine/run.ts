@@ -25,7 +25,7 @@ import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import { runAcceptance, verifyFindings } from "../checks/acceptance.ts";
-import { ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
+import { BYTECODE, ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
 import { observedText } from "./observed.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
@@ -614,6 +614,8 @@ async function prepareEnv(run: RunCtx, dir: string, prepared: string[], task?: s
   const outcome = await optionalAsync(run, "work-env", undefined, () => ensureEnv(dir, { python: meansPython(run.state), signal: run.signal }));
   if (!outcome) return undefined;
   for (const f of outcome.folders) if (!prepared.includes(f)) prepared.push(f);
+  // Bytecode is left out of the run's final diff as well as each task's.
+  if (outcome.folders.includes(BYTECODE) && !run.state.prepared.includes(BYTECODE)) run.state.prepared.push(BYTECODE);
   if (outcome.installed.length > 0 || outcome.failed) {
     run.log.emit("env.ready", { feature: "F54", task, folders: outcome.folders, installed: outcome.installed, failed: outcome.failed?.slice(0, 1_500) });
   }

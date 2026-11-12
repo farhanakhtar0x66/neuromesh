@@ -208,6 +208,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     an empty folder, set off by a package the worker's sandbox could not
     install. Causes, replays and the six changes: `docs/12-python-bot-run.md`.
 
+21. **logstat, Neuromesh against Opus alone (2026-11-12).** First live run with
+    F54 to F63, on `factory-opus-haiku`: 27/27 on a hidden battery against
+    26/27 (25/27 on Python 3.9) for Opus alone, at about half the estimated
+    cost ($0.23 against $0.43; Opus share 40%) and five times the time. Both
+    moved the 5-hour quota by 1%. Bytecode in the diff, found there, is fixed.
+    `docs/13-logstat-benchmark.md`.
+
 ## Next steps
 
 0. Built 2026-11-12: the python-bot changes, F54 to F63
