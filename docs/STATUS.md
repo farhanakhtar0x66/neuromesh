@@ -232,11 +232,24 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     reviewed once, as a whole (F71); the usage log records quota (F72).
     `docs/15-bookshelf-run.md`.
 
+24. **Fault harness (2026-11-12).** `evals/chaos.ts` runs seeded random runs
+    against agents that misbehave, with the engine process killed and resumed
+    as one of the faults, and checks rules every run must keep. The first 320
+    seeds broke a rule 39 times. Fixed: an endless checks loop after a failed
+    expert fix; a task built beside another being tested without the other's
+    work and sent to the expert (F75); a crashing adapter (F74); damaged work
+    folders (F73); a turn hung by a program the tool left running (F76); and
+    more. Since then 1,620 ordinary and 400 kill-and-resume seeds kept every
+    rule. `docs/16-fault-harness.md`.
+
 ## Next steps
 
-0. Next live run: the bookshelf prompt on `factory-opus-luna`, with both quota
-   bars before and after (Claude for Opus, ChatGPT for Luna). F69 to F72 are
-   not yet checked live. Then the role tests on a prompt the owner gives.
+0. Next live run: the bookshelf prompt with the worker on its own quota
+   (`factory-opus-flash`, or `factory-opus-luna` when Luna is back), with both
+   quota bars before and after. Then the role tests on a prompt the owner
+   gives. Before changing the engine, run `node evals/chaos.ts --seeds 1000`
+   and `--kill 1 --seeds 400`; add any new kind of failure to the harness
+   first, then fix it.
 1. Done 2026-11-12: the telemetry endpoint is live at
    `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
    requests without keys are refused). `neuromesh telemetry pull` reads it.

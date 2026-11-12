@@ -35,6 +35,11 @@ new work is judged on real use: the owner's usage log and testers' reports.
 - TypeScript strict mode, run directly by Node (no build step), no runtime
   dependencies unless a milestone needs one, no agent framework.
 - `npm test` and `npx tsc --noEmit` must pass before work is called done.
+- A change to the engine (`src/engine`, `src/workspace`, `src/backends`) also
+  runs the fault harness: `node evals/chaos.ts --seeds 1000` and
+  `node evals/chaos.ts --kill 1 --seeds 400` (no model calls). A new kind of
+  failure seen in a real run is added to the harness first, then fixed
+  (`docs/16-fault-harness.md`).
 - Every feature or behaviour change added after v0.1 is registered in
   `src/features.ts` with an id (F01, F02, ...). Mark its code with a
   `// [Fxx key]` comment, gate it with `isOn("key")`, run optional ones through
