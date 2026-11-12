@@ -42,29 +42,65 @@ export function claudeArgs(request: AgentRequest): string[] {
   return args;
 }
 
-export function claudeParser(request: Pick<AgentRequest, "onActivity">): StreamParser {
+export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage">): StreamParser {
   const run: ParsedRun = { finalText: "", usage: {} };
   let quotaBlocked = false;
+  // [F60 no-rebuild] Usage so far in the turn. Input and cache counts come per
+  // model call; output in the stream is only a placeholder, so it is estimated
+  // from what was written (about 4 characters a token) and the thinking counts.
+  const calls = new Map<string, { input: number; cacheRead: number; cacheWrite: number }>();
+  let writtenChars = 0;
+  let thinking = 0;
+  const reportUsage = (): void => {
+    if (!request.onUsage) return;
+    let input = 0;
+    let cacheRead = 0;
+    let cacheWrite = 0;
+    for (const c of calls.values()) {
+      input += c.input;
+      cacheRead += c.cacheRead;
+      cacheWrite += c.cacheWrite;
+    }
+    request.onUsage({ input, cacheRead, cacheWrite, output: Math.round(writtenChars / 4) + thinking });
+  };
 
   return {
     onEvent(event) {
       const type = str(event.type);
+      if (type === "system" && event.subtype === "thinking_tokens") {
+        thinking += num(event.estimated_tokens_delta) ?? 0;
+        return;
+      }
       if (type === "system" && event.subtype === "init") {
         run.sessionId = str(event.session_id);
         run.model = str(event.model);
         return;
       }
       if (type === "assistant") {
-        const content = obj(event.message)?.content;
+        const message = obj(event.message);
+        const content = message?.content;
+        const id = str(message?.id);
+        const u = obj(message?.usage);
+        if (id && u) {
+          const prev = calls.get(id);
+          calls.set(id, {
+            input: Math.max(prev?.input ?? 0, num(u.input_tokens) ?? 0),
+            cacheRead: Math.max(prev?.cacheRead ?? 0, num(u.cache_read_input_tokens) ?? 0),
+            cacheWrite: Math.max(prev?.cacheWrite ?? 0, num(u.cache_creation_input_tokens) ?? 0),
+          });
+        }
         if (!Array.isArray(content)) return;
         for (const block of content) {
           const b = obj(block);
           if (b?.type === "text" && str(b.text)) {
+            writtenChars += str(b.text)!.length;
             request.onActivity?.({ kind: "text", summary: short(b.text, 160) });
           } else if (b?.type === "tool_use") {
+            writtenChars += JSON.stringify(b.input ?? "").length;
             request.onActivity?.({ kind: "tool", summary: `${str(b.name) ?? "tool"} ${short(b.input, 100)}` });
           }
         }
+        reportUsage();
         return;
       }
       if (type === "rate_limit_event") {

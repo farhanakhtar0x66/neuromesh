@@ -48,7 +48,8 @@ export type AttemptKind =
   | "advice"
   | "advised-fix"
   | "climb"
-  | "integration";
+  | "integration"
+  | "scout";
 
 export interface AttemptRecord {
   role: Role;
@@ -89,6 +90,13 @@ export interface Finding {
    * "minor": everything else. Unset (older testers) counts as a blocker.
    */
   severity?: "blocker" | "minor";
+  /**
+   * [F59 reproduced-findings] A command that exits non-zero while the problem
+   * is there. The engine runs it; a finding whose check passes is dropped.
+   */
+  check?: string;
+  /** [F59 reproduced-findings] Shown by its check (true), or not checkable (undefined). */
+  verified?: boolean;
 }
 
 export interface Verdict {
@@ -154,6 +162,10 @@ export interface TaskState extends PlannedTask {
   progress: ProgressHistory;
   conflicts: number;
   previousDiff?: string;
+  /** [F56 env-blocked] Turns spent on environment problems (not counted as repair rounds). */
+  envRepairs?: number;
+  /** [F56 env-blocked] What the environment problem was, for the next worker turn. */
+  envProblem?: string;
   outOfScope?: string[];
   files?: FileChange[];
   error?: string;
@@ -193,6 +205,8 @@ export interface RunState {
   start?: string;
   /** What the brief engine made of the request, and the staffing it chose. */
   brief?: Brief;
+  /** [F63 scout-facts] Facts a cheap scout checked on this machine before the spec was written. */
+  facts?: string[];
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;

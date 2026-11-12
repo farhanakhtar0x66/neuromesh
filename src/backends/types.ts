@@ -61,6 +61,19 @@ export interface AgentRequest {
    * in Neuromesh's sandbox (macOS). Undefined: not sandboxed by Neuromesh.
    */
   writable?: string[];
+  /**
+   * [F55 worker-network] A writing turn may reach the network from inside its
+   * sandbox (Codex keeps it off by default). Other tools already have it.
+   */
+  network?: boolean;
+  /** [F54 work-env] Extra environment variables for the tool and the commands it runs. */
+  env?: Record<string, string>;
+  /**
+   * [F60 no-rebuild] Called with the turn's usage so far, as the tool reports
+   * it during the turn (Claude Code does, per model call). Lets the engine stop
+   * a turn that runs past the expert budget.
+   */
+  onUsage?: (usage: Usage) => void;
   /** Display only. Never used to make decisions. */
   onActivity?: (activity: Activity) => void;
   /** Called with the tool's process id (also its process group) once started. */

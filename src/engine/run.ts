@@ -17,18 +17,21 @@
 // subscription limit resumes where it was. When a model runs out of quota the
 // next model in the role's list takes over; when none is left the run pauses.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
+import { runAcceptance, verifyFindings } from "../checks/acceptance.ts";
+import { ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
+import { observedText } from "./observed.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { buildPacket } from "../context/packet.ts";
 import { estimateCost } from "../usage/prices.ts";
-import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
+import { buildBrief, detectRuntimes, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
@@ -60,6 +63,11 @@ import {
   freshAdvisedFixPrompt,
   parseAdvice,
   escalationPrompt,
+  envRepairPrompt,
+  FACTS_SCHEMA,
+  fixInPlacePrompt,
+  parseFacts,
+  scoutPrompt,
   patchPrompt,
   failureSummary,
   freshFollowUpPrompt,
@@ -83,7 +91,7 @@ import {
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier } from "./types.ts";
+import type { AttemptKind, AttemptRecord, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 
 export interface EngineContext {
   home: string;
@@ -170,6 +178,10 @@ function followFrom(repoRoot: string, head: string, prev: RunState, dir: string)
 type Stop = { status: "paused" | "interrupted" | "failed"; reason: string; failure?: "agent" | "engine" };
 
 const ESCALATION_REPAIRS = 1;
+/** [F56 env-blocked] Turns a worker gets to fix an environment problem (declaring a package) before the run stops. */
+const ENV_REPAIRS = 2;
+/** [F60 no-rebuild] Why an expert turn was stopped part way. */
+const BUDGET_CUT = "stopped: the expert budget was reached during this turn";
 /** A tool that prints nothing for this long has stalled; the turn is stopped and retried once. */
 const IDLE_MS = 10 * 60_000;
 const MAX_CONFLICTS = 2;
@@ -568,6 +580,12 @@ interface RunCtx {
 
 async function check(run: RunCtx, dir: string, label: string): Promise<CheckResult[]> {
   if (run.state.checks.length === 0) return [];
+  // [F57 hollow-checks] After the baseline, a check that tests nothing is not a
+  // pass, unless it already tested nothing before the work started.
+  const strict =
+    label !== "baseline" && isOn("hollow-checks")
+      ? new Set(run.state.checks.map((c) => c.name).filter((n) => !run.state.baseline?.find((b) => b.name === n)?.hollow))
+      : undefined;
   return runChecks({
     dir,
     checks: run.state.checks,
@@ -575,7 +593,54 @@ async function check(run: RunCtx, dir: string, label: string): Promise<CheckResu
     label,
     timeoutMs: run.ctx.checkTimeoutMs,
     signal: run.signal,
+    // [F54 work-env]
+    env: isOn("work-env") ? envVars(dir) : undefined,
+    strict,
   });
+}
+
+/** [F54 work-env] Python is meant even before any Python file exists: the request or its spec says so. */
+function meansPython(state: RunState): boolean {
+  return /\bpython\b|\bpip\b|requirements\.txt|\.py\b/i.test(`${state.request ?? ""}\n${state.prompt}`);
+}
+
+/**
+ * [F54 work-env] Make or update the work folder's environment. Returns the
+ * install failure, if any; the engine's own folders are added to `prepared`
+ * so they never reach the diff.
+ */
+async function prepareEnv(run: RunCtx, dir: string, prepared: string[], task?: string): Promise<string | undefined> {
+  if (!isOn("work-env")) return undefined;
+  const outcome = await optionalAsync(run, "work-env", undefined, () => ensureEnv(dir, { python: meansPython(run.state), signal: run.signal }));
+  if (!outcome) return undefined;
+  for (const f of outcome.folders) if (!prepared.includes(f)) prepared.push(f);
+  if (outcome.installed.length > 0 || outcome.failed) {
+    run.log.emit("env.ready", { feature: "F54", task, folders: outcome.folders, installed: outcome.installed, failed: outcome.failed?.slice(0, 1_500) });
+  }
+  return outcome.failed;
+}
+
+/**
+ * [F56 env-blocked] When the checks failed because of the environment (a
+ * package that is not installed, an install that failed), what went wrong;
+ * undefined when the code is at fault.
+ */
+function environmentProblem(task: TaskState, results: CheckResult[], installFailed: string | undefined): string | undefined {
+  if (installFailed) return `Installing the declared packages failed:\n${installFailed.slice(-1_200)}`;
+  for (const r of results) {
+    if (r.status !== "failed") continue;
+    if (r.hollow && /package is missing/.test(r.hollow)) return r.tail.slice(0, 1_500);
+    const missing = missingModule(r.tail);
+    // A missing module of the project's own is a code problem (a wrong import), not the environment.
+    if (missing && !existsSync(join(task.worktree, missing)) && !existsSync(join(task.worktree, `${missing}.py`)) && !existsSync(join(task.worktree, "src", missing))) {
+      return `Check "${r.name}" failed because the module \`${missing}\` is not installed:\n${r.tail.slice(-1_200)}`;
+    }
+  }
+  const report = task.report;
+  if (report?.status === "blocked" && environmentTrouble(`${report.summary} ${report.notes ?? ""}`)) {
+    return `You reported being blocked by the environment: ${`${report.summary} ${report.notes ?? ""}`.slice(0, 1_000)}`;
+  }
+  return undefined;
 }
 
 function brief(results: CheckResult[]): { name: string; status: string; durationMs: number }[] {
@@ -677,13 +742,13 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     let result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
 
     // A dropped connection or an overloaded service: try the same turn once more.
-    if (result.stop === "error" && TRANSIENT.test(result.detail ?? "") && !run.signal.aborted) {
+    if (result.stop === "error" && result.detail !== BUDGET_CUT && TRANSIENT.test(result.detail ?? "") && !run.signal.aborted) {
       log.emit("note", { message: `The ${req.role}'s connection failed (${(result.detail ?? "").slice(0, 80)}); trying once more.` });
       result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
     }
 
     // Resuming a session can fail (an expired or unknown id): one fresh try.
-    if (sameSession && result.stop === "error" && !UNAVAILABLE.test(result.detail ?? "") && !run.signal.aborted) {
+    if (sameSession && result.stop === "error" && result.detail !== BUDGET_CUT && !UNAVAILABLE.test(result.detail ?? "") && !run.signal.aborted) {
       log.emit("note", { message: "Could not continue the agent's session; starting a fresh one." });
       result = await once(run, req, config, backend, req.freshPrompt ?? req.prompt, undefined);
     }
@@ -730,12 +795,29 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const contextChars = state.contextPacket && prompt.includes(state.contextPacket) ? state.contextPacket.length : 0;
   log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, tier, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId), effort: config.effort, promptChars: prompt.length, contextChars });
 
-  const result = await backend.run({
+  // [F60 no-rebuild] An expert turn is stopped once the run's expert spending passes the budget.
+  const turnStop = new AbortController();
+  let cut = false;
+  const watch = tier === "expert" && isOn("no-rebuild") && isOn("dollar-budget") && state.expertBudgetUsd !== undefined;
+  const spentBefore = watch ? expertDollars(state) : 0;
+  let result = await backend.run({
     cwd: req.cwd,
     prompt,
     model: config.model,
     effort: config.effort,
     access: req.access,
+    // [F54 work-env]
+    env: isOn("work-env") && req.access === "write" ? envVars(req.cwd) : undefined,
+    // [F55 worker-network] New programs (their packages, their real data), and the scout.
+    network: req.access === "write" && ((isOn("worker-network") && state.brief?.kind === "greenfield") || (req.kind === "scout" && isOn("scout-facts"))),
+    onUsage: watch
+      ? (u) => {
+          if (cut || spentBefore + (estimateCost(config.model, u) ?? 0) < state.expertBudgetUsd!) return;
+          cut = true;
+          log.emit("note", { feature: "F60", message: `Expert budget reached during the ${req.role}'s turn (about $${(spentBefore + (estimateCost(config.model, u) ?? 0)).toFixed(2)} of $${state.expertBudgetUsd!.toFixed(2)}, estimated); stopping it.` });
+          turnStop.abort();
+        }
+      : undefined,
     // [F53 write-sandbox] A writing turn may write in its own copy and git's shared objects; a reading turn nowhere of ours.
     writable: isOn("write-sandbox") ? (req.access === "write" ? [req.cwd, join(state.repo, ".git", "worktrees"), join(state.repo, ".git", "objects")] : []) : undefined,
     outputSchema: req.schema,
@@ -743,7 +825,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     timeoutMs: state.turnTimeoutMs,
     idleMs: IDLE_MS,
     logPath,
-    signal: run.signal,
+    signal: AbortSignal.any([run.signal, turnStop.signal]),
     onActivity: (a) => log.emit("agent.activity", { task: req.task, role: req.role, activity: a.kind, summary: a.summary }),
     onSpawn: (pid) => {
       const f = state.inFlight[req.key];
@@ -752,6 +834,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     },
   });
 
+  if (cut && !run.signal.aborted) result = { ...result, stop: "error", detail: BUDGET_CUT };
   delete state.inFlight[req.key];
   const usage =
     // [F09 codex-session-totals]
@@ -820,13 +903,19 @@ function stopFor(result: AgentResult, what: string): Stop {
 async function specStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
   const brief = state.brief!;
+  // [F63 scout-facts] Only where an expert writes the spec: its judgement is worth grounding.
+  if (isOn("scout-facts") && state.facts === undefined && brief.kind === "greenfield" && state.roles.briefer?.[0]?.tier === "expert") {
+    state.facts = await optionalAsync(run, "scout-facts", [] as string[], () => scoutStep(run));
+    saveState(state);
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped by the user" };
+  }
   const { result, config } = await turn(run, {
     key: "spec",
     role: "briefer",
     kind: "spec",
     round: 0,
     cwd: state.worktree,
-    prompt: specPrompt(brief.request, renderBrief(brief)),
+    prompt: specPrompt(brief.request, renderBrief(brief), state.facts),
     access: "read-only",
     schema: SPEC_SCHEMA,
   });
@@ -873,6 +962,80 @@ function startScript(dir: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** [F61 advice-facts] What the task's worker saw fail, for the expert. */
+function observedFor(state: RunState, task: TaskState): string | undefined {
+  if (!isOn("advice-facts")) return undefined;
+  const logs = state.attempts.filter((a) => a.task === task.id && a.role === "worker" && a.logPath).slice(-3).map((a) => a.logPath!);
+  return inFeature("advice-facts", () => observedText(logs, task.report)) || undefined;
+}
+
+/** [F58 acceptance-runs] Run the spec's acceptance runs in the reviewer's copy; the evidence for its prompt. */
+async function acceptanceFor(run: RunCtx, task: TaskState, dir: string): Promise<string | undefined> {
+  const runs = run.state.brief?.spec?.acceptance ?? [];
+  if (!isOn("acceptance-runs") || runs.length === 0) return undefined;
+  return optionalAsync(run, "acceptance-runs", undefined, async () => {
+    const outcome = await runAcceptance(dir, runs, { env: isOn("work-env") ? envVars(dir) : undefined, signal: run.signal });
+    run.log.emit("acceptance.ran", {
+      feature: "F58",
+      task: task.id,
+      runs: outcome.results.map((r) => ({ command: r.command, exitCode: r.exitCode, timedOut: r.timedOut, durationMs: r.durationMs })),
+      files: outcome.files.length,
+    });
+    return outcome.text;
+  });
+}
+
+/**
+ * [F59 reproduced-findings] Keep the blockers the engine can show. A blocker
+ * whose check exits 0 is dropped; one without a check is kept as minor (it can
+ * be fixed, but it never calls the expert in), except for a terminal program,
+ * whose findings rest on the recorded screens.
+ */
+async function checkFindings(run: RunCtx, task: TaskState, dir: string, verdict: Verdict, screens: boolean): Promise<Verdict> {
+  return optionalAsync(run, "reproduced-findings", verdict, async () => {
+    // The tester's edits to the project's files are undone; files it or the acceptance runs created stay.
+    spawnSync("git", ["checkout", "-q", "--", "."], { cwd: dir });
+    const { kept, dropped } = await verifyFindings(dir, verdict.findings, { env: isOn("work-env") ? envVars(dir) : undefined, signal: run.signal });
+    const findings = kept.map((f) => (f.severity !== "minor" && !f.verified && !screens ? { ...f, severity: "minor" as const } : f));
+    run.log.emit("findings.checked", {
+      feature: "F59",
+      task: task.id,
+      shown: kept.filter((f) => f.verified).length,
+      unchecked: kept.filter((f) => f.severity !== "minor" && !f.verified).length + findings.filter((f, i) => f.severity === "minor" && kept[i]!.severity !== "minor").length,
+      dropped: dropped.map((d) => ({ problem: d.problem.slice(0, 200), check: d.check })),
+    });
+    if (findings.length === 0) return { verdict: "pass", summary: `${verdict.summary} (no finding could be shown)`, findings };
+    return { ...verdict, findings };
+  });
+}
+
+/** [F63 scout-facts] A cheap turn checks the machine and the real data before the expert writes the spec. */
+async function scoutStep(run: RunCtx): Promise<string[]> {
+  const { state, log } = run;
+  const dir = join(state.dir, "scout");
+  mkdirSync(dir, { recursive: true });
+  const machine = [
+    ...detectRuntimes().map((r) => `installed: ${r}`),
+    spawnSync("uv", ["--version"]).status === 0 ? "uv is installed" : "uv is not installed",
+    isOn("work-env") ? "Neuromesh installs the packages a project declares into an environment it manages, so the system Python's restrictions on pip do not matter" : "",
+  ].filter(Boolean);
+  const first = state.workerLadder?.[0] ?? state.roles.worker?.[0];
+  const { result } = await turn(run, {
+    key: "scout",
+    role: "worker",
+    kind: "scout",
+    round: 0,
+    cwd: dir,
+    prompt: scoutPrompt(state.brief!.request, machine),
+    access: "write",
+    schema: FACTS_SCHEMA,
+    chain: first ? [first] : undefined,
+  });
+  const facts = result.stop === "done" ? parseFacts(result) : [];
+  log.emit("facts.ready", { feature: "F63", facts });
+  return facts;
 }
 
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
@@ -1113,6 +1276,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       task.base = headCommit(state.worktree);
       createWorktree(state.repo, task.worktree, task.branch, task.base);
       task.prepared = prepareWorktree(state.repo, task.worktree);
+      // [F54 work-env] Before the first turn, so the worker can run what it writes.
+      await prepareEnv(run, task.worktree, task.prepared, task.id);
       task.step = "agent";
       saveState(state);
       log.emit("task.started", { task: task.id, title: task.title, owner: task.owner, owned: task.owned });
@@ -1123,15 +1288,19 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const role = roleFor(state, task);
       const kind: AttemptKind = task.escalated && task.next === "initial" ? "escalation" : task.next;
       const followUp = task.next === "repair" || task.next === "review-fix" || task.next === "advised-fix";
+      // [F54 work-env] Every first prompt of a session says how to use the environment.
+      const env = isOn("work-env") ? envNote(task.worktree) : "";
       const prompt =
-        task.next === "climb" ? climbPrompt(state, task)
+        task.next === "climb" ? climbPrompt(state, task) + env
         : task.next === "advised-fix" ? advisedFixPrompt(task)
+        // [F56 env-blocked]
+        : task.next === "repair" && task.envProblem ? envRepairPrompt(task)
         : task.next === "repair" ? repairPrompt(state, task)
         : task.next === "review-fix" ? reviewFixPrompt(task)
-        : task.next === "redo" ? redoPrompt(state, task)
-        : task.next === "continue" ? continuePrompt(state, task)
-        : task.escalated ? (task.patch ? patchPrompt(state, task) : escalationPrompt(state, task))
-        : taskPrompt(state, task);
+        : task.next === "redo" ? redoPrompt(state, task) + env
+        : task.next === "continue" ? continuePrompt(state, task) + env
+        : task.escalated ? (task.patch ? patchPrompt(state, task) : isOn("no-rebuild") ? fixInPlacePrompt(state, task, observedFor(state, task)) : escalationPrompt(state, task)) + env
+        : taskPrompt(state, task) + env;
       const { result, config } = await turn(run, {
         key: task.id,
         role,
@@ -1140,12 +1309,20 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         round: task.round,
         cwd: task.worktree,
         prompt,
-        freshPrompt: task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : prompt,
+        freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : prompt) + (followUp ? env : ""),
         access: "write",
         schema: REPORT_SCHEMA,
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
         chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
       });
+      task.envProblem = undefined;
+      // [F60 no-rebuild] The expert's turn was stopped at the budget: its work so far stays, and the checks decide.
+      if (result.detail === BUDGET_CUT && task.escalated) {
+        log.emit("note", { feature: "F60", message: `Task ${task.id}: the expert's turn was stopped at the expert budget; its changes are kept and checked.` });
+        task.step = "checks";
+        saveState(state);
+        continue;
+      }
       if (result.stop === "done") {
         task.report = parseReport(result);
         // [F44 task-report]
@@ -1161,6 +1338,10 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         if (task.next === "initial" && !task.escalated) task.next = "continue";
         saveState(state);
         return stopFor(result, role);
+      }
+      // [F60 no-rebuild] No expert budget left for this task: keep the work, without failing the run.
+      if (task.escalated && isOn("no-rebuild") && result.detail === "expert budget reached") {
+        return failTask(run, task, "the expert budget is spent");
       }
       // The agent failed outright (refused, timed out, crashed): the expert takes over.
       task.history.push({ diff: diffOf(task), failures: `The ${role} stopped: ${result.stop}: ${result.detail ?? ""}` });
@@ -1182,6 +1363,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           log.emit("note", { feature: "F10", message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
         }
       }
+      // [F54 work-env] Install what the work declares now, before its checks.
+      const installFailed = await prepareEnv(run, task.worktree, task.prepared, task.id);
       let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
       const cannotRun = results.filter((r) => r.status === "unavailable").map((r) => r.name);
       if (cannotRun.length > 0) {
@@ -1202,6 +1385,23 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const regressions = failing.filter((r) => state.baseline?.find((b) => b.name === r.name)?.status !== "failed");
       const ok = regressions.length === 0 && (!isLastOpen(state, task) || failing.length === 0);
       log.emit("checks.finished", { phase: "task", task: task.id, round: task.round, results: brief(results), ok });
+      // [F56 env-blocked] An environment problem is not the worker's failure and never goes to the expert.
+      if (!ok && isOn("env-blocked")) {
+        const problem = environmentProblem(task, results, installFailed);
+        if (problem) {
+          task.latest = results;
+          if ((task.envRepairs ?? 0) < ENV_REPAIRS) {
+            task.envRepairs = (task.envRepairs ?? 0) + 1;
+            task.envProblem = problem;
+            task.next = "repair";
+            task.step = "agent";
+            saveState(state);
+            log.emit("env.problem", { feature: "F56", task: task.id, problem: problem.slice(0, 600), turn: task.envRepairs });
+            continue;
+          }
+          return failTask(run, task, `environment: ${problem.split("\n")[0]}`, { stop: true, failure: "engine" });
+        }
+      }
       const decision = observe(task.progress, attemptFrom(failing, diff), ok);
       if (ok) {
         task.step = wantsTester(state, task) ? "test" : "merge";
@@ -1230,10 +1430,15 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const candidate = commitAll(task.worktree, `neuromesh candidate: ${task.title}`, task.prepared);
       const testerDir = join(state.dir, "tasks", task.id, "tester");
       createDetachedWorktree(state.repo, testerDir, candidate);
-      prepareWorktree(state.repo, testerDir);
+      const testerPrepared = prepareWorktree(state.repo, testerDir);
+      // [F54 work-env] The copy gets the same environment, for the tester and the runs below.
+      await prepareEnv(run, testerDir, testerPrepared, task.id);
       const diff = git(task.worktree, "diff", "--binary", task.base!, candidate);
       const screens = state.brief?.surface === "tui" ? screensFor(run, task, testerDir) : undefined;
+      // [F58 acceptance-runs] The program used for real, before the tester looks.
+      const acceptance = await acceptanceFor(run, task, testerDir);
       let outcome: TurnResult;
+      let verdict: ReturnType<typeof parseVerdict>;
       try {
         outcome = await turn(run, {
           key: `${task.id}-test`,
@@ -1242,17 +1447,19 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           task: task.id,
           round: task.testRounds,
           cwd: testerDir,
-          prompt: testerPrompt(state, task, diff, screens),
+          prompt: testerPrompt(state, task, diff, screens, acceptance),
           access: "write",
           schema: VERDICT_SCHEMA,
         });
+        verdict = outcome.result.stop === "done" ? parseVerdict(outcome.result) : undefined;
+        // [F59 reproduced-findings] Each blocker's check is run before the copy goes.
+        if (verdict?.verdict === "fail" && isOn("reproduced-findings")) verdict = await checkFindings(run, task, testerDir, verdict, Boolean(screens));
       } finally {
         removeDetachedWorktree(state.repo, testerDir);
       }
       const { result } = outcome;
       if (result.stop === "cancelled") return stopFor(result, "tester");
       task.testRounds += 1;
-      const verdict = result.stop === "done" ? parseVerdict(result) : undefined;
       if (!verdict) {
         log.emit("note", { message: `The tester gave no usable verdict for task ${task.id} (${result.stop}); relying on the checks.` });
         task.step = "merge";
@@ -1335,7 +1542,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         task: task.id,
         round: task.round,
         cwd: task.worktree,
-        prompt: advisePrompt(state, task),
+        prompt: advisePrompt(state, task, observedFor(state, task)),
         access: "read-only",
         schema: ADVICE_SCHEMA,
       });
@@ -1364,7 +1571,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // rebuilding from the start, which is what every expensive build was.
       const lastFindings = task.history.at(-1)?.findings ?? [];
       task.patch = isOn("expert-patch") && checksPass(task) && lastFindings.length > 0;
-      if (!task.patch) resetTo(task.worktree, task.base!);
+      // [F60 no-rebuild] The worker's code stays; the expert fixes it in place.
+      if (!task.patch && !isOn("no-rebuild")) resetTo(task.worktree, task.base!);
       task.escalated = true;
       task.round = 0;
       task.next = "initial";
@@ -1419,7 +1627,7 @@ function nextRound(run: RunCtx, task: TaskState, next: "repair" | "review-fix"):
  * user can look at it; the run reports the task as failed. With `stop`, the
  * agent itself failed and the run ends as failed rather than finished.
  */
-function failTask(run: RunCtx, task: TaskState, reason: string, options: { keepWork?: boolean; stop?: boolean } = {}): Stop | undefined {
+function failTask(run: RunCtx, task: TaskState, reason: string, options: { keepWork?: boolean; stop?: boolean; failure?: "agent" | "engine" } = {}): Stop | undefined {
   const { state, log } = run;
   task.error = reason;
   if (options.keepWork !== false && task.base) {
@@ -1435,7 +1643,7 @@ function failTask(run: RunCtx, task: TaskState, reason: string, options: { keepW
   task.step = "done";
   saveState(state);
   log.emit("task.failed", { task: task.id, reason });
-  return options.stop ? { status: "failed", reason, failure: "agent" } : undefined;
+  return options.stop ? { status: "failed", reason, failure: options.failure ?? "agent" } : undefined;
 }
 
 function diffOf(task: TaskState): string {

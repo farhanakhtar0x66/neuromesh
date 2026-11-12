@@ -17,6 +17,8 @@ export function codexArgs(request: AgentRequest, schemaPath?: string): string[] 
   const args = request.resumeSessionId
     ? ["exec", "resume", request.resumeSessionId, "--json", "-c", `sandbox_mode="${sandbox}"`]
     : ["exec", "--json", "-C", request.cwd, "-s", sandbox];
+  // [F55 worker-network] Codex's workspace-write sandbox has no network unless asked.
+  if (request.network && request.access === "write") args.push("-c", "sandbox_workspace_write.network_access=true");
   if (request.model) args.push("-m", request.model);
   if (request.effort) args.push("-c", `model_reasoning_effort="${request.effort}"`);
   if (schemaPath) args.push("--output-schema", schemaPath);

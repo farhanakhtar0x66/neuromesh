@@ -30,8 +30,17 @@ export const SPEC_SCHEMA = {
     behaviour: { type: "array", items: { type: "string" } },
     out_of_scope: { type: "array", items: { type: "string" } },
     design: { type: "array", items: { type: "string" } },
+    acceptance: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { command: { type: "string" }, expect: { type: "string" } },
+        required: ["command", "expect"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design"],
+  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design", "acceptance"],
   additionalProperties: false,
 };
 
@@ -74,13 +83,22 @@ export const VERDICT_SCHEMA = {
           file: { type: "string" },
           reproduce: { type: "string" },
           severity: { type: "string", enum: ["blocker", "minor"] },
+          check: { type: "string" },
         },
-        required: ["problem", "file", "reproduce", "severity"],
+        required: ["problem", "file", "reproduce", "severity", "check"],
         additionalProperties: false,
       },
     },
   },
   required: ["verdict", "summary", "findings"],
+  additionalProperties: false,
+};
+
+/** [F63 scout-facts] What the scout found. */
+export const FACTS_SCHEMA = {
+  type: "object",
+  properties: { facts: { type: "array", items: { type: "string" } } },
+  required: ["facts"],
   additionalProperties: false,
 };
 
@@ -132,12 +150,18 @@ function isWholeRequest(state: RunState, task: TaskState): boolean {
 }
 
 /** A cheap model turns a request too short to build from into a product spec. */
-export function specPrompt(request: string, brief?: string): string {
+export function specPrompt(request: string, brief?: string, facts?: string[]): string {
+  // [F63 scout-facts] Checked on this machine before you write, so the spec does not guess.
+  const checked = facts && facts.length > 0 ? `\nFacts checked on this machine and against the real data just now (trust these over memory; design for them):\n${facts.map((f) => `- ${f}`).join("\n")}\n` : "";
+  // [F54 work-env]
+  const env = isOn("work-env")
+    ? "\nNeuromesh installs the packages a project declares (requirements.txt or pyproject.toml for Python, package.json for Node) into an environment it manages, and the developer, the checks and the acceptance runs all use it. A third-party package is fine where it is the usual choice; keep them few.\n"
+    : "";
   return `You are the lead engineer. A less experienced developer is about to build the request below on their own, from what you write now; you will not see their work. Write the product spec and the design they need. Do not write code and do not create or edit files.
 
 The request:
 ${request}
-${brief && brief !== request ? `\nThe full brief they will get (the request plus standards they must meet):\n${brief}\n` : ""}
+${brief && brief !== request ? `\nThe full brief they will get (the request plus standards they must meet):\n${brief}\n` : ""}${checked}${env}
 If the request is already detailed, do not repeat it: cover only what it leaves open, and put most of your effort into the design.
 
 Give your answer in the required JSON format:
@@ -147,6 +171,7 @@ Give your answer in the required JSON format:
 - behaviour: the exact rules that are easy to get wrong: how every number shown is calculated, what every key or command does, what happens at the edges (empty input, the end, a mistake, going back), and what each screen or output shows.
 - out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
 - design: ${isOn("spec-cap") ? "5 to 8" : "6 to 12"} points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
+- acceptance: ${isOn("acceptance-runs") ? "2 to 4 real uses of the finished program, each a shell command run from the project folder (relative paths only, no installs, under 2 minutes, no keyboard input) and what must be true of its result: its output, or the files it writes (name them). Use the real thing the program is for (a real website, a real file), not a test fixture: these catch what tests on made-up samples miss. A terminal program that needs a keyboard gets an empty list." : "an empty list."}
 
 Rules:
 - Do not contradict the request, and do not choose the programming language unless the request does.
@@ -163,6 +188,13 @@ export function parseSpec(result: AgentResult): Spec | undefined {
   const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim()) : []);
   const features = list(raw.features);
   if (features.length === 0) return undefined;
+  const acceptance = Array.isArray(raw.acceptance)
+    ? (raw.acceptance as unknown[])
+        .map((a) => a as { command?: unknown; expect?: unknown })
+        .filter((a) => typeof a?.command === "string" && a.command.trim() !== "")
+        .map((a) => ({ command: (a.command as string).trim(), expect: typeof a.expect === "string" ? a.expect.trim() : "" }))
+        .slice(0, 4)
+    : [];
   return {
     name: typeof raw.name === "string" ? raw.name.trim() : "",
     summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
@@ -170,7 +202,34 @@ export function parseSpec(result: AgentResult): Spec | undefined {
     behaviour: list(raw.behaviour),
     outOfScope: list(raw.out_of_scope),
     design: list(raw.design),
+    ...(acceptance.length > 0 ? { acceptance } : {}),
   };
+}
+
+/**
+ * [F63 scout-facts] A cheap model checks the facts a spec depends on before the
+ * expert writes it: what this machine has, and what the real data looks like.
+ * The python-bot spec guessed Wikipedia's math markup and was wrong.
+ */
+export function scoutPrompt(request: string, machine: string[]): string {
+  return `A program is about to be designed for the request below. Before the design is written, check the facts it depends on. Do not write the program.
+
+The request:
+${request}
+
+Known about this machine already:
+${machine.map((m) => `- ${m}`).join("\n")}
+
+Check, briefly (a few commands; you may use the network and write scratch files in this folder):
+1. If the program works with something outside itself (a website, an online service, a file format, a device), fetch or open one real example and note its exact shape: the parts the program must handle, and anything that differs from what most people would assume (markup that changed, fields that are missing, limits, required headers).
+2. Anything about this machine that the design must respect (a package that will not install, a tool that is missing).
+
+Give your answer in the required JSON format: facts, at most 10, each one concrete sentence a designer can act on. Leave out what any developer already knows.`;
+}
+
+export function parseFacts(result: AgentResult): string[] {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { facts?: unknown } | undefined;
+  return Array.isArray(raw?.facts) ? raw.facts.filter((f): f is string => typeof f === "string" && f.trim() !== "").map((f) => f.trim().slice(0, 400)).slice(0, 10) : [];
 }
 
 /** The first turn of a task. */
@@ -323,7 +382,7 @@ ${findingText(earlier.slice(-8))}
 Check whether they are fixed. Do not ask for the opposite of an earlier finding, and do not fail the change over a choice the request (and its spec, if any) leaves open: there, the developer's choice stands.`;
 }
 
-export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string): string {
+export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string, acceptance?: string): string {
   const what = isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
   return `You are reviewing a change made by another engineer. Decide whether it does what was asked, correctly.
 
@@ -340,6 +399,11 @@ Keep the review focused and quick: go through the requirements the request state
     screens
       ? `\n\nThis is a full-screen terminal program, so reading the code is not enough. ${screens}\n\nCompare these screens with the request. A garbled, cut-off or overflowing screen, a crash or stack trace, typed text that does not appear or is not marked, a key that does the wrong thing, or a program that does not quit is a blocker. Point to the screen that shows it.`
       : ""
+  }${
+    // [F58 acceptance-runs]
+    acceptance
+      ? `\n\nNeuromesh ran the program for real, as the spec's acceptance runs say, before you started. Judge these results first: each one either meets what it expects or it does not. A result that falls short is a blocker even when every test passes.\n\n${acceptance}`
+      : ""
   }
 
 Be strict about the request and lenient about style. Do not fail the change for things the request did not ask for.
@@ -348,7 +412,8 @@ Give your answer in the required JSON format:
 - verdict: "pass" or "fail"
 - summary: one sentence
 - findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass
-- severity of each finding: "blocker" when something the request states is missing or wrong, or the program crashes, hangs or loses data; "minor" for everything else (polish, wording, layout details, cases the request does not mention). Fail the change only if there is at least one blocker; list minor findings with a pass.`;
+- severity of each finding: "blocker" when something the request states is missing or wrong, or the program crashes, hangs or loses data; "minor" for everything else (polish, wording, layout details, cases the request does not mention). Fail the change only if there is at least one blocker; list minor findings with a pass.
+- check: ${isOn("reproduced-findings") ? "a shell command, run from the project folder, that exits non-zero while the problem is there and 0 once it is fixed. It must stand on its own (for example `python3 -c ...` or `node -e ...` with the probe inline, or a grep of a file an acceptance run wrote); your edits to the project's files are undone before it runs. Neuromesh runs it, and a blocker whose check exits 0 is dropped as not shown. Write a check for every blocker you can; leave it empty only where no command can show the problem (layout, wording)." : "an empty string."}`;
 }
 
 function attemptsText(task: TaskState): string {
@@ -361,17 +426,41 @@ function attemptsText(task: TaskState): string {
     .join("\n\n");
 }
 
+/**
+ * [F62 advice-cap] The stuck state in a few thousand characters: the latest
+ * change (cut short; the expert can read the files), what failed, and the
+ * reviewer's open findings. The earlier attempt shows only which files it touched.
+ */
+export function compactAttempts(task: TaskState): string {
+  const last = task.history.at(-1);
+  if (!last) return "";
+  const earlier = task.history.at(-2);
+  const files = (diff: string): string[] => [...diff.matchAll(/^diff --git a\/(\S+)/gm)].map((m) => m[1]!).slice(0, 30);
+  const findings = (last.findings ?? []).filter((f) => f.severity !== "minor");
+  const parts = [
+    `The latest change touches: ${files(last.diff).join(", ") || "(nothing)"}. Read the files for the detail; the start of the diff:\n\`\`\`diff\n${last.diff.slice(0, 2_500)}\n\`\`\``,
+    `What went wrong:\n${last.failures.slice(-1_800) || "(the checks passed)"}`,
+  ];
+  if (findings.length > 0) parts.push(`The reviewer's open findings:\n${findingText(findings.slice(0, 5))}`);
+  if (earlier) parts.push(`The attempt before touched: ${files(earlier.diff).join(", ") || "(nothing)"}; it failed with:\n${(earlier.failures || "(checks passed; reviewer findings)").slice(-600)}`);
+  return parts.join("\n\n");
+}
+
 /** The cheap first step of escalation: the expert looks, explains, and the worker fixes. */
-export function advisePrompt(state: RunState, task: TaskState): string {
+export function advisePrompt(state: RunState, task: TaskState, observed?: string): string {
+  const attempts = isOn("advice-cap") ? compactAttempts(task) : attemptsText(task);
   return `You are the lead engineer. A worker on your team is stuck on the task below, and you are asked for advice, not to do the work. Do not change any files. The current directory holds the worker's latest attempt.
 
 ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
 
 The worker's last attempts and how they failed (its reasoning is left out; do not assume its approach was right):
 
-${attemptsText(task) || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
+${attempts || "(no attempt was recorded)"}${
+    // [F61 advice-facts] What the worker saw happen, which is evidence, unlike its theories.
+    observed ? `\n\nWhat the worker observed (commands that failed in its environment, and what it reported; facts about the environment, not about the cause):\n${observed}` : ""
+  }${contextSection(state)}${toolsNote()}
 
-Read what you need, find the real cause, and tell the worker how to fix it. The worker is capable but missed something; give it the key insight and concrete steps (which file, which function, what to change), not a full implementation. Keep it short.
+Read only what you need, find the real cause, and tell the worker how to fix it. The worker is capable but missed something; give it the key insight and concrete steps (which file, which function, what to change), not a full implementation. Every step must be something the worker can do where it works: it cannot change the machine, and Neuromesh installs declared packages itself. If a step needs the environment changed (a package that will not install, no network), say so in the diagnosis instead. Keep it short.
 
 Give your answer in the required JSON format:
 - diagnosis: what is actually wrong, in a few sentences
@@ -425,6 +514,35 @@ Fix these problems with the smallest changes that do it. Keep the worker's struc
 ${checkList(state.checks)}
 
 ${WORKER_RULES}`;
+}
+
+/**
+ * [F60 no-rebuild] The expert fixes the worker's code in place: never a rebuild.
+ * Every expensive build so far was a rebuild from an empty folder.
+ */
+export function fixInPlacePrompt(state: RunState, task: TaskState, observed?: string): string {
+  return `You are the lead engineer. A worker built the task below but could not finish it, even with your advice. The current directory holds its work.
+
+${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
+
+Where it stands (the worker's reasoning is left out on purpose):
+
+${compactAttempts(task) || "(no attempt was recorded)"}${observed ? `\n\nWhat the worker observed:\n${observed}` : ""}${task.advice ? `\n\nYour earlier advice, which the worker followed:\n${adviceText(task.advice)}` : ""}${contextSection(state)}${toolsNote()}
+
+Fix what is wrong in the worker's code with the smallest changes that do it. Keep its structure and everything that works; do not rewrite, restyle or start over. Your time on this is limited and the turn is stopped when it runs out, so fix the most important problem first.
+
+${checkList(state.checks)}
+
+${WORKER_RULES}`;
+}
+
+/** [F56 env-blocked] The environment, not the code, was at fault; this does not count as a repair round. */
+export function envRepairPrompt(task: TaskState): string {
+  return `Neuromesh ran the project's checks on your change, and they failed because of the environment, not your logic:
+
+${task.envProblem ?? "(no detail)"}
+
+Neuromesh installs exactly what requirements.txt (or pyproject.toml) and package.json declare, before every check. Declare what is missing there, under its installable package name; do not skip or remove tests because a package is missing. Then run the checks again and give your final answer in the same JSON format as before.`;
 }
 
 export function escalationPrompt(state: RunState, task: TaskState): string {
@@ -487,7 +605,7 @@ export function parseVerdict(result: AgentResult): Verdict | undefined {
   const findings = Array.isArray(v.findings)
     ? v.findings
         .filter((f): f is Finding => typeof f?.problem === "string" && f.problem.trim() !== "")
-        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined, severity: f.severity === "minor" ? ("minor" as const) : ("blocker" as const) }))
+        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined, severity: f.severity === "minor" ? ("minor" as const) : ("blocker" as const), check: typeof f.check === "string" && f.check.trim() !== "" ? f.check.trim() : undefined }))
     : [];
   // A fail without anything concrete to fix is not actionable.
   if (v.verdict === "fail" && findings.length === 0) return { verdict: "pass", summary: `${v.summary ?? ""} (no concrete findings)`, findings };

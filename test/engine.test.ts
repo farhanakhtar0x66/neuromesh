@@ -399,7 +399,7 @@ test("the tester's findings go back to the worker's session, and a pass lets the
     if (isTest(req)) {
       tests += 1;
       return tests === 1
-        ? { structured: { verdict: "fail", summary: "not quite", findings: [{ problem: "fixed.txt lacks the word great", file: "fixed.txt", reproduce: "cat fixed.txt" }] } }
+        ? { structured: { verdict: "fail", summary: "not quite", findings: [{ problem: "fixed.txt lacks the word great", file: "fixed.txt", reproduce: "cat fixed.txt", check: "grep -q great fixed.txt" }] } }
         : { structured: { verdict: "pass", summary: "good", findings: [] } };
     }
     write(req.cwd, "fixed.txt", "ok");
@@ -444,8 +444,9 @@ test("with test 'no-checks', the tester only runs when the project has no checks
   assert.equal(b.fake.calls.filter(isTest).length, 1, "no checks, so the tester reviews");
 });
 
-test("a stuck worker is escalated: the expert starts clean and sees diffs and failures, not the chat", async () => {
+test("with no-rebuild off, a stuck worker is escalated: the expert starts clean and sees diffs and failures, not the chat", async () => {
   const repo = fixableRepo();
+
   const { ctx, fake, events } = context((req) => {
     if (req.model === "fake-expert") {
       assert.ok(!existsSync(join(req.cwd, "fixed.txt")), "the expert starts from the task's clean start");
@@ -455,7 +456,8 @@ test("a stuck worker is escalated: the expert starts clean and sees diffs and fa
     write(req.cwd, "fixed.txt", "nope");
     return report("SECRET-WORKER-REASONING");
   });
-  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 3 }) }, ctx);
+  process.env.NEUROMESH_DISABLE = "no-rebuild";
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 3 }) }, ctx).finally(() => delete process.env.NEUROMESH_DISABLE);
 
   assert.equal(state.status, "finished", state.reason);
   assert.equal(state.outcome?.checks, "passed");
@@ -941,7 +943,7 @@ test("when only the reviewer objects after the expert's advice, the task merges 
   const { ctx, fake } = context((req) => {
     if (isTest(req)) {
       reviews += 1;
-      return { structured: { verdict: "fail", summary: "no", findings: [{ problem: `problem ${reviews}`, file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+      return { structured: { verdict: "fail", summary: "no", findings: [{ problem: `problem ${reviews}`, file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker", check: "grep -q great fixed.txt" }] } };
     }
     if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
       return { structured: { diagnosis: "do it differently", steps: ["one"], files: ["fixed.txt"] } };
@@ -999,7 +1001,7 @@ test("workers get the repository map and the shared tool in their first prompt",
 test("with passing checks and open review findings, the expert patches the worker's code instead of starting over", async () => {
   const repo = fixableRepo();
   const { ctx, fake, events } = context((req) => {
-    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "the greeting is missing", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "the greeting is missing", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker", check: "grep -q hello fixed.txt" }] } };
     if (req.model === "fake-expert") {
       assert.equal(readFileSync(join(req.cwd, "fixed.txt"), "utf8"), "ok\n", "the expert sees the worker's code");
       return report("patched");
@@ -1025,7 +1027,7 @@ test("the expert budget in dollars keeps passing work instead of failing it, and
   const repo = fixableRepo();
   const SOL = { backend: "fake", model: "gpt-6.1-sol", tier: "expert" as const };
   const { ctx, fake, events } = context((req) => {
-    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "still wrong", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "still wrong", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker", check: "grep -q right fixed.txt" }] } };
     if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
       return { structured: { diagnosis: "look again", steps: ["one"] }, usage: { input: 1_000_000, output: 0 } };
     }

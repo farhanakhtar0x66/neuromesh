@@ -67,6 +67,8 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     signal,
     stdin: invocation.stdin,
     logPath: request.logPath,
+    // [F54 work-env]
+    env: request.env ? { ...process.env, ...request.env } : undefined,
     onSpawn: request.onSpawn,
     onLine: (line) => {
       if (!line.startsWith("{")) return;

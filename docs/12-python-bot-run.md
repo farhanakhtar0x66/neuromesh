@@ -174,3 +174,35 @@ first case, and the replays above were its first use.
 
 A sweep is about ten Luna turns ($0.01 to $0.02 each) and, for the spec role,
 one Opus turn ($0.16) per variant.
+
+## Built (2026-11-12)
+
+The eight changes are in the engine as F54 to F63, each switchable with
+`--disable <key>` (`docs/10-features.md`):
+
+| Change | Features |
+| --- | --- |
+| 1. A working environment | F54 `work-env`, F55 `worker-network`, F56 `env-blocked` |
+| 2. No expert rebuild | F60 `no-rebuild` |
+| 3. A check that tests nothing is not a pass | F57 `hollow-checks` |
+| 4. Real output as evidence | F58 `acceptance-runs` |
+| 5. Only reproduced findings count | F59 `reproduced-findings` |
+| 6. Facts before the spec | F63 `scout-facts` |
+| 7. The adviser gets what the worker observed | F61 `advice-facts` |
+| 8. A small advice packet | F62 `advice-cap` |
+
+`factory-opus-luna`'s expert budget went from $1.00 to $0.60 (estimated):
+the spec, one advice turn and a short in-place fix, with a running expert turn
+stopped at the limit.
+
+Checked with the fake backend (19 new tests, 154 in all) and two replays with
+no model calls on the worker's real code from this run:
+
+- Its round-2 version, whose check "passed" with four converter tests skipped
+  ("install requirements.txt to run converter tests"), is now a failed check
+  that says why.
+- With the engine's environment, `beautifulsoup4` installs from its
+  requirements.txt, all 13 tests run, and the one real bug (`** bold **`)
+  shows as an ordinary failing test, which a repair round handles.
+
+Not yet checked live. The role tests come next, then a rerun of the request.

@@ -210,8 +210,9 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
 
 ## Next steps
 
-0. The six changes in `docs/12-python-bot-run.md`, environment first, then
-   the role tests, then rerun the python-bot request.
+0. Built 2026-11-12: the python-bot changes, F54 to F63
+   (`docs/12-python-bot-run.md`, "Built"). Next: the role tests on a prompt
+   the owner gives, then rerun the python-bot request. Not yet checked live.
 1. Done 2026-11-12: the telemetry endpoint is live at
    `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
    requests without keys are refused). `neuromesh telemetry pull` reads it.

@@ -48,6 +48,11 @@ export interface Spec {
   outOfScope: string[];
   /** How to build it: modules and what each does, the data model, the hard parts. */
   design: string[];
+  /**
+   * [F58 acceptance-runs] Real commands the engine runs on the finished work,
+   * and what must be true of their result. The reviewer judges the result.
+   */
+  acceptance?: { command: string; expect: string }[];
 }
 
 export interface Brief {
@@ -205,12 +210,12 @@ function standardsFor(kind: Kind, surface: Surface | undefined, everything: stri
         : undefined;
     if (pick) s.push(`The request names no language. Use ${pick}, so it runs here with nothing to install.`);
   } else {
-    s.push("Use the language and tools the request names. Keep dependencies few, and only ones that install without extra setup.");
+    s.push("Use the language and tools the request names. Keep dependencies few: declare each one (requirements.txt, package.json), and Neuromesh installs them.");
   }
   s.push("One documented command starts it. Write a README.md with that command, what the program does and how to use it.");
   s.push("Keep the logic (state, rules, calculations, parsing) in plain modules separate from input and output, and unit-test those modules.");
   s.push("Provide a test command that runs with no setup (for Node, a `test` script in package.json using `node --test`), and make it pass.");
-  s.push("No network access at run time; ship any data the program needs.");
+  s.push("No network access at run time unless the request needs it (fetching, scraping, an online service); then only for that, and the tests still run offline.");
   s.push("Bad input must give a clear message, never a stack trace.");
   if (surface === "tui") {
     s.push("Restore the terminal on every way out (normal quit, Ctrl-C, an unexpected error): leave raw mode, show the cursor, leave the alternate screen.");
@@ -306,6 +311,10 @@ export function renderBrief(brief: Brief): string {
         spec.behaviour.length > 0 ? `Exact behaviour:\n${list(spec.behaviour)}` : "",
         spec.outOfScope.length > 0 ? `Out of scope, do not build:\n${list(spec.outOfScope)}` : "",
         spec.design.length > 0 ? `Design, follow it unless it is clearly wrong:\n${list(spec.design)}` : "",
+        // [F58 acceptance-runs]
+        spec.acceptance && spec.acceptance.length > 0
+          ? `Acceptance runs (Neuromesh runs these on the finished work from the project folder, and a reviewer judges the result; try them yourself):\n${spec.acceptance.map((a) => `- \`${a.command}\`: ${a.expect}`).join("\n")}`
+          : "",
       ]
         .filter(Boolean)
         .join("\n\n"),
