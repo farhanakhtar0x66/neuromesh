@@ -192,6 +192,8 @@ const BUDGET_CUT = "stopped: the expert budget was reached during this turn";
 /** A tool that prints nothing for this long has stalled; the turn is stopped and retried once. */
 const IDLE_MS = 10 * 60_000;
 const MAX_CONFLICTS = 2;
+/** [F63 scout-facts] The scout's own time limit. */
+const SCOUT_MS = 4 * 60_000;
 
 export function modelKey(c: RoleConfig): string {
   return `${c.backend}/${c.model ?? "default"}`;
@@ -678,6 +680,8 @@ interface TurnRequest {
   resume?: { sessionId?: string; model?: string };
   /** Models to try instead of the role's own list (the worker ladder from the task's rung up). */
   chain?: RoleConfig[];
+  /** A shorter time limit than the run's, for a turn that is only a help. */
+  timeoutMs?: number;
 }
 
 interface TurnResult {
@@ -877,7 +881,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     writable: isOn("write-sandbox") ? (req.access === "write" ? [req.cwd, join(state.repo, ".git", "worktrees"), join(state.repo, ".git", "objects")] : []) : undefined,
     outputSchema: req.schema,
     resumeSessionId,
-    timeoutMs: state.turnTimeoutMs,
+    timeoutMs: Math.min(state.turnTimeoutMs, req.timeoutMs ?? Number.POSITIVE_INFINITY),
     idleMs: IDLE_MS,
     logPath,
     signal: AbortSignal.any([run.signal, turnStop.signal]),
@@ -1126,7 +1130,10 @@ async function scoutStep(run: RunCtx): Promise<string[]> {
     access: "write",
     schema: FACTS_SCHEMA,
     chain: first ? [first] : undefined,
+    // A quick look, not a study: past this the spec is written without it.
+    timeoutMs: SCOUT_MS,
   });
+  if (result.stop === "timeout") log.emit("note", { feature: "F63", message: `The fact check took over ${SCOUT_MS / 60_000} minutes and was stopped; the spec is written without it.` });
   const facts = result.stop === "done" ? parseFacts(result) : [];
   log.emit("facts.ready", { feature: "F63", facts });
   return facts;

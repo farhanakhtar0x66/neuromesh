@@ -17,7 +17,7 @@ import { EventLog } from "../src/engine/store.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
 import type { RoleChain } from "../src/engine/types.ts";
 import type { Preset } from "../src/presets/presets.ts";
-import { git } from "../src/workspace/git.ts";
+import { git, useCommandLineTools } from "../src/workspace/git.ts";
 import { commitAll, createWorktree, healWorktree } from "../src/workspace/workspace.ts";
 
 const scratch = mkdtempSync(join(tmpdir(), "neuromesh-reliability-test-"));
@@ -222,4 +222,20 @@ test("an event log whose last line was cut by a kill loses only that line", () =
   const lines = readFileSync(path, "utf8").split("\n").filter(Boolean);
   assert.equal(lines.length, 3);
   assert.equal((JSON.parse(lines[2]!) as { type: string }).type, "c");
+});
+
+test("when Xcode is away (macOS, mid-update), git falls back to the Command Line Tools' copy", { skip: process.platform !== "darwin" || !existsSync("/Library/Developer/CommandLineTools/usr/bin/git") }, () => {
+  const before = process.env.DEVELOPER_DIR;
+  try {
+    delete process.env.DEVELOPER_DIR;
+    assert.equal(useCommandLineTools("fatal: not a git repository"), false, "an ordinary git error changes nothing");
+    assert.equal(process.env.DEVELOPER_DIR, undefined);
+    assert.equal(useCommandLineTools("xcrun: error: invalid active developer path (/Applications/Xcode.app/Contents/Developer), missing xcrun at: ..."), true);
+    assert.equal(process.env.DEVELOPER_DIR, "/Library/Developer/CommandLineTools");
+    assert.match(git(".", "--version"), /git version/);
+    assert.equal(useCommandLineTools("xcrun: error: invalid active developer path"), false, "tried once, not in a loop");
+  } finally {
+    if (before === undefined) delete process.env.DEVELOPER_DIR;
+    else process.env.DEVELOPER_DIR = before;
+  }
 });

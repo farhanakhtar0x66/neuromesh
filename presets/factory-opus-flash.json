@@ -1,0 +1,73 @@
+{
+  "name": "factory-opus-flash",
+  "description": "Untested candidate (2026-11-12). Claude Opus 5.5 is lead engineer (spec, plan, splits, expert fixes); Gemini 3.8 Flash through Antigravity is worker and tester, on Google's quota rather than Claude's. Made after the bookshelf run showed that a Haiku worker shares Opus's quota (docs/15-bookshelf-run.md).",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-high"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000,
+  "expertBudgetUsd": 0.6,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash-medium"
+    },
+    {
+      "backend": "agy",
+      "model": "gemini-3.8-flash-high"
+    }
+  ]
+}

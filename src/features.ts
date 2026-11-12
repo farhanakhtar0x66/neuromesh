@@ -647,7 +647,7 @@ export const FEATURES: Feature[] = [
     name: "Expert parts go to a worker when the budget is spent",
     added: "2026-11-12",
     files: ["src/engine/run.ts (expertCanTake, driveTask)"],
-    what: "A task the plan gives the expert goes to the top worker rung when the expert budget left cannot pay for one expert turn (estimated from this run's expert turns, at least $0.15). An expert-owned turn stopped at the budget keeps its work; the checks decide, and any further turns on that task are the worker's, never a second expert turn.",
+    what: "A task the plan gives the expert goes to the top worker rung when the expert budget left cannot pay for one expert turn (estimated from this run's expert turns, at least $0.15). The same when the preset has no expert at all. An expert-owned turn stopped at the budget keeps its work; the checks decide, and any further turns on that task are the worker's, never a second expert turn.",
     optional: true,
   },
   {
@@ -683,7 +683,7 @@ export const FEATURES: Feature[] = [
     name: "Work folders are put right after an agent has been in them",
     added: "2026-11-12",
     files: ["src/workspace/workspace.ts (healWorktree)", "src/engine/run.ts (healTask)"],
-    what: "Before and after every agent turn that may write, the engine checks the work folder and repairs what agents and their tools do to it: a deleted folder (made again from its branch), a stale git lock file, a half-done merge or rebase, a switched branch or detached HEAD (the branch name is put back, keeping the commits), and a git repository started inside the work, which would silently leave those files out of the result. Each used to end the run with an engine error or lose work. Found by the fault harness (evals/chaos.ts).",
+    what: "Before and after every agent turn that may write, the engine checks the work folder and repairs what agents and their tools do to it: a deleted folder (made again from its branch), a stale git lock file, a half-done merge or rebase, a switched branch or detached HEAD (the branch name is put back, keeping the commits), and a git repository started inside the work, which would silently leave those files out of the result. Git commands that meet another process's lock file are tried again. Each used to end the run with an engine error or lose work. Found by the fault harness (evals/chaos.ts).",
     optional: true,
   },
   {
@@ -702,6 +702,15 @@ export const FEATURES: Feature[] = [
     added: "2026-11-12",
     files: ["src/engine/run.ts (syncTask)"],
     what: "Before a task's checks run, the work other tasks merged since it started is merged into its folder, and its diff is counted from there. The later of two tasks built at the same time used to be tested without the other's work: its checks failed through no fault of its own, the worker repaired nothing, the expert was called in and the task was marked failed while the merged result passed. Found by the fault harness (evals/chaos.ts).",
+    optional: true,
+  },
+  {
+    id: "F76",
+    key: "leftover-stop",
+    name: "A finished tool always ends its turn, and what it left running is stopped",
+    added: "2026-11-12",
+    files: ["src/backends/proc.ts (runProcess, taggedProcesses)"],
+    what: "Every program a turn, a check or an acceptance run starts carries a tag in its environment. When the tool has exited, or was stopped at a time limit or by the person, whatever still carries the tag is stopped, and the turn ends even if its output pipe is still held open. A program the tool left running in a group of its own (a server started in the background) used to keep the turn waiting for as long as it lived, past every time limit, and survived the run. Found while reviewing the process runner for the fault harness.",
     optional: true,
   },
 ];

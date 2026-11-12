@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 const MAX_BUFFER = 256 * 1024 * 1024;
 
@@ -9,6 +10,22 @@ const MAX_BUFFER = 256 * 1024 * 1024;
  */
 const LOCKED = /\.lock': File exists|Unable to create '.*\.lock'|cannot lock ref|could not lock|Another git process seems to be running/i;
 const LOCK_WAITS_MS = [120, 300, 700, 1_500];
+
+/**
+ * On macOS `git` is a shim that asks Xcode where the real one is. While Xcode
+ * is being updated or moved that fails for many minutes, although the Command
+ * Line Tools' git is still there. The engine, and every tool it starts from
+ * then on, is pointed at that one for the rest of the process.
+ */
+const XCODE_GONE = /invalid active developer path|xcrun: error|unable to find utility "git"/i;
+const COMMAND_LINE_TOOLS = "/Library/Developer/CommandLineTools";
+
+export function useCommandLineTools(stderr: string): boolean {
+  if (process.platform !== "darwin" || process.env.DEVELOPER_DIR === COMMAND_LINE_TOOLS || !XCODE_GONE.test(stderr)) return false;
+  if (!existsSync(`${COMMAND_LINE_TOOLS}/usr/bin/git`)) return false;
+  process.env.DEVELOPER_DIR = COMMAND_LINE_TOOLS;
+  return true;
+}
 
 function pause(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -26,6 +43,7 @@ export function git(cwd: string, ...args: string[]): string {
       });
     } catch (error) {
       const e = error as { stderr?: string; message: string };
+      if (useCommandLineTools(e.stderr ?? "")) continue;
       const wait = LOCK_WAITS_MS[attempt];
       if (wait !== undefined && LOCKED.test(e.stderr ?? "")) {
         pause(wait);

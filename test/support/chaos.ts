@@ -14,6 +14,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AgentBackend, AgentRequest, AgentResult } from "../../src/backends/types.ts";
+import { applyRun } from "../../src/engine/apply.ts";
 import { resumeRun, startRun } from "../../src/engine/run.ts";
 import type { EngineContext } from "../../src/engine/run.ts";
 import { loadState } from "../../src/engine/store.ts";
@@ -22,6 +23,7 @@ import type { RoleChain, RoleConfig, RunState } from "../../src/engine/types.ts"
 import { FEATURES } from "../../src/features.ts";
 import type { Preset } from "../../src/presets/presets.ts";
 import { estimateCost } from "../../src/usage/prices.ts";
+import { git } from "../../src/workspace/git.ts";
 
 export interface ChaosOptions {
   /** A folder the run may fill and that the caller removes. */
@@ -91,7 +93,8 @@ function dice(seed: number): Dice {
   };
 }
 
-const sh = (cwd: string, ...args: string[]): string => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+// Through the engine's own git helper, which survives a lock held for a moment and Xcode being away.
+const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
 type Call = "scout" | "spec" | "plan" | "review" | "advice" | "build";
@@ -109,7 +112,7 @@ function callKind(r: AgentRequest): Call {
 const GARBAGE: unknown[] = [null, "not json at all", {}, [], 42, { tasks: [null] }, { tasks: "three" }, { tasks: [{ id: 7 }] }, { verdict: 5, findings: "none" }, { verdict: "fail" }, { verdict: "fail", findings: [null, 3] }, { status: 3, summary: null }, { diagnosis: [], steps: "do it" }, { facts: "one" }, { name: 1, tasks: [{}], acceptance: "run it" }, { summary: "x".repeat(200_000) }];
 
 // The features that keep a run alive are never switched off here: the rules below rest on them.
-const PROTECTIVE = ["heal-worktree", "adapter-guard", "sync-before-checks"];
+const PROTECTIVE = ["heal-worktree", "adapter-guard", "sync-before-checks", "leftover-stop"];
 const OPTIONAL = FEATURES.filter((f) => f.optional && !PROTECTIVE.includes(f.key)).map((f) => f.key);
 // Features that start other programs the harness does not model (a terminal recorder, package installs).
 const ALWAYS_OFF = ["screen-check"];
@@ -555,6 +558,33 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     }
     // A kill may cut the line being written; nothing else may damage the log.
     if (damaged > (options.resume ? 1 : 0)) broke(`the event log on disk has ${damaged} damaged line(s)`);
+    // Last, what the person does next: apply the result. What the run built is what they get.
+    if (state.status === "finished" && state.outcome?.checks !== "failed" && !hung && !runaway) {
+      const built = new Map<string, string | undefined>();
+      for (const f of state.outcome?.files ?? []) built.set(f.path, existsSync(join(state.worktree, f.path)) ? readFileSync(join(state.worktree, f.path), "utf8") : undefined);
+      try {
+        applyRun(loadState(state.dir));
+        for (const [path, text] of built) {
+          const got = existsSync(join(repo, path)) ? readFileSync(join(repo, path), "utf8") : undefined;
+          if (got !== text) {
+            broke(`after applying, ${path} in the repository is not what the run built`);
+            break;
+          }
+        }
+        if (state.outcome?.checks === "passed" && withChecks && existsSync(join(repo, "check.js"))) {
+          try {
+            execFileSync("node", ["check.js"], { cwd: repo, stdio: "ignore" });
+          } catch {
+            broke("the checks passed in the run, but fail in the repository after applying it");
+          }
+        }
+        const after = sh(repo, "worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree ")).length;
+        if (after !== 1) broke(`${after - 1} work folder(s) left after applying`);
+        if (sh(repo, "branch", "--list", "neuromesh*").trim()) broke("run branches left after applying");
+      } catch (error) {
+        broke(`applying the finished run failed: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+      }
+    }
   } else if (!hung && violations.length === 0) {
     broke("the run returned nothing");
   }

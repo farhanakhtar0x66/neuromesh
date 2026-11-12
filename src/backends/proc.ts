@@ -10,6 +10,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { isOn } from "../features.ts";
 import { createInterface } from "node:readline";
 
 export interface ProcOptions {
@@ -153,6 +154,8 @@ function taggedProcesses(tag: string): number[] {
 }
 
 function signalTagged(tag: string, signal: NodeJS.Signals): void {
+  // [F76 leftover-stop]
+  if (!isOn("leftover-stop")) return;
   for (const pid of taggedProcesses(tag)) {
     try {
       process.kill(pid, signal);
@@ -234,6 +237,8 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
      * group of its own); waiting for it would hang the run for as long as it lives.
      */
     const abandonAfter = (ms: number): void => {
+      // [F76 leftover-stop]
+      if (!isOn("leftover-stop")) return;
       setTimeout(() => {
         if (done) return;
         child.stdout.destroy();
@@ -285,7 +290,7 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
       // The tool is gone. Its output normally closes at once; if something it
       // started still holds it, that is stopped, and the turn ends either way.
       setTimeout(() => {
-        if (done) return;
+        if (done || !isOn("leftover-stop")) return;
         killGroup("SIGKILL");
         tracker?.sample();
         tracker?.signal("SIGKILL");
