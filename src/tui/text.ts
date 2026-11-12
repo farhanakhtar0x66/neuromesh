@@ -9,8 +9,18 @@ const WIDE =
   /\p{Emoji_Presentation}|\uFE0F|[ᄀ-ᅟ⺀-〾ぁ-㏿㐀-䶿一-鿿ꀀ-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]|[\u{1F300}-\u{1F64F}\u{1F900}-\u{1F9FF}\u{20000}-\u{3FFFD}]/u;
 const ANSI = /\x1b\[[0-9;?]*[ -/]*[@-~]/g;
 
+// Plain printable ASCII needs no segmenter; it is nearly all the text drawn.
+const ASCII = /^[\x20-\x7e]*$/;
+const segmented = new Map<string, string[]>();
+
 export function graphemes(text: string): string[] {
-  return Array.from(segmenter.segment(text), (s) => s.segment);
+  if (ASCII.test(text)) return text.split("");
+  const hit = segmented.get(text);
+  if (hit) return hit;
+  const out = Array.from(segmenter.segment(text), (s) => s.segment);
+  if (segmented.size > 4_000) segmented.clear();
+  segmented.set(text, out);
+  return out;
 }
 
 export function cellWidth(g: string): number {
@@ -25,6 +35,7 @@ export function stripAnsi(text: string): string {
 }
 
 export function width(text: string): number {
+  if (ASCII.test(text)) return text.length;
   let w = 0;
   for (const g of graphemes(stripAnsi(text))) w += cellWidth(g);
   return w;

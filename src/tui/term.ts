@@ -2,15 +2,38 @@
 // way out (normal quit, an error, a signal) puts the terminal back as it was.
 // Key decoding is a pure function so it can be tested without a terminal.
 
+import type { Canvas } from "./canvas.ts";
 import { cellWidth, graphemes } from "./text.ts";
+import { sgr } from "./theme.ts";
 
 export interface Key {
   name: string;
-  /** The typed text, for "char" and "paste". */
+  /** The typed text, for "char" and "paste"; the reply, for "osc". */
   text?: string;
   ctrl?: boolean;
   alt?: boolean;
   shift?: boolean;
+  /** [F33 tui-mouse] For "mouse": where (0-based cells) and what. */
+  mouse?: Mouse;
+}
+
+export interface Mouse {
+  x: number;
+  y: number;
+  button: "left" | "middle" | "right" | "none";
+  action: "down" | "up" | "move" | "drag" | "wheelUp" | "wheelDown";
+}
+
+/** [F33 tui-mouse] An SGR mouse report: \x1b[<b;x;y then M (press, motion) or m (release). */
+export function decodeMouse(params: string[], final: string): Mouse {
+  const b = Number.parseInt(params[0]!.slice(1), 10) || 0;
+  const x = (Number.parseInt(params[1] ?? "1", 10) || 1) - 1;
+  const y = (Number.parseInt(params[2] ?? "1", 10) || 1) - 1;
+  const low = b & 3;
+  const button = low === 0 ? "left" : low === 1 ? "middle" : low === 2 ? "right" : "none";
+  if (b & 64) return { x, y, button: "none", action: low === 0 ? "wheelUp" : "wheelDown" };
+  if (b & 32) return { x, y, button, action: button === "none" ? "move" : "drag" };
+  return { x, y, button, action: final === "m" ? "up" : "down" };
 }
 
 const PASTE_START = "\x1b[200~";
@@ -32,7 +55,9 @@ function modifiers(param: string | undefined): Pick<Key, "ctrl" | "alt" | "shift
 function single(ch: string, alt = false): Key {
   const code = ch.codePointAt(0)!;
   const a = alt ? { alt: true } : {};
-  if (ch === "\r" || ch === "\n") return { name: "enter", ...a };
+  // Enter sends a carriage return; Ctrl+J a line feed, which is a new line in the prompt.
+  if (ch === "\r") return { name: "enter", ...a };
+  if (ch === "\n") return { name: "j", ctrl: true, ...a };
   if (ch === "\t") return { name: "tab", ...a };
   if (ch === "\x7f" || ch === "\b") return { name: "backspace", ...a };
   if (ch === "\x1b") return { name: "esc" };
@@ -72,19 +97,30 @@ export function parseKeys(input: string, pending = ""): { keys: Key[]; pending: 
         i += 1;
         continue;
       }
+      if (next === "]") {
+        // [F32 tui-layers] A reply to a colour query: OSC ... ended by BEL or ESC \.
+        const bel = s.indexOf("\x07", i + 2);
+        const st = s.indexOf("\x1b\\", i + 2);
+        const end = bel < 0 ? st : st < 0 ? bel : Math.min(bel, st);
+        if (end < 0) return { keys: mergeChars(keys), pending: s.slice(i) };
+        keys.push({ name: "osc", text: s.slice(i + 2, end) });
+        i = end + (end === bel ? 1 : 2);
+        continue;
+      }
       if (next === "[") {
         // CSI: parameters, then one final byte.
         let j = i + 2;
         while (j < s.length && /[0-9;:?<=>]/.test(s[j]!)) j++;
         const final = s[j];
         if (final === undefined) {
-          keys.push({ name: "esc" });
-          i += 1;
-          continue;
+          // Cut off by the end of this read (a mouse report often is): wait for the rest.
+          return { keys: mergeChars(keys), pending: s.slice(i) };
         }
         const params = s.slice(i + 2, j).split(";");
-        // [F31 tui-screensaver] SGR mouse reports (\x1b[<b;x;yM), only sent while tracking is on.
-        if (params[0]?.startsWith("<") && (final === "M" || final === "m")) keys.push({ name: "mouse" });
+        // [F33 tui-mouse] SGR mouse reports (\x1b[<b;x;yM).
+        if (params[0]?.startsWith("<") && (final === "M" || final === "m")) keys.push({ name: "mouse", mouse: decodeMouse(params, final) });
+        // The terminal's answer to "who are you" (DA1): the end of the colour replies.
+        else if (params[0]?.startsWith("?") && final === "c") keys.push({ name: "da" });
         else if (final === "~") keys.push({ name: TILDE[params[0]!] ?? "unknown", ...modifiers(params[1]) });
         else if (final === "u") {
           // Keyboard protocol: code;modifiers u (kitty and others), e.g. Shift+Enter.
@@ -114,14 +150,42 @@ export function parseKeys(input: string, pending = ""): { keys: Key[]; pending: 
     keys.push(single(s.slice(i, i + len)));
     i += len;
   }
-  // Consecutive typed characters become one key, so a fast burst is one update.
+  return { keys: mergeChars(keys), pending: "" };
+}
+
+/** Consecutive typed characters become one key, so a fast burst is one update. */
+function mergeChars(keys: Key[]): Key[] {
   const merged: Key[] = [];
   for (const k of keys) {
     const last = merged.at(-1);
     if (k.name === "char" && !k.alt && last?.name === "char" && !last.alt) last.text += k.text!;
     else merged.push(k);
   }
-  return { keys: merged, pending: "" };
+  return merged;
+}
+
+/** [F32 tui-layers] Read "rgb:RRRR/GGGG/BBBB" (1 to 4 hex digits each) from a colour reply. */
+export function parseRgb(text: string): [number, number, number] | undefined {
+  const m = /rgba?:([0-9a-f]{1,4})\/([0-9a-f]{1,4})\/([0-9a-f]{1,4})/i.exec(text);
+  if (!m) return undefined;
+  const c = (h: string): number => Math.round((Number.parseInt(h, 16) / (16 ** h.length - 1)) * 255);
+  return [c(m[1]!), c(m[2]!), c(m[3]!)];
+}
+
+/** [F32 tui-layers] Fold colour replies (OSC 10, 11 and 4) into the terminal's colours. */
+export function readColourReplies(replies: string[]): { fg?: [number, number, number]; bg?: [number, number, number]; ansi: ([number, number, number] | undefined)[] } {
+  const out: { fg?: [number, number, number]; bg?: [number, number, number]; ansi: ([number, number, number] | undefined)[] } = { ansi: [] };
+  for (const r of replies) {
+    const rgb = parseRgb(r);
+    if (!rgb) continue;
+    if (r.startsWith("10;")) out.fg = rgb;
+    else if (r.startsWith("11;")) out.bg = rgb;
+    else {
+      const m = /^4;(\d+);/.exec(r);
+      if (m) out.ansi[Number(m[1])] = rgb;
+    }
+  }
+  return out;
 }
 
 export interface Size {
@@ -271,6 +335,12 @@ export class Terminal {
   private active = false;
   private readonly cleanups: (() => void)[] = [];
   private onData: ((data: string) => void) | undefined;
+  /** [F32 tui-layers] Collects colour replies while a query is out. */
+  private replies: ((key: Key) => void) | undefined;
+  private mouseOn = false;
+  /** The last canvas drawn, compared cell by cell with the next one. */
+  private lastCanvas: Canvas | undefined;
+  private styles = new Map<string, string>();
 
   constructor(input: NodeJS.ReadStream = process.stdin, out: NodeJS.WriteStream = process.stdout) {
     this.input = input;
@@ -291,7 +361,13 @@ export class Terminal {
     const onData = (data: string): void => {
       const { keys, pending } = parseKeys(data, this.pending);
       this.pending = pending;
-      if (keys.length > 0) onKeys(keys);
+      // Answers to the colour query are not keys.
+      const real = keys.filter((k) => {
+        if (k.name !== "osc" && k.name !== "da") return true;
+        this.replies?.(k);
+        return false;
+      });
+      if (real.length > 0) onKeys(real);
     };
     const resize = (): void => {
       this.previous = [];
@@ -341,7 +417,31 @@ export class Terminal {
    * needs Shift, so it stays off the rest of the time.
    */
   mouse(on: boolean): void {
-    if (this.active) this.out.write(on ? "\x1b[?1003h\x1b[?1006h" : "\x1b[?1003l\x1b[?1006l");
+    if (this.active && on !== this.mouseOn) this.out.write(on ? "\x1b[?1003h\x1b[?1006h" : "\x1b[?1003l\x1b[?1006l");
+    this.mouseOn = on;
+  }
+
+  /**
+   * [F32 tui-layers] Ask the terminal for its foreground, background and 16
+   * palette colours. The device-attributes query goes last: every terminal
+   * answers it, so its reply means all the colour replies that will come have
+   * come. Resolves with whatever arrived within `ms`.
+   */
+  queryColours(ms = 250): Promise<string[]> {
+    if (!this.active) return Promise.resolve([]);
+    const got: string[] = [];
+    return new Promise((resolve) => {
+      const done = (): void => {
+        clearTimeout(timer);
+        this.replies = undefined;
+        resolve(got);
+      };
+      const timer = setTimeout(done, ms);
+      this.replies = (k) => (k.name === "osc" ? void got.push(k.text ?? "") : done());
+      let q = "\x1b]10;?\x07\x1b]11;?\x07";
+      for (let i = 0; i < 16; i++) q += `\x1b]4;${i};?\x07`;
+      this.out.write(`${q}\x1b[c`);
+    });
   }
 
   /** [F28 tui-notify] The terminal window or tab title. */
@@ -371,20 +471,83 @@ export class Terminal {
     this.input.setRawMode?.(true);
     this.input.resume();
     this.input.on("data", this.onData);
-    this.out.write("\x1b[?1049h\x1b[?25l\x1b[?2004h\x1b[H\x1b[2J");
+    this.out.write(`\x1b[?1049h\x1b[?25l\x1b[?2004h\x1b[H\x1b[2J${this.mouseOn ? "\x1b[?1003h\x1b[?1006h" : ""}`);
     this.previous = [];
   }
 
   /** Forget the last frame, so the next one is drawn in full (after a theme change). */
   invalidate(): void {
     this.previous = [];
+    this.styles.clear();
   }
 
-  /** Draw a frame: only cells that changed are written, inside one synchronized update. */
-  draw(lines: string[], cursor?: { row: number; col: number }): void {
+  /**
+   * Draw a canvas: its arrays are compared with the last canvas's, and only
+   * the cells that changed are written, inside one synchronized update. No
+   * per-cell objects are made, so a frame costs little at 60 or 120 a second.
+   */
+  drawCanvas(cv: Canvas, cursor?: { row: number; col: number }): void {
+    if (!this.active) return;
+    // After invalidate() or a resize, `previous` is empty: draw everything.
+    const prev = this.previous.length > 0 && this.lastCanvas && this.lastCanvas.w === cv.w && this.lastCanvas.h === cv.h ? this.lastCanvas : undefined;
+    let out = "\x1b[?2026h\x1b[?25l";
+    if (!prev) out += "\x1b[0m\x1b[H\x1b[2J";
+    let pen = "";
+    const w = cv.w;
+    const differs = (i: number): boolean => !prev || prev.ch[i] !== cv.ch[i] || prev.fg[i] !== cv.fg[i] || prev.bg[i] !== cv.bg[i] || prev.at[i] !== cv.at[i];
+    for (let y = 0; y < cv.h; y++) {
+      const row = y * w;
+      let x = 0;
+      while (x < w) {
+        if (!differs(row + x)) {
+          x++;
+          continue;
+        }
+        let start = x;
+        if (cv.ch[row + start] === "" && start > 0) start--;
+        let end = x;
+        let same = 0;
+        for (let i = x; i < w; i++) {
+          if (differs(row + i)) {
+            end = i;
+            same = 0;
+          } else if (++same > 4) break;
+        }
+        if (cv.ch[row + end + 1] === "" && end + 1 < w) end++;
+        out += `\x1b[${y + 1};${start + 1}H`;
+        for (let i = start; i <= end; i++) {
+          const k = row + i;
+          const ch = cv.ch[k]!;
+          if (ch === "") continue;
+          const key = `${cv.fg[k]},${cv.bg[k]},${cv.at[k]}`;
+          let style = this.styles.get(key);
+          if (style === undefined) {
+            style = sgr(cv.fg[k]!, cv.bg[k]!, cv.at[k]!);
+            this.styles.set(key, style);
+          }
+          if (style !== pen) {
+            out += style;
+            pen = style;
+          }
+          out += ch;
+        }
+        x = end + 1;
+      }
+    }
+    if (pen) out += "\x1b[0m";
+    out += cursor ? `\x1b[${cursor.row + 1};${cursor.col + 1}H\x1b[?25h` : "";
+    out += "\x1b[?2026l";
+    this.lastCanvas = cv;
+    this.previous = [[]];
+    this.out.write(out);
+  }
+
+  /** Draw a frame (styled lines, or cells from a canvas): only cells that changed are written, inside one synchronized update. */
+  draw(frame: string[] | Cell[][], cursor?: { row: number; col: number }): void {
     if (!this.active) return;
     const { cols, rows } = this.size();
-    const next = lines.slice(0, rows).map((l) => toCells(l, cols));
+    const fit = (row: Cell[]): Cell[] => (row.length === cols ? row : row.length > cols ? row.slice(0, cols) : row.concat(toCells("", cols - row.length)));
+    const next = frame.slice(0, rows).map((l) => (typeof l === "string" ? toCells(l, cols) : fit(l)));
     while (next.length < rows) next.push(toCells("", cols));
     const fresh = this.previous.length === 0;
     let out = "\x1b[?2026h\x1b[?25l";
@@ -393,6 +556,7 @@ export class Terminal {
     out += cursor ? `\x1b[${cursor.row + 1};${cursor.col + 1}H\x1b[?25h` : "";
     out += "\x1b[?2026l";
     this.previous = next;
+    this.lastCanvas = undefined;
     this.out.write(out);
   }
 }

@@ -92,6 +92,25 @@ export interface EngineContext {
   /** Overrides the preset's turn time limit (tests use this). */
   turnTimeoutMs?: number;
   checkTimeoutMs?: number;
+  /**
+   * [F39 ask-first] Ask the person running Neuromesh. Only a caller that can
+   * answer (the TUI in Normal mode) gives this; without it the run never stops
+   * to ask.
+   */
+  ask?: (question: Question) => Promise<Answer>;
+  /** [F42 compact] Set `compact` to have the next follow-up turn start a fresh session. */
+  steer?: { compact?: boolean };
+}
+
+/** [F39 ask-first] What the run may stop to ask. */
+export type Question =
+  | { kind: "plan"; summary: string; tasks: { id: string; title: string; owner: string }[]; model?: string }
+  | { kind: "expert"; task: string; title: string; reason: string; step: "advise" | "escalate" };
+
+export interface Answer {
+  ok: boolean;
+  /** With ok false: what to change (a plan is revised with it); empty means stop. */
+  note?: string;
 }
 
 export interface StartOptions {
@@ -105,6 +124,8 @@ export interface StartOptions {
   mode?: "solo" | "team";
   /** Override the preset's expert token budget. */
   expertBudget?: number;
+  /** [F38 attachments] Files from anywhere that go with the request; `text` for text files. */
+  attachments?: { path: string; text?: string }[];
 }
 
 /** How a task or a turn ended, when it ends the whole run early. */
@@ -162,6 +183,22 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       disable("brief-engine");
     }
   }
+  // [F38 attachments] Text files are added to the brief like documents the request names; others by path.
+  const attachedNote: string[] = [];
+  if (options.attachments?.length && isOn("attachments")) {
+    try {
+      inFeature("attachments", () => {
+        for (const a of options.attachments ?? []) {
+          if (a.text !== undefined && brief && !brief.attached.some((b) => b.path === a.path)) brief.attached.push({ path: a.path, text: a.text });
+          else if (a.text !== undefined && !brief) attachedNote.push(`The file ${a.path}, attached to the request:\n--- ${a.path} ---\n${a.text}\n--- end of ${a.path} ---`);
+          else if (a.text === undefined) attachedNote.push(`Attached to the request (read it from there): ${a.path}`);
+        }
+      });
+    } catch (error) {
+      featureErrors.push(failure(error, "attachments"));
+      disable("attachments");
+    }
+  }
   if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
     mode = brief.staffing.plan ? "team" : "solo";
@@ -177,7 +214,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     id,
     dir,
     repo: repo.root,
-    prompt: brief ? renderBrief(brief) : options.prompt,
+    prompt: [brief ? renderBrief(brief) : options.prompt, ...attachedNote].join("\n\n"),
     request: brief ? options.prompt : undefined,
     usagePerTurn: true,
     features: activeKeys(),
@@ -396,7 +433,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           state.mode = "solo";
           state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "worker" })];
         } else if (outcome) {
-          return outcome.status === "interrupted" ? interrupted() : end(outcome);
+          // [F39 ask-first] A stop at the plan keeps its own reason.
+          return end(outcome);
         }
         state.step = "tasks";
         saveState(state);
@@ -576,7 +614,13 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     }
     const backend = ctx.backends[config.backend];
     if (!backend) throw new Error(`unknown backend "${config.backend}"`);
-    const sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
+    let sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
+    // [F42 compact] Asked to compact: this follow-up starts a fresh session from the brief and the last report.
+    if (sameSession && ctx.steer?.compact && isOn("compact") && req.freshPrompt) {
+      ctx.steer.compact = false;
+      sameSession = false;
+      log.emit("context.compacted", { feature: "F42", role: req.role, task: req.task });
+    }
     const prompt = sameSession ? req.prompt : (req.freshPrompt ?? req.prompt);
     let result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
 
@@ -630,7 +674,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const logPath = join(runPaths(state.dir).agentLogs, `${String(n).padStart(3, "0")}-${req.key}-${req.kind}.jsonl`);
   state.inFlight[req.key] = { role: req.role, tier, task: req.task, round: req.round, kind: req.kind, backend: backend.id, model: config.model, startedAt, logPath };
   saveState(state);
-  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, tier, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId) });
+  // [F41 tui-context] What the prompt is made of, for the context view.
+  const contextChars = state.contextPacket && prompt.includes(state.contextPacket) ? state.contextPacket.length : 0;
+  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, tier, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId), effort: config.effort, promptChars: prompt.length, contextChars });
 
   const result = await backend.run({
     cwd: req.cwd,
@@ -693,6 +739,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     tier,
     detail: result.detail,
     quotaUsed: result.quotaUsed,
+    // [F43 quota-windows]
+    quotaResets: isOn("quota-windows") ? result.quotaResets : undefined,
   });
   return result;
 }
@@ -778,6 +826,7 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
   const first = plannerPrompt(state, files);
   let prompt = first;
   let resume: TurnRequest["resume"];
+  let revisions = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
     const { result, config } = await turn(run, {
       key: "plan",
@@ -799,7 +848,15 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
       log.emit("plan.ready", { summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
-      return undefined;
+      // [F39 ask-first] The person approves the plan, asks for changes, or stops here.
+      const answer = await askUser(run, { kind: "plan", summary: plan.summary, tasks: plan.tasks.map((t) => ({ id: t.id, title: t.title, owner: t.owner })), model: config ? modelKey(config) : undefined });
+      if (answer.ok) return undefined;
+      if (!answer.note?.trim() || revisions >= 3) return { status: "interrupted", reason: "stopped at the plan, as asked" };
+      revisions += 1;
+      prompt = `The person running this asked for changes to your plan: ${answer.note.trim()}\nGive the revised plan in the same JSON format.`;
+      resume = { sessionId: result.sessionId, model: config ? modelKey(config) : undefined };
+      attempt = -1;
+      continue;
     } catch (error) {
       const problem = error instanceof Error ? error.message : String(error);
       log.emit("note", { message: `The plan was not usable (${problem}); asking for a corrected one.` });
@@ -899,6 +956,25 @@ function optional<T>(run: RunCtx, key: string, fallback: T, fn: () => T): T {
     featureFailed(run, error, key);
     return fallback;
   }
+}
+
+/** [F39 ask-first] Ask the person, when the caller can answer; otherwise go ahead. */
+async function askUser(run: RunCtx, question: Question): Promise<Answer> {
+  const ask = run.ctx.ask;
+  if (!ask || !isOn("ask-first") || run.signal.aborted) return { ok: true };
+  run.log.emit("ask", { feature: "F39", question });
+  const answer = await optionalAsync(run, "ask-first", { ok: true } as Answer, () =>
+    new Promise<Answer>((resolve, reject) => {
+      const stop = (): void => resolve({ ok: false });
+      run.signal.addEventListener("abort", stop, { once: true });
+      ask(question).then(
+        (a) => (run.signal.removeEventListener("abort", stop), resolve(a)),
+        (e: unknown) => (run.signal.removeEventListener("abort", stop), reject(e)),
+      );
+    }),
+  );
+  run.log.emit("answer", { feature: "F39", kind: question.kind, ok: answer.ok, note: answer.note });
+  return answer;
 }
 
 async function optionalAsync<T>(run: RunCtx, key: string, fallback: T, fn: () => Promise<T>): Promise<T> {
@@ -1017,6 +1093,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       });
       if (result.stop === "done") {
         task.report = parseReport(result);
+        // [F44 task-report]
+        if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role, status: task.report.status, summary: task.report.summary.slice(0, 8_000), notes: task.report.notes?.slice(0, 4_000) });
         task.sessionId = result.sessionId;
         task.sessionModel = config ? modelKey(config) : undefined;
         task.step = "checks";
@@ -1176,6 +1254,22 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       log.emit("note", { message: `Expert budget reached; task ${task.id} ends without expert help.` });
       return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert budget is spent`);
+    }
+
+    // [F39 ask-first] The expert costs the most: the person says whether to call it in.
+    if ((task.step === "advise" || task.step === "escalate") && !task.expertApproved) {
+      const answer = await askUser(run, { kind: "expert", task: task.id, title: task.title, reason: task.escalationReason ?? "the worker is stuck", step: task.step });
+      if (!answer.ok) {
+        if (checksPass(task)) {
+          log.emit("note", { message: `Task ${task.id} keeps its work without the expert (the checks pass); the reviewer's findings are recorded.` });
+          task.step = "merge";
+          saveState(state);
+          continue;
+        }
+        return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert was not called in`);
+      }
+      task.expertApproved = true;
+      saveState(state);
     }
 
     if (task.step === "advise") {

@@ -16,6 +16,7 @@ export interface ParsedRun {
   usage: Usage;
   costUsdEquivalent?: number;
   quotaUsed?: Record<string, number>;
+  quotaResets?: Record<string, number>;
   detail?: string;
 }
 
@@ -110,6 +111,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     usage: parsed.usage,
     costUsdEquivalent: parsed.costUsdEquivalent,
     quotaUsed: parsed.quotaUsed,
+    quotaResets: parsed.quotaResets,
     durationMs: proc.durationMs,
     exitCode: proc.exitCode,
     detail,

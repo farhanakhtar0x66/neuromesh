@@ -38,13 +38,48 @@ export const demo = createFakeBackend(async (r) => {
   }
   if (has(r, "tasks")) {
     await say("Planning");
-    return { structured: { summary: "One task.", tasks: [{ id: "t1", title: "the demo", brief: "Write demo.txt", owned: [], depends_on: [], owner: "worker" }] }, usage: { input: 1_500, output: 200 } };
+    return {
+      structured: {
+        summary: "Two small tasks: a greeting file, then a note about it.",
+        tasks: [
+          { id: "t1", title: "Write the greeting", brief: "Write neuromesh-demo-t1.txt", owned: ["neuromesh-demo-t1.txt"], depends_on: [], owner: "worker" },
+          { id: "t2", title: "Write the note", brief: "Write neuromesh-demo-t2.txt", owned: ["neuromesh-demo-t2.txt"], depends_on: ["t1"], owner: "worker" },
+        ],
+      },
+      usage: { input: 1_500, output: 200 },
+    };
   }
   if (has(r, "diagnosis")) return { structured: { diagnosis: "Nothing is wrong.", steps: ["Carry on"] }, usage: { input: 500, output: 50 } };
+  const task = /Your task: (.*)/.exec(r.prompt)?.[1];
+  const file = task ? `neuromesh-demo-${/note/i.test(task) ? "t2" : "t1"}.txt` : "neuromesh-demo.txt";
   await say("Looking at the project");
-  await say("Writing demo.txt");
+  r.onActivity?.({ kind: "tool", summary: "$ ls -la" });
+  await say(`Writing ${file}`);
   mkdirSync(r.cwd, { recursive: true });
-  writeFileSync(join(r.cwd, "neuromesh-demo.txt"), `Written by the Neuromesh demo backend.\nRequest: ${r.prompt.split("\n").find((l) => l.trim())?.slice(0, 200) ?? ""}\n`);
+  writeFileSync(join(r.cwd, file), `Written by the Neuromesh demo backend.\nRequest: ${r.prompt.split("\n").find((l) => l.trim())?.slice(0, 200) ?? ""}\n`);
+  r.onActivity?.({ kind: "tool", summary: `edit ${file}` });
   await say("Done");
-  return { structured: { status: "done", summary: "Wrote neuromesh-demo.txt (a demonstration; no model was called).", notes: "", run: "" }, usage: { input: 3_000, output: 300 } };
+  // The report is markdown, as real agents write it.
+  const summary = [
+    `## What I did`,
+    ``,
+    `Wrote **${file}** with a greeting${task ? ` for *${task}*` : ""}. This is a demonstration: no model was called.`,
+    ``,
+    `- Created \`${file}\` in the project root`,
+    `- Kept every other file as it was`,
+    `- Ran the project's checks: all pass`,
+    ``,
+    `## How to try it`,
+    ``,
+    "```sh",
+    `cat ${file}`,
+    "```",
+    ``,
+    `| File | Lines |`,
+    `| --- | --- |`,
+    `| ${file} | 2 |`,
+    ``,
+    `> Nothing else needs doing.`,
+  ].join("\n");
+  return { structured: { status: "done", summary, notes: "", run: "" }, usage: { input: 3_000, output: 300 } };
 }, "demo");

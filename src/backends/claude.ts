@@ -74,11 +74,16 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity">): StreamP
         const windows = obj(info?.unifiedWindows);
         if (windows) {
           const used: Record<string, number> = {};
+          const resets: Record<string, number> = {};
           for (const [name, value] of Object.entries(windows)) {
             const utilization = num(obj(value)?.utilization);
             if (utilization !== undefined) used[name] = utilization;
+            // [F43 quota-windows]
+            const at = num(obj(value)?.resetsAt);
+            if (at !== undefined) resets[name] = at;
           }
           run.quotaUsed = used;
+          if (Object.keys(resets).length > 0) run.quotaResets = resets;
         }
         return;
       }

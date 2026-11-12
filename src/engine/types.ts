@@ -128,6 +128,8 @@ export interface TaskState extends PlannedTask {
   base?: string;
   branch: string;
   worktree: string;
+  /** [F39 ask-first] The person agreed to call the expert in for this task. */
+  expertApproved?: boolean;
   prepared: string[];
   sessionId?: string;
   /** Which model the session belongs to; a session cannot move to another model. */

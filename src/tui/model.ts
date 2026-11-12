@@ -1,39 +1,55 @@
 // [F19 tui] What the TUI shows, built only from the engine's own events and
 // run records: nothing is guessed. Unknown numbers stay unknown.
+//
+// The conversation is a log of entries: what you typed, every engine event,
+// and a few notes of the TUI's own. The stream (blocks.ts) is drawn from that
+// log, so changing the verbosity redraws the same history differently.
 
-import { formatEvent } from "../cli/format.ts";
+import type { Question } from "../engine/run.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { estimateCost } from "../usage/prices.ts";
-import { stripAnsi } from "./text.ts";
+import type { Access, Verbosity } from "./store.ts";
 import type { Tone } from "./theme.ts";
 
 export type Stage = "idle" | "planning" | "building" | "checking" | "reviewing" | "finished" | "failed" | "stopped" | "paused";
 
-export interface Item {
-  kind: "you" | "neuromesh" | "activity" | "note" | "error" | "outcome" | "diff" | "detail";
-  text: string;
-  tone?: Tone;
-  /** [F29 tui-motion] When it arrived, for its entrance. */
-  at?: number;
-  /** For "diff": the patch lines. */
-  lines?: string[];
-}
+export type Entry =
+  | { kind: "you"; text: string; at: number; attachments?: string[] }
+  | { kind: "event"; e: NeuromeshEvent; at: number }
+  | { kind: "note"; text: string; tone?: Tone; at: number }
+  | { kind: "error"; text: string; at: number }
+  | { kind: "diff"; text: string; lines: string[]; at: number }
+  /** [F47 tui-markdown] The agents' final report, in markdown. */
+  | { kind: "final"; text: string; role: string; model?: string; at: number }
+  | { kind: "result"; at: number };
 
-/** A past run of this repository, for the sessions pane. */
+/** A session in the sidebar. */
 export interface SessionView {
   id: string;
   title: string;
   status: string;
   at: string;
   files?: number;
+  repo: string;
+  dir: string;
+}
+
+export interface ProjectView {
+  name: string;
+  path: string;
+  sessions: SessionView[];
 }
 
 export interface AgentView {
   key: string;
+  /** Engine role: orchestrator, briefer, worker, tester, escalation. */
+  roleId: string;
+  /** Shown name: Orchestrator, Spec writer, Worker, Tester, Expert. */
   role: string;
   task?: string;
   model: string;
+  effort?: string;
   working: boolean;
   turns: number;
   tokens: number;
@@ -41,17 +57,55 @@ export interface AgentView {
   cost?: number;
   last?: string;
   failed?: boolean;
-  /** [F29 tui-motion] When it last finished a turn, for a brief flash. */
+  startedAt?: number;
   doneAt?: number;
+  /** [F41 tui-context] What the current or last turn was made of. */
+  promptChars?: number;
+  contextChars?: number;
+  lastUsage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
 }
+
+/** [F43 quota-windows] A model's subscription windows, as its tool last reported them. */
+export interface Quota {
+  used: Record<string, number>;
+  resets?: Record<string, number>;
+  at: number;
+}
+
+export interface TaskView {
+  id: string;
+  title: string;
+  state: "waiting" | "working" | "checking" | "done" | "failed" | "expert";
+  note?: string;
+}
+
+export type Dialog =
+  | { kind: "confirm"; title: string; body: string[]; yes: string; action: string; danger?: boolean; at: number }
+  | {
+      kind: "form";
+      title: string;
+      fields: { label: string; value: string; placeholder?: string; browse?: "folder" | "file" }[];
+      focus: number;
+      submit: string;
+      action: string;
+      error?: string;
+      at: number;
+    }
+  | { kind: "settings"; index: number; at: number };
 
 export interface Model {
   screen: "landing" | "workspace";
   repo?: string;
+  repoRoot?: string;
   repoError?: string;
+  /** The project's name: its name in the sidebar, or the folder's. */
+  projectName?: string;
+  branch?: string;
   preset: string;
-  items: Item[];
+  log: Entry[];
   agents: Map<string, AgentView>;
+  tasks: Map<string, TaskView>;
+  quotas: Map<string, Quota>;
   stage: Stage;
   planned: boolean;
   runId?: string;
@@ -61,42 +115,65 @@ export interface Model {
   cost: number;
   expertCost: number;
   costUnknown: boolean;
-  focus: "composer" | "outcome" | "diff";
-  diff?: { lines: string[]; scroll: number };
+  focus: "composer" | "outcome" | "diff" | "sidebar";
+  diff?: { title: string; lines: string[]; scroll: number };
+  /** Rows scrolled up from the newest, in the stream. */
   scroll: number;
   toast?: { text: string; tone: Tone; until: number; at?: number };
   confirm?: "stop" | "discard" | "quit";
   rating?: number;
-  /** The working directory, shown in the bottom bar. */
   cwd: string;
-  sessions: SessionView[];
-  /** The command popup, when open: the selected row. */
+  /** [F34 tui-projects] The sidebar. */
+  projects: ProjectView[];
+  recents: SessionView[];
+  folded: Set<string>;
+  sideScroll: { projects: number; recents: number };
+  /** Keyboard selection in the sidebar (Ctrl+E), as a row id. */
+  sideSel?: string;
   palette?: { index: number; at?: number };
-  /** Latest result of each check, by name. */
   checks: Map<string, string>;
-  /** The tester's latest verdict, in its own words. */
   verdict?: { verdict: string; summary: string };
-  /** Who does what in the preset: role and model. */
   team: { role: string; model: string }[];
-  /** The preset's expert budget in estimated dollars, if any. */
   budgetUsd?: number;
-  /** [F29 tui-motion] Animations on; the app turns this on unless switched off. */
   motion: boolean;
   /** Time to draw at; tests set it, the app leaves it to the clock. */
   clock?: number;
-  /** [F30 tui-intro] When the TUI opened. */
   introAt?: number;
-  /** When the stage last changed. */
   stageAt?: number;
-  /** Cost shown before the last change, and when it changed, for counting up. */
   costFrom: number;
   costAt?: number;
-  /** [F26 tui-details] Show each agent's steps in the stream. */
-  details: boolean;
-  /** [F21 tui-slash] [F22 tui-mentions] The dropdown above the prompt. */
   suggest?: Suggest;
-  /** [F24 tui-sessions] [F25 tui-presets] A list popup with a filter. */
   picker?: Picker;
+  /** [F35 tui-agent-boxes] How much of each agent's work the stream shows, and boxes opened by hand. */
+  verbose: Verbosity;
+  expanded: Set<string>;
+  /** [F39 ask-first] */
+  access: Access;
+  ask?: { question: Question; at: number };
+  /** [F38 attachments] Files to send with the next instruction. */
+  attachments: { path: string; name: string }[];
+  /** [F33 tui-mouse] The region under the pointer. */
+  hover?: string;
+  dialog?: Dialog;
+  /** [F35] When the brand last shimmered (a click, or a run that ended). */
+  brandAt?: number;
+  /** When the status last changed, for its entrance. */
+  statusAt?: number;
+  /** [F37 tui-scroll] Last scroll in the stream and the sidebar, for their scrollbars. */
+  scrollAt?: number;
+  sideScrollAt?: number;
+  showSidebar: boolean;
+  showInfo: boolean;
+  /** [F45 tui-settings] The settings as shown in /settings. */
+  settings: Record<string, string>;
+  /** [F41 tui-context] The agent the context view shows (clicked in the graph). */
+  focusAgent?: string;
+  contextAt?: number;
+  compactAsked?: boolean;
+  /** [F47 tui-markdown] Scroll the stream so this block's first line is at the top (once). */
+  readFrom?: string;
+  /** The last agent to start, and the one before it, for the graph's hand-off. */
+  handoff?: { from?: string; to: string; at: number };
 }
 
 export interface Choice {
@@ -118,7 +195,6 @@ export interface Picker {
   kind: "sessions" | "presets";
   title: string;
   query: string;
-  /** [F29 tui-motion] When it opened. */
   at?: number;
   all: Choice[];
   index: number;
@@ -130,8 +206,11 @@ export function newModel(preset: string, repo?: string, repoError?: string): Mod
     preset,
     repo,
     repoError,
-    items: [],
+    projectName: repo,
+    log: [],
     agents: new Map(),
+    tasks: new Map(),
+    quotas: new Map(),
     stage: "idle",
     planned: false,
     cost: 0,
@@ -140,22 +219,39 @@ export function newModel(preset: string, repo?: string, repoError?: string): Mod
     focus: "composer",
     scroll: 0,
     cwd: process.cwd(),
-    details: false,
+    projects: [],
+    recents: [],
+    folded: new Set(),
+    sideScroll: { projects: 0, recents: 0 },
+    verbose: "medium",
+    expanded: new Set(),
+    access: "normal",
+    attachments: [],
     motion: false,
     costFrom: 0,
-    sessions: [],
     checks: new Map(),
     team: [],
+    showSidebar: true,
+    showInfo: true,
+    settings: {},
   };
 }
 
-/** Add to the stream, stamped with the time it arrived. */
-export function push(m: Model, item: Item): void {
-  m.items.push({ ...item, at: item.at ?? Date.now() });
+/** Add to the log, stamped with the time it arrived. */
+export function push(m: Model, entry: Entry): void {
+  m.log.push(entry);
+}
+
+export function note(m: Model, text: string, tone?: Tone): void {
+  m.screen = "workspace";
+  m.log.push({ kind: "note", text, tone, at: Date.now() });
 }
 
 export function setStage(m: Model, stage: Stage): void {
-  if (m.stage !== stage) m.stageAt = Date.now();
+  if (m.stage !== stage) {
+    m.stageAt = Date.now();
+    m.statusAt = Date.now();
+  }
   m.stage = stage;
 }
 
@@ -169,12 +265,13 @@ export function toast(m: Model, text: string, tone: Tone = "jade", ms = 4_000): 
 }
 
 /** Start a new run in the workspace: the user's words appear at once, before any model answers. */
-export function submitted(m: Model, prompt: string): void {
+export function submitted(m: Model, prompt: string, attachments: string[] = []): void {
   m.screen = "workspace";
-  push(m, { kind: "you", text: prompt });
+  m.log.push({ kind: "you", text: prompt, at: Date.now(), attachments: attachments.length ? attachments : undefined });
   setStage(m, "planning");
   m.planned = false;
   m.agents = new Map();
+  m.tasks = new Map();
   m.run = undefined;
   m.runId = undefined;
   m.startedAt = Date.now();
@@ -189,9 +286,13 @@ export function submitted(m: Model, prompt: string): void {
   m.scroll = 0;
   m.checks = new Map();
   m.verdict = undefined;
+  m.ask = undefined;
+  m.focusAgent = undefined;
+  m.compactAsked = false;
+  m.handoff = undefined;
 }
 
-const ROLE_NAME: Record<string, string> = { orchestrator: "Planner", escalation: "Expert", worker: "Worker", tester: "Tester", briefer: "Spec writer" };
+export const ROLE_NAME: Record<string, string> = { orchestrator: "Orchestrator", escalation: "Expert", worker: "Worker", tester: "Tester", briefer: "Spec writer" };
 
 function agentKey(e: NeuromeshEvent): string {
   return `${String(e.role ?? "agent")}${e.task ? `:${String(e.task)}` : ""}`;
@@ -204,41 +305,51 @@ function totalTokens(u: Record<string, number | undefined> | undefined): number 
 /** Fold one engine event into the model. */
 export function applyEvent(m: Model, e: NeuromeshEvent): void {
   if (e.run && !m.runId) m.runId = String(e.run);
-  const line = (): string => stripAnsi(formatEvent(e) ?? "").trim();
+  m.screen = "workspace";
+  m.log.push({ kind: "event", e, at: Date.now() });
   switch (e.type) {
     case "agent.activity": {
       const a = m.agents.get(agentKey(e));
-      const what = String(e.summary ?? e.activity ?? "");
-      if (a) a.last = what;
-      // [F26 tui-details] Kept for Ctrl+O; hidden unless details are on.
-      if (what) push(m, { kind: "detail", text: `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}: ${what}` });
+      if (a) a.last = String(e.summary ?? e.activity ?? "");
       return;
     }
     case "agent.started": {
       const key = agentKey(e);
       const prior = m.agents.get(key);
-      const role = String(e.role ?? "worker");
+      const roleId = String(e.role ?? "worker");
       m.agents.set(key, {
         key,
-        role: ROLE_NAME[role] ?? role,
+        roleId,
+        role: ROLE_NAME[roleId] ?? roleId,
         task: e.task ? String(e.task) : undefined,
         model: String(e.model ?? prior?.model ?? "?"),
+        effort: typeof e.effort === "string" ? e.effort : prior?.effort,
         working: true,
         turns: prior?.turns ?? 0,
         tokens: prior?.tokens ?? 0,
         cost: prior?.cost,
         last: undefined,
+        startedAt: Date.now(),
+        promptChars: typeof e.promptChars === "number" ? e.promptChars : undefined,
+        contextChars: typeof e.contextChars === "number" ? e.contextChars : undefined,
+        lastUsage: prior?.lastUsage,
       });
-      if (role === "tester") setStage(m, "reviewing");
-      else if (role === "worker" || role === "escalation") setStage(m, "building");
-      else if (role === "orchestrator" || role === "briefer") setStage(m, "planning");
-      // A running agent shows on its live line; the stream records it when it finishes.
+      const last = m.handoff?.to;
+      m.handoff = { from: last && last !== roleId ? last : m.handoff?.from, to: roleId, at: Date.now() };
+      if (roleId === "tester") setStage(m, "reviewing");
+      else if (roleId === "worker" || roleId === "escalation") setStage(m, "building");
+      else if (roleId === "orchestrator" || roleId === "briefer") setStage(m, "planning");
+      if (e.task) {
+        const t = m.tasks.get(String(e.task));
+        if (t && roleId !== "tester") t.state = roleId === "escalation" ? "expert" : "working";
+      }
       return;
     }
     case "agent.finished": {
       const a = m.agents.get(agentKey(e));
-      const tokens = totalTokens(e.usage as Record<string, number | undefined>);
-      const cost = typeof e.cost === "number" ? e.cost : estimateCost(String(e.model ?? ""), (e.usage ?? {}) as Record<string, number>);
+      const usage = (e.usage ?? {}) as Record<string, number | undefined>;
+      const tokens = totalTokens(usage);
+      const cost = typeof e.cost === "number" ? e.cost : estimateCost(String(e.model ?? ""), usage as Record<string, number>);
       if (e.role === "briefer" || e.role === "orchestrator") m.planned = true;
       if (a) {
         a.working = false;
@@ -248,6 +359,9 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         a.failed = e.stop !== "done";
         a.doneAt = Date.now();
         a.last = undefined;
+        a.lastUsage = { input: usage.input, output: usage.output, cacheRead: usage.cacheRead, cacheWrite: usage.cacheWrite };
+        if (String(e.model ?? "")) a.model = String(e.model);
+        m.contextAt = Date.now();
       }
       if (cost !== undefined) {
         m.costFrom = m.cost;
@@ -255,85 +369,66 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         m.cost += cost;
         if (e.tier === "expert") m.expertCost += cost;
       } else if (tokens > 0) m.costUnknown = true;
-      const secs = Math.round(Number(e.durationMs ?? 0) / 1000);
-      const took = secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${String(secs % 60).padStart(2, "0")}s`;
-      const name = `${a?.role ?? ROLE_NAME[String(e.role)] ?? String(e.role)}${e.task && e.task !== "main" ? ` ${String(e.task)}` : ""}`;
-      const what = e.kind && !["initial", "spec", "test", "plan"].includes(String(e.kind)) ? ` (${String(e.kind)})` : "";
-      const tok = tokens > 0 ? ` · ${tokens >= 1000 ? `${Math.round(tokens / 1000)}k` : tokens} tokens` : "";
-      const price = cost !== undefined ? ` · ≈$${cost.toFixed(cost < 0.1 ? 3 : 2)}` : "";
-      const end = e.stop === "done" ? "" : ` · ${String(e.stop)}${e.detail ? `: ${String(e.detail).slice(0, 120)}` : ""}`;
-      push(m, { kind: "activity", text: `${name}${what} · ${String(e.model ?? "")} · ${took}${tok}${price}${end}`, tone: e.stop === "done" ? undefined : "red" });
+      // [F43 quota-windows]
+      const used = e.quotaUsed as Record<string, number> | undefined;
+      if (used && Object.keys(used).length > 0) m.quotas.set(String(e.model ?? ""), { used, resets: e.quotaResets as Record<string, number> | undefined, at: Date.now() });
       return;
     }
     case "plan.ready":
       m.planned = true;
-      push(m, { kind: "neuromesh", text: line() });
+      for (const t of (e.tasks as { id: string; title: string }[] | undefined) ?? []) m.tasks.set(t.id, { id: t.id, title: t.title, state: "waiting" });
       return;
-    case "brief": {
-      const s = (e.staffing ?? {}) as { plan?: boolean; rung?: string; tester?: boolean; spec?: boolean };
-      const kind = String(e.kind ?? "change");
-      // In plain words: what kind of work this is (when it says something) and who will do it.
-      const what = kind === "greenfield" ? "Something new" : kind === "other" || kind === "change" ? "" : kind[0]!.toUpperCase() + kind.slice(1);
-      const surface = e.surface ? String(e.surface) : "";
-      const how = [s.spec ? "a spec first" : "", s.plan ? "the lead plans" : "one worker", s.rung === "top" ? "at its strongest setting" : "", s.tester ? "with a reviewer" : "no reviewer"].filter(Boolean).join(", ");
-      const lead = [what, what ? surface : surface ? surface[0]!.toUpperCase() + surface.slice(1) : ""].filter(Boolean).join(", ");
-      push(m, { kind: "note", text: lead ? `${lead} · ${how}` : how[0]!.toUpperCase() + how.slice(1) });
+    case "task.started": {
+      const id = String(e.task);
+      const t = m.tasks.get(id) ?? { id, title: String(e.title ?? id), state: "working" as const };
+      t.state = "working";
+      t.title = String(e.title ?? t.title);
+      m.tasks.set(id, t);
       return;
     }
-    case "task.started":
-      if (e.task !== "main") push(m, { kind: "note", text: line() });
-      return;
-    case "context.ready":
-      push(m, { kind: "note", text: `Repository map for the agents · about ${Math.max(1, Math.round(Number(e.chars ?? 0) / 4000))}k tokens` });
-      return;
-    case "spec.ready": {
-      const n = (v: unknown, one: string): string => `${Number(v)} ${one}${Number(v) === 1 ? "" : "s"}`;
-      push(m, { kind: "note", text: `Spec ready · "${String(e.name)}" · ${n(e.features, "feature")}, ${n(e.behaviour, "behaviour rule")}` });
+    case "task.report": {
+      const t = m.tasks.get(String(e.task));
+      if (t) t.state = "checking";
       return;
     }
-    case "route":
-    case "screens.checked":
-      push(m, { kind: "note", text: line() });
-      return;
-    case "checks.finished": {
-      const results = (e.results as { name: string; status: string }[] | undefined) ?? [];
-      for (const r of results) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
-      if (e.phase !== "baseline") setStage(m, "checking");
-      if (results.length === 0) return;
-      const label = e.phase === "baseline" ? "Checks before the change" : e.phase === "final" ? "Checks on the result" : e.task && e.task !== "main" ? `Checks for ${String(e.task)}` : "Checks";
-      push(m, { kind: "note", text: `${label}: ${results.map((r) => `${r.name} ${r.status}`).join(", ")}`, tone: e.ok === false ? "amber" : undefined });
+    case "task.merged": {
+      const t = m.tasks.get(String(e.task));
+      if (t) t.state = "done";
       return;
     }
-    case "tester.verdict": {
-      m.verdict = { verdict: String(e.verdict), summary: String(e.summary ?? "") };
-      const findings = ((e.findings as { problem: string }[] | undefined) ?? []).map((f) => `\n- ${f.problem}`).join("");
-      const task = e.task && e.task !== "main" ? ` ${String(e.task)}` : "";
-      push(m, { kind: "neuromesh", text: `Review${task}: ${e.verdict === "pass" ? "passed" : "changes asked"} · ${String(e.summary ?? "")}${findings}`, tone: e.verdict === "pass" ? "jade" : "amber" });
+    case "task.failed": {
+      const t = m.tasks.get(String(e.task));
+      if (t) {
+        t.state = "failed";
+        t.note = String(e.reason ?? "");
+      }
       return;
     }
-    case "task.merged":
-      // A one-task run's merge is bookkeeping; with several tasks it is progress.
-      if (e.task !== "main" || e.escalated) push(m, { kind: "neuromesh", text: line(), tone: "jade" });
-      return;
-    case "task.failed":
-    case "feature.failed":
-      push(m, { kind: "error", text: line(), tone: "red" });
-      return;
     case "task.escalated":
-    case "task.advised":
-    case "task.climbed":
-      push(m, { kind: "neuromesh", text: line(), tone: "mauve" });
+    case "task.advised": {
+      const t = m.tasks.get(String(e.task));
+      if (t) t.state = "expert";
       return;
-    case "run.started":
-    case "run.resumed":
-    case "workspace.ready":
-    case "checks.detected":
-    case "run.finished":
-      return;
-    default: {
-      const text = line();
-      if (text) push(m, { kind: "note", text });
     }
+    case "checks.finished":
+      for (const r of (e.results as { name: string; status: string }[] | undefined) ?? []) m.checks.set(r.name, e.phase === "baseline" ? `${r.status} before the change` : r.status);
+      if (e.phase !== "baseline") setStage(m, "checking");
+      return;
+    case "tester.verdict":
+      m.verdict = { verdict: String(e.verdict), summary: String(e.summary ?? "") };
+      return;
+    case "ask":
+      m.ask = { question: e.question as Question, at: Date.now() };
+      m.statusAt = Date.now();
+      return;
+    case "answer":
+      m.ask = undefined;
+      m.statusAt = Date.now();
+      return;
+    case "context.compacted":
+      m.compactAsked = false;
+      return;
+    default:
   }
 }
 
@@ -343,6 +438,8 @@ export function finished(m: Model, state: RunState): void {
   m.endedAt = Date.now();
   for (const a of m.agents.values()) a.working = false;
   m.stageAt = Date.now();
+  m.statusAt = Date.now();
+  m.ask = undefined;
   m.stage =
     state.status === "finished" ? (state.outcome?.checks === "failed" ? "failed" : "finished")
     : state.status === "paused" ? "paused"
@@ -352,14 +449,30 @@ export function finished(m: Model, state: RunState): void {
 }
 
 /** The pipeline as the design shows it, from what actually happened. */
-export function pipeline(m: Model): { label: string; state: "done" | "active" | "todo" | "failed" | "skipped" }[] {
+export function pipeline(m: Model): { label: string; stage: Stage; state: "done" | "active" | "todo" | "failed" | "skipped" }[] {
   const order: Stage[] = ["planning", "building", "checking", "reviewing"];
   const at = order.indexOf(m.stage);
   const over = ["finished", "failed", "stopped", "paused"].includes(m.stage);
   return order.map((s, i) => {
-    const label = s === "planning" ? "PLAN" : s === "building" ? "BUILD" : s === "checking" ? "CHECK" : "REVIEW";
-    if (s === "planning" && !m.planned && i < at) return { label, state: "skipped" };
-    if (over) return { label, state: m.stage === "finished" ? "done" : i === order.length - 1 ? "failed" : "done" };
-    return { label, state: i < at ? "done" : i === at ? "active" : "todo" };
+    const label = s === "planning" ? "Plan" : s === "building" ? "Build" : s === "checking" ? "Check" : "Review";
+    if (s === "planning" && !m.planned && (i < at || over)) return { label, stage: s, state: "skipped" };
+    if (over) return { label, stage: s, state: m.stage === "finished" ? "done" : i === order.length - 1 ? "failed" : "done" };
+    return { label, stage: s, state: i < at ? "done" : i === at ? "active" : "todo" };
   });
 }
+
+/** Model names as people say them: claude-opus-5-5 is Opus 5.5, gpt-6-luna is GPT-6 Luna. */
+export function prettyModel(model: string | undefined): string {
+  if (!model) return "?";
+  const name = model.replace(/^[a-z]+\//, "");
+  const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+  const claude = /^claude-([a-z]+)-(\d+)(?:-(\d+))?/.exec(name);
+  if (claude) return `${cap(claude[1]!)} ${claude[2]}${claude[3] ? `.${claude[3]}` : ""}`;
+  const gpt = /^gpt-([\d.]+)-([a-z]+)/.exec(name);
+  if (gpt) return `GPT-${gpt[1]} ${cap(gpt[2]!)}`;
+  const gemini = /^gemini-([\d.]+)-([a-z-]+)/.exec(name);
+  if (gemini) return `Gemini ${gemini[1]} ${gemini[2]!.split("-").map(cap).join(" ")}`;
+  return name;
+}
+
+export const shortEffort = (e: string | undefined): string => (!e ? "" : e === "medium" ? "med" : e);

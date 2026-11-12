@@ -182,6 +182,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     A deterministic brief engine that improves the prompt and picks the
     staffing comes first.
 
+18. **The TUI, redesigned to the owner's sketch (2026-11-12).** Layered panes in
+    the terminal's own colours (or transparent), projects and recents on the
+    left, one box per agent in the middle with verbosity none/medium/full, the
+    agent graph, context and changes on the right, mouse everywhere, and the
+    final report rendered as markdown. Normal mode asks before the plan and the
+    expert (F39); Turbo goes ahead. Features F32 to F47; `docs/11-tui.md`.
+    Checked with the demo preset only; no live run through the TUI yet.
+
 ## Next steps
 
 1. E1 on the Luna team: `node evals/until-done.ts e1-luna-1 e1-luna-2 e1-luna-3`
