@@ -205,9 +205,9 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
 
 ## Next steps
 
-1. The owner deploys the telemetry endpoint: `npx wrangler login`, then
-   `sh telemetry-endpoint/deploy.sh`; commit the URL it writes. Until then,
-   testers' reports wait on their machines.
+1. Done 2026-11-12: the telemetry endpoint is live at
+   `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
+   requests without keys are refused). `neuromesh telemetry pull` reads it.
 2. Live runs through the TUI on real work (the owner's usage log), then
    testers' reports: read them together (`neuromesh telemetry pull`) and pick
    the defaults from the data.
