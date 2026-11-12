@@ -4,10 +4,24 @@
 // prompt placed after it on the command line would be read as a tool name.
 
 import type { AgentBackend, AgentRequest, AgentResult } from "./types.ts";
+import { isOn } from "../features.ts";
 import { classifyFailure } from "./types.ts";
 import { capture } from "./proc.ts";
 import { num, obj, runCli, short, str } from "./shared.ts";
 import type { ParsedRun, StreamParser } from "./shared.ts";
+
+/**
+ * Claude Code sends its whole tool list, MCP servers, skills and settings with
+ * every new session: about 33k prompt tokens before the task (measured
+ * 2026-11-11, Claude Code 2.1.319). Neuromesh turns need few tools, so each
+ * session gets only those, and nothing from the user's own setup.
+ */
+const LEAN = ["--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--disable-slash-commands", "--setting-sources", ""];
+const READ_TOOLS = "Read,Grep,Glob";
+const WRITE_TOOLS = "Bash,Edit,Write,Read,Grep,Glob";
+/** Replaces Claude Code's long default system prompt for turns that only read. */
+export const READ_ONLY_SYSTEM_PROMPT =
+  "You are a senior software engineer. You are working in the repository in the current directory, which you can read with the Read, Grep and Glob tools but not change. Read what you need, think carefully, and answer precisely and concisely. When a JSON format is required, give your final answer in exactly that format.";
 
 export function claudeArgs(request: AgentRequest): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose"];
@@ -15,9 +29,14 @@ export function claudeArgs(request: AgentRequest): string[] {
   if (request.effort) args.push("--effort", request.effort);
   if (request.outputSchema) args.push("--json-schema", JSON.stringify(request.outputSchema));
   if (request.resumeSessionId) args.push("--resume", request.resumeSessionId);
+  // [F08 lean-claude]
+  const lean = isOn("lean-claude");
+  if (lean) args.push(...LEAN);
   if (request.access === "write") {
+    if (lean) args.push("--tools", WRITE_TOOLS);
     args.push("--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
   } else {
+    if (lean) args.push("--tools", READ_TOOLS, "--system-prompt", READ_ONLY_SYSTEM_PROMPT);
     args.push("--permission-mode", "plan");
   }
   return args;
@@ -55,11 +74,16 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity">): StreamP
         const windows = obj(info?.unifiedWindows);
         if (windows) {
           const used: Record<string, number> = {};
+          const resets: Record<string, number> = {};
           for (const [name, value] of Object.entries(windows)) {
             const utilization = num(obj(value)?.utilization);
             if (utilization !== undefined) used[name] = utilization;
+            // [F43 quota-windows]
+            const at = num(obj(value)?.resetsAt);
+            if (at !== undefined) resets[name] = at;
           }
           run.quotaUsed = used;
+          if (Object.keys(resets).length > 0) run.quotaResets = resets;
         }
         return;
       }

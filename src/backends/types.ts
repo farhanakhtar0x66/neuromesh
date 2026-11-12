@@ -74,6 +74,8 @@ export interface AgentResult {
   costUsdEquivalent?: number;
   /** Fraction of the subscription window used (0 to 1), when reported. */
   quotaUsed?: Record<string, number>;
+  /** [F43 quota-windows] When each of those windows resets (Unix seconds), when reported. */
+  quotaResets?: Record<string, number>;
   durationMs: number;
   exitCode: number | null;
   /** Error or refusal text, when there is one. */

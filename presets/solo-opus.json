@@ -1,0 +1,13 @@
+{
+  "name": "solo-opus",
+  "description": "One Claude Opus 5.5 agent at medium effort through Claude Code, given the request exactly as typed. The single frontier agent the build test compares against; uses the scarce Claude subscription.",
+  "mode": "solo",
+  "worker": {
+    "tier": "expert",
+    "backend": "claude",
+    "model": "claude-opus-5-5",
+    "effort": "medium"
+  },
+  "repairs": 1,
+  "turnTimeoutMinutes": 40
+}

@@ -28,6 +28,8 @@ const TABLE: [RegExp, Price][] = [
   [/^gpt-6\.1-terra/, { input: 1, cacheRead: 0.05, output: 5, cacheWriteFactor: 0 }],
   [/^gpt-6-astra/, { input: 10, cacheRead: 1, output: 50, cacheWriteFactor: 0 }],
   [/^gpt-6-luna/, { input: 0.1, cacheRead: 0.01, output: 0.5, cacheWriteFactor: 0 }],
+  [/^claude-fable-5-2/, { input: 8, cacheRead: 0.2, output: 40, cacheWriteFactor: 2 }],
+  [/^claude-fable-5-1/, { input: 6, cacheRead: 0.15, output: 30, cacheWriteFactor: 2 }],
   // Claude Code writes one-hour cache entries, billed at twice the input price.
   [/^claude-opus-5-5/, { input: 4, cacheRead: 0.2, output: 20, cacheWriteFactor: 2 }],
   [/^claude-sonnet-5-5/, { input: 2, cacheRead: 0.1, output: 10, cacheWriteFactor: 2 }],

@@ -1,0 +1,68 @@
+{
+  "name": "factory-sol-luna",
+  "description": "All-OpenAI subscription team: GPT-6.1 Sol (medium) is the expert architect, spec writer, and advisor; GPT-6 Luna is the high-throughput worker (low effort first, climbing to high) and tester. Zero cross-provider dependencies, fully contained within ChatGPT Plus/Pro Codex.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 200000,
+  "expertBudgetUsd": 0.8,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "codex",
+      "model": "gpt-6-luna",
+      "effort": "low"
+    },
+    {
+      "backend": "codex",
+      "model": "gpt-6-luna",
+      "effort": "high"
+    }
+  ]
+}

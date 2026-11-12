@@ -2,6 +2,7 @@ import type { StopReason, Usage } from "../backends/types.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import type { FileChange } from "../workspace/workspace.ts";
 import type { ProgressHistory } from "./progress.ts";
+import type { Brief } from "../intake/brief.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -16,7 +17,7 @@ export interface RoleConfig {
   tier?: Tier;
 }
 
-export type Role = "worker" | "orchestrator" | "tester" | "escalation";
+export type Role = "worker" | "orchestrator" | "tester" | "escalation" | "briefer";
 
 /** Models to try for each role, in order. A later one is used when an earlier one runs out of quota. */
 export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
@@ -32,9 +33,10 @@ export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
  */
 export type RunStatus = "running" | "interrupted" | "paused" | "failed" | "finished" | "applied" | "discarded";
 
-export type RunStep = "setup" | "baseline" | "plan" | "tasks" | "final" | "done";
+export type RunStep = "setup" | "baseline" | "spec" | "plan" | "tasks" | "final" | "done";
 
 export type AttemptKind =
+  | "spec"
   | "plan"
   | "initial"
   | "repair"
@@ -74,12 +76,19 @@ export interface WorkerReport {
   status: "done" | "blocked" | "unknown";
   summary: string;
   notes?: string;
+  /** How to start the program, when the worker built one. */
+  run?: string;
 }
 
 export interface Finding {
   problem: string;
   file?: string;
   reproduce?: string;
+  /**
+   * "blocker": a stated requirement is not met, or it crashes or loses data.
+   * "minor": everything else. Unset (older testers) counts as a blocker.
+   */
+  severity?: "blocker" | "minor";
 }
 
 export interface Verdict {
@@ -119,12 +128,16 @@ export interface TaskState extends PlannedTask {
   base?: string;
   branch: string;
   worktree: string;
+  /** [F39 ask-first] The person agreed to call the expert in for this task. */
+  expertApproved?: boolean;
   prepared: string[];
   sessionId?: string;
   /** Which model the session belongs to; a session cannot move to another model. */
   sessionModel?: string;
   /** Why the next agent turn is happening. */
   next: "initial" | "repair" | "review-fix" | "redo" | "continue" | "advised-fix" | "climb";
+  /** [F14 expert-patch] The expert fixes named problems in the worker's code instead of starting over. */
+  patch?: boolean;
   /** Position on the worker ladder (0 = the cheapest, lowest-effort rung). */
   rung?: number;
   /** The expert's diagnosis for a stuck worker (the first, cheaper step of escalation). */
@@ -158,6 +171,7 @@ export interface RunState {
   id: string;
   dir: string;
   repo: string;
+  /** What the agents work from: the brief when the brief engine ran, else the request as typed. */
   prompt: string;
   /**
    * Usage of resumed sessions is recorded per turn. Runs made before 2026-11-11
@@ -165,6 +179,20 @@ export interface RunState {
    * perTurnAttempts.
    */
   usagePerTurn?: boolean;
+  /** [F12 context-packet] Repository map and relevant signatures, made at the start of the run. */
+  contextPacket?: string;
+  /** Features switched on for this run (src/features.ts). */
+  features?: string[];
+  /** Features that failed during the run; optional ones were switched off and the run went on. */
+  featureErrors?: { id: string; key: string; message: string; at: string }[];
+  /** The request as typed, when the brief engine rewrote it. */
+  request?: string;
+  /** [F49 follow-up] The session this run belongs to (the first run's id), the run it follows, and the commit it starts from. */
+  session?: string;
+  follows?: string;
+  start?: string;
+  /** What the brief engine made of the request, and the staffing it chose. */
+  brief?: Brief;
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;
@@ -175,6 +203,8 @@ export interface RunState {
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend; no limit when unset. */
   expertBudget?: number;
+  /** [F16 dollar-budget] Most estimated expert spending (US dollars, API list prices) one run may have. */
+  expertBudgetUsd?: number;
   /** When the tester runs: always, or only when the project has no automatic checks. */
   test?: "always" | "no-checks";
   /** Worker rungs, cheapest first: a stuck worker climbs before the expert is asked. */

@@ -2,7 +2,9 @@
 // Neuromesh command line.
 
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
+import { loadSettings, saveSettings } from "../tui/store.ts";
+import { join, resolve } from "node:path";
 import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
 import type { CallName, DoctorReport } from "../doctor/doctor.ts";
@@ -13,10 +15,13 @@ import type { EngineContext } from "../engine/run.ts";
 import { defaultHome, findRun, listRuns } from "../engine/store.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
+import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
+import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
+import { disable, feature, featureTable, hint, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
-import { formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
+import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
 
@@ -47,7 +52,16 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
+  neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
+  neuromesh                     (no command, in a terminal) open the TUI; also \`neuromesh tui\` [--preset <name>]
+  neuromesh features            the features added since v0.1, their ids and whether they are on
+                                (--disable <id or key,...> switches features off for any command)
+  neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
+  neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
+  neuromesh telemetry [on|off|pull]
+                                share run reports with Neuromesh's author (asked once in the TUI),
+                                stop sharing, or (the author) fetch everyone's reports
   neuromesh doctor              check each backend with a few small live calls
 
   [run] is a run id, the end of one, or "last" (the default).
@@ -125,9 +139,83 @@ function exitCodeFor(state: RunState): number {
   return 1;
 }
 
-function finish(state: RunState, flags: Map<string, string>): number {
+async function finish(state: RunState, flags: Map<string, string>): Promise<number> {
   if (!flags.has("json")) process.stdout.write("\n" + formatSummary(state) + "\n");
+  // Every real run goes into the usage log (~/.neuromesh/usage), unless --no-log.
+  // [F11 usage-log]
+  if (!flags.has("no-log") && isOn("usage-log") && state.preset !== "demo" && state.status !== "running") {
+    const home = defaultHome();
+    try {
+      const entry = entryFor(state, (b) => backends[b]?.sessionTotals === true);
+      recordRun(home, entry);
+      const ended = state.status === "finished" || state.status === "failed";
+      const rating = ended && !flags.has("json") && !flags.has("no-rate") ? await askRating(state.id) : undefined;
+      if (rating) recordRating(home, rating);
+      // [F52 telemetry] With the tester's consent, the same as a report for the owner.
+      if (isOn("telemetry") && telemetryAllowed(loadSettings(home).telemetry)) {
+        queue(home, runReport(home, state, entry));
+        if (rating) queue(home, ratingReport(home, state.id, rating.score, rating.note));
+        await flush(home);
+      }
+      if (!flags.has("json")) process.stdout.write(`Recorded in ${join(usageDir(home), "USAGE.md")}\n`);
+    } catch (error) {
+      process.stderr.write(`Could not write the usage log: ${error instanceof Error ? error.message : String(error)}\n${hint(feature("usage-log"))}\n`);
+    }
+  }
   return exitCodeFor(state);
+}
+
+/** [F52 telemetry] neuromesh telemetry [on|off|pull|status] */
+async function commandTelemetry({ positional }: Parsed): Promise<number> {
+  const home = defaultHome();
+  const what = positional[0] ?? "status";
+  const settings = loadSettings(home);
+  if (what === "on" || what === "off") {
+    saveSettings(home, { ...settings, telemetry: what });
+    process.stdout.write(what === "on" ? `Sharing run reports. ${NOTICE[2]}\n` : "Not sharing run reports. Nothing more is sent.\n");
+    if (what === "on") await flush(home);
+    return 0;
+  }
+  if (what === "pull") {
+    const token = process.env.NEUROMESH_TELEMETRY_ADMIN;
+    if (!token) {
+      process.stderr.write("Set NEUROMESH_TELEMETRY_ADMIN to the endpoint's ADMIN_TOKEN.\n");
+      return 2;
+    }
+    const n = await pull(home, token);
+    process.stdout.write(`${n} report${n === 1 ? "" : "s"} saved in ${join(home, "telemetry", "inbox")}\n`);
+    return 0;
+  }
+  const waiting = outbox(home).length;
+  process.stdout.write(
+    [
+      `Sharing: ${settings.telemetry === "on" ? "on" : settings.telemetry === "off" ? "off" : "not asked yet (the TUI asks before the first run)"}${process.env.NEUROMESH_TELEMETRY === "off" ? " (but NEUROMESH_TELEMETRY=off)" : ""}`,
+      `Endpoint: ${endpoint() ?? "not set yet; reports wait in the outbox"}`,
+      `Waiting to be sent: ${waiting}`,
+      "",
+      ...NOTICE,
+    ].join("\n") + "\n",
+  );
+  return 0;
+}
+
+/** Rate a run after trying its result: neuromesh rate <run> <1-5> [note...] */
+function commandRate({ positional, flags }: Parsed): number {
+  const [ref, scoreText, ...note] = positional;
+  const score = Number.parseInt(scoreText ?? "", 10);
+  if (!ref || !(score >= 1 && score <= 5)) {
+    process.stderr.write("Usage: neuromesh rate <run|last> <1-5> [note]   (1 much worse ... 5 much better than your usual way)\n");
+    return 2;
+  }
+  const state = findRun(defaultHome(), repoRoot(flags), ref);
+  recordRating(defaultHome(), { run: state.id, at: new Date().toISOString(), score, usual: flags.get("usual"), note: note.join(" ") || undefined });
+  process.stdout.write(`Rated run ${state.id}: ${score}. Report: ${join(usageDir(defaultHome()), "USAGE.md")}\n`);
+  return 0;
+}
+
+function commandUsage(): number {
+  process.stdout.write(report(readLog(defaultHome())));
+  return 0;
 }
 
 function repoRoot(flags: Map<string, string>): string {
@@ -159,6 +247,28 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
   return finish(state, flags);
 }
 
+/** Show what the brief engine makes of a request, without running anything. */
+function commandBrief({ positional, flags }: Parsed): number {
+  const file = flags.get("prompt-file");
+  const prompt = (file ? readFileSync(file, "utf8") : positional.join(" ")).trim();
+  if (prompt === "") {
+    process.stderr.write('Give a request: neuromesh brief "build a typing test for the terminal"\n');
+    return 2;
+  }
+  const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
+  const repo = findRepo(flags.get("repo") ?? process.cwd());
+  const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: preset.roles.briefer !== undefined, expertSpec: preset.roles.briefer?.[0]?.tier === "expert" });
+  const s = brief.staffing;
+  process.stdout.write(
+    `${bold("Kind")}: ${brief.kind}${brief.surface ? `, ${brief.surface}` : ""}\n` +
+      `${bold("Staffing")}: ${s.plan ? `the expert plans; up to ${s.agents} workers at once` : "one worker"}, starting on the ${s.rung === "top" ? "strongest" : "cheapest"} rung; ` +
+      `${s.tester ? "tester on" : "no tester"}${s.spec ? "; a cheap model writes a product spec first" : ""}\n` +
+      s.reasons.map((r) => `  - ${r}`).join("\n") +
+      `\n\n${bold("The brief the agents get")}:\n${renderBrief(brief)}\n`,
+  );
+  return 0;
+}
+
 async function commandEval({ positional, flags }: Parsed): Promise<number> {
   const home = defaultHome();
   if (positional[0] === "compare") {
@@ -188,7 +298,8 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     return 0;
   }
   const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
-  const tasks = loadTasks(undefined, {
+  // --suite: another folder of tasks, e.g. evals/builds for the judged build tests.
+  const tasks = loadTasks(flags.get("suite") ? resolve(flags.get("suite")!) : undefined, {
     names: flags.get("tasks")?.split(",").filter(Boolean),
     kinds: flags.get("kinds")?.split(",").filter(Boolean),
   });
@@ -291,7 +402,7 @@ const DOCTOR_DEFAULTS: Record<string, { model?: string; effort?: string }> = {
 };
 
 async function commandDoctor({ flags }: Parsed): Promise<number> {
-  const ids = (flags.get("backend") ?? Object.keys(backends).join(",")).split(",").filter(Boolean);
+  const ids = (flags.get("backend") ?? Object.keys(backends).filter((id) => id !== "demo").join(",")).split(",").filter(Boolean);
   const models = new Map<string, string>();
   for (const pair of (flags.get("model") ?? "").split(",").filter(Boolean)) {
     const [backend, model] = pair.split("=");
@@ -333,11 +444,31 @@ async function commandDoctor({ flags }: Parsed): Promise<number> {
 
 async function main(): Promise<number> {
   const [command, ...rest] = process.argv.slice(2);
+  // [F19 tui] No command in a terminal opens the TUI.
+  if ((command === undefined && process.stdin.isTTY && process.stdout.isTTY) || command === "tui") {
+    const parsed = parseArgs(command === "tui" ? rest : []);
+    if (parsed.flags.get("disable")) {
+      process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
+      disable(parsed.flags.get("disable"));
+    }
+    const { runTui } = await import("../tui/app.ts");
+    return runTui({ cwd: parsed.flags.get("repo") ?? process.cwd(), preset: parsed.flags.get("preset") });
+  }
+  if (command === "--version" || command === "-v" || command === "version") {
+    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string };
+    process.stdout.write(`neuromesh ${pkg.version}\n`);
+    return 0;
+  }
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
     process.stdout.write(HELP);
     return 0;
   }
   const parsed = parseArgs(rest);
+  // --disable F04,context-packet: switch features off for this command (see `neuromesh features`).
+  if (parsed.flags.get("disable")) {
+    process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
+    disable(parsed.flags.get("disable"));
+  }
   if (parsed.flags.has("help")) {
     process.stdout.write(HELP);
     return 0;
@@ -357,6 +488,12 @@ async function main(): Promise<number> {
       return commandDiscard(parsed);
     case "eval":
       return commandEval(parsed);
+    case "brief":
+      return commandBrief(parsed);
+    case "rate":
+      return commandRate(parsed);
+    case "usage":
+      return commandUsage();
     case "cooldowns": {
       if (parsed.flags.has("clear")) clearCooldowns(defaultHome());
       const cooling = coolingModels(defaultHome());
@@ -364,8 +501,13 @@ async function main(): Promise<number> {
       process.stdout.write(rows.length === 0 ? "No model is cooling down.\n" : rows.map(([m, c]) => `${m.padEnd(36)} until ${new Date(c.until).toLocaleString()}  ${c.reason.slice(0, 80)}`).join("\n") + "\n");
       return 0;
     }
+    case "features":
+      process.stdout.write(featureTable() + "\n");
+      return 0;
     case "presets":
       return commandPresets();
+    case "telemetry":
+      return commandTelemetry(parsed);
     case "doctor":
       return commandDoctor(parsed);
     default:

@@ -6,6 +6,8 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import type { EvalReport } from "../eval/eval.ts";
 import { summarize } from "../eval/eval.ts";
+import { isOn } from "../features.ts";
+import { estimateCost } from "../usage/prices.ts";
 
 const useColor = process.stderr.isTTY && !process.env.NO_COLOR;
 const paint = (code: string) => (text: string): string => (useColor ? `\x1b[${code}m${text}\x1b[0m` : text);
@@ -48,7 +50,7 @@ function oneLine(text: string, limit: number): string {
   return flat.length > limit ? flat.slice(0, limit - 1) + "…" : flat;
 }
 
-const ROLE_LABEL: Record<string, string> = { orchestrator: "Expert (plan)", escalation: "Expert", worker: "Worker", tester: "Tester" };
+const ROLE_LABEL: Record<string, string> = { orchestrator: "Expert (plan)", escalation: "Expert", worker: "Worker", tester: "Tester", briefer: "Spec writer" };
 // An advice turn is the expert reading, not editing.
 
 function who(event: NeuromeshEvent): string {
@@ -69,6 +71,20 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
     }
     case "run.resumed":
       return `${bold(`Resuming run ${event.run}`)} from ${event.from}, at step "${event.step}"`;
+    case "brief": {
+      const st = event.staffing as { reasons: string[] };
+      const attached = event.attached as string[];
+      const what = `${String(event.kind)}${event.surface ? `, ${String(event.surface)}` : ""}`;
+      return dim(`Brief: ${what} · ${String(event.standards)} working standards added${attached.length > 0 ? ` · attached ${attached.join(", ")}` : ""}\n   Staffing: ${st.reasons.join("; ")}`);
+    }
+    case "context.ready":
+      return dim(`Context packet: ${String(event.chars)} characters (about ${Math.round(Number(event.chars) / 4)} tokens) of repository map for the agents`);
+    case "feature.failed":
+      return red(`! Feature ${String(event.feature)} ${String(event.key)} failed: ${oneLine(String(event.message), 200)}\n   ${String(event.hint)}`);
+    case "screens.checked":
+      return dim(`Screen check [${String(event.task)}]: ran \`${String(event.command)}\` in tmux, ${String(event.screens)} screens recorded${event.stuck ? "; it did not quit" : ""}`);
+    case "spec.ready":
+      return dim(`Product spec ready (${String(event.model ?? "?")}): "${String(event.name)}", ${String(event.features)} features, ${String(event.behaviour)} behaviour rules`);
     case "route":
       return dim(`Intake: ${event.mode} — ${event.reason}`);
     case "note":
@@ -105,7 +121,9 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
     case "agent.finished": {
       const stop = String(event.stop);
       const detail = stop === "done" ? "" : ` — ${oneLine(String(event.detail ?? ""), 160)}`;
-      return `${who(event)} ${statusColor(stop)(stop)} in ${duration(Number(event.durationMs))} · ${usageText(event.usage as Usage)}${detail}`;
+      // [F17 live-cost]
+      const cost = typeof event.cost === "number" ? ` · ≈$${event.cost.toFixed(event.cost < 0.1 ? 3 : 2)}` : "";
+      return `${who(event)} ${statusColor(stop)(stop)} in ${duration(Number(event.durationMs))} · ${usageText(event.usage as Usage)}${cost}${detail}`;
     }
     case "tester.verdict": {
       const findings = (event.findings as { problem: string }[]) ?? [];
@@ -138,7 +156,21 @@ export function formatSummary(state: RunState): string {
   const lines: string[] = [];
   lines.push(`${bold(`Run ${state.id}`)} · ${statusColor(state.status)(state.status)} · ${state.preset} (${state.mode ?? "solo"})`);
   lines.push(`  Request: ${oneLine(state.prompt, 100)}`);
-  if (state.reason) lines.push(`  Reason:  ${state.failure === "engine" ? red("[engine] ") : ""}${oneLine(state.reason, 300)}`);
+  if (state.reason) lines.push(`  Reason:  ${state.failure === "engine" ? red("[engine] ") : ""}${oneLine(state.reason, 400)}`);
+  for (const f of state.featureErrors ?? []) lines.push(red(`  Feature ${f.id} ${f.key} failed: ${oneLine(f.message, 200)}`));
+  // [F17 live-cost] Estimated cost by role, at API list prices.
+  if (isOn("live-cost") && (state.attempts ?? []).length > 0) {
+    const byRole = new Map<string, number>();
+    let unknown = false;
+    for (const a of state.attempts) {
+      const c = estimateCost(a.model, a.usage);
+      if (c === undefined) unknown ||= a.usage.input !== undefined || a.usage.output !== undefined;
+      else byRole.set(a.role, (byRole.get(a.role) ?? 0) + c);
+    }
+    const total = [...byRole.values()].reduce((x, y) => x + y, 0);
+    const parts = [...byRole.entries()].sort((x, y) => y[1] - x[1]).map(([r, c]) => `${r} $${c.toFixed(c < 0.1 ? 3 : 2)}`);
+    lines.push(`  Cost:    ≈$${total.toFixed(total < 0.1 ? 3 : 2)} estimated at API list prices (${parts.join(", ")})${unknown ? "; some turns unpriced" : ""}`);
+  }
   for (const t of state.tasks ?? []) {
     const label = state.tasks.length === 1 ? "Agent:  " : `Task ${t.id}:`;
     const summary = t.report ? oneLine(t.report.summary, 160) : t.error ? oneLine(t.error, 160) : t.status;

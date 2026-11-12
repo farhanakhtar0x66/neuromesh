@@ -1,0 +1,20 @@
+{
+  "name": "solo-fable",
+  "description": "Single-agent frontier baseline: Claude Fable 5.2 through Claude Code at high effort. Used to evaluate whether multi-agent decomposition beats the world-leading single frontier model on SWE-bench Pro / FrontierCode.",
+  "mode": "solo",
+  "routing": "worker-first",
+  "roles": {
+    "worker": [
+      {
+        "backend": "claude",
+        "model": "claude-fable-5-2",
+        "effort": "high"
+      }
+    ]
+  },
+  "repairs": 1,
+  "maxTasks": 1,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 35,
+  "test": "always"
+}

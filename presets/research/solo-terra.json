@@ -1,0 +1,20 @@
+{
+  "name": "solo-terra",
+  "description": "Single-agent mid-tier baseline: GPT-6.1 Terra through Codex at medium effort. Evaluates standalone mid-tier performance at 50% of Sol API cost.",
+  "mode": "solo",
+  "routing": "worker-first",
+  "roles": {
+    "worker": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-terra",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 1,
+  "maxTasks": 1,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 30,
+  "test": "always"
+}

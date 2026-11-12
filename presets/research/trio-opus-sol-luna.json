@@ -1,0 +1,68 @@
+{
+  "name": "trio-opus-sol-luna",
+  "description": "3-agent heterogeneous premium team: Claude Opus 5.5 designs architecture and product spec; GPT-6.1 Sol (medium) performs complex implementation; GPT-6 Luna provides independent adversarial testing and code review. Completely separates design, implementation, and verification across distinct models.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 35,
+  "expertBudget": 300000,
+  "expertBudgetUsd": 2.0,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "low"
+    },
+    {
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium"
+    }
+  ]
+}

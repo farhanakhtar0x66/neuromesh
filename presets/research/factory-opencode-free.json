@@ -1,0 +1,68 @@
+{
+  "name": "factory-opencode-free",
+  "description": "Candidate open-source / genuinely free preset (requires OpenCode CLI adapter): DeepSeek V4.1 Flash acts as architect and escalation lead; GLM-5.3 Flash / DeepSeek Flash via NVIDIA NIM or local vLLM acts as the worker and tester. Zero subscription fees, zero paid API charges.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "opencode",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "effort": "high"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "opencode",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "opencode",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "effort": "high",
+        "tier": "expert"
+      },
+      {
+        "backend": "opencode",
+        "model": "glm/glm-5.3-flash",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "opencode",
+        "model": "glm/glm-5.3-flash",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "opencode",
+        "model": "deepseek/deepseek-v4.1-flash",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 300000,
+  "expertBudgetUsd": 0.5,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "opencode",
+      "model": "glm/glm-5.3-flash",
+      "effort": "low"
+    },
+    {
+      "backend": "opencode",
+      "model": "glm/glm-5.3-flash",
+      "effort": "high"
+    }
+  ]
+}

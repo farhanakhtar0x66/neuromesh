@@ -4,6 +4,9 @@
 import type { AgentResult } from "../backends/types.ts";
 import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
+import { fileURLToPath } from "node:url";
+import { isOn } from "../features.ts";
+import type { Spec } from "../intake/brief.ts";
 import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
 export const REPORT_SCHEMA = {
@@ -12,8 +15,23 @@ export const REPORT_SCHEMA = {
     status: { type: "string", enum: ["done", "blocked"] },
     summary: { type: "string" },
     notes: { type: "string" },
+    run: { type: "string" },
   },
-  required: ["status", "summary", "notes"],
+  required: ["status", "summary", "notes", "run"],
+  additionalProperties: false,
+};
+
+export const SPEC_SCHEMA = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    summary: { type: "string" },
+    features: { type: "array", items: { type: "string" } },
+    behaviour: { type: "array", items: { type: "string" } },
+    out_of_scope: { type: "array", items: { type: "string" } },
+    design: { type: "array", items: { type: "string" } },
+  },
+  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design"],
   additionalProperties: false,
 };
 
@@ -55,8 +73,9 @@ export const VERDICT_SCHEMA = {
           problem: { type: "string" },
           file: { type: "string" },
           reproduce: { type: "string" },
+          severity: { type: "string", enum: ["blocker", "minor"] },
         },
-        required: ["problem", "file", "reproduce"],
+        required: ["problem", "file", "reproduce", "severity"],
         additionalProperties: false,
       },
     },
@@ -90,10 +109,68 @@ const WORKER_RULES = `Rules:
 When you finish, give your final answer in the required JSON format:
 - status: "done", or "blocked" if you could not complete the task
 - summary: one or two sentences on what you changed
-- notes: anything the reviewer should know (assumptions, things left undone); empty if none`;
+- notes: anything the reviewer should know (assumptions, things left undone); empty if none
+- run: the shell command that starts the program from this directory, if it is a program a person runs; empty otherwise`;
+
+/** Absolute path of the agents' tool, so any CLI can run it from any directory. */
+export const NM_TOOL = fileURLToPath(new URL("../tools/nm.ts", import.meta.url));
+
+/** [F12 context-packet] The repository map for a prompt, when there is one. */
+function contextSection(state: RunState): string {
+  if (!state.contextPacket || !isOn("context-packet")) return "";
+  return `\n\nThe repository, mapped by Neuromesh before you started (no need to rediscover it; read only what you need):\n${state.contextPacket}`;
+}
+
+/** [F13 nm-tools] How to use the shared tool. */
+function toolsNote(): string {
+  if (!isOn("nm-tools")) return "";
+  return `\n\nTo find your way cheaply, use this read-only tool from your shell instead of listing directories or reading whole files: \`node ${NM_TOOL} map [words]\` (repository map), \`node ${NM_TOOL} show <file> <function or class>\` (one definition with line numbers), \`node ${NM_TOOL} find <regex> [path]\` (matches grouped by file), \`node ${NM_TOOL} checks\` (the project's checks, failures only in full).`;
+}
 
 function isWholeRequest(state: RunState, task: TaskState): boolean {
   return state.tasks.length === 1 && task.brief === state.prompt;
+}
+
+/** A cheap model turns a request too short to build from into a product spec. */
+export function specPrompt(request: string, brief?: string): string {
+  return `You are the lead engineer. A less experienced developer is about to build the request below on their own, from what you write now; you will not see their work. Write the product spec and the design they need. Do not write code and do not create or edit files.
+
+The request:
+${request}
+${brief && brief !== request ? `\nThe full brief they will get (the request plus standards they must meet):\n${brief}\n` : ""}
+If the request is already detailed, do not repeat it: cover only what it leaves open, and put most of your effort into the design.
+
+Give your answer in the required JSON format:
+- name: a short working name of your own for the product
+- summary: two or three sentences on what it is and who uses it
+- features: ${isOn("spec-cap") ? "6 to 10" : "8 to 14"} must-have features, most important first. Include what anyone asking for this would expect without saying it. One sentence each, concrete enough to check.
+- behaviour: the exact rules that are easy to get wrong: how every number shown is calculated, what every key or command does, what happens at the edges (empty input, the end, a mistake, going back), and what each screen or output shows.
+- out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
+- design: ${isOn("spec-cap") ? "5 to 8" : "6 to 12"} points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
+
+Rules:
+- Do not contradict the request, and do not choose the programming language unless the request does.
+- Where the request names an existing product as its model, describe the expected features in your own generic terms. Do not copy that product's name, texts, word lists or artwork.
+- Prefer a small product that is complete and pleasant to use over a long list of half-features.${
+    // [F15 spec-cap] The spec writer's output is most of an expert spec turn's cost.
+    isOn("spec-cap") ? "\n- Be compact: one or two sentences per point, and about 900 words in all. Every word is read by the developer; say each thing once." : ""
+  }`;
+}
+
+export function parseSpec(result: AgentResult): Spec | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as Record<string, unknown> | undefined;
+  if (!raw || typeof raw !== "object") return undefined;
+  const list = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim().length > 0).map((v) => v.trim()) : []);
+  const features = list(raw.features);
+  if (features.length === 0) return undefined;
+  return {
+    name: typeof raw.name === "string" ? raw.name.trim() : "",
+    summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
+    features,
+    behaviour: list(raw.behaviour),
+    outOfScope: list(raw.out_of_scope),
+    design: list(raw.design),
+  };
 }
 
 /** The first turn of a task. */
@@ -102,7 +179,7 @@ export function taskPrompt(state: RunState, task: TaskState): string {
     return `You are working on a software project. Complete the request below by editing the files in the current directory.
 
 Request:
-${state.prompt}
+${state.prompt}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -117,7 +194,7 @@ ${state.prompt}
 Your task: ${task.title}
 ${task.brief}${owned}
 
-Other tasks of the plan are done by others. Do not do them, but do not break them either.
+Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -217,8 +294,7 @@ export function plannerPrompt(state: RunState, files: string[]): string {
 Request:
 ${state.prompt}
 
-Project files:
-${listing.join("\n")}
+${state.contextPacket && isOn("context-packet") ? `The project, mapped by Neuromesh:\n${state.contextPacket}` : `Project files:\n${listing.join("\n")}`}
 
 ${state.checks.length > 0 ? `The project's checks: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}` : "The project has no automatic checks."}
 
@@ -233,7 +309,21 @@ How the team works:
 Give your answer in the required JSON format: summary (one sentence) and tasks (id, title, brief, owned, depends_on, owner). Use short ids like "t1".`;
 }
 
-export function testerPrompt(state: RunState, task: TaskState, diff: string): string {
+/** What earlier reviews of this task asked for, so a reviewer does not reverse itself. */
+function earlierReviews(task: TaskState): string {
+  // [F06 review-memory]
+  if (!isOn("review-memory")) return "";
+  const earlier = task.history.flatMap((h) => h.findings ?? []).filter((f) => f.severity !== "minor");
+  if (earlier.length === 0) return "";
+  return `
+
+Earlier reviews of this task asked for these, and the developer has worked on them since:
+${findingText(earlier.slice(-8))}
+
+Check whether they are fixed. Do not ask for the opposite of an earlier finding, and do not fail the change over a choice the request (and its spec, if any) leaves open: there, the developer's choice stands.`;
+}
+
+export function testerPrompt(state: RunState, task: TaskState, diff: string, screens?: string): string {
   const what = isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task under review: ${task.title}\n${task.brief}`;
   return `You are reviewing a change made by another engineer. Decide whether it does what was asked, correctly.
 
@@ -244,16 +334,21 @@ The change:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.
+The project's own checks already pass. Look for what they miss: requirements not met, wrong behaviour in edge cases the request mentions, broken existing behaviour. You may read files and run commands, and you may write small scripts to try the change. Your edits here are thrown away afterwards.${toolsNote()}${earlierReviews(task)}
 
-Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.
+Keep the review focused and quick: go through the requirements the request states, try each with a short probe, and stop. Do not build a large test suite or hunt for cases the request does not mention. A few minutes is enough.${
+    screens
+      ? `\n\nThis is a full-screen terminal program, so reading the code is not enough. ${screens}\n\nCompare these screens with the request. A garbled, cut-off or overflowing screen, a crash or stack trace, typed text that does not appear or is not marked, a key that does the wrong thing, or a program that does not quit is a blocker. Point to the screen that shows it.`
+      : ""
+  }
 
 Be strict about the request and lenient about style. Do not fail the change for things the request did not ask for.
 
 Give your answer in the required JSON format:
 - verdict: "pass" or "fail"
 - summary: one sentence
-- findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass`;
+- findings: for a fail, each concrete problem with the file and a command or input that shows it; empty for a pass
+- severity of each finding: "blocker" when something the request states is missing or wrong, or the program crashes, hangs or loses data; "minor" for everything else (polish, wording, layout details, cases the request does not mention). Fail the change only if there is at least one blocker; list minor findings with a pass.`;
 }
 
 function attemptsText(task: TaskState): string {
@@ -274,7 +369,7 @@ ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall r
 
 The worker's last attempts and how they failed (its reasoning is left out; do not assume its approach was right):
 
-${attemptsText(task) || "(no attempt was recorded)"}
+${attemptsText(task) || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
 
 Read what you need, find the real cause, and tell the worker how to fix it. The worker is capable but missed something; give it the key insight and concrete steps (which file, which function, what to change), not a full implementation. Keep it short.
 
@@ -313,6 +408,25 @@ export function parseAdvice(result: AgentResult): Advice | undefined {
   return { diagnosis: a.diagnosis.trim(), steps };
 }
 
+/** [F14 expert-patch] The expert fixes the reviewer's findings in the worker's code. */
+export function patchPrompt(state: RunState, task: TaskState): string {
+  const findings = task.history.flatMap((h) => h.findings ?? []).filter((f) => f.severity !== "minor");
+  const latest = task.history.at(-1)?.findings ?? [];
+  return `You are the lead engineer. A worker built the task below and the project's checks pass, but a reviewer found problems the worker could not fix. The current directory holds the worker's code.
+
+${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
+
+The reviewer's latest findings:
+${findingText(latest)}
+${findings.length > latest.length ? `\nEarlier findings, for context (some may be fixed already):\n${findingText(findings.slice(0, -latest.length).slice(-6))}\n` : ""}${contextSection(state)}${toolsNote()}
+
+Fix these problems with the smallest changes that do it. Keep the worker's structure and everything that already works; do not rewrite or restyle working code. If a finding is wrong, leave the code as it is and say why in your notes.
+
+${checkList(state.checks)}
+
+${WORKER_RULES}`;
+}
+
 export function escalationPrompt(state: RunState, task: TaskState): string {
   const attempts = task.history
     .slice(-2)
@@ -327,7 +441,7 @@ ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall r
 
 The worker's attempts and how they failed (its reasoning is left out on purpose; do not assume its approach was right):
 
-${attempts || "(no attempt was recorded)"}
+${attempts || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -360,6 +474,7 @@ export function parseReport(result: AgentResult): WorkerReport {
       status: structured.status === "done" || structured.status === "blocked" ? structured.status : "unknown",
       summary: structured.summary,
       notes: typeof structured.notes === "string" && structured.notes.trim() !== "" ? structured.notes : undefined,
+      run: typeof structured.run === "string" && structured.run.trim() !== "" ? structured.run.trim() : undefined,
     };
   }
   const text = result.finalText.trim();
@@ -372,7 +487,7 @@ export function parseVerdict(result: AgentResult): Verdict | undefined {
   const findings = Array.isArray(v.findings)
     ? v.findings
         .filter((f): f is Finding => typeof f?.problem === "string" && f.problem.trim() !== "")
-        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined }))
+        .map((f) => ({ problem: f.problem, file: f.file || undefined, reproduce: f.reproduce || undefined, severity: f.severity === "minor" ? ("minor" as const) : ("blocker" as const) }))
     : [];
   // A fail without anything concrete to fix is not actionable.
   if (v.verdict === "fail" && findings.length === 0) return { verdict: "pass", summary: `${v.summary ?? ""} (no concrete findings)`, findings };

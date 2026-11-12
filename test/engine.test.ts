@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -57,6 +57,7 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
     maxParallel: 1,
     turnTimeoutMinutes: 1,
     intake: false,
+    brief: false,
     routing: "rules",
     advise: false,
     test: "always",
@@ -110,7 +111,7 @@ test("a solo run goes from prompt to a checked diff, and apply brings it home", 
   assert.ok(!existsSync(join(repo, "fixed.txt")), "the user's files are untouched during a run");
   assert.deepEqual(
     events.map((e) => e.type).filter((t) => t !== "agent.activity"),
-    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "task.started", "agent.started", "agent.finished", "checks.finished", "task.merged", "run.finished"],
+    ["run.started", "workspace.ready", "checks.detected", "checks.finished", "context.ready", "task.started", "agent.started", "agent.finished", "task.report", "checks.finished", "task.merged", "run.finished"],
   );
 
   const applied = applyRun(loadState(state.dir));
@@ -802,6 +803,86 @@ test("failure signatures ignore timings and paths", () => {
   assert.notEqual(failureSignature(a), failureSignature(c));
 });
 
+// ---------------------------------------------------------------------------
+// The brief engine
+
+const isSpec = (r: AgentRequest): boolean => Boolean((r.outputSchema?.properties as Record<string, unknown> | undefined)?.out_of_scope);
+
+test("a thin request gets a product spec from the cheap model, and every agent works from the brief", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake, events } = context((req) => {
+    if (isSpec(req)) {
+      return { structured: { name: "Keys", summary: "A typing test.", features: ["Shows words to type"], behaviour: ["WPM is correct characters / 5 per minute"], out_of_scope: ["Accounts"], design: ["Keep scoring in score.js"] } };
+    }
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "good", findings: [] } };
+    write(req.cwd, "app.js", "console.log('hi')");
+    return report("built");
+  });
+  const LADDER2 = [
+    { backend: "fake", model: "low", tier: "worker" as const },
+    { backend: "fake", model: "high", tier: "worker" as const },
+  ];
+  const p = preset({ orchestrator: [EXPERT], tester: [TESTER], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true, workerLadder: LADDER2 });
+  const state = await startRun({ cwd: repo, prompt: "hey pls create a typing app in terminal tui", preset: p }, ctx);
+
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => [a.role, a.kind, a.model]), [
+    ["briefer", "spec", "cheap"],
+    ["worker", "initial", "high"],
+    ["tester", "test", "fake-tester"],
+  ]);
+  assert.equal(state.request, "hey pls create a typing app in terminal tui");
+  assert.equal(fake.calls[0]!.access, "read-only");
+  const worker = fake.calls[1]!.prompt;
+  assert.match(worker, /Create a typing app in terminal tui\./);
+  assert.match(worker, /Working name: Keys/);
+  assert.match(worker, /WPM is correct characters/);
+  assert.match(worker, /Design, follow it unless it is clearly wrong:\n- Keep scoring in score.js/);
+  assert.match(worker, /Restore the terminal on every way out/);
+  assert.match(fake.calls[2]!.prompt, /Out of scope, do not build:\n- Accounts/, "the tester reviews against the same brief");
+  assert.ok(events.some((e) => e.type === "brief" && e.kind === "greenfield"));
+  assert.ok(events.some((e) => e.type === "spec.ready"));
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert").length, 0);
+});
+
+test("a failed spec turn does not stop the work, and a small change skips the tester", async () => {
+  const empty = makeRepo({ ".gitignore": "x\n" });
+  const first = context((req) => {
+    if (isSpec(req)) return { stop: "error", detail: "boom" };
+    write(req.cwd, "app.js", "1");
+    return report("built");
+  });
+  const p = preset({ orchestrator: [EXPERT], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true });
+  const built = await startRun({ cwd: empty, prompt: "create a typing app in terminal tui", preset: p }, first.ctx);
+  assert.equal(built.status, "finished", built.reason);
+  assert.doesNotMatch(first.fake.calls.at(-1)!.prompt, /Product spec/);
+
+  const repo = fixableRepo({ "src/app.js": "export const port = 3000;\n" });
+  const second = context((req) => {
+    assert.ok(!isTest(req), "no tester for a small change");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const small = preset({ orchestrator: [EXPERT], tester: [TESTER] }, { mode: "team", brief: true });
+  const state = await startRun({ cwd: repo, prompt: "Change the default port from 3000 to 8080.", preset: small }, second.ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial"]);
+});
+
+test("tests that a new project brings with it gate the work", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake } = context((req, index) => {
+    write(req.cwd, "package.json", JSON.stringify({ name: "new", scripts: { test: "node check.js" } }));
+    write(req.cwd, "check.js", index === 0 ? "console.error('one test fails');process.exit(1)" : "process.exit(0)");
+    return report("built");
+  });
+  const state = await startRun({ cwd: repo, prompt: "build it", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "repair"]);
+  assert.match(fake.calls[1]!.prompt, /one test fails/);
+  assert.equal(state.outcome?.checks, "passed");
+});
+
 test("a tool that reports session totals on resume is recorded per turn", async () => {
   const repo = fixableRepo();
   const totals = [
@@ -819,4 +900,255 @@ test("a tool that reports session totals on resume is recorded per turn", async 
     ["initial", 100, 1_000, 10],
     ["repair", 50, 1_500, 15],
   ]);
+});
+
+test("a review with only minor findings lets the task merge without another round", async () => {
+  const repo = fixableRepo();
+  const { ctx, events } = context((req) => {
+    if (isTest(req)) {
+      return { structured: { verdict: "fail", summary: "fine, small things", findings: [{ problem: "the help text has a typo", file: "README.md", reproduce: "read it", severity: "minor" }] } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ tester: [TESTER], escalation: [EXPERT] }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "test"]);
+  assert.equal(state.tasks[0]?.verdict?.findings[0]?.severity, "minor");
+  assert.ok(events.some((e) => e.type === "note" && /only minor/.test(String(e.message))));
+});
+
+test("a full-screen terminal program is run in tmux and the tester sees its screens", { skip: spawnSync("tmux", ["-V"]).status !== 0 }, async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "good", findings: [] } };
+    write(req.cwd, "app.js", "process.stdout.write('HELLO FROM THE APP\\n'); process.stdin.setRawMode(true); process.stdin.on('data', (d) => { if (d[0] === 27 || d[0] === 3) process.exit(0); });");
+    return { structured: { status: "done", summary: "built", notes: "", run: "node app.js" } };
+  });
+  const p = preset({ orchestrator: [EXPERT], tester: [TESTER] }, { mode: "team", brief: true });
+  const state = await startRun({ cwd: repo, prompt: "build a small app in the terminal tui. Please make it nice and do not ask questions, use defaults for everything else that is needed here.", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const tester = fake.calls.find(isTest)!;
+  assert.match(tester.prompt, /real 80x24 terminal/);
+  assert.match(tester.prompt, /HELLO FROM THE APP/);
+  assert.match(tester.prompt, /the program exited with code 0/);
+  assert.ok(events.some((e) => e.type === "screens.checked" && e.stuck === false));
+});
+
+test("when only the reviewer objects after the expert's advice, the task merges instead of an expert rebuild", async () => {
+  const repo = fixableRepo();
+  let reviews = 0;
+  const { ctx, fake } = context((req) => {
+    if (isTest(req)) {
+      reviews += 1;
+      return { structured: { verdict: "fail", summary: "no", findings: [{ problem: `problem ${reviews}`, file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    }
+    if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
+      return { structured: { diagnosis: "do it differently", steps: ["one"], files: ["fixed.txt"] } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [EXPERT] }, { repairs: 1, advise: true });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const kinds = state.attempts.map((a) => a.kind);
+  assert.ok(kinds.includes("advice"), kinds.join(","));
+  assert.ok(!kinds.includes("escalation"), "no expert rebuild over review-only objections");
+  const lastReview = fake.calls.filter(isTest).at(-1)!;
+  assert.match(lastReview.prompt, /Do not ask for the opposite of an earlier finding/);
+  assert.match(lastReview.prompt, /problem 1/);
+});
+
+test("an optional feature that fails is recorded with its id and the run goes on without it", async () => {
+  const repo = makeRepo({ ".gitignore": "node_modules\n" });
+  const { ctx, events } = context((req) => {
+    write(req.cwd, "app.js", "1");
+    return report("built");
+  });
+  const p = preset({ orchestrator: [EXPERT], briefer: [{ backend: "fake", model: "cheap", tier: "worker" }] }, { mode: "team", brief: true });
+  process.env.NEUROMESH_FAULT = "brief-engine";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "create a typing app in terminal tui", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.equal(state.brief, undefined, "no brief: the request went to the worker as typed");
+    assert.deepEqual(state.featureErrors?.map((f) => f.id), ["F01"]);
+    assert.ok(!state.features?.includes("brief-engine"));
+    const failed = events.find((e) => e.type === "feature.failed");
+    assert.equal(failed?.feature, "F01");
+    assert.match(String(failed?.hint), /--disable brief-engine/);
+  } finally {
+    delete process.env.NEUROMESH_FAULT;
+  }
+});
+
+test("workers get the repository map and the shared tool in their first prompt", async () => {
+  const repo = fixableRepo({ "src/cart.js": "export function cartTotal(cart) {\n  return 0;\n}\n" });
+  const { ctx, fake, events } = context((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo, prompt: "fix cartTotal", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.match(fake.calls[0]!.prompt, /mapped by Neuromesh/);
+  assert.match(fake.calls[0]!.prompt, /1: export function cartTotal\(cart\)/);
+  assert.match(fake.calls[0]!.prompt, /src\/tools\/nm\.ts map/);
+  assert.ok(events.some((e) => e.type === "context.ready" && e.feature === "F12"));
+});
+
+test("with passing checks and open review findings, the expert patches the worker's code instead of starting over", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "the greeting is missing", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if (req.model === "fake-expert") {
+      assert.equal(readFileSync(join(req.cwd, "fixed.txt"), "utf8"), "ok\n", "the expert sees the worker's code");
+      return report("patched");
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [EXPERT] }, { repairs: 1, advise: false });
+  process.env.NEUROMESH_DISABLE = "review-only-merge";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    const expert = fake.calls.find((c) => c.model === "fake-expert")!;
+    assert.match(expert.prompt, /Fix these problems with the smallest changes/);
+    assert.match(expert.prompt, /the greeting is missing/);
+    assert.ok(events.some((e) => e.type === "task.escalated" && e.patch === true && e.feature === "F14"));
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("the expert budget in dollars keeps passing work instead of failing it, and every turn shows its estimated cost", async () => {
+  const repo = fixableRepo();
+  const SOL = { backend: "fake", model: "gpt-6.1-sol", tier: "expert" as const };
+  const { ctx, fake, events } = context((req) => {
+    if (isTest(req)) return { structured: { verdict: "fail", summary: "no", findings: [{ problem: "still wrong", file: "fixed.txt", reproduce: "cat fixed.txt", severity: "blocker" }] } };
+    if ((req.outputSchema?.properties as Record<string, unknown> | undefined)?.diagnosis) {
+      return { structured: { diagnosis: "look again", steps: ["one"] }, usage: { input: 1_000_000, output: 0 } };
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ tester: [TESTER], escalation: [SOL] }, { repairs: 1, advise: true, expertBudgetUsd: 0.5 });
+  process.env.NEUROMESH_DISABLE = "review-only-merge";
+  try {
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.equal(state.tasks[0]?.status, "passed", "the work is kept");
+    assert.equal(fake.calls.filter((c) => c.model === "gpt-6.1-sol").length, 1, "advice only; the $2 advice spent the budget");
+    assert.ok(events.some((e) => e.type === "note" && e.feature === "F16"));
+    const advice = events.find((e) => e.type === "agent.finished" && e.kind === "advice");
+    assert.equal(advice?.cost, 2, "1M fresh input tokens on GPT-6.1 Sol at $2 per million");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// [F39 ask-first] [F42 compact] [F38 attachments] What the TUI can steer.
+
+test("asked first: the plan waits for a yes, a change goes back to the planner, and no stops the run", async () => {
+  const team = preset({ orchestrator: [EXPERT] }, { mode: "team" });
+  // Yes: the run goes on as usual.
+  {
+    const repo = twoPartRepo();
+    const asked: string[] = [];
+    const { ctx, events } = context((req) => (isPlan(req) ? twoTaskPlan(false) : (workerFor(req), report("done"))), {
+      ask: async (q) => (asked.push(q.kind), { ok: true }),
+    });
+    const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.deepEqual(asked, ["plan"]);
+    assert.deepEqual(events.filter((e) => e.type === "ask" || e.type === "answer").map((e) => e.type), ["ask", "answer"]);
+  }
+  // A change: the planner sees it, in its own session, and the new plan is asked about again.
+  {
+    const repo = twoPartRepo();
+    let n = 0;
+    const { ctx, fake } = context((req) => (isPlan(req) ? twoTaskPlan(false) : (workerFor(req), report("done"))), {
+      ask: async () => (++n === 1 ? { ok: false, note: "name the files clearly" } : { ok: true }),
+    });
+    const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.equal(n, 2);
+    const second = fake.calls.filter(isPlan)[1]!;
+    assert.match(second.prompt, /asked for changes to your plan: name the files clearly/);
+    assert.equal(second.resumeSessionId, "fake-session-0");
+  }
+  // No: the run stops at the plan, before any worker.
+  {
+    const repo = twoPartRepo();
+    const { ctx, fake } = context((req) => (isPlan(req) ? twoTaskPlan(false) : report("done")), { ask: async () => ({ ok: false }) });
+    const state = await startRun({ cwd: repo, prompt: "build a and b", preset: team }, ctx);
+    assert.equal(state.status, "interrupted");
+    assert.match(state.reason ?? "", /stopped at the plan/);
+    assert.equal(fake.calls.length, 1, "no worker ran");
+  }
+});
+
+test("asked first: saying no to the expert ends the task without calling it", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context(() => report("tried"), { ask: async (q) => ({ ok: q.kind !== "expert" }) });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 0 }) }, ctx);
+  assert.equal(state.tasks[0]?.status, "failed");
+  assert.ok(fake.calls.every((c) => c.model !== "fake-expert"), "the expert was never called");
+  assert.ok(events.some((e) => e.type === "ask" && (e.question as { kind: string }).kind === "expert"));
+  assert.match(String(events.find((e) => e.type === "task.failed")?.reason), /expert was not called in/);
+});
+
+test("compaction: the next follow-up turn starts a fresh session instead of resuming", async () => {
+  const repo = fixableRepo();
+  let turns = 0;
+  const steer = { compact: true };
+  const { ctx, fake, events } = context(
+    (req) => {
+      turns += 1;
+      write(req.cwd, "fixed.txt", turns === 1 ? "not yet" : "ok");
+      return report("done");
+    },
+    { steer },
+  );
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(fake.calls.length, 2);
+  assert.equal(fake.calls[1]!.resumeSessionId, undefined, "the repair started fresh");
+  assert.equal(steer.compact, false, "the request is used once");
+  assert.ok(events.some((e) => e.type === "context.compacted"));
+});
+
+test("attachments: a text file from anywhere goes into what the agents work from", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake } = context((req) => (write(req.cwd, "fixed.txt", "ok"), report("done")));
+  await startRun({ cwd: repo, prompt: "make the test pass", preset: preset(), attachments: [{ path: "/elsewhere/notes.md", text: "Use the word ok." }, { path: "/elsewhere/logo.png" }] }, ctx);
+  assert.match(fake.calls[0]!.prompt, /--- \/elsewhere\/notes\.md ---\nUse the word ok\./);
+  assert.match(fake.calls[0]!.prompt, /Attached to the request \(read it from there\): \/elsewhere\/logo\.png/);
+});
+
+test("a follow-up starts from the earlier run's result, knows what it did, and belongs to its session", async () => {
+  const repo = makeRepo({ "package.json": JSON.stringify({ name: "demo", scripts: { test: "node -e 0" } }) });
+  const { ctx, fake } = context((req) => {
+    const firstRun = !/now make/.test(req.prompt);
+    if (firstRun) write(req.cwd, "a.txt", "one");
+    else if (/now make b/.test(req.prompt)) write(req.cwd, "b.txt", existsSync(join(req.cwd, "a.txt")) ? "saw a" : "no a");
+    else write(req.cwd, "c.txt", "three");
+    return report(firstRun ? "Wrote a.txt" : "Wrote the next file");
+  });
+  const first = await startRun({ cwd: repo, prompt: "make a.txt", preset: preset() }, ctx);
+  assert.equal(first.status, "finished", first.reason);
+  // Not applied: the follow-up still builds on it.
+  const second = await startRun({ cwd: repo, prompt: "now make b.txt", preset: preset(), follows: first }, ctx);
+  assert.equal(second.status, "finished", second.reason);
+  assert.equal(second.session, first.id);
+  assert.equal(second.follows, first.id);
+  assert.match(fake.calls[1]!.prompt, /Earlier in this session[\s\S]*Asked: make a\.txt[\s\S]*Wrote a\.txt/);
+  assert.deepEqual(second.outcome?.files.map((f) => f.path).sort(), ["a.txt", "b.txt"], "the diff holds the whole session's work");
+  applyRun(second);
+  assert.equal(readFileSync(join(repo, "b.txt"), "utf8"), "saw a\n");
+  // After an applied run, only the new work is the diff.
+  const third = await startRun({ cwd: repo, prompt: "now make c.txt", preset: preset(), follows: loadState(second.dir) }, { ...ctx });
+  assert.equal(third.session, first.id);
+  assert.ok(!third.outcome?.files.some((f) => f.path === "a.txt"), "applied work is not applied twice");
 });

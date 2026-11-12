@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.2.0 (2026-11-12)
+
+The TUI, and the first build for testers.
+
+### The TUI
+
+- `neuromesh` in a project folder opens it.
+- **Look:** its own look, the `neuromesh-dark` theme with rounded, titled
+  frames, or transparent. The big logo glimmers.
+- **Panes:**
+  - left: projects and recent sessions;
+  - middle: one box per agent, at three levels of detail;
+  - right: the team as a graph with each model's usage, what the agents'
+    context was made of, the changes, and the cost.
+- **Control:** mouse everywhere, and a key for everything.
+- **Final report:** drawn as markdown, and read from its first line.
+- **Follow-ups** continue a session from the earlier run's result.
+- **Teams:** two favourites (Opus 5.5 lead with GPT-6 Luna workers; GPT-6.1
+  Sol high with Gemini 3.8 Flash workers) and a Custom team builder.
+- **`/connect`** signs in to Codex, Claude Code, Antigravity and opencode.
+
+### Engine
+
+- Normal mode asks before the plan and before calling the expert; Turbo goes
+  ahead.
+- opencode backend, so any model opencode knows works, API-key models included.
+- Attachments, compaction, Claude's usage windows, worker reports as events,
+  follow-up runs.
+
+### Testing
+
+- Run reports to the author, with consent (`neuromesh telemetry`), and the
+  endpoint to receive them.
+- `install.sh` for the testing build.
+- Licensed under PolyForm Shield 1.0.0.
+
 ## 0.1.0 (2026-11-11)
 
 The first working version: an engine that turns a request into a checked diff,

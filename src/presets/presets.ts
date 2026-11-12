@@ -5,6 +5,7 @@
 // role ("orchestrator") to reuse its list.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Role, RoleChain, RoleConfig, Tier } from "../engine/types.ts";
@@ -25,12 +26,22 @@ export interface Preset {
   turnTimeoutMinutes: number;
   /** Team presets: let small requests skip the orchestrator. */
   intake: boolean;
+  /**
+   * Run the brief engine (src/intake/brief.ts): clean and complete the request and
+   * choose the staffing by rule. On for team presets unless set; with it on, the
+   * brief engine decides about planning instead of `routing`.
+   */
+  brief: boolean;
+  /** Features to switch off for this preset (ids or keys; see src/features.ts). */
+  disable?: string[];
   /** How the intake decides; see src/intake/intake.ts. */
   routing: "rules" | "worker-first";
   /** A stuck worker first gets the expert's advice; the expert takes over only if that fails. */
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend. */
   expertBudget?: number;
+  /** [F16 dollar-budget] Most expert spending one run may have, in estimated US dollars at API list prices. */
+  expertBudgetUsd?: number;
   /** When the tester reviews a task: always, or only when the project has no automatic checks. */
   test: "always" | "no-checks";
   /**
@@ -40,12 +51,12 @@ export interface Preset {
   workerLadder?: RoleConfig[];
 }
 
-export const DEFAULT_PRESET = "factory-luna";
+export const DEFAULT_PRESET = "factory-opus-luna";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 
-const DEFAULT_TIER: Record<Role, Tier> = { orchestrator: "expert", escalation: "expert", worker: "worker", tester: "worker" };
-const ROLES: Role[] = ["orchestrator", "worker", "tester", "escalation"];
+const DEFAULT_TIER: Record<Role, Tier> = { orchestrator: "expert", escalation: "expert", worker: "worker", tester: "worker", briefer: "worker" };
+const ROLES: Role[] = ["orchestrator", "worker", "tester", "escalation", "briefer"];
 
 function chain(raw: unknown, role: Role, file: string): RoleConfig[] {
   const list = Array.isArray(raw) ? raw : [raw];
@@ -90,20 +101,29 @@ export function validatePreset(raw: unknown, file: string): Preset {
     maxParallel: int(p.maxParallel, 1, 1),
     turnTimeoutMinutes: typeof p.turnTimeoutMinutes === "number" && p.turnTimeoutMinutes > 0 ? p.turnTimeoutMinutes : 30,
     intake: p.intake ?? p.mode === "team",
+    brief: p.brief ?? p.mode === "team",
+    disable: Array.isArray(p.disable) ? p.disable.filter((d): d is string => typeof d === "string") : undefined,
     routing: p.routing === "worker-first" ? "worker-first" : "rules",
     advise: p.advise ?? true,
     expertBudget: typeof p.expertBudget === "number" && p.expertBudget > 0 ? p.expertBudget : undefined,
+    expertBudgetUsd: typeof p.expertBudgetUsd === "number" && p.expertBudgetUsd > 0 ? p.expertBudgetUsd : undefined,
     test: p.test === "no-checks" ? "no-checks" : "always",
     workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
   };
 }
 
 export function listPresets(dir = PRESET_DIR): Preset[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .map((f) => validatePreset(JSON.parse(readFileSync(join(dir, f), "utf8")), f));
+  const read = (d: string): Preset[] =>
+    existsSync(d)
+      ? readdirSync(d)
+          .filter((f) => f.endsWith(".json"))
+          .sort()
+          .map((f) => validatePreset(JSON.parse(readFileSync(join(d, f), "utf8")), f))
+      : [];
+  // [F51 tui-teams] The owner's own presets (the Custom team) live in ~/.neuromesh/presets.
+  const own = dir === PRESET_DIR ? read(join(process.env.NEUROMESH_HOME ?? join(homedir(), ".neuromesh"), "presets")) : [];
+  const shipped = read(dir);
+  return [...shipped.filter((p) => !own.some((o) => o.name === p.name)), ...own];
 }
 
 export function loadPreset(name: string, dir = PRESET_DIR): Preset {

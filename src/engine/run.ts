@@ -18,11 +18,18 @@
 // next model in the role's list takes over; when none is left the run pauses.
 
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
+import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import type { CheckResult } from "../checks/checks.ts";
+import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
+import { buildPacket } from "../context/packet.ts";
+import { estimateCost } from "../usage/prices.ts";
+import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
+import type { Brief } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
 import { git } from "../workspace/git.ts";
@@ -53,14 +60,18 @@ import {
   freshAdvisedFixPrompt,
   parseAdvice,
   escalationPrompt,
+  patchPrompt,
   failureSummary,
   freshFollowUpPrompt,
   integrationPrompt,
   parsePlan,
   parseReport,
+  parseSpec,
   parseVerdict,
   PLAN_SCHEMA,
   plannerPrompt,
+  SPEC_SCHEMA,
+  specPrompt,
   redoPrompt,
   repairPrompt,
   REPORT_SCHEMA,
@@ -69,6 +80,7 @@ import {
   testerPrompt,
   VERDICT_SCHEMA,
 } from "./prompts.ts";
+import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
 import type { AttemptKind, AttemptRecord, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier } from "./types.ts";
@@ -81,6 +93,25 @@ export interface EngineContext {
   /** Overrides the preset's turn time limit (tests use this). */
   turnTimeoutMs?: number;
   checkTimeoutMs?: number;
+  /**
+   * [F39 ask-first] Ask the person running Neuromesh. Only a caller that can
+   * answer (the TUI in Normal mode) gives this; without it the run never stops
+   * to ask.
+   */
+  ask?: (question: Question) => Promise<Answer>;
+  /** [F42 compact] Set `compact` to have the next follow-up turn start a fresh session. */
+  steer?: { compact?: boolean };
+}
+
+/** [F39 ask-first] What the run may stop to ask. */
+export type Question =
+  | { kind: "plan"; summary: string; tasks: { id: string; title: string; owner: string }[]; model?: string }
+  | { kind: "expert"; task: string; title: string; reason: string; step: "advise" | "escalate" };
+
+export interface Answer {
+  ok: boolean;
+  /** With ok false: what to change (a plan is revised with it); empty means stop. */
+  note?: string;
 }
 
 export interface StartOptions {
@@ -94,6 +125,45 @@ export interface StartOptions {
   mode?: "solo" | "team";
   /** Override the preset's expert token budget. */
   expertBudget?: number;
+  /** [F38 attachments] Files from anywhere that go with the request; `text` for text files. */
+  attachments?: { path: string; text?: string }[];
+  /** [F49 follow-up] The run this one follows in the same session: it starts from that run's result. */
+  follows?: RunState;
+}
+
+/**
+ * [F49 follow-up] Where a follow-up starts: the earlier run's changes on top of
+ * its base, committed in a scratch checkout. The diff stays measured from the
+ * session's base, so applying the follow-up brings the whole session's work;
+ * after an applied run (its changes are already in the repository) it is
+ * measured from the new start, so only the new work is applied.
+ */
+function followFrom(repoRoot: string, head: string, prev: RunState, dir: string): { base: string; start: string; session: string; context: string } {
+  const patch = prev.status === "discarded" ? "" : currentPatch(prev);
+  let start = prev.status === "applied" && head !== prev.base ? head : prev.base;
+  if (patch.trim() && start === prev.base) {
+    const scratch = join(dir, "start");
+    createDetachedWorktree(repoRoot, scratch, prev.base);
+    try {
+      const file = join(dir, "previous.patch");
+      writeFileSync(file, patch.endsWith("\n") ? patch : `${patch}\n`);
+      git(scratch, "apply", "--binary", "--whitespace=nowarn", file);
+      start = commitAll(scratch, `neuromesh: earlier in session ${prev.session ?? prev.id}`, prev.prepared);
+    } finally {
+      removeDetachedWorktree(repoRoot, scratch);
+    }
+  }
+  const reports = (prev.tasks ?? []).map((t) => t.report?.summary?.trim()).filter((r): r is string => Boolean(r));
+  const asked = (prev.request ?? prev.prompt).trim().slice(0, 1_500);
+  const told = reports.join("\n\n").slice(0, 2_500);
+  const where = prev.status === "applied" ? "and its changes are in the repository" : prev.status === "discarded" ? "and its changes were thrown away" : "and its changes are already in your working copy";
+  const context = [
+    "Earlier in this session (this is a follow-up; build on it rather than starting again):",
+    `- Asked: ${asked}`,
+    `- That run ${prev.status === "finished" ? "finished" : prev.status}, ${where}.`,
+    ...(told ? [`- What the agents reported:\n${told}`] : []),
+  ].join("\n");
+  return { base: prev.status === "applied" ? start : prev.base, start, session: prev.session ?? prev.id, context };
 }
 
 /** How a task or a turn ended, when it ends the whole run early. */
@@ -130,7 +200,58 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
 
   let mode: "solo" | "team" = options.mode ?? preset.mode;
   let why: string | undefined;
-  if (!options.mode && preset.mode === "team" && preset.intake) {
+  let brief: Brief | undefined;
+  resetFeatures();
+  disable(preset.disable);
+  const featureErrors: NonNullable<RunState["featureErrors"]> = [];
+  // [F01 brief-engine] Optional: if it fails, the run goes on with the request as typed.
+  if (preset.brief && isOn("brief-engine")) {
+    try {
+      brief = inFeature("brief-engine", () =>
+        buildBrief(options.prompt, repoFacts(repo.root), {
+          team: preset.mode === "team" && options.mode !== "solo",
+          maxParallel: preset.maxParallel,
+          canSpec: roles.briefer !== undefined && isOn("spec-step"),
+          // [F03 expert-spec]
+          expertSpec: roles.briefer?.[0]?.tier === "expert" && isOn("expert-spec"),
+        }),
+      );
+    } catch (error) {
+      featureErrors.push(failure(error, "brief-engine"));
+      disable("brief-engine");
+    }
+  }
+  // [F49 follow-up] A follow-up starts from the earlier run's result and knows what it did.
+  let follow: ReturnType<typeof followFrom> | undefined;
+  if (options.follows && isOn("follow-up")) {
+    try {
+      follow = inFeature("follow-up", () => followFrom(repo.root, repo.head, options.follows!, dir));
+    } catch (error) {
+      featureErrors.push(failure(error, "follow-up"));
+      disable("follow-up");
+    }
+  }
+  // [F38 attachments] Text files are added to the brief like documents the request names; others by path.
+  const attachedNote: string[] = [];
+  if (options.attachments?.length && isOn("attachments")) {
+    try {
+      inFeature("attachments", () => {
+        for (const a of options.attachments ?? []) {
+          if (a.text !== undefined && brief && !brief.attached.some((b) => b.path === a.path)) brief.attached.push({ path: a.path, text: a.text });
+          else if (a.text !== undefined && !brief) attachedNote.push(`The file ${a.path}, attached to the request:\n--- ${a.path} ---\n${a.text}\n--- end of ${a.path} ---`);
+          else if (a.text === undefined) attachedNote.push(`Attached to the request (read it from there): ${a.path}`);
+        }
+      });
+    } catch (error) {
+      featureErrors.push(failure(error, "attachments"));
+      disable("attachments");
+    }
+  }
+  if (brief) {
+    if (options.mode === "team") brief.staffing.plan = true;
+    mode = brief.staffing.plan ? "team" : "solo";
+    why = brief.staffing.reasons.join("; ");
+  } else if (!options.mode && preset.mode === "team" && preset.intake) {
     const decision = route(options.prompt, preset.routing);
     mode = decision.mode;
     why = decision.reason;
@@ -141,21 +262,29 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     id,
     dir,
     repo: repo.root,
-    prompt: options.prompt,
+    prompt: [brief ? renderBrief(brief) : options.prompt, ...attachedNote, ...(follow ? [follow.context] : [])].join("\n\n"),
+    session: follow?.session,
+    follows: follow ? options.follows!.id : undefined,
+    start: follow?.start,
+    request: brief ? options.prompt : undefined,
     usagePerTurn: true,
+    features: activeKeys(),
+    featureErrors,
+    brief,
     preset: preset.name,
     mode,
     roles,
     repairs: options.repairs ?? preset.repairs,
     maxTasks: preset.maxTasks,
-    maxParallel: preset.maxParallel,
+    maxParallel: brief && !brief.staffing.plan ? 1 : preset.maxParallel,
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
+    expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
-    base: repo.head,
+    base: follow?.base ?? repo.head,
     branch: `neuromesh/${id}`,
     worktree: paths.worktree,
     status: "running",
@@ -184,8 +313,14 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     base: repo.head,
     prompt: options.prompt,
   });
-  if (why) log.emit("route", { mode, reason: why });
-  if (repo.dirty) {
+  for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
+  if (brief) {
+    log.emit("brief", { kind: brief.kind, surface: brief.surface, attached: brief.attached.map((a) => a.path), standards: brief.standards.length, staffing: brief.staffing });
+  } else if (why) {
+    log.emit("route", { mode, reason: why });
+  }
+  // A follow-up of an applied run sees those changes already; anything else uncommitted it does not.
+  if (repo.dirty && !(follow && options.follows?.status === "applied")) {
     log.emit("note", { message: "The repository has uncommitted changes. The run starts from the last commit and does not see them." });
   }
   return drive(state, ctx, log);
@@ -199,6 +334,9 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
     throw new Error(`Run ${state.id} is still running in process ${state.pid}.`);
   }
   const log = new EventLog(runPaths(state.dir).events, state.id, ctx.onEvent);
+  // A resumed run keeps the features it started with, less any that failed.
+  resetFeatures();
+  if (state.features) onlyThese(state.features.filter((k) => !(state.featureErrors ?? []).some((e) => e.key === k)));
 
   // Turns the engine never finished: stop any agent tool still running on its
   // own, and record the turn with its usage unknown.
@@ -229,7 +367,10 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
 
 function newTask(state: RunState, planned: PlannedTask): TaskState {
   const dir = join(state.dir, "tasks", planned.id);
+  // The brief engine may start a task on the strongest worker rung.
+  const rung = state.brief?.staffing.rung === "top" && state.workerLadder ? state.workerLadder.length - 1 : undefined;
   return {
+    rung,
     id: planned.id,
     title: planned.title,
     brief: planned.brief,
@@ -289,7 +430,7 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       if (ctx.signal?.aborted) return interrupted();
 
       if (state.step === "setup") {
-        createWorktree(state.repo, state.worktree, state.branch, state.base);
+        createWorktree(state.repo, state.worktree, state.branch, state.start ?? state.base);
         state.prepared = prepareWorktree(state.repo, state.worktree);
         state.checks = detectChecks(state.worktree);
         state.step = "baseline";
@@ -309,6 +450,22 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           log.emit("note", { message: `Skipping checks that cannot run here: ${missing.join(", ")}` });
         }
         log.emit("checks.finished", { phase: "baseline", results: brief(results) });
+        // [F12 context-packet] Map the repository once, for every prompt of the run.
+        if (isOn("context-packet") && !state.contextPacket) {
+          state.contextPacket = optional(run, "context-packet", undefined, () => buildPacket(state.worktree, state.request ?? state.prompt));
+          if (state.contextPacket) log.emit("context.ready", { feature: "F12", chars: state.contextPacket.length });
+        }
+        state.step = "spec";
+        saveState(state);
+        continue;
+      }
+
+      if (state.step === "spec") {
+        // [F02 spec-step]
+        if (state.brief?.staffing.spec && !state.brief.spec && isOn("spec-step")) {
+          const outcome = await optionalAsync(run, "spec-step", undefined, () => specStep(run));
+          if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
+        }
         if (state.mode === "team") {
           state.step = "plan";
         } else {
@@ -328,7 +485,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           state.mode = "solo";
           state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "worker" })];
         } else if (outcome) {
-          return outcome.status === "interrupted" ? interrupted() : end(outcome);
+          // [F39 ask-first] A stop at the plan keeps its own reason.
+          return end(outcome);
         }
         state.step = "tasks";
         saveState(state);
@@ -387,6 +545,12 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
   } catch (error) {
     if (ctx.signal?.aborted) return interrupted();
     const message = error instanceof Error ? error.message : String(error);
+    if (error instanceof FeatureError) {
+      // A core feature failed: say which, and how to run without it.
+      state.featureErrors = [...(state.featureErrors ?? []), failure(error, error.feature.key)];
+      log.emit("feature.failed", { feature: error.feature.id, key: error.feature.key, message, hint: hint(error.feature) });
+      return end({ status: "failed", reason: `engine error in ${error.feature.id} ${error.feature.key}: ${message}. ${hint(error.feature)}`, failure: "engine" });
+    }
     return end({ status: "failed", reason: `engine error: ${message}`, failure: "engine" });
   } finally {
     ctx.signal?.removeEventListener("abort", onOuterAbort);
@@ -458,7 +622,16 @@ function tierOf(role: Role, c: RoleConfig): Tier {
 }
 
 function budgetLeft(state: RunState): boolean {
-  return state.expertBudget === undefined || expertSpend(state) < state.expertBudget;
+  return (state.expertBudget === undefined || expertSpend(state) < state.expertBudget) && dollarsLeft(state);
+}
+
+/** [F16 dollar-budget] Estimated expert spending so far, in US dollars at API list prices. */
+export function expertDollars(state: RunState): number {
+  return state.attempts.filter((a) => a.tier === "expert").reduce((n, a) => n + (estimateCost(a.model, a.usage) ?? 0), 0);
+}
+
+function dollarsLeft(state: RunState): boolean {
+  return !isOn("dollar-budget") || state.expertBudgetUsd === undefined || expertDollars(state) < state.expertBudgetUsd;
 }
 
 /** Expert tokens that count against the budget: fresh input, cache writes and output. */
@@ -477,6 +650,10 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
       return { result: emptyResult("error", "expert budget reached") };
     }
   }
+  if ((req.role === "orchestrator" || req.role === "escalation") && !dollarsLeft(state)) {
+    log.emit("note", { feature: "F16", message: `Expert budget reached ($${expertDollars(state).toFixed(2)} of $${state.expertBudgetUsd!.toFixed(2)}, estimated); no more ${req.role === "orchestrator" ? "planning" : "expert help"} in this run.` });
+    return { result: emptyResult("error", "expert budget reached") };
+  }
   let last: AgentResult | undefined;
   let lastConfig: RoleConfig | undefined;
   const candidates = (): RoleConfig[] =>
@@ -489,7 +666,13 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     }
     const backend = ctx.backends[config.backend];
     if (!backend) throw new Error(`unknown backend "${config.backend}"`);
-    const sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
+    let sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
+    // [F42 compact] Asked to compact: this follow-up starts a fresh session from the brief and the last report.
+    if (sameSession && ctx.steer?.compact && isOn("compact") && req.freshPrompt) {
+      ctx.steer.compact = false;
+      sameSession = false;
+      log.emit("context.compacted", { feature: "F42", role: req.role, task: req.task });
+    }
     const prompt = sameSession ? req.prompt : (req.freshPrompt ?? req.prompt);
     let result = await once(run, req, config, backend, prompt, sameSession ? req.resume?.sessionId : undefined);
 
@@ -543,7 +726,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const logPath = join(runPaths(state.dir).agentLogs, `${String(n).padStart(3, "0")}-${req.key}-${req.kind}.jsonl`);
   state.inFlight[req.key] = { role: req.role, tier, task: req.task, round: req.round, kind: req.kind, backend: backend.id, model: config.model, startedAt, logPath };
   saveState(state);
-  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId) });
+  // [F41 tui-context] What the prompt is made of, for the context view.
+  const contextChars = state.contextPacket && prompt.includes(state.contextPacket) ? state.contextPacket.length : 0;
+  log.emit("agent.started", { task: req.task, role: req.role, kind: req.kind, tier, backend: backend.id, model: config.model, resumed: Boolean(resumeSessionId), effort: config.effort, promptChars: prompt.length, contextChars });
 
   const result = await backend.run({
     cwd: req.cwd,
@@ -567,7 +752,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
 
   delete state.inFlight[req.key];
   const usage =
-    backend.sessionTotals && resumeSessionId !== undefined && result.sessionId === resumeSessionId
+    // [F09 codex-session-totals]
+    backend.sessionTotals && isOn("codex-session-totals") && resumeSessionId !== undefined && result.sessionId === resumeSessionId
       ? usageSince(
           result.usage,
           state.attempts.filter((a) => a.sessionId === resumeSessionId && a.backend === backend.id).map((a) => a.usage),
@@ -600,8 +786,14 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     model: record.model,
     durationMs: result.durationMs,
     usage,
+    // [F17 live-cost]
+    // An estimate at list prices; for models without one (opencode's), what the tool reported.
+    cost: isOn("live-cost") ? (estimateCost(record.model, usage) ?? (backend.id === "opencode" ? result.costUsdEquivalent : undefined)) : undefined,
+    tier,
     detail: result.detail,
     quotaUsed: result.quotaUsed,
+    // [F43 quota-windows]
+    quotaResets: isOn("quota-windows") ? result.quotaResets : undefined,
   });
   return result;
 }
@@ -618,12 +810,76 @@ function stopFor(result: AgentResult, what: string): Stop {
 // ---------------------------------------------------------------------------
 // The expert plans.
 
+/**
+ * A request too thin to build from gets a product spec from a cheap model. The
+ * spec is a help, not a requirement: when the turn fails, the work goes on from
+ * the brief as it is. Only a pause or an interruption stops the run.
+ */
+async function specStep(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const brief = state.brief!;
+  const { result, config } = await turn(run, {
+    key: "spec",
+    role: "briefer",
+    kind: "spec",
+    round: 0,
+    cwd: state.worktree,
+    prompt: specPrompt(brief.request, renderBrief(brief)),
+    access: "read-only",
+    schema: SPEC_SCHEMA,
+  });
+  if (result.stop === "quota" || result.stop === "cancelled") return stopFor(result, "briefer");
+  const spec = result.stop === "done" ? parseSpec(result) : undefined;
+  if (!spec) {
+    log.emit("note", { message: "No usable product spec came back; the work goes on from the request as it is." });
+    brief.staffing.spec = false;
+    saveState(state);
+    return undefined;
+  }
+  brief.spec = spec;
+  state.prompt = renderBrief(brief);
+  saveState(state);
+  log.emit("spec.ready", { model: config ? modelKey(config) : undefined, name: spec.name, features: spec.features.length, behaviour: spec.behaviour.length });
+  return undefined;
+}
+
+/**
+ * For a full-screen terminal program: run it in tmux and record its screens for
+ * the tester. Skipped when tmux is missing or there is no way to start it.
+ */
+function screensFor(run: RunCtx, task: TaskState, dir: string): string | undefined {
+  // [F04 screen-check]
+  if (!isOn("screen-check") || !hasTmux()) return undefined;
+  return optional(run, "screen-check", undefined, () => screensNow(run, task, dir));
+}
+
+function screensNow(run: RunCtx, task: TaskState, dir: string): string | undefined {
+  const command = task.report?.run ?? startScript(dir);
+  if (!command) {
+    run.log.emit("note", { message: `Task ${task.id}: no command to start the program, so its screens were not checked.` });
+    return undefined;
+  }
+  const check = screenCheck(dir, command);
+  run.log.emit("screens.checked", { feature: "F04", task: task.id, command, screens: check.screens.length, stuck: check.stuck });
+  return screenText(check);
+}
+
+function startScript(dir: string): string | undefined {
+  try {
+    const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { scripts?: Record<string, string> };
+    return pkg.scripts?.start ? "npm start --silent" : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
   const files = git(state.worktree, "ls-files").split("\n").filter(Boolean);
   const first = plannerPrompt(state, files);
   let prompt = first;
   let resume: TurnRequest["resume"];
+  let revisions = 0;
   for (let attempt = 0; attempt < 2; attempt++) {
     const { result, config } = await turn(run, {
       key: "plan",
@@ -645,7 +901,15 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
       log.emit("plan.ready", { summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
-      return undefined;
+      // [F39 ask-first] The person approves the plan, asks for changes, or stops here.
+      const answer = await askUser(run, { kind: "plan", summary: plan.summary, tasks: plan.tasks.map((t) => ({ id: t.id, title: t.title, owner: t.owner })), model: config ? modelKey(config) : undefined });
+      if (answer.ok) return undefined;
+      if (!answer.note?.trim() || revisions >= 3) return { status: "interrupted", reason: "stopped at the plan, as asked" };
+      revisions += 1;
+      prompt = `The person running this asked for changes to your plan: ${answer.note.trim()}\nGive the revised plan in the same JSON format.`;
+      resume = { sessionId: result.sessionId, model: config ? modelKey(config) : undefined };
+      attempt = -1;
+      continue;
     } catch (error) {
       const problem = error instanceof Error ? error.message : String(error);
       log.emit("note", { message: `The plan was not usable (${problem}); asking for a corrected one.` });
@@ -724,7 +988,68 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
 /** The tester costs a full agent session; with test "no-checks" it only runs where nothing else verifies the work. */
 function wantsTester(state: RunState, task: TaskState): boolean {
   if (!state.roles.tester || task.escalated) return false;
+  if (state.brief && !state.brief.staffing.tester) return false;
   return state.test !== "no-checks" || state.checks.length === 0;
+}
+
+function failure(error: unknown, key: string): { id: string; key: string; message: string; at: string } {
+  const f = error instanceof FeatureError ? error.feature : feature(key);
+  const message = error instanceof Error ? error.message : String(error);
+  return { id: f.id, key: f.key, message, at: new Date().toISOString() };
+}
+
+/**
+ * Run an optional feature. If it throws, the failure is recorded on the run,
+ * the feature is switched off for the rest of the run, and `fallback` is used.
+ */
+function optional<T>(run: RunCtx, key: string, fallback: T, fn: () => T): T {
+  try {
+    return inFeature(key, fn);
+  } catch (error) {
+    featureFailed(run, error, key);
+    return fallback;
+  }
+}
+
+/** [F39 ask-first] Ask the person, when the caller can answer; otherwise go ahead. */
+async function askUser(run: RunCtx, question: Question): Promise<Answer> {
+  const ask = run.ctx.ask;
+  if (!ask || !isOn("ask-first") || run.signal.aborted) return { ok: true };
+  run.log.emit("ask", { feature: "F39", question });
+  const answer = await optionalAsync(run, "ask-first", { ok: true } as Answer, () =>
+    new Promise<Answer>((resolve, reject) => {
+      const stop = (): void => resolve({ ok: false });
+      run.signal.addEventListener("abort", stop, { once: true });
+      ask(question).then(
+        (a) => (run.signal.removeEventListener("abort", stop), resolve(a)),
+        (e: unknown) => (run.signal.removeEventListener("abort", stop), reject(e)),
+      );
+    }),
+  );
+  run.log.emit("answer", { feature: "F39", kind: question.kind, ok: answer.ok, note: answer.note });
+  return answer;
+}
+
+async function optionalAsync<T>(run: RunCtx, key: string, fallback: T, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await inFeature(key, fn);
+  } catch (error) {
+    featureFailed(run, error, key);
+    return fallback;
+  }
+}
+
+function featureFailed(run: RunCtx, error: unknown, key: string): void {
+  const f = failure(error, key);
+  run.state.featureErrors = [...(run.state.featureErrors ?? []), f];
+  disable(key);
+  run.log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(key)) });
+  saveState(run.state);
+}
+
+/** The task's latest checks all passed (or the project has none). */
+function checksPass(task: TaskState): boolean {
+  return (task.latest ?? []).every((r) => r.status !== "failed" && r.status !== "timeout");
 }
 
 function canClimb(state: RunState, task: TaskState): boolean {
@@ -803,7 +1128,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         : task.next === "review-fix" ? reviewFixPrompt(task)
         : task.next === "redo" ? redoPrompt(state, task)
         : task.next === "continue" ? continuePrompt(state, task)
-        : task.escalated ? escalationPrompt(state, task)
+        : task.escalated ? (task.patch ? patchPrompt(state, task) : escalationPrompt(state, task))
         : taskPrompt(state, task);
       const { result, config } = await turn(run, {
         key: task.id,
@@ -821,6 +1146,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       });
       if (result.stop === "done") {
         task.report = parseReport(result);
+        // [F44 task-report]
+        if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role, status: task.report.status, summary: task.report.summary.slice(0, 8_000), notes: task.report.notes?.slice(0, 4_000) });
         task.sessionId = result.sessionId;
         task.sessionModel = config ? modelKey(config) : undefined;
         task.step = "checks";
@@ -843,7 +1170,22 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "checks") {
-      const results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
+      // A project that had no checks may get some from the work itself (a new
+      // program with its own tests). From then on they gate the task.
+      // [F10 work-created-checks]
+      if (state.checks.length === 0 && isOn("work-created-checks")) {
+        const found = optional(run, "work-created-checks", [], () => detectChecks(task.worktree));
+        if (found.length > 0) {
+          state.checks = found;
+          log.emit("note", { feature: "F10", message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
+        }
+      }
+      let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
+      const cannotRun = results.filter((r) => r.status === "unavailable").map((r) => r.name);
+      if (cannotRun.length > 0) {
+        state.checks = state.checks.filter((c) => !cannotRun.includes(c.name));
+        results = results.filter((r) => r.status !== "unavailable");
+      }
       if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
       const diff = diffOf(task);
       task.latest = results;
@@ -888,6 +1230,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       createDetachedWorktree(state.repo, testerDir, candidate);
       prepareWorktree(state.repo, testerDir);
       const diff = git(task.worktree, "diff", "--binary", task.base!, candidate);
+      const screens = state.brief?.surface === "tui" ? screensFor(run, task, testerDir) : undefined;
       let outcome: TurnResult;
       try {
         outcome = await turn(run, {
@@ -897,7 +1240,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           task: task.id,
           round: task.testRounds,
           cwd: testerDir,
-          prompt: testerPrompt(state, task, diff),
+          prompt: testerPrompt(state, task, diff, screens),
           access: "write",
           schema: VERDICT_SCHEMA,
         });
@@ -916,12 +1259,30 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       task.verdict = verdict;
       log.emit("tester.verdict", { task: task.id, verdict: verdict.verdict, summary: verdict.summary, findings: verdict.findings });
+      // Minor findings never hold a task up: they are recorded and the work merges.
+      // A reviewer can always find something more; only blockers are worth rounds.
+      // [F05 tester-severity]
+      if (isOn("tester-severity") && verdict.verdict === "fail" && verdict.findings.every((f) => f.severity === "minor")) {
+        log.emit("note", { message: `Task ${task.id}: the reviewer found only minor problems; merging with them recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       if (verdict.verdict === "pass") {
         task.step = "merge";
         saveState(state);
         continue;
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
+      // [F07 review-only-merge]
+      if (isOn("review-only-merge") && task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
+        // The project's checks pass, the expert's advice has been tried, and only the
+        // reviewer still objects. An expert rebuild costs more than that is worth.
+        log.emit("note", { message: `Task ${task.id}: the checks pass and the expert's advice was applied; merging with the reviewer's remaining findings recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       if (task.round >= repairLimit(state, task)) {
         if (canClimb(state, task) || canEscalate(state)) {
           onStuck(run, task, "the reviewer still found problems after the repair rounds");
@@ -937,8 +1298,31 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if ((task.step === "advise" || task.step === "escalate") && !budgetLeft(state)) {
+      // [F16 dollar-budget] Work whose checks pass is kept, with the open findings recorded.
+      if (isOn("dollar-budget") && checksPass(task) && (task.history.at(-1)?.findings?.length ?? 0) > 0) {
+        log.emit("note", { feature: "F16", message: `Expert budget reached; task ${task.id} keeps its work (the checks pass) with the reviewer's findings recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
       log.emit("note", { message: `Expert budget reached; task ${task.id} ends without expert help.` });
       return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert budget is spent`);
+    }
+
+    // [F39 ask-first] The expert costs the most: the person says whether to call it in.
+    if ((task.step === "advise" || task.step === "escalate") && !task.expertApproved) {
+      const answer = await askUser(run, { kind: "expert", task: task.id, title: task.title, reason: task.escalationReason ?? "the worker is stuck", step: task.step });
+      if (!answer.ok) {
+        if (checksPass(task)) {
+          log.emit("note", { message: `Task ${task.id} keeps its work without the expert (the checks pass); the reviewer's findings are recorded.` });
+          task.step = "merge";
+          saveState(state);
+          continue;
+        }
+        return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the expert was not called in`);
+      }
+      task.expertApproved = true;
+      saveState(state);
     }
 
     if (task.step === "advise") {
@@ -973,7 +1357,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "escalate") {
-      resetTo(task.worktree, task.base!);
+      // [F14 expert-patch] When the checks pass and only the reviewer's findings
+      // remain, the expert fixes those in the worker's code: far cheaper than
+      // rebuilding from the start, which is what every expensive build was.
+      const lastFindings = task.history.at(-1)?.findings ?? [];
+      task.patch = isOn("expert-patch") && checksPass(task) && lastFindings.length > 0;
+      if (!task.patch) resetTo(task.worktree, task.base!);
       task.escalated = true;
       task.round = 0;
       task.next = "initial";
@@ -982,7 +1371,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       task.progress = newHistory();
       task.step = "agent";
       saveState(state);
-      log.emit("task.escalated", { task: task.id, reason: task.escalationReason });
+      log.emit("task.escalated", { task: task.id, reason: task.escalationReason, patch: task.patch, feature: task.patch ? "F14" : undefined });
       continue;
     }
 
