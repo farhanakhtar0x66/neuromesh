@@ -4,7 +4,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, openSync, readFileSync, readSync, closeSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, realpathSync, openSync, readFileSync, readSync, closeSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { backends } from "../backends/index.ts";
 import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
@@ -663,11 +663,17 @@ export async function runTui(options: TuiOptions): Promise<number> {
     const path = resolve(folder.replace(/^~(?=$|\/)/, process.env.HOME ?? "~"));
     if (!name.trim()) return "Give the project a name.";
     if (!folder.trim()) return "Choose a folder.";
-    if (!existsSync(path)) {
-      mkdirSync(path, { recursive: true });
-      // A new folder becomes a repository with one empty commit, which the engine needs.
+    if (!existsSync(path)) mkdirSync(path, { recursive: true });
+    // A new or empty folder becomes its own repository with one empty commit,
+    // which the engine needs, even when a folder above it is a repository.
+    const top = spawnSync("git", ["-C", path, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
+    const ownRepo = top.status === 0 && realpathSync(top.stdout.trim()) === realpathSync(path);
+    if (!ownRepo && readdirSync(path).filter((f) => f !== ".DS_Store").length === 0) {
       if (spawnSync("git", ["init", "-q", path]).status !== 0) return "The folder was made, but git init failed there.";
-      spawnSync("git", ["-C", path, "commit", "-q", "--allow-empty", "-m", "Start the project"]);
+      // Without a git identity the commit fails; use a stand-in for this one commit.
+      const named = spawnSync("git", ["-C", path, "config", "user.name"], { encoding: "utf8" }).stdout.trim() !== "";
+      const who = named ? [] : ["-c", "user.name=Neuromesh", "-c", "user.email=neuromesh@localhost"];
+      if (spawnSync("git", ["-C", path, ...who, "commit", "-q", "--allow-empty", "-m", "Start the project"]).status !== 0) return "The repository was made, but its first commit failed.";
     }
     let root: string;
     try {
