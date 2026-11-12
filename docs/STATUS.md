@@ -203,8 +203,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     - `main` and `neuromesh-testing` are protected from force-pushes and
       deletion.
 
+20. **First real TUI run cost three times Opus alone (2026-11-12).** The
+    python-bot build: 83% of the Opus cost was one takeover that rebuilt from
+    an empty folder, set off by a package the worker's sandbox could not
+    install. Causes, replays and the six changes: `docs/12-python-bot-run.md`.
+
 ## Next steps
 
+0. The six changes in `docs/12-python-bot-run.md`, environment first, then
+   the role tests, then rerun the python-bot request.
 1. Done 2026-11-12: the telemetry endpoint is live at
    `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
    requests without keys are refused). `neuromesh telemetry pull` reads it.
