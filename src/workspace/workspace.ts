@@ -2,7 +2,7 @@
 // touch the user's own files. Changes come back as one patch the user applies.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { git, tryGit } from "./git.ts";
 
@@ -49,11 +49,21 @@ export function prepareWorktree(repoRoot: string, worktree: string): string[] {
     if (!existsSync(source) || !lstatSync(source).isDirectory() || existsSync(target)) continue;
     // Only folders git ignores; anything tracked is already in the worktree.
     if (tryGit(repoRoot, "check-ignore", "-q", dir) === undefined) continue;
-    try {
-      execFileSync("cp", ["-cR", source, target], { stdio: "ignore" });
-    } catch {
-      symlinkSync(source, target);
+    // A copy, so the agent's changes never reach the user's own folder:
+    // copy-on-write where the system can (macOS `cp -c`, GNU `--reflink=auto`),
+    // else a plain copy. A link to the original is the last resort.
+    const tries = process.platform === "darwin" ? [["-cR"], ["-R"]] : [["-R", "--reflink=auto"], ["-R"]];
+    let copied = false;
+    for (const flags of tries) {
+      try {
+        execFileSync("cp", [...flags, source, target], { stdio: "ignore" });
+        copied = true;
+        break;
+      } catch {
+        rmSync(target, { recursive: true, force: true });
+      }
     }
+    if (!copied) symlinkSync(source, target);
     prepared.push(dir);
   }
   return prepared;
