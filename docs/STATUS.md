@@ -215,6 +215,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     moved the 5-hour quota by 1%. Bytecode in the diff, found there, is fixed.
     `docs/13-logstat-benchmark.md`.
 
+22. **SiteWatch against GPT-6 Astra; plan-first building (2026-11-12).** Both
+    13/13 on end-to-end scenarios at about the same cost ($0.80 against $0.73);
+    Neuromesh's cost was one long Haiku session past Haiku's 100K price tier.
+    Now Opus's spec turn plans small tasks (F65), workers can ask for a split
+    (F68), sessions past 90K start fresh (F67), long calls are priced right
+    (F66), and a revoked login pauses (F64). `docs/14-sitewatch-and-plan-first.md`.
+
 ## Next steps
 
 0. Built 2026-11-12: the python-bot changes, F54 to F63

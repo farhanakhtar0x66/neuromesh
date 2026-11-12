@@ -5,7 +5,7 @@
 
 import type { AgentBackend, AgentRequest, AgentResult } from "./types.ts";
 import { isOn } from "../features.ts";
-import { classifyFailure } from "./types.ts";
+import { LONG_PROMPT, classifyFailure } from "./types.ts";
 import { capture } from "./proc.ts";
 import { num, obj, runCli, short, str } from "./shared.ts";
 import type { ParsedRun, StreamParser } from "./shared.ts";
@@ -83,11 +83,14 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
         const u = obj(message?.usage);
         if (id && u) {
           const prev = calls.get(id);
-          calls.set(id, {
+          const call = {
             input: Math.max(prev?.input ?? 0, num(u.input_tokens) ?? 0),
             cacheRead: Math.max(prev?.cacheRead ?? 0, num(u.cache_read_input_tokens) ?? 0),
             cacheWrite: Math.max(prev?.cacheWrite ?? 0, num(u.cache_creation_input_tokens) ?? 0),
-          });
+          };
+          calls.set(id, call);
+          // [F67 session-cap]
+          run.peakPrompt = Math.max(run.peakPrompt ?? 0, call.input + call.cacheRead + call.cacheWrite);
         }
         if (!Array.isArray(content)) return;
         for (const block of content) {
@@ -136,6 +139,18 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
           cacheRead: num(usage?.cache_read_input_tokens),
           cacheWrite: num(usage?.cache_creation_input_tokens),
         };
+        // [F66 tier-pricing] Calls over the long-context size, priced apart.
+        if (isOn("tier-pricing") && calls.size > 0) {
+          const long = [...calls.values()].filter((c) => c.input + c.cacheRead + c.cacheWrite > LONG_PROMPT);
+          if (long.length > 0) {
+            run.usage.long = {
+              input: long.reduce((n, c) => n + c.input, 0),
+              cacheRead: long.reduce((n, c) => n + c.cacheRead, 0),
+              cacheWrite: long.reduce((n, c) => n + c.cacheWrite, 0),
+              output: Math.round(((run.usage.output ?? 0) * long.length) / calls.size),
+            };
+          }
+        }
         // The model that did the most output is the one that answered.
         const models = obj(event.modelUsage);
         if (models) {

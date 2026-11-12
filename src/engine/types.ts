@@ -49,7 +49,8 @@ export type AttemptKind =
   | "advised-fix"
   | "climb"
   | "integration"
-  | "scout";
+  | "scout"
+  | "split";
 
 export interface AttemptRecord {
   role: Role;
@@ -67,6 +68,8 @@ export interface AttemptRecord {
   sessionId?: string;
   detail?: string;
   logPath?: string;
+  /** [F67 session-cap] The largest prompt of the turn, when the tool reports it per call. */
+  peakPrompt?: number;
 }
 
 export type InFlight = Omit<AttemptRecord, "stop" | "durationMs" | "usage" | "costUsdEquivalent" | "sessionId" | "detail"> & {
@@ -74,7 +77,8 @@ export type InFlight = Omit<AttemptRecord, "stop" | "durationMs" | "usage" | "co
 };
 
 export interface WorkerReport {
-  status: "done" | "blocked" | "unknown";
+  /** [F68 split-ask] "split": too big or too hard for one worker session; the expert divides it. */
+  status: "done" | "blocked" | "split" | "unknown";
   summary: string;
   notes?: string;
   /** How to start the program, when the worker built one. */
@@ -125,7 +129,7 @@ export interface Plan {
   tasks: PlannedTask[];
 }
 
-export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "merge" | "done";
+export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done";
 
 export interface TaskState extends PlannedTask {
   status: "pending" | "active" | "passed" | "failed";
@@ -162,6 +166,10 @@ export interface TaskState extends PlannedTask {
   progress: ProgressHistory;
   conflicts: number;
   previousDiff?: string;
+  /** [F68 split-ask] Made by the expert dividing a bigger task; it cannot be split again. */
+  fromSplit?: boolean;
+  /** [F68 split-ask] The worker asked for a split and the expert answered. */
+  splitAsked?: boolean;
   /** [F56 env-blocked] Turns spent on environment problems (not counted as repair rounds). */
   envRepairs?: number;
   /** [F56 env-blocked] What the environment problem was, for the next worker turn. */
@@ -213,6 +221,8 @@ export interface RunState {
   repairs: number;
   maxTasks: number;
   maxParallel: number;
+  /** The preset's limit on tasks at once; maxParallel is 1 until a plan exists. */
+  parallelLimit?: number;
   /** Escalate in two steps: the expert advises first, and takes over only if that fails. */
   advise: boolean;
   /** Most expert tokens (fresh input + output) one run may spend; no limit when unset. */

@@ -409,3 +409,26 @@ test("the environment is made before the first turn and never enters the diff", 
   assert.ok(!state.outcome!.files.some((f) => f.path.startsWith(".venv") || f.path.endsWith(".pyc")), state.outcome!.files.map((f) => f.path).join(","));
   assert.ok(state.outcome!.files.some((f) => f.path === "main.py"));
 });
+
+// ---------------------------------------------------------------------------
+// [F64 auth-pause]
+
+test("a revoked login pauses the run before any expert is called, and resume continues once signed in", async () => {
+  const repo = fixableRepo();
+  let signedIn = false;
+  const { ctx, fake } = context((req) => {
+    if (!signedIn) return { stop: "auth", detail: "success Failed to authenticate: OAuth token revoked. Please log in again. 401" };
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true });
+  const paused = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
+  assert.equal(paused.status, "paused");
+  assert.match(paused.reason ?? "", /no longer signed in.*claude auth login/);
+  assert.ok(!fake.calls.some((c) => c.model === "fake-expert"), "no expert on a dead login");
+  signedIn = true;
+  const { resumeRun } = await import("../src/engine/run.ts");
+  const done = await resumeRun(paused, ctx);
+  assert.equal(done.status, "finished", done.reason);
+  assert.equal(done.outcome?.checks, "passed");
+});

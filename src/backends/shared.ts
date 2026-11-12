@@ -19,6 +19,8 @@ export interface ParsedRun {
   quotaUsed?: Record<string, number>;
   quotaResets?: Record<string, number>;
   detail?: string;
+  /** [F67 session-cap] */
+  peakPrompt?: number;
 }
 
 export interface StreamParser {
@@ -123,6 +125,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     quotaUsed: parsed.quotaUsed,
     quotaResets: parsed.quotaResets,
     durationMs: proc.durationMs,
+    peakPrompt: parsed.peakPrompt,
     exitCode: proc.exitCode,
     detail,
     logPath: request.logPath,

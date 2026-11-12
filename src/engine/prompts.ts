@@ -12,7 +12,7 @@ import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, 
 export const REPORT_SCHEMA = {
   type: "object",
   properties: {
-    status: { type: "string", enum: ["done", "blocked"] },
+    status: { type: "string", enum: ["done", "blocked", "split"] },
     summary: { type: "string" },
     notes: { type: "string" },
     run: { type: "string" },
@@ -39,8 +39,24 @@ export const SPEC_SCHEMA = {
         additionalProperties: false,
       },
     },
+    tasks: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          title: { type: "string" },
+          brief: { type: "string" },
+          owned: { type: "array", items: { type: "string" } },
+          depends_on: { type: "array", items: { type: "string" } },
+          owner: { type: "string", enum: ["worker", "expert"] },
+        },
+        required: ["id", "title", "brief", "owned", "depends_on", "owner"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design", "acceptance"],
+  required: ["name", "summary", "features", "behaviour", "out_of_scope", "design", "acceptance", "tasks"],
   additionalProperties: false,
 };
 
@@ -172,6 +188,7 @@ Give your answer in the required JSON format:
 - out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
 - design: ${isOn("spec-cap") ? "5 to 8" : "6 to 12"} points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
 - acceptance: ${isOn("acceptance-runs") ? "2 to 4 real uses of the finished program, each a shell command run from the project folder (relative paths only, no installs, under 2 minutes, no keyboard input) and what must be true of its result: its output, or the files it writes (name them). Use the real thing the program is for (a real website, a real file), not a test fixture: these catch what tests on made-up samples miss. A terminal program that needs a keyboard gets an empty list." : "an empty list."}
+- tasks: ${isOn("spec-plan") ? `the build order. Cheap, fast developers build it, each in a fresh session that sees the spec, your task brief and the files so far; a session that has to hold more than about 300 lines of new code and its tests gets slow and expensive. So split the program into 2 to 5 tasks of that size, each owning its own files (its module and that module's tests; the README and the entry point in the last task), with depends_on for tasks that need another's code. Each brief names the exact functions, signatures and data shapes others rely on, and how to tell it is done. Mark a task "expert" only if it needs reasoning a cheap model would likely get wrong (a tricky algorithm, subtle concurrency); you will build that one yourself. A program under about 300 lines in all is one task.` : "an empty list."}
 
 Rules:
 - Do not contradict the request, and do not choose the programming language unless the request does.
@@ -195,6 +212,7 @@ export function parseSpec(result: AgentResult): Spec | undefined {
         .map((a) => ({ command: (a.command as string).trim(), expect: typeof a.expect === "string" ? a.expect.trim() : "" }))
         .slice(0, 4)
     : [];
+  const tasks = Array.isArray(raw.tasks) ? (raw.tasks as NonNullable<Spec["tasks"]>) : [];
   return {
     name: typeof raw.name === "string" ? raw.name.trim() : "",
     summary: typeof raw.summary === "string" ? raw.summary.trim() : "",
@@ -203,6 +221,7 @@ export function parseSpec(result: AgentResult): Spec | undefined {
     outOfScope: list(raw.out_of_scope),
     design: list(raw.design),
     ...(acceptance.length > 0 ? { acceptance } : {}),
+    ...(tasks.length > 0 ? { tasks } : {}),
   };
 }
 
@@ -232,6 +251,12 @@ export function parseFacts(result: AgentResult): string[] {
   return Array.isArray(raw?.facts) ? raw.facts.filter((f): f is string => typeof f === "string" && f.trim() !== "").map((f) => f.trim().slice(0, 400)).slice(0, 10) : [];
 }
 
+/** [F68 split-ask] A worker may hand a task that is too big or too hard back to the lead engineer, once. */
+function splitNote(task: TaskState): string {
+  if (!isOn("split-ask") || task.owner !== "worker" || task.fromSplit || task.splitAsked || task.escalated) return "";
+  return `\n\nIf this task turns out much bigger than one short sitting (well over about 300 lines of new code and its tests), or needs reasoning you are not confident you can get right (a tricky algorithm, subtle concurrency), do not push on: stop early and answer with status "split", saying in notes what makes it big or hard. The lead engineer then divides it, or builds the hard part, and hands the rest back. Keep what you wrote; it is kept.`;
+}
+
 /** The first turn of a task. */
 export function taskPrompt(state: RunState, task: TaskState): string {
   if (isWholeRequest(state, task)) {
@@ -242,7 +267,7 @@ ${state.prompt}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}`;
+${WORKER_RULES}${splitNote(task)}`;
   }
   const owned = task.owned.length > 0 ? `\nFiles and folders you own for this task: ${task.owned.join(", ")}. Change other files only if the task cannot be done without it, and say so in your notes.` : "";
   return `You are one worker on a team building a change to this software project. Another part of the team planned the work; you do one task of it.
@@ -257,7 +282,29 @@ Other tasks of the plan are done by others. Do not do them, but do not break the
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}`;
+${WORKER_RULES}${splitNote(task)}`;
+}
+
+/**
+ * [F68 split-ask] The worker said its task is too big or too hard. The expert
+ * divides it into worker-sized parts, keeping for itself only what needs deep
+ * reasoning; that part is built first and the rest is handed out.
+ */
+export function splitPrompt(state: RunState, task: TaskState, files: string[]): string {
+  return `You are the lead engineer. A worker on your team started the task below and stopped: it judged the task too big or too hard for one short session. Its work so far stays in the project.
+
+The overall request (with its spec):
+${state.prompt}
+
+The task: ${task.title}
+${task.brief}
+
+What the worker said: ${(task.report?.notes || task.report?.summary || "(nothing)").slice(0, 1_500)}
+Files it has written so far: ${files.join(", ") || "(none)"}
+
+Split the rest of this task into 2 to 4 parts, each one short worker session (about 300 lines of new code and its tests), each owning its own files, in build order (depends_on). Each brief names the exact functions, signatures and data shapes the others rely on, says what of the worker's code to keep, and how to tell it is done. Mark a part "expert" only if it needs reasoning a cheap model would likely get wrong; you will build that part yourself before the parts that depend on it. Use short ids like "a", "b". Do not change files now.
+
+Give your answer in the required JSON format: summary (one sentence) and tasks (id, title, brief, owned, depends_on, owner).`;
 }
 
 function failureText(results: CheckResult[], baseline: CheckResult[] | undefined): string {
@@ -589,7 +636,7 @@ export function parseReport(result: AgentResult): WorkerReport {
   const structured = (result.structured ?? parseStructured(result.finalText)) as Partial<WorkerReport> | undefined;
   if (structured && typeof structured.summary === "string") {
     return {
-      status: structured.status === "done" || structured.status === "blocked" ? structured.status : "unknown",
+      status: structured.status === "done" || structured.status === "blocked" || structured.status === "split" ? structured.status : "unknown",
       summary: structured.summary,
       notes: typeof structured.notes === "string" && structured.notes.trim() !== "" ? structured.notes : undefined,
       run: typeof structured.run === "string" && structured.run.trim() !== "" ? structured.run.trim() : undefined,

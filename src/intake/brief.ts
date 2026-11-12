@@ -53,6 +53,12 @@ export interface Spec {
    * and what must be true of their result. The reviewer judges the result.
    */
   acceptance?: { command: string; expect: string }[];
+  /**
+   * [F65 spec-plan] The build split into tasks small enough for one short
+   * worker session each, in build order. Raw from the spec writer; the engine
+   * checks it with parsePlan.
+   */
+  tasks?: { id: string; title: string; brief: string; owned: string[]; depends_on: string[]; owner: "worker" | "expert" }[];
 }
 
 export interface Brief {
@@ -314,6 +320,10 @@ export function renderBrief(brief: Brief): string {
         // [F58 acceptance-runs]
         spec.acceptance && spec.acceptance.length > 0
           ? `Acceptance runs (Neuromesh runs these on the finished work from the project folder, and a reviewer judges the result; try them yourself):\n${spec.acceptance.map((a) => `- \`${a.command}\`: ${a.expect}`).join("\n")}`
+          : "",
+        // [F65 spec-plan]
+        spec.tasks && spec.tasks.length > 1
+          ? `Build plan (each task is built by one developer in order; do only your own):\n${spec.tasks.map((t) => `- ${t.id}: ${t.title}${t.owned.length > 0 ? ` (owns ${t.owned.join(", ")})` : ""}`).join("\n")}`
           : "",
       ]
         .filter(Boolean)

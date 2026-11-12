@@ -28,7 +28,16 @@ export interface Usage {
   reasoning?: number;
   cacheRead?: number;
   cacheWrite?: number;
+  /**
+   * [F66 tier-pricing] The part of this usage from model calls whose prompt was
+   * over LONG_PROMPT tokens, which some models charge more for. Output is
+   * shared out by number of calls (an estimate).
+   */
+  long?: Usage;
 }
+
+/** [F66 tier-pricing] Prompt size above which a call is priced at a model's long-context rates. */
+export const LONG_PROMPT = 100_000;
 
 export interface Activity {
   kind: "text" | "tool" | "info";
@@ -95,6 +104,11 @@ export interface AgentResult {
   /** [F43 quota-windows] When each of those windows resets (Unix seconds), when reported. */
   quotaResets?: Record<string, number>;
   durationMs: number;
+  /**
+   * [F67 session-cap] The largest prompt (input, cache read and cache write
+   * together) any model call of the turn sent, when the tool reports per call.
+   */
+  peakPrompt?: number;
   exitCode: number | null;
   /** Error or refusal text, when there is one. */
   detail?: string;
@@ -117,12 +131,14 @@ export interface AgentBackend {
 export function addUsage(a: Usage, b: Usage): Usage {
   const sum = (x?: number, y?: number): number | undefined =>
     x === undefined && y === undefined ? undefined : (x ?? 0) + (y ?? 0);
+  const long = a.long || b.long ? addUsage(a.long ?? {}, b.long ?? {}) : undefined;
   return {
     input: sum(a.input, b.input),
     output: sum(a.output, b.output),
     reasoning: sum(a.reasoning, b.reasoning),
     cacheRead: sum(a.cacheRead, b.cacheRead),
     cacheWrite: sum(a.cacheWrite, b.cacheWrite),
+    ...(long ? { long } : {}),
   };
 }
 

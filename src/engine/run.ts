@@ -68,6 +68,7 @@ import {
   fixInPlacePrompt,
   parseFacts,
   scoutPrompt,
+  splitPrompt,
   patchPrompt,
   failureSummary,
   freshFollowUpPrompt,
@@ -91,7 +92,7 @@ import {
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import type { AttemptKind, AttemptRecord, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 
 export interface EngineContext {
   home: string;
@@ -180,6 +181,11 @@ type Stop = { status: "paused" | "interrupted" | "failed"; reason: string; failu
 const ESCALATION_REPAIRS = 1;
 /** [F56 env-blocked] Turns a worker gets to fix an environment problem (declaring a package) before the run stops. */
 const ENV_REPAIRS = 2;
+/**
+ * [F67 session-cap] Prompt size above which a session is not resumed. Haiku 5.5
+ * charges five times as much for a call whose prompt is over 100K tokens.
+ */
+const SESSION_CAP = 90_000;
 /** [F60 no-rebuild] Why an expert turn was stopped part way. */
 const BUDGET_CUT = "stopped: the expert budget was reached during this turn";
 /** A tool that prints nothing for this long has stalled; the turn is stopped and retried once. */
@@ -289,6 +295,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     repairs: options.repairs ?? preset.repairs,
     maxTasks: preset.maxTasks,
     maxParallel: brief && !brief.staffing.plan ? 1 : preset.maxParallel,
+    parallelLimit: preset.maxParallel,
     advise: preset.advise ?? true,
     expertBudget: options.expertBudget ?? preset.expertBudget,
     expertBudgetUsd: preset.expertBudgetUsd,
@@ -478,7 +485,10 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           const outcome = await optionalAsync(run, "spec-step", undefined, () => specStep(run));
           if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
         }
-        if (state.mode === "team") {
+        if (state.tasks.length > 0) {
+          // [F65 spec-plan] Planned already, by the spec writer.
+          state.step = "tasks";
+        } else if (state.mode === "team") {
           state.step = "plan";
         } else {
           state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "worker" })];
@@ -734,6 +744,12 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     const backend = ctx.backends[config.backend];
     if (!backend) throw new Error(`unknown backend "${config.backend}"`);
     let sameSession = req.resume?.sessionId !== undefined && req.resume.model === modelKey(config);
+    // [F67 session-cap] A session already this large costs more per call than a fresh start from the brief.
+    const peak = sameSession && isOn("session-cap") ? Math.max(0, ...state.attempts.filter((a) => a.sessionId === req.resume!.sessionId).map((a) => a.peakPrompt ?? 0)) : 0;
+    if (sameSession && peak > SESSION_CAP && req.freshPrompt) {
+      sameSession = false;
+      log.emit("context.compacted", { feature: "F67", role: req.role, task: req.task, peakPrompt: peak });
+    }
     // [F42 compact] Asked to compact: this follow-up starts a fresh session from the brief and the last report.
     if (sameSession && ctx.steer?.compact && isOn("compact") && req.freshPrompt) {
       ctx.steer.compact = false;
@@ -862,6 +878,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     sessionId: result.sessionId,
     detail: result.detail,
     logPath,
+    peakPrompt: result.peakPrompt,
   };
   state.attempts.push(record);
   saveState(state);
@@ -885,9 +902,22 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   return result;
 }
 
+/**
+ * [F64 auth-pause] A login the tool's server rejected (expired or revoked).
+ * Every model on the same tool shares that login, so no fallback or expert can
+ * help: the run pauses until the person signs in again.
+ */
+function signedOut(result: AgentResult): boolean {
+  return isOn("auth-pause") && result.stop === "auth" && !UNAVAILABLE.test(result.detail ?? "");
+}
+
 /** Turn a non-finished agent result into how the run should stop. */
 function stopFor(result: AgentResult, what: string): Stop {
   if (result.stop === "cancelled") return { status: "interrupted", reason: "stopped by the user" };
+  // [F64 auth-pause]
+  if (signedOut(result)) {
+    return { status: "paused", reason: `the ${what}'s tool is no longer signed in (${(result.detail ?? "").replace(/^success\s+/, "").slice(0, 160)}). Sign in again (/connect in the TUI, or \`claude auth login\` for Claude Code), then resume the run.` };
+  }
   if (result.stop === "quota") {
     return { status: "paused", reason: `subscription limits reached for every ${what} model: ${result.detail ?? ""} (see "neuromesh cooldowns" for when they reset)`.trim() };
   }
@@ -921,7 +951,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
     access: "read-only",
     schema: SPEC_SCHEMA,
   });
-  if (result.stop === "quota" || result.stop === "cancelled") return stopFor(result, "briefer");
+  if (result.stop === "quota" || result.stop === "cancelled" || signedOut(result)) return stopFor(result, "briefer");
   const spec = result.stop === "done" ? parseSpec(result) : undefined;
   if (!spec) {
     log.emit("note", { message: "No usable product spec came back; the work goes on from the request as it is." });
@@ -933,6 +963,19 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
   state.prompt = renderBrief(brief);
   saveState(state);
   log.emit("spec.ready", { model: config ? modelKey(config) : undefined, name: spec.name, features: spec.features.length, behaviour: spec.behaviour.length });
+  // [F65 spec-plan] The spec writer split the build: those tasks are the plan, with no planning turn.
+  if (isOn("spec-plan") && (spec.tasks?.length ?? 0) > 1) {
+    optional(run, "spec-plan", undefined, () => {
+      const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, state.maxTasks);
+      state.plan = plan;
+      // Small tasks start on the first worker rung; the ladder still climbs when one is stuck.
+      state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: undefined }));
+      state.mode = "team";
+      state.maxParallel = state.parallelLimit ?? 1;
+      saveState(state);
+      log.emit("plan.ready", { feature: "F65", summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
+    });
+  }
   return undefined;
 }
 
@@ -977,6 +1020,8 @@ function observedFor(state: RunState, task: TaskState): string | undefined {
 async function acceptanceFor(run: RunCtx, task: TaskState, dir: string): Promise<string | undefined> {
   const runs = run.state.brief?.spec?.acceptance ?? [];
   if (!isOn("acceptance-runs") || runs.length === 0) return undefined;
+  // With several tasks the program is only whole at the last one.
+  if (run.state.tasks.length > 1 && !isLastOpen(run.state, task)) return undefined;
   return optionalAsync(run, "acceptance-runs", undefined, async () => {
     const outcome = await runAcceptance(dir, runs, { env: isOn("work-env") ? envVars(dir) : undefined, signal: run.signal });
     run.log.emit("acceptance.ran", {
@@ -1332,10 +1377,15 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         task.sessionId = result.sessionId;
         task.sessionModel = config ? modelKey(config) : undefined;
         task.step = "checks";
+        // [F68 split-ask] The worker judged the task too big or too hard for one session.
+        if (task.report.status === "split" && canSplit(state, task)) {
+          log.emit("note", { feature: "F68", message: `Task ${task.id}: the worker asks the lead engineer to split it (${(task.report.notes ?? task.report.summary).slice(0, 200)}).` });
+          task.step = "split";
+        }
         saveState(state);
         continue;
       }
-      if (result.stop === "cancelled" || result.stop === "quota") {
+      if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {
         // The turn may have changed files before it stopped; the next one checks first.
         if (task.next === "initial" && !task.escalated) task.next = "continue";
         saveState(state);
@@ -1460,7 +1510,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         removeDetachedWorktree(state.repo, testerDir);
       }
       const { result } = outcome;
-      if (result.stop === "cancelled") return stopFor(result, "tester");
+      if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "tester");
       task.testRounds += 1;
       if (!verdict) {
         log.emit("note", { message: `The tester gave no usable verdict for task ${task.id} (${result.stop}); relying on the checks.` });
@@ -1508,6 +1558,13 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
     }
 
+    if (task.step === "split") {
+      const outcome = await splitStep(run, task);
+      if (outcome === "split") return undefined;
+      if (outcome) return outcome;
+      continue;
+    }
+
     if ((task.step === "advise" || task.step === "escalate") && !budgetLeft(state)) {
       // [F16 dollar-budget] Work whose checks pass is kept, with the open findings recorded.
       if (isOn("dollar-budget") && checksPass(task) && (task.history.at(-1)?.findings?.length ?? 0) > 0) {
@@ -1548,7 +1605,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         access: "read-only",
         schema: ADVICE_SCHEMA,
       });
-      if (result.stop === "cancelled" || result.stop === "quota") return stopFor(result, "escalation");
+      if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
       task.advised = true;
       const advice = result.stop === "done" ? parseAdvice(result) : undefined;
       if (!advice) {
@@ -1616,6 +1673,85 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
   return undefined;
 }
 
+/** [F68 split-ask] A worker task the expert may still divide. */
+function canSplit(state: RunState, task: TaskState): boolean {
+  return isOn("split-ask") && task.owner === "worker" && !task.fromSplit && !task.splitAsked && !task.escalated && roleChain(state, "orchestrator").length > 0 && budgetLeft(state);
+}
+
+/**
+ * [F68 split-ask] The expert divides a task the worker found too big. The
+ * worker's work so far is merged; the parts become new tasks (expert-owned ones
+ * are built by the expert, first where others depend on them), and whatever
+ * depended on the original task now depends on all of them. When the expert
+ * does not split it, its answer goes back to the worker as advice.
+ */
+async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" | undefined> {
+  const { state, log } = run;
+  task.splitAsked = true;
+  const files = snapshot(task.worktree, task.base!, task.prepared).files.map((f) => f.path);
+  const { result, config } = await turn(run, {
+    key: `${task.id}-split`,
+    role: "orchestrator",
+    kind: "split",
+    task: task.id,
+    round: task.round,
+    cwd: task.worktree,
+    prompt: splitPrompt(state, task, files),
+    access: "read-only",
+    schema: PLAN_SCHEMA,
+  });
+  if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "orchestrator");
+  let plan: Plan | undefined;
+  if (result.stop === "done") {
+    try {
+      plan = parsePlan(result, state.maxTasks);
+    } catch (error) {
+      log.emit("note", { feature: "F68", message: `The split for task ${task.id} was not usable (${error instanceof Error ? error.message : String(error)}).` });
+    }
+  }
+  if (!plan || plan.tasks.length < 2) {
+    // Not divided: the worker finishes, with the expert's brief as advice when there is one.
+    const only = plan?.tasks[0];
+    if (only) {
+      task.advice = { diagnosis: plan!.summary || "The lead engineer kept the task whole.", steps: [only.brief] };
+      task.next = "advised-fix";
+    } else {
+      task.next = "continue";
+    }
+    task.step = "agent";
+    saveState(state);
+    log.emit("note", { feature: "F68", message: `Task ${task.id} stays whole; the worker carries on${only ? " with the lead engineer's brief" : ""}.` });
+    return undefined;
+  }
+  commitAll(task.worktree, `neuromesh: ${task.title} (started, then split)`, task.prepared);
+  if (mergeBranch(state.worktree, task.branch, `neuromesh: merge the start of task ${task.id} before its split`) === "conflict") {
+    task.next = "continue";
+    task.step = "agent";
+    saveState(state);
+    log.emit("note", { feature: "F68", message: `Task ${task.id}: its work so far does not merge, so it is not split; the worker carries on.` });
+    return undefined;
+  }
+  removeWorktree(state.repo, task.worktree, task.branch);
+  const id = (sub: string): string => `${task.id}.${sub}`;
+  const parts = plan.tasks.map((t) => ({
+    ...newTask(state, { ...t, id: id(t.id), dependsOn: [...t.dependsOn.map(id), ...task.dependsOn] }),
+    rung: undefined,
+    fromSplit: true,
+  }));
+  for (const other of state.tasks) {
+    if (other.dependsOn.includes(task.id)) other.dependsOn = [...other.dependsOn.filter((d) => d !== task.id), ...parts.map((p) => p.id)];
+  }
+  state.tasks.splice(state.tasks.indexOf(task) + 1, 0, ...parts);
+  task.status = "passed";
+  task.step = "done";
+  task.report = { status: "split", summary: `Split by the lead engineer into ${parts.map((p) => p.id).join(", ")}.`, notes: task.report?.notes };
+  state.mode = "team";
+  state.maxParallel = state.parallelLimit ?? state.maxParallel;
+  saveState(state);
+  log.emit("task.split", { feature: "F68", task: task.id, model: config ? modelKey(config) : undefined, summary: plan.summary, tasks: parts.map((p) => ({ id: p.id, title: p.title, owner: p.owner, dependsOn: p.dependsOn })) });
+  return "split";
+}
+
 function nextRound(run: RunCtx, task: TaskState, next: "repair" | "review-fix"): void {
   task.round += 1;
   task.next = next;
@@ -1666,6 +1802,8 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
     state.latest = state.tasks[0]?.latest ?? [];
     return undefined;
   }
+  // [F54 work-env] The merged work needs its environment too.
+  await prepareEnv(run, state.worktree, state.prepared);
   let results = await check(run, state.worktree, "final");
   if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
   log.emit("checks.finished", { phase: "final", results: brief(results) });
@@ -1685,7 +1823,7 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
       access: "write",
       schema: REPORT_SCHEMA,
     });
-    if (result.stop === "cancelled" || result.stop === "quota") return stopFor(result, "escalation");
+    if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
     commitAll(state.worktree, "neuromesh: integration fix", state.prepared);
     results = await check(run, state.worktree, "final-fixed");
     if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
