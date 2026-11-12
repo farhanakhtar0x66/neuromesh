@@ -81,7 +81,8 @@ test("telemetry: nothing without consent; a report leaves out code, paths and th
   queue(home, report);
   queue(home, ratingReport(home, "r1", 4));
   assert.equal(outbox(home).length, 2);
-  // No endpoint in this build yet: everything waits.
+  // With no endpoint, everything waits. (Tests never reach the real one.)
+  process.env.NEUROMESH_TELEMETRY_URL = "off";
   assert.deepEqual(await flush(home), { sent: 0, waiting: 2 });
   // With one, each report is posted with the ingest key and removed once taken.
   process.env.NEUROMESH_TELEMETRY_URL = "https://example.test";

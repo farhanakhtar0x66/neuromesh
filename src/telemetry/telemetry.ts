@@ -25,9 +25,15 @@ export const SCHEMA = 1;
 
 const dir = (home: string): string => join(home, "telemetry");
 
-/** The endpoint: NEUROMESH_TELEMETRY_URL, else the one this build ships with. */
+/**
+ * The endpoint: NEUROMESH_TELEMETRY_URL ("off" for none), else the one this
+ * build ships with. Under Node's test runner the shipped one is never used,
+ * so tests (and CI) cannot send reports to the real endpoint.
+ */
 export function endpoint(): string | undefined {
-  const url = process.env.NEUROMESH_TELEMETRY_URL ?? ENDPOINT;
+  const set = process.env.NEUROMESH_TELEMETRY_URL;
+  if (set === "off") return undefined;
+  const url = set ?? (process.env.NODE_TEST_CONTEXT ? undefined : ENDPOINT);
   return url && /^https:\/\//.test(url) ? url.replace(/\/$/, "") : undefined;
 }
 
