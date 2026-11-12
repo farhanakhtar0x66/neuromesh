@@ -17,6 +17,7 @@ import { backends } from "../backends/index.ts";
 import { loadState } from "../engine/store.ts";
 import type { EngineContext, ModelUsage } from "../engine/run.ts";
 import type { AttemptRecord, RunState } from "../engine/types.ts";
+import type { Spec } from "../intake/brief.ts";
 import type { Preset } from "../presets/presets.ts";
 import { estimateCost } from "../usage/prices.ts";
 
@@ -65,6 +66,13 @@ export interface TaskResult {
   checks: "passed" | "failed" | "none" | "-";
   hidden: "pass" | "fail" | "not run";
   hiddenTail?: string;
+  /** Cases the hidden check counted, when it prints a line "SCORE passed/total". */
+  score?: { passed: number; total: number };
+  /**
+   * Subscription quota (fraction used per window) read by a one-word call just
+   * before and just after the task, when the eval was asked to probe it.
+   */
+  quota?: { before?: Record<string, number>; after?: Record<string, number> };
   files: number;
   insertions: number;
   deletions: number;
@@ -126,6 +134,13 @@ function seedRepo(task: EvalTask, into: string): string {
   return realpathSync(into);
 }
 
+/** The last "SCORE passed/total" line a hidden check printed. */
+export function scoreOf(output: string): { passed: number; total: number } | undefined {
+  const all = [...output.matchAll(/^SCORE (\d+)\/(\d+)\s*$/gm)];
+  const last = all.at(-1);
+  return last ? { passed: Number(last[1]), total: Number(last[2]) } : undefined;
+}
+
 export function evalDir(home: string, name: string): string {
   return join(home, "evals", name);
 }
@@ -155,6 +170,10 @@ export interface EvalOptions {
   rerun?: string[];
   /** Replace the preset's worker model for every task. */
   workerModel?: string;
+  /** Read the subscription quota (a one-word live call); asked before the first task and after each one. */
+  quotaProbe?: () => Promise<Record<string, number> | undefined>;
+  /** A spec to build each task from instead of having one written (a frozen spec, for testing the roles after it). */
+  specFor?: (task: EvalTask) => Spec | undefined;
   onTaskStart?: (task: EvalTask, index: number, total: number) => void;
   onTaskDone?: (result: TaskResult) => void;
 }
@@ -179,22 +198,27 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
     return !done || RETRY_STATUSES.has(done.status) || options.rerun?.includes(t.name);
   });
 
+  let quotaNow = todo.length > 0 ? await options.quotaProbe?.() : undefined;
   for (const [index, task] of todo.entries()) {
     if (ctx.signal?.aborted) break;
     options.onTaskStart?.(task, index, todo.length);
+    const quotaBefore = quotaNow;
     const repo = seedRepo(task, join(evalDir(ctx.home, options.name), "repos", task.name));
     const started = Date.now();
-    const state = await startRun({ cwd: repo, prompt: task.prompt, preset, worker: options.workerModel ? { model: options.workerModel } : undefined }, ctx);
+    const state = await startRun({ cwd: repo, prompt: task.prompt, preset, worker: options.workerModel ? { model: options.workerModel } : undefined, spec: options.specFor?.(task) }, ctx);
     const wallMs = Date.now() - started;
+    quotaNow = await options.quotaProbe?.();
 
     let hidden: TaskResult["hidden"] = "not run";
     let hiddenTail: string | undefined;
+    let score: TaskResult["score"];
     if (state.status === "finished") {
       applyRun(state, { force: true });
       cpSync(join(task.dir, "hidden"), join(repo, "hidden"), { recursive: true });
       const check = sh(repo, task.hiddenCheck);
       hidden = check.code === 0 ? "pass" : "fail";
       if (hidden === "fail") hiddenTail = check.output.split("\n").slice(-20).join("\n");
+      score = scoreOf(check.output);
     }
 
     const tiers = tierTokens(state.attempts);
@@ -207,6 +231,8 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
       checks: state.outcome?.checks ?? "-",
       hidden,
       hiddenTail,
+      score,
+      quota: quotaBefore || quotaNow ? { before: quotaBefore, after: quotaNow } : undefined,
       files: state.outcome?.files.length ?? 0,
       insertions: state.outcome?.insertions ?? 0,
       deletions: state.outcome?.deletions ?? 0,

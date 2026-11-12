@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Neuromesh command line.
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
 import { loadSettings, saveSettings } from "../tui/store.ts";
 import { join, resolve } from "node:path";
@@ -12,7 +13,7 @@ import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
 import { clearCooldowns, coolingModels } from "../engine/cooldown.ts";
 import { resumeRun, startRun } from "../engine/run.ts";
 import type { EngineContext } from "../engine/run.ts";
-import { defaultHome, findRun, listRuns } from "../engine/store.ts";
+import { defaultHome, findRun, listRuns, loadState } from "../engine/store.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
@@ -315,11 +316,38 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     if (line !== undefined) process.stderr.write(`    ${line}\n`);
   };
   process.stderr.write(`Eval ${name}: ${tasks.length} task(s) on preset ${preset.name}. Results: ${evalDir(home, name)}\n`);
+  // --quota: read the Claude subscription quota around every task (one one-word Haiku call each).
+  const quotaProbe = flags.has("quota")
+    ? async (): Promise<Record<string, number> | undefined> => {
+        const dir = mkdtempSync(join(tmpdir(), "neuromesh-quota-"));
+        try {
+          const r = await ctx.backends.claude!.run({ cwd: dir, prompt: "Reply with the single word: ok", model: "claude-haiku-5-5", effort: "low", access: "read-only", timeoutMs: 120_000, idleMs: 120_000 });
+          return r.quotaUsed;
+        } catch {
+          return undefined;
+        } finally {
+          rmSync(dir, { recursive: true, force: true });
+        }
+      }
+    : undefined;
+  // --spec-from <eval>: build each task from the spec an earlier eval's run wrote (no spec turn).
+  const specSource = flags.get("spec-from") ? loadReport(home, flags.get("spec-from")!) : undefined;
+  if (flags.get("spec-from") && !specSource) throw new Error(`No eval results named "${flags.get("spec-from")}"`);
+  const specFor = specSource
+    ? (task: { name: string }) => {
+        const runId = specSource.results[task.name]?.runId;
+        const projects = join(home, "projects");
+        const dir = runId && existsSync(projects) ? readdirSync(projects).map((p) => join(projects, p, "runs", runId)).find((d) => existsSync(join(d, "run.json"))) : undefined;
+        return dir ? loadState(dir).brief?.spec : undefined;
+      }
+    : undefined;
   const report = await runEval({
     name,
     preset,
     tasks,
     ctx,
+    quotaProbe,
+    specFor,
     rerun: flags.get("rerun")?.split(",").filter(Boolean),
     workerModel: flags.get("model"),
     onTaskStart: (task, i, total) => process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`),

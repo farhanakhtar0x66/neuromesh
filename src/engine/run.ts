@@ -32,7 +32,7 @@ import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, only
 import { buildPacket } from "../context/packet.ts";
 import { estimateCost } from "../usage/prices.ts";
 import { buildBrief, detectRuntimes, renderBrief, repoFacts } from "../intake/brief.ts";
-import type { Brief } from "../intake/brief.ts";
+import type { Brief, Spec } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
 import { git } from "../workspace/git.ts";
@@ -139,6 +139,12 @@ export interface StartOptions {
   attachments?: { path: string; text?: string }[];
   /** [F49 follow-up] The run this one follows in the same session: it starts from that run's result. */
   follows?: RunState;
+  /**
+   * A spec to build from instead of having one written (the eval's frozen
+   * specs: the roles after the spec are then tested on the same input, with
+   * no expert turn). Needs the brief engine.
+   */
+  spec?: Spec;
 }
 
 /**
@@ -268,6 +274,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       disable("attachments");
     }
   }
+  if (brief && options.spec) brief.spec = options.spec;
   if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
     mode = brief.staffing.plan ? "team" : "solo";
@@ -488,6 +495,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           const outcome = await optionalAsync(run, "spec-step", undefined, () => specStep(run));
           if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
         }
+        // A spec that was given, not written here, still carries its build plan.
+        if (state.brief?.spec && state.tasks.length === 0 && state.attempts.every((a) => a.kind !== "spec")) planFromSpec(run, state.brief.spec, undefined);
         if (state.tasks.length > 0) {
           // [F65 spec-plan] Planned already, by the spec writer.
           state.step = "tasks";
@@ -1013,21 +1022,25 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
   state.prompt = renderBrief(brief);
   saveState(state);
   log.emit("spec.ready", { model: config ? modelKey(config) : undefined, name: spec.name, features: spec.features.length, behaviour: spec.behaviour.length });
-  // [F65 spec-plan] The spec writer split the build: those tasks are the plan, with no planning turn.
-  if (isOn("spec-plan") && (spec.tasks?.length ?? 0) > 1) {
-    optional(run, "spec-plan", undefined, () => {
-      const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, state.maxTasks);
-      state.plan = plan;
-      // Small tasks start on the first worker rung; the ladder still climbs when one is stuck.
-      state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: undefined }));
-      state.mode = "team";
-      state.maxParallel = state.parallelLimit ?? 1;
-      state.planFromSpec = true;
-      saveState(state);
-      log.emit("plan.ready", { feature: "F65", summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
-    });
-  }
+  planFromSpec(run, spec, config);
   return undefined;
+}
+
+/** [F65 spec-plan] The spec writer split the build: those tasks are the plan, with no planning turn. */
+function planFromSpec(run: RunCtx, spec: Spec, config: RoleConfig | undefined): void {
+  const { state, log } = run;
+  if (!isOn("spec-plan") || (spec.tasks?.length ?? 0) < 2) return;
+  optional(run, "spec-plan", undefined, () => {
+    const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, state.maxTasks);
+    state.plan = plan;
+    // Small tasks start on the first worker rung; the ladder still climbs when one is stuck.
+    state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: undefined }));
+    state.mode = "team";
+    state.maxParallel = state.parallelLimit ?? 1;
+    state.planFromSpec = true;
+    saveState(state);
+    log.emit("plan.ready", { feature: "F65", summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
+  });
 }
 
 /**

@@ -1,0 +1,12 @@
+{
+  "name": "solo-haiku",
+  "description": "One Claude Haiku 5.5 agent at high effort through Claude Code, given the request exactly as typed. The cheap floor the benchmark compares against (docs/17-benchmark.md).",
+  "mode": "solo",
+  "worker": {
+    "backend": "claude",
+    "model": "claude-haiku-5-5",
+    "effort": "high"
+  },
+  "repairs": 1,
+  "turnTimeoutMinutes": 40
+}

@@ -1,0 +1,1 @@
+{ "kind": "build", "language": "python", "hiddenCheck": "python3 hidden/hidden_check.py" }
