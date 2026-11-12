@@ -677,6 +677,33 @@ export const FEATURES: Feature[] = [
     what: "Each run records, per tool that reports it, the 5-hour and weekly quota readings at its first and last turn (Claude Code's rate-limit events), and the usage log shows them. Quota, not the API-price estimate, is what a subscription run costs.",
     optional: true,
   },
+  {
+    id: "F73",
+    key: "heal-worktree",
+    name: "Work folders are put right after an agent has been in them",
+    added: "2026-11-12",
+    files: ["src/workspace/workspace.ts (healWorktree)", "src/engine/run.ts (healTask)"],
+    what: "Before and after every agent turn that may write, the engine checks the work folder and repairs what agents and their tools do to it: a deleted folder (made again from its branch), a stale git lock file, a half-done merge or rebase, a switched branch or detached HEAD (the branch name is put back, keeping the commits), and a git repository started inside the work, which would silently leave those files out of the result. Each used to end the run with an engine error or lose work. Found by the fault harness (evals/chaos.ts).",
+    optional: true,
+  },
+  {
+    id: "F74",
+    key: "adapter-guard",
+    name: "A crashing tool adapter is a failed turn, not a crashed run",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (once)"],
+    what: "When a backend adapter throws (the tool could not be started, or its output broke the parser), the turn ends as an error like any other, with its usage unknown and its record kept; the fallback chain, the ladder and the expert apply as usual. It used to end the run with an engine error and leave the turn open in the event log.",
+    optional: true,
+  },
+  {
+    id: "F75",
+    key: "sync-before-checks",
+    name: "A task is tested with what the others have merged",
+    added: "2026-11-12",
+    files: ["src/engine/run.ts (syncTask)"],
+    what: "Before a task's checks run, the work other tasks merged since it started is merged into its folder, and its diff is counted from there. The later of two tasks built at the same time used to be tested without the other's work: its checks failed through no fault of its own, the worker repaired nothing, the expert was called in and the task was marked failed while the merged result passed. Found by the fault harness (evals/chaos.ts).",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

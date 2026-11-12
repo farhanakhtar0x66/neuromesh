@@ -253,7 +253,7 @@ export function parseFacts(result: AgentResult): string[] {
 
 /** [F68 split-ask] A worker may hand a task that is too big or too hard back to the lead engineer, once. */
 function splitNote(task: TaskState): string {
-  if (!isOn("split-ask") || task.owner !== "worker" || task.fromSplit || task.splitAsked || task.escalated) return "";
+  if (!isOn("split-ask") || task.owner !== "worker" || task.fromSplit || task.splitAsked || task.escalated || task.noSplit) return "";
   return `\n\nIf this task turns out much bigger than one short sitting (well over about 300 lines of new code and its tests), or needs reasoning you are not confident you can get right (a tricky algorithm, subtle concurrency), do not push on: stop early and answer with status "split", saying in notes what makes it big or hard. The lead engineer then divides it, or builds the hard part, and hands the rest back. Keep what you wrote; it is kept.`;
 }
 

@@ -117,3 +117,20 @@ test("a program that goes quiet is stopped as idle", async () => {
   assert.equal(result.idle, true);
   assert.ok(Date.now() - started < 5_000);
 });
+
+test("a tool that exits while a program it started still holds its output open ends promptly, with its exit code", async () => {
+  // The tool starts a background program in a group of its own (as a dev server
+  // started with `&` would be), prints its answer and exits. The program keeps
+  // the output pipe open for a minute.
+  const marker = `held-pipe-${process.pid}`;
+  const script = `const {spawn}=require('child_process');spawn('node',['-e','setTimeout(()=>{},60000)//${marker}'],{detached:true,stdio:'inherit'}).unref();console.log('answer');process.exit(0)`;
+  const lines: string[] = [];
+  const started = Date.now();
+  const result = await runProcess({ command: "node", args: ["-e", script], cwd: process.cwd(), timeoutMs: 40_000, idleMs: 30_000, onLine: (l) => lines.push(l) });
+  assert.ok(Date.now() - started < 12_000, `waited ${Date.now() - started} ms for a pipe nobody writes to`);
+  assert.deepEqual(lines, ["answer"]);
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.timedOut, false, "the tool finished; it did not time out");
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(alive(marker), 0, "the program it left behind was stopped");
+});

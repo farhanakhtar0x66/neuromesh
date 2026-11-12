@@ -7,7 +7,8 @@
 // tool's descendants while it runs and stops those too.
 
 import { execFileSync, spawn } from "node:child_process";
-import { createWriteStream, mkdirSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 
@@ -44,6 +45,10 @@ export interface ProcResult {
 const STDERR_LIMIT = 64_000;
 const KILL_GRACE_MS = 3_000;
 const SAMPLE_MS = 1_500;
+/** After the tool itself has exited: how long its output may still drain before whatever holds it open is stopped. */
+const EXIT_GRACE_MS = 1_500;
+/** After everything was told to stop: how long before the turn ends anyway, with the output abandoned. */
+const ABANDON_MS = 2_500;
 
 interface ProcessRow {
   ppid: number;
@@ -110,6 +115,53 @@ class DescendantTracker {
   }
 }
 
+/** Every program a turn starts carries this in its environment, whatever group or parent it ends up with. */
+const TURN_TAG = "NEUROMESH_TURN";
+
+/**
+ * Processes whose environment carries the tag. This finds what the descendant
+ * list cannot: a program that moved to its own group and lost its parent
+ * before the list was first taken (a server started in the background by a
+ * tool that then exits).
+ */
+function taggedProcesses(tag: string): number[] {
+  const needle = `${TURN_TAG}=${tag}`;
+  const found: number[] = [];
+  if (existsSync("/proc/self/environ")) {
+    for (const name of readdirSync("/proc")) {
+      if (!/^\d+$/.test(name)) continue;
+      try {
+        if (readFileSync(`/proc/${name}/environ`, "utf8").split("\0").includes(needle)) found.push(Number(name));
+      } catch {
+        // Another user's process, or one that has just exited.
+      }
+    }
+  } else {
+    let out = "";
+    try {
+      out = execFileSync("ps", ["axeww", "-o", "pid=,command="], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    } catch {
+      return found;
+    }
+    for (const line of out.split("\n")) {
+      if (!line.includes(needle)) continue;
+      const pid = Number.parseInt(line, 10);
+      if (Number.isFinite(pid)) found.push(pid);
+    }
+  }
+  return found.filter((pid) => pid !== process.pid);
+}
+
+function signalTagged(tag: string, signal: NodeJS.Signals): void {
+  for (const pid of taggedProcesses(tag)) {
+    try {
+      process.kill(pid, signal);
+    } catch {
+      // Already gone.
+    }
+  }
+}
+
 export function runProcess(options: ProcOptions): Promise<ProcResult> {
   const started = Date.now();
   return new Promise((resolve) => {
@@ -124,10 +176,11 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
       return;
     }
 
+    const tag = `${process.pid}-${randomBytes(6).toString("hex")}`;
     const child = spawn(options.command, options.args, {
       cwd: options.cwd,
       // PWD follows cwd: some tools (opencode) take their working folder from it.
-      env: { ...(options.env ?? process.env), ...(options.cwd ? { PWD: options.cwd } : {}) },
+      env: { ...(options.env ?? process.env), ...(options.cwd ? { PWD: options.cwd } : {}), [TURN_TAG]: tag },
       detached: true, // new process group; see killGroup
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -151,16 +204,55 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
     const tracker = child.pid === undefined ? undefined : new DescendantTracker(child.pid);
     const sampler = setInterval(() => tracker?.sample(), SAMPLE_MS);
     sampler.unref();
+    // Early looks too: a program that moves to a group of its own and whose
+    // parent exits at once is only ever seen in its first moments.
+    for (const ms of [150, 500]) setTimeout(() => tracker?.sample(), ms).unref();
     let stopped = false;
+    let exitCode: number | null | undefined;
+    let done = false;
+    const finish = (code: number | null): void => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      clearTimeout(idleTimer);
+      clearInterval(sampler);
+      options.signal?.removeEventListener("abort", onAbort);
+      // Children the tool left behind in its group must not outlive it.
+      killGroup("SIGKILL");
+      // After a cancel or timeout, or once the tool has exited, neither may commands it ran in other groups.
+      if (stopped || exitCode !== undefined) {
+        tracker?.signal("SIGKILL");
+        signalTagged(tag, "SIGKILL");
+      }
+      const result = (): void => resolve({ exitCode: code, stderr, timedOut, idle, cancelled, spawnError, durationMs: Date.now() - started });
+      if (log) log.end(result);
+      else result();
+    };
+    /**
+     * The turn ends even if the output never closes. A program the tool started
+     * can keep the pipe open after the tool is gone (a server left running in a
+     * group of its own); waiting for it would hang the run for as long as it lives.
+     */
+    const abandonAfter = (ms: number): void => {
+      setTimeout(() => {
+        if (done) return;
+        child.stdout.destroy();
+        child.stderr.destroy();
+        finish(exitCode ?? null);
+      }, ms).unref();
+    };
     const stop = (): void => {
       stopped = true;
       tracker?.sample(); // one last look before the parent disappears
       killGroup("SIGTERM");
       tracker?.signal("SIGTERM");
+      signalTagged(tag, "SIGTERM");
       setTimeout(() => {
         killGroup("SIGKILL");
         tracker?.signal("SIGKILL");
+        signalTagged(tag, "SIGKILL");
       }, KILL_GRACE_MS).unref();
+      abandonAfter(KILL_GRACE_MS + ABANDON_MS);
     };
 
     const timer = setTimeout(() => {
@@ -187,6 +279,20 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
     child.on("error", (error) => {
       spawnError = error.message;
     });
+    child.on("exit", (code) => {
+      exitCode = code;
+      tracker?.sample();
+      // The tool is gone. Its output normally closes at once; if something it
+      // started still holds it, that is stopped, and the turn ends either way.
+      setTimeout(() => {
+        if (done) return;
+        killGroup("SIGKILL");
+        tracker?.sample();
+        tracker?.signal("SIGKILL");
+        signalTagged(tag, "SIGKILL");
+        abandonAfter(ABANDON_MS);
+      }, EXIT_GRACE_MS).unref();
+    });
     child.stdin.on("error", () => {
       // The tool closed its input early; nothing to do.
     });
@@ -202,28 +308,7 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
       if (stderr.length < STDERR_LIMIT) stderr += chunk.toString("utf8");
     });
 
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      clearTimeout(idleTimer);
-      clearInterval(sampler);
-      options.signal?.removeEventListener("abort", onAbort);
-      // Children the tool left behind in its group must not outlive it.
-      killGroup("SIGKILL");
-      // After a cancel or timeout, neither may commands it ran in other groups.
-      if (stopped) tracker?.signal("SIGKILL");
-      const finish = (): void =>
-        resolve({
-          exitCode: code,
-          stderr,
-          timedOut,
-          idle,
-          cancelled,
-          spawnError,
-          durationMs: Date.now() - started,
-        });
-      if (log) log.end(finish);
-      else finish();
-    });
+    child.on("close", (code) => finish(code));
   });
 }
 

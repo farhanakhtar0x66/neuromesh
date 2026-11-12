@@ -2,7 +2,7 @@
 // touch the user's own files. Changes come back as one patch the user applies.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { git, tryGit } from "./git.ts";
 
@@ -32,6 +32,93 @@ export function createWorktree(repoRoot: string, worktree: string, branch: strin
   if (existsSync(join(worktree, ".git"))) return;
   mkdirSync(dirname(worktree), { recursive: true });
   git(repoRoot, "worktree", "add", "--quiet", "-B", branch, worktree, base);
+}
+
+/** What `healWorktree` had to put right. */
+export interface Healed {
+  /** The folder or its link to the repository was gone: it was made again from the branch, without the uncommitted work. */
+  restored: boolean;
+  /** Smaller repairs, in words. */
+  fixed: string[];
+}
+
+const SKIP_WHEN_SEARCHING = new Set(["node_modules", ".venv", "venv", "target", ".git"]);
+
+/** Git folders inside a work folder (a tool ran `git init` there), nearest first. */
+function nestedRepos(root: string, depth = 5): string[] {
+  const found: string[] = [];
+  const walk = (dir: string, left: number): void => {
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isSymbolicLink()) continue;
+      const path = join(dir, e.name);
+      if (e.name === ".git" && dir !== root) found.push(path);
+      else if (e.isDirectory() && !SKIP_WHEN_SEARCHING.has(e.name) && left > 0) walk(path, left - 1);
+    }
+  };
+  walk(root, depth);
+  return found;
+}
+
+/**
+ * [F73 heal-worktree] Put a work folder back into a state the engine can use,
+ * after an agent has been in it. Agents and the tools they run do these things:
+ * delete the folder, leave git's lock file behind when stopped, leave a merge
+ * or rebase half done, switch branch, or start a git repository of their own
+ * inside (scaffolding tools do), which would silently drop those files from
+ * the result. Call it only when no agent is working in the folder.
+ */
+export function healWorktree(repoRoot: string, worktree: string, branch: string, fallbackCommit: string): Healed {
+  const fixed: string[] = [];
+  const top = existsSync(join(worktree, ".git")) ? tryGit(worktree, "rev-parse", "--show-toplevel")?.trim() : undefined;
+  let same = false;
+  try {
+    same = top !== undefined && realpathSync(top) === realpathSync(worktree);
+  } catch {
+    same = false;
+  }
+  if (!same) {
+    tryGit(repoRoot, "worktree", "prune");
+    rmSync(worktree, { recursive: true, force: true });
+    tryGit(repoRoot, "worktree", "prune");
+    mkdirSync(dirname(worktree), { recursive: true });
+    const hasBranch = tryGit(repoRoot, "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`) !== undefined;
+    git(repoRoot, "worktree", "add", "--quiet", "--force", ...(hasBranch ? [worktree, branch] : ["-B", branch, worktree, fallbackCommit]));
+    return { restored: true, fixed: ["the work folder was gone and was made again from its branch"] };
+  }
+  const gitDir = tryGit(worktree, "rev-parse", "--absolute-git-dir")?.trim();
+  if (gitDir) {
+    for (const lock of ["index.lock", "HEAD.lock"]) {
+      if (existsSync(join(gitDir, lock))) {
+        rmSync(join(gitDir, lock), { force: true });
+        fixed.push(`removed a stale ${lock}`);
+      }
+    }
+    for (const [marker, command] of [["MERGE_HEAD", ["merge", "--abort"]], ["CHERRY_PICK_HEAD", ["cherry-pick", "--abort"]], ["REVERT_HEAD", ["revert", "--abort"]], ["rebase-merge", ["rebase", "--abort"]], ["rebase-apply", ["rebase", "--abort"]]] as const) {
+      if (existsSync(join(gitDir, marker))) {
+        tryGit(worktree, ...command);
+        fixed.push(`stopped a half-done ${command[0]}`);
+      }
+    }
+  }
+  for (const nested of nestedRepos(worktree)) {
+    rmSync(nested, { recursive: true, force: true });
+    // A folder git already recorded as a repository of its own is recorded again as plain files.
+    tryGit(worktree, "rm", "-r", "-q", "--cached", "--ignore-unmatch", "--", dirname(nested));
+    fixed.push(`a git repository started inside the work (${dirname(nested).slice(worktree.length + 1)}) was turned back into plain files`);
+  }
+  const current = tryGit(worktree, "symbolic-ref", "--quiet", "--short", "HEAD")?.trim();
+  if (current !== branch) {
+    // Keeps the files and any commits the agent made; only the branch name is put back.
+    git(worktree, "checkout", "-q", "-B", branch);
+    fixed.push(current ? `switched back from branch ${current}` : "re-attached a detached HEAD");
+  }
+  return { restored: false, fixed };
 }
 
 // Installed dependencies are not in git, so a fresh worktree lacks them. They

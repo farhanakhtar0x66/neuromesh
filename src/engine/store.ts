@@ -105,6 +105,14 @@ export class EventLog {
     this.run = run;
     this.sink = sink;
     mkdirSync(dirname(path), { recursive: true });
+    // An engine that was killed may have left its last line half written: the
+    // next event starts on a line of its own, so only that one line is lost.
+    try {
+      const text = readFileSync(path, "utf8");
+      if (text !== "" && !text.endsWith("\n")) appendFileSync(path, "\n");
+    } catch {
+      // No log yet.
+    }
   }
 
   emit(type: string, data: Record<string, unknown> = {}): void {

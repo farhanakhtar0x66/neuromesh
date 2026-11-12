@@ -42,6 +42,7 @@ import {
   createWorktree,
   findRepo,
   headCommit,
+  healWorktree,
   mergeBranch,
   outsideOwned,
   ownedOverlap,
@@ -768,6 +769,9 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
   while (true) {
     const config = candidates()[0];
     if (!config) {
+      // A role the preset never gave a model is not a quota limit: the caller goes on without it.
+      const configured = (req.chain ?? state.roles[req.role] ?? (req.role === "escalation" ? state.roles.orchestrator : undefined) ?? []).length > 0;
+      if (!last && !configured) return { result: emptyResult("error", `no ${req.role} model is configured`) };
       const detail = last?.detail ?? `no ${req.role} model is configured`;
       return { result: last ?? emptyResult("quota", detail), config: lastConfig };
     }
@@ -849,7 +853,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const watch = tier === "expert" && isOn("no-rebuild") && isOn("dollar-budget") && state.expertBudgetUsd !== undefined;
   const spentBefore = watch ? expertDollars(state) : 0;
   let streamed: Usage | undefined;
-  let result = await backend.run({
+  let result: AgentResult;
+  try {
+    result = await backend.run({
     cwd: req.cwd,
     prompt,
     model: config.model,
@@ -881,7 +887,14 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
       if (f) f.pid = pid;
       saveState(state);
     },
-  });
+    });
+  } catch (error) {
+    // [F74 adapter-guard]
+    if (!isOn("adapter-guard")) throw error;
+    // The tool's adapter itself failed (it could not start the tool, or broke on its output):
+    // a failed turn like any other, never a crashed run.
+    result = { stop: "error", finalText: "", usage: {}, durationMs: Date.now() - Date.parse(startedAt), exitCode: null, detail: `the ${backend.id} adapter failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
 
   if (cut && !run.signal.aborted) result = { ...result, stop: "error", detail: BUDGET_CUT };
   delete state.inFlight[req.key];
@@ -1362,6 +1375,46 @@ function roleFor(state: RunState, task: TaskState): Role {
   return "worker";
 }
 
+/**
+ * [F75 sync-before-checks] Bring a task's folder up to date with the work other
+ * tasks have merged since it started, so its checks test the program as it is
+ * now. Without this, the later of two tasks built at the same time was tested
+ * without the other's work, failed through no fault of its own, and went to
+ * repair rounds and the expert. A conflict is left for the merge step.
+ */
+function syncTask(run: RunCtx, task: TaskState): void {
+  const { state, log } = run;
+  const head = headCommit(state.worktree);
+  if (!task.base || head === task.base) return;
+  commitAll(task.worktree, `neuromesh: ${task.title} (work so far)`, task.prepared);
+  if (mergeBranch(task.worktree, head, `neuromesh: bring task ${task.id} up to date`) === "conflict") {
+    log.emit("note", { feature: "F75", message: `Task ${task.id}: its work conflicts with what other tasks merged; its checks run without their work.` });
+    return;
+  }
+  task.base = head;
+  saveState(state);
+  log.emit("task.synced", { feature: "F75", task: task.id, head });
+}
+
+/**
+ * [F73 heal-worktree] Put a task's work folder right after an agent has been in
+ * it. When the folder had to be made again, the turn's uncommitted work is
+ * gone: the next turn starts a fresh session and is told so by the checks.
+ */
+function healTask(run: RunCtx, task: TaskState): void {
+  if (!isOn("heal-worktree") || !task.base) return;
+  const { state, log } = run;
+  const healed = optional(run, "heal-worktree", undefined, () => healWorktree(state.repo, task.worktree, task.branch, task.base!));
+  if (!healed || healed.fixed.length === 0) return;
+  if (healed.restored) {
+    task.prepared = prepareWorktree(state.repo, task.worktree);
+    task.sessionId = undefined;
+    task.sessionModel = undefined;
+  }
+  saveState(state);
+  log.emit("worktree.healed", { feature: "F73", task: task.id, restored: healed.restored, fixed: healed.fixed });
+}
+
 async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
   const { state, log } = run;
   while (task.status === "active") {
@@ -1375,14 +1428,22 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       await prepareEnv(run, task.worktree, task.prepared, task.id);
       task.step = "agent";
       // [F69 budget-handoff]
-      if (task.owner === "expert" && isOn("budget-handoff") && !expertCanTake(state)) handToWorker(run, task, "the expert budget left cannot pay for an expert turn");
+      if (task.owner === "expert" && isOn("budget-handoff")) {
+        // A plan may give the expert a part in a preset that has no expert at all.
+        if ((state.roles.escalation ?? state.roles.orchestrator ?? []).length === 0) handToWorker(run, task, "the plan gives this part to the expert, and this preset has none");
+        else if (!expertCanTake(state)) handToWorker(run, task, "the expert budget left cannot pay for an expert turn");
+      }
       saveState(state);
       log.emit("task.started", { task: task.id, title: task.title, owner: task.owner, owned: task.owned });
       continue;
     }
 
     if (task.step === "agent") {
+      // [F73 heal-worktree] An interrupted turn may have left the folder unusable for the next one.
+      healTask(run, task);
       const role = roleFor(state, task);
+      // [F68 split-ask] Offered only while someone can do the dividing.
+      task.noSplit = !canSplit(state, task);
       const kind: AttemptKind = task.escalated && task.next === "initial" ? "escalation" : task.next;
       const followUp = task.next === "repair" || task.next === "review-fix" || task.next === "advised-fix";
       // [F54 work-env] Every first prompt of a session says how to use the environment.
@@ -1413,6 +1474,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
       });
       task.envProblem = undefined;
+      // [F73 heal-worktree] Before the engine uses the folder the agent has just left.
+      healTask(run, task);
       // [F60 no-rebuild] The expert's turn was stopped at the budget: its work so far stays, and the checks decide.
       if (result.detail === BUDGET_CUT && task.escalated) {
         log.emit("note", { feature: "F60", message: `Task ${task.id}: the expert's turn was stopped at the expert budget; its changes are kept and checked.` });
@@ -1479,6 +1542,9 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
           log.emit("note", { feature: "F10", message: `The work added checks, which now gate it: ${found.map((c) => c.name).join(", ")}` });
         }
       }
+      // [F75 sync-before-checks] Tested with what the other tasks have merged since this one started.
+      if (isOn("sync-before-checks") && state.tasks.length > 1) optional(run, "sync-before-checks", undefined, () => syncTask(run, task));
+      const testedAt = state.tasks.length > 1 ? headCommit(state.worktree) : undefined;
       // [F54 work-env] Install what the work declares now, before its checks.
       const installFailed = await prepareEnv(run, task.worktree, task.prepared, task.id);
       let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
@@ -1501,6 +1567,9 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const regressions = failing.filter((r) => state.baseline?.find((b) => b.name === r.name)?.status !== "failed");
       const ok = regressions.length === 0 && (!isLastOpen(state, task) || failing.length === 0);
       log.emit("checks.finished", { phase: "task", task: task.id, round: task.round, results: brief(results), ok });
+      // [F75 sync-before-checks] Another task merged while these checks ran: a failure may be
+      // only its missing work, so the checks run again on the program as it is now.
+      if (!ok && testedAt !== undefined && isOn("sync-before-checks") && headCommit(state.worktree) !== testedAt) continue;
       // [F56 env-blocked] An environment problem is not the worker's failure and never goes to the expert.
       if (!ok && isOn("env-blocked")) {
         const problem = environmentProblem(task, results, installFailed);
@@ -1526,8 +1595,10 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       task.history.push({ diff, failures: failureSummary(results, state.baseline) });
       if (task.escalated) {
-        if (task.round < ESCALATION_REPAIRS) nextRound(run, task, "repair");
-        continue;
+        if (task.round < ESCALATION_REPAIRS) {
+          nextRound(run, task, "repair");
+          continue;
+        }
         return failTask(run, task, "checks still fail after the expert's attempt");
       }
       if (decision === "oscillated" || decision === "no-progress" || task.round >= repairLimit(state, task)) {
@@ -1539,7 +1610,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         return failTask(run, task, `checks still fail (${why})`);
       }
       nextRound(run, task, "repair");
-        continue;
+      continue;
     }
 
     if (task.step === "test") {
@@ -1621,7 +1692,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       nextRound(run, task, "review-fix");
-        continue;
+      continue;
     }
 
     if (task.step === "split") {
@@ -1741,7 +1812,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
 
 /** [F68 split-ask] A worker task the expert may still divide. */
 function canSplit(state: RunState, task: TaskState): boolean {
-  return isOn("split-ask") && task.owner === "worker" && !task.fromSplit && !task.splitAsked && !task.escalated && roleChain(state, "orchestrator").length > 0 && budgetLeft(state);
+  return isOn("split-ask") && task.owner === "worker" && !task.fromSplit && !task.splitAsked && !task.escalated && roleChain(state, "orchestrator").length > 0 && (isOn("budget-handoff") ? expertCanTake(state) : budgetLeft(state));
 }
 
 /**
@@ -1890,6 +1961,11 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
       schema: REPORT_SCHEMA,
     });
     if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
+    // [F73 heal-worktree]
+    if (isOn("heal-worktree")) {
+      const healed = optional(run, "heal-worktree", undefined, () => healWorktree(state.repo, state.worktree, state.branch, state.base));
+      if (healed && healed.fixed.length > 0) log.emit("worktree.healed", { feature: "F73", restored: healed.restored, fixed: healed.fixed });
+    }
     commitAll(state.worktree, "neuromesh: integration fix", state.prepared);
     results = await check(run, state.worktree, "final-fixed");
     if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
