@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Neuromesh command line.
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
 import { loadSettings, saveSettings } from "../tui/store.ts";
 import { join, resolve } from "node:path";
@@ -177,9 +177,11 @@ async function commandTelemetry({ positional }: Parsed): Promise<number> {
     return 0;
   }
   if (what === "pull") {
-    const token = process.env.NEUROMESH_TELEMETRY_ADMIN;
+    // The token deploy.sh made, or NEUROMESH_TELEMETRY_ADMIN.
+    const tokenFile = join(home, "telemetry", "admin-token");
+    const token = process.env.NEUROMESH_TELEMETRY_ADMIN ?? (existsSync(tokenFile) ? readFileSync(tokenFile, "utf8").trim() : undefined);
     if (!token) {
-      process.stderr.write("Set NEUROMESH_TELEMETRY_ADMIN to the endpoint's ADMIN_TOKEN.\n");
+      process.stderr.write("No admin token: run telemetry-endpoint/deploy.sh, or set NEUROMESH_TELEMETRY_ADMIN.\n");
       return 2;
     }
     const n = await pull(home, token);

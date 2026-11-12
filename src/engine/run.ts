@@ -736,6 +736,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     model: config.model,
     effort: config.effort,
     access: req.access,
+    // [F53 write-sandbox] A writing turn may write in its own copy and git's shared objects; a reading turn nowhere of ours.
+    writable: isOn("write-sandbox") ? (req.access === "write" ? [req.cwd, join(state.repo, ".git", "worktrees"), join(state.repo, ".git", "objects")] : []) : undefined,
     outputSchema: req.schema,
     resumeSessionId,
     timeoutMs: state.turnTimeoutMs,

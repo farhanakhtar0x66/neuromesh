@@ -497,6 +497,15 @@ export const FEATURES: Feature[] = [
     what: "With the tester's consent (asked once), each real run's numbers, request, final reports and rating go to the owner's endpoint; never code, diffs, file locations or identity. Unsent reports wait in ~/.neuromesh/telemetry/outbox. `neuromesh telemetry on|off|pull`.",
     optional: true,
   },
+  {
+    id: "F53",
+    key: "write-sandbox",
+    name: "Write sandbox",
+    added: "2026-11-12",
+    files: ["src/backends/sandbox.ts", "src/backends/shared.ts (runCli)", "src/engine/run.ts (once)"],
+    what: "On macOS, Claude Code, Antigravity and opencode run under the system sandbox (sandbox-exec): they may write only in the run's copy of the repository, git's shared objects, temporary and cache folders, and their own state. Reading and the network are unchanged. Codex keeps its own sandbox.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

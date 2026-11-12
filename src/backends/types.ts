@@ -56,6 +56,11 @@ export interface AgentRequest {
   /** Where to save the raw event stream. */
   logPath?: string;
   signal?: AbortSignal;
+  /**
+   * [F53 write-sandbox] The folders this turn may write in, when the tool runs
+   * in Neuromesh's sandbox (macOS). Undefined: not sandboxed by Neuromesh.
+   */
+  writable?: string[];
   /** Display only. Never used to make decisions. */
   onActivity?: (activity: Activity) => void;
   /** Called with the tool's process id (also its process group) once started. */

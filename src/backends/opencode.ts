@@ -10,6 +10,8 @@
 // - step_finish tokens are per step: input (fresh), output, reasoning and
 //   cache.read / cache.write. part.cost is what the provider charges; on a
 //   free or subscription model it is 0, on an API-key model real money.
+// - `--standalone` keeps the work in this process and its folder (the
+//   background service otherwise runs the turn in its own folder).
 // - `--auto` approves what is not explicitly denied (writes, commands);
 //   `--agent plan` is opencode's read-only agent.
 // - There is no output-schema flag: the schema goes in the prompt, and the
@@ -22,7 +24,10 @@ import { num, obj, parseStructured, runCli, short, str } from "./shared.ts";
 import type { ParsedRun, StreamParser } from "./shared.ts";
 
 export function opencodeArgs(request: AgentRequest): string[] {
-  const args = ["run", "--format", "json"];
+  // --standalone: a private server in this process. Without it, opencode hands
+  // the turn to its background service, which works in its own folder, outside
+  // the turn's copy of the repository and outside Neuromesh's sandbox.
+  const args = ["run", "--standalone", "--format", "json"];
   if (request.model) args.push("--model", request.effort ? `${request.model}#${request.effort}` : request.model);
   if (request.access === "write") args.push("--auto");
   else args.push("--agent", "plan");

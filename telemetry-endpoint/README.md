@@ -5,9 +5,21 @@ D1 database, on Cloudflare's free tier. The client side is
 `src/telemetry/telemetry.ts`; what a report holds is described there and shown
 to every tester before they agree.
 
-## Deploy (once, about five minutes)
+## Deploy (once, a few minutes)
 
-You need a Cloudflare account. From this folder:
+You need a Cloudflare account. The quick way, from the repository's root:
+
+```sh
+npx wrangler login
+sh telemetry-endpoint/deploy.sh
+```
+
+`deploy.sh` does everything below:
+- creates or reuses the database, applies the schema, and sets both secrets;
+- makes the admin token and keeps it only in `~/.neuromesh/telemetry/admin-token`;
+- deploys, and writes the URL into `src/telemetry/config.ts`.
+
+Then commit and push. By hand, from this folder:
 
 ```sh
 npx wrangler login

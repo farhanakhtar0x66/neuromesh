@@ -1,9 +1,11 @@
 # Neuromesh working rules
 
-Read `docs/02-v0.1-plan.md` before starting work. It says which milestone is
-current and what "done" means for it.
+Read `docs/STATUS.md` before starting work: where things stand and what comes
+next. v0.1 (the engine) and v0.2 (the TUI, the testing build) are released;
+new work is judged on real use: the owner's usage log and testers' reports.
 
-- Build the engine only. No TUI work until the v0.1 exit criteria hold.
+- Every change keeps CI green (`.github/workflows/ci.yml`: type-check and tests
+  on Linux and macOS).
 - Models are reached only through the installed CLIs in their documented
   headless modes (`agy -p`, `claude -p`, `codex exec`, `opencode run`). Never
   drive a tool through an internal protocol. Models paid per token (API keys)

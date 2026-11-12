@@ -12,8 +12,8 @@ import type { UsageEntry } from "../src/usage/log.ts";
 
 test("opencode: arguments for read-only and write turns, the schema in the prompt, and its events read", () => {
   const base = { cwd: "/w", prompt: "do it", timeoutMs: 1 };
-  assert.deepEqual(opencodeArgs({ ...base, access: "write", model: "opencode/big-pickle" }), ["run", "--format", "json", "--model", "opencode/big-pickle", "--auto"]);
-  assert.deepEqual(opencodeArgs({ ...base, access: "read-only", model: "nvidia/x", effort: "high", resumeSessionId: "ses_1" }), ["run", "--format", "json", "--model", "nvidia/x#high", "--agent", "plan", "--session", "ses_1"]);
+  assert.deepEqual(opencodeArgs({ ...base, access: "write", model: "opencode/big-pickle" }), ["run", "--standalone", "--format", "json", "--model", "opencode/big-pickle", "--auto"]);
+  assert.deepEqual(opencodeArgs({ ...base, access: "read-only", model: "nvidia/x", effort: "high", resumeSessionId: "ses_1" }), ["run", "--standalone", "--format", "json", "--model", "nvidia/x#high", "--agent", "plan", "--session", "ses_1"]);
   assert.match(opencodePrompt({ ...base, access: "write", outputSchema: { type: "object" } }), /only a JSON object[\s\S]*\{"type":"object"\}/);
   const seen: string[] = [];
   const p = opencodeParser({ outputSchema: { type: "object" }, onActivity: (a) => seen.push(a.summary) });
@@ -94,4 +94,23 @@ test("telemetry: nothing without consent; a report leaves out code, paths and th
   delete process.env.NEUROMESH_TELEMETRY_URL;
   assert.equal(outbox(home).length, 0);
   assert.deepEqual(posted, ["https://example.test/v1/report neuromesh-testing-v1", "https://example.test/v1/report neuromesh-testing-v1"]);
+});
+
+test("the write sandbox: a turn writes in its own folder and nowhere else (macOS)", async (t) => {
+  const { sandboxAvailable, sandboxProfile, sandboxed } = await import("../src/backends/sandbox.ts");
+  const { mkdtempSync: mk, existsSync } = await import("node:fs");
+  const { spawnSync } = await import("node:child_process");
+  const work = mk(join(tmpdir(), "nm-sbx-work-"));
+  const profile = sandboxProfile([work]);
+  assert.match(profile, /\(deny file-write\*\)/);
+  assert.match(profile, /\.claude/, "the tools keep their own state");
+  if (!sandboxAvailable()) return t.skip("sandbox-exec is macOS only");
+  // Inside the turn's folder: allowed. The repository's own folder (not temp, not tool state): refused.
+  const ok = sandboxed("/bin/sh", ["-c", `echo ok > "${work}/in.txt"`], [work]);
+  assert.equal(spawnSync(ok.command, ok.args).status, 0);
+  assert.ok(existsSync(join(work, "in.txt")));
+  const outside = join(process.cwd(), `.nm-sbx-probe-${process.pid}`);
+  const no = sandboxed("/bin/sh", ["-c", `echo x > "${outside}"`], [work]);
+  assert.notEqual(spawnSync(no.command, no.args).status, 0, "a write outside is refused");
+  assert.ok(!existsSync(outside));
 });

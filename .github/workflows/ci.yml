@@ -1,0 +1,44 @@
+name: CI
+
+# Type-check and the whole test suite (the fake backend; no model is called)
+# on every push and pull request.
+
+on:
+  push:
+    branches: [main, neuromesh-testing, neuromesh-research]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 24 }
+          - { os: ubuntu-latest, node: 26 }
+          # macOS runs the write-sandbox test (sandbox-exec).
+          - { os: macos-latest, node: 26 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: tmux, for the screen-check test
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update -qq && sudo apt-get install -y -qq tmux; else brew install tmux; fi
+      - run: npm ci
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Tests
+        run: npm test

@@ -12,6 +12,7 @@
   <img alt="license PolyForm Shield 1.0.0" src="https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-8C6BE0?style=flat-square">
   <img alt="Node.js 24 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2024-5A5A5A?style=flat-square">
   <img alt="no runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-5A5A5A?style=flat-square">
+  <a href="https://github.com/farhanakhtar0x66/neuromesh/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/farhanakhtar0x66/neuromesh/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 <p align="center">
@@ -37,8 +38,9 @@ the expert in charge of a team:**
 - **The expensive model is spent where it pays:** a spec and design for
   something new, advice when a worker is stuck, and a plan only for large
   requests.
-- **You approve.** Work happens in its own git worktree; nothing touches your
-  repository until you've read the report and applied the diff.
+- **You approve.** Work happens in its own git worktree, under a write sandbox
+  on macOS. Nothing touches your repository until you've read the report and
+  applied the diff.
 
 ## Results
 
@@ -176,9 +178,10 @@ with the author. They decide which teams become the defaults.
 
 ## Limits
 
-- **Not sandboxed everywhere.** Workers on Antigravity, Claude Code and opencode
-  can reach outside their folder. Work happens in a throwaway git worktree, and
-  you review the diff before applying it.
+- **Sandboxed on macOS only.** On macOS, agents can write only in their run's
+  copy of your repository; Codex uses its own sandbox, the others run under
+  the system's. On Linux and Windows only Codex is confined; the others work in
+  a throwaway git worktree, and you review the diff before applying it.
 - **Small benchmarks so far** (see [Results](#results)).
 - **Costs are mostly estimates.** On subscriptions, cost is estimated from API
   list prices (`src/usage/prices.ts`). Models paid per token through opencode

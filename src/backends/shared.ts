@@ -4,6 +4,7 @@
 import { classifyFailure } from "./types.ts";
 import type { AgentRequest, AgentResult, StopReason, Usage } from "./types.ts";
 import { runProcess } from "./proc.ts";
+import { sandboxAvailable, sandboxed } from "./sandbox.ts";
 
 /** What a parser has learned from the event stream. */
 export interface ParsedRun {
@@ -39,6 +40,8 @@ export interface CliInvocation {
   stdin?: string;
   request: AgentRequest;
   parser: StreamParser;
+  /** [F53 write-sandbox] The tool confines itself (Codex); its own sandbox cannot be nested in ours. */
+  ownSandbox?: boolean;
   /** How long to wait for the tool to exit after its final event (tests shorten it). */
   lingerMs?: number;
 }
@@ -50,9 +53,14 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
   const linger = new AbortController();
   const signal = request.signal ? AbortSignal.any([request.signal, linger.signal]) : linger.signal;
   let lingerTimer: NodeJS.Timeout | undefined;
+  // [F53 write-sandbox] Writing only where the turn's work is.
+  const run =
+    request.writable && !invocation.ownSandbox && sandboxAvailable()
+      ? sandboxed(invocation.command, invocation.args, request.writable)
+      : { command: invocation.command, args: invocation.args };
   const proc = await runProcess({
-    command: invocation.command,
-    args: invocation.args,
+    command: run.command,
+    args: run.args,
     cwd: request.cwd,
     timeoutMs: request.timeoutMs,
     idleMs: request.idleMs,

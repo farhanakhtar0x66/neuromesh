@@ -15,7 +15,15 @@ holds experiments; `neuromesh-testing` records real use (`docs/07-usage-log.md`)
 The owner's Mac runs `neuromesh-testing`, and the usage log from real work is
 the main evidence from here on; no heavy synthetic tests unless asked.
 
-## Status (2026-11-11, evening)
+## Status (2026-11-12)
+
+v0.2.0 is released: the TUI (F19 to F31, then F32 to F49 for its own look,
+projects, agent boxes, approvals, follow-ups and the final report), teams and
+logins (F50, F51), testers' reports (F52) and the write sandbox (F53). The TUI
+was built at the owner's request before the gate below was met; the gate's
+comparison is still to be repeated (Next steps in `docs/STATUS.md`).
+
+### Earlier (2026-11-11, evening)
 
 Built on `neuromesh-research`, merged into `neuromesh-testing`, each with a
 feature id (`docs/10-features.md`), unit-tested, not yet measured live:
@@ -86,7 +94,7 @@ so cost stays down and scores stay up. Decisions to make data-driven:
 
 - Local models as workers (Ollama or similar through a CLI), for zero-cost
   repair rounds and reviews.
-- The TUI, once the gate below holds.
+- The TUI: done in v0.2 (`docs/11-tui.md`).
 
 ## Gate for the TUI phase
 

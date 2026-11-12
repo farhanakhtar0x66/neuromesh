@@ -114,6 +114,7 @@ export const codex: AgentBackend = {
         stdin: request.prompt,
         request,
         parser: codexParser(request),
+        ownSandbox: true,
       });
     } finally {
       if (schemaDir) rmSync(schemaDir, { recursive: true, force: true });

@@ -193,14 +193,26 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     opencode-like shaded panels) and follow-ups that continue a session from
     the earlier run's result (F48, F49).
 
+19. **v0.2.0 released and the repository public (2026-11-12).** Testers install
+    the `neuromesh-testing` build (`install.sh`). Since then:
+    - on macOS, Claude Code, Antigravity and opencode run under a write
+      sandbox (F53), checked live on all three;
+    - opencode now runs with `--standalone`, because its background service
+      had been working in the wrong folder;
+    - CI runs the type-check and the tests on Linux and macOS;
+    - `main` and `neuromesh-testing` are protected from force-pushes and
+      deletion.
+
 ## Next steps
 
-1. E1 on the Luna team: `node evals/until-done.ts e1-luna-1 e1-luna-2 e1-luna-3`
-   (run from a frozen copy of `main`). Then `eval recheck` the three, fill the
-   E1 to E3 rows in the results, tag v0.1.0.
-2. On `neuromesh-research`: the brief engine, then the typing-app test against
-   Opus 5.5 medium.
-3. A harder benchmark: tasks Luna fails alone, so that escalation and the tester
-   can be shown to earn their cost.
-4. Large requests: the Sol plan is most of the cost. Try a Luna-high planner, or
-   plan only above a higher size bar.
+1. The owner deploys the telemetry endpoint: `npx wrangler login`, then
+   `sh telemetry-endpoint/deploy.sh`; commit the URL it writes. Until then,
+   testers' reports wait on their machines.
+2. Live runs through the TUI on real work (the owner's usage log), then
+   testers' reports: read them together (`neuromesh telemetry pull`) and pick
+   the defaults from the data.
+3. Repeat the typing-app build test three times per configuration, including
+   the step-list prompt since the review fixes.
+4. A harder benchmark: tasks Luna fails alone, so that escalation and the
+   tester can be shown to earn their cost.
+5. A write sandbox on Linux (bubblewrap), where only Codex is confined today.

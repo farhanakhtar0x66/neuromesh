@@ -126,7 +126,8 @@ export function runProcess(options: ProcOptions): Promise<ProcResult> {
 
     const child = spawn(options.command, options.args, {
       cwd: options.cwd,
-      env: options.env ?? process.env,
+      // PWD follows cwd: some tools (opencode) take their working folder from it.
+      env: { ...(options.env ?? process.env), ...(options.cwd ? { PWD: options.cwd } : {}) },
       detached: true, // new process group; see killGroup
       stdio: ["pipe", "pipe", "pipe"],
     });
