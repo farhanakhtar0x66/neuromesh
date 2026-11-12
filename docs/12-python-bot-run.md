@@ -110,6 +110,55 @@ twice; a third has not been measured yet.
    the real data and the machine (interpreter, package tools) and hands the
    spec writer a short fact sheet, so the spec does not guess.
 
+Two more, found when the run was read against the earlier research and
+published work (next section):
+
+7. **The adviser gets what the worker observed.** The handoff strips the
+   worker's reasoning on purpose, and with it went the worker's report that
+   the package could not be installed. Commands the worker ran and their
+   output, and its "blocked" note, are facts and go to the adviser; its
+   theories still do not.
+8. **A small advice packet.** 75% of the advice turn's cost was its own input
+   (two 8,000-character diffs, the failures, and the tool's setup), not its
+   answer. The earlier research capped this handoff at 2,000 tokens; the port
+   did not keep the cap.
+
+## What the earlier research and published work say
+
+From the earlier research (`neuromesh-old-learn`):
+
+- **The takeover's reset is the M3a design used outside what it was measured
+  on.** M3a restores the baseline and hands the expert only the failed patches
+  and errors. It was measured on one-patch tasks of 269 and 10,159 source
+  tokens, where a reset loses nothing. On a new program the reset throws away
+  the whole build. The no-chat handoff stays; the reset does not (change 2).
+- **Every delegated turn has a fixed cost** (17,500 tokens per Codex turn
+  then). In this run an Opus turn with write tools started at 25,800 tokens
+  before any work. So few, large turns; this run had nine.
+- M1 (context packet) and M2 (stagnation breaker) are in the engine and had no
+  part here: there was no repository to slice, and the breaker watches the
+  checks, which were green while testing nothing (change 3).
+- M4 (contract-first parallel work) and the routing ideas apply to large
+  changes in existing code, not to this failure.
+
+From published work (figures as reported there, several second-hand):
+
+| Source | Finding | Bears on |
+| --- | --- | --- |
+| Anthropic, the advisor strategy (2026) | A cheap model runs the whole job and consults a stronger one at decision points; the advisor never uses tools or writes the output, and its uses are capped | Change 2: the expert advises, never types |
+| SWE-Edit (arXiv 2604.26102) | A stronger editing model added 0.4 points of resolve rate at 5.8 times the editor cost | Change 2: typing does not need the expert |
+| Strong-weak collaboration study (arXiv 2505.20182) | A plan or an answered question for the task at hand lifts the weak model and is worth its cost; repo-wide context and repeated weak attempts are not | Keep the spec turn; make advice a pointed answer |
+| Why do multi-agent LLM systems fail? (arXiv 2503.13657) | Failures fall into specification, information lost between agents, and missing or wrong verification; better role prompts alone did not remove them | This run had one of each: causes 6, 1 and 4, 2 and 3 |
+| SetupBench (arXiv 2507.09063) | Agents set up a repository's environment correctly 39% to 57% of the time | Change 1: the engine installs, not the worker |
+| Routing and cascading (arXiv 2410.10347), SWE-Router | Escalating only after a failed test does poorly; reading the first few cheap turns decides better. Savings measured on visible tests overstate | Change 1 (act on the first "blocked" report) and change 3 |
+| Review overcorrection; Refute-or-Promote (arXiv 2604.19049) | Model reviewers flag correct code; one real run removes findings that argument does not | Change 5 |
+| Harness comparisons (2026) | The same model costs about twice as much in one harness as in another, mostly fixed overhead per turn | Fewer turns; change 8 |
+
+None of these reports a team at a third of the frontier model's cost with
+equal results on whole-program builds. The advisor strategy's own coding
+figure is 12% cheaper with a mid-priced executor. A third is a target to
+measure, not a published result.
+
 ## Testing each role alone
 
 The owner's suggestion: instead of only running the whole team, freeze a task
