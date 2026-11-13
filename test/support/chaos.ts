@@ -436,6 +436,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       clearTimeout(timer);
     }
   };
+  let appliedBefore = false;
   try {
     // After a kill: the newest run the dead process left, if it got as far as saving one.
     const left = ((): string | undefined => {
@@ -449,6 +450,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       return undefined;
     })();
     const leftState = left ? loadState(left) : undefined;
+    // The kill can land after the dead process had finished the run, checked every rule and applied the result:
+    // the repository then holds the applied files, and there is nothing left to resume or to check again.
+    appliedBefore = leftState?.status === "applied";
     // The process may have finished the run just before it died.
     if (leftState && ["finished", "applied", "discarded"].includes(leftState.status)) state = leftState;
     else state = await within(leftState ? resumeRun(leftState, context()) : startRun({ cwd: repo, prompt, preset }, context()));
@@ -466,7 +470,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   if (runaway) broke(`runaway: more than ${maxCalls} agent turns`);
 
   // ---- The rules.
-  if (state) {
+  if (appliedBefore) {
+    // Checked and applied by the process that was killed.
+  } else if (state) {
     const saved = ((): RunState | undefined => {
       try {
         return loadState(state.dir);
@@ -541,7 +547,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       for (const dep of t?.dependsOn ?? []) {
         const at = mergedAt.get(dep);
         const depTask = state!.tasks.find((x) => x.id === dep);
-        if (depTask && depTask.status === "passed" && (at === undefined || at > i)) broke(`task ${t!.id} started before ${dep} was merged`);
+        // After a kill these are only the events since the resume: a merge from before it is not among them.
+        if (depTask && depTask.status === "passed" && (at === undefined ? !options.resume : at > i)) broke(`task ${t!.id} started before ${dep} was merged`);
       }
     });
     // The event log tells the whole story.
