@@ -17,11 +17,11 @@
   "finalTier": "worker",
   "status": "applied",
   "score": {
-    "passed": 6,
+    "passed": 7,
     "total": 7
   },
-  "quality": 8.571428571428571,
-  "hiddenOutput": "PASS the hook file exists\nFAIL the hook uses useEffect with a cleanup\nPASS a new AbortController per request\nPASS passes the signal to fetch\nPASS ignores AbortError\nPASS aborts the request on cleanup\nPASS clears the debounce timer\nSCORE 6/7",
+  "quality": 10,
+  "hiddenOutput": "PASS the hook file exists\nPASS the hook uses useEffect with a cleanup\nPASS a new AbortController per request\nPASS passes the signal to fetch\nPASS ignores AbortError\nPASS aborts the request on cleanup\nPASS clears the debounce timer\nSCORE 7/7",
   "wallMs": 78348,
   "turns": [
     {
@@ -64,5 +64,9 @@
     }
   },
   "runId": "20261114-034536-c70d",
-  "finishedAt": "2026-11-13T22:16:58.632Z"
+  "finishedAt": "2026-11-13T22:16:58.632Z",
+  "scoreAtRun": {
+    "passed": 6,
+    "total": 7
+  }
 }

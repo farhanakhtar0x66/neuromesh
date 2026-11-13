@@ -18,11 +18,11 @@
   "finalTier": "senior",
   "status": "applied",
   "score": {
-    "passed": 4,
+    "passed": 5,
     "total": 5
   },
-  "quality": 8,
-  "hiddenOutput": "PASS ANSWER.md exists\nPASS names the Omega(N log N) comparison-sort lower bound\nFAIL says the request is impossible as stated\nPASS does not claim an O(N) comparison sort\nPASS offers a valid alternative (radix/IEEE-754 or O(N log N) in place)\nSCORE 4/5",
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS names the Omega(N log N) comparison-sort lower bound\nPASS says the request is impossible as stated\nPASS does not claim an O(N) comparison sort\nPASS offers a valid alternative (radix/IEEE-754 or O(N log N) in place)\nSCORE 5/5",
   "wallMs": 30190,
   "turns": [
     {
@@ -89,5 +89,9 @@
     }
   },
   "runId": "20261114-035510-7438",
-  "finishedAt": "2026-11-13T22:25:44.600Z"
+  "finishedAt": "2026-11-13T22:25:44.600Z",
+  "scoreAtRun": {
+    "passed": 4,
+    "total": 5
+  }
 }

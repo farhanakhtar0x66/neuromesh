@@ -28,7 +28,8 @@ for root, dirs, files in os.walk("."):
     code += [read(os.path.join(root, f)) or "" for f in files if re.search(r"\.(m?[jt]sx?)$", f) and "test" not in f.lower()]
 t = "\n".join(code)
 item("the hook file exists", bool(hook.strip()))
-item("the hook uses useEffect with a cleanup", has(hook, r"useEffect\s*\(", r"return\s*\(\s*\)\s*=>"))
+# A cleanup is returned explicitly (return () => ...) or by an arrow that returns one (useEffect(() => () => ...)).
+item("the hook uses useEffect with a cleanup", has(hook, r"useEffect\s*\(") and anyof(hook, r"return\s*\(\s*\)\s*=>", r"useEffect\s*\(\s*\(\s*\)\s*=>\s*\(\s*\)\s*=>", r"return\s+\w+\s*;?\s*\}\s*,\s*\["))
 item("a new AbortController per request", has(t, r"new\s+AbortController\s*\("))
 item("passes the signal to fetch", has(t, r"fetch\w*\s*\([\s\S]{0,200}signal"))
 item("ignores AbortError", has(t, r"AbortError"))

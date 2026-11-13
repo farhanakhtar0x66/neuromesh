@@ -177,3 +177,57 @@ Not taken:
 A bug was also found and fixed while doing this. Removing a sentence that asks for a model (the router's prompt-injection guard) used to flatten the request onto one line. That hid the line structure of pasted logs, so trap 5.2 would have scored its jargon even with F89.
 
 A suggestion that these changes bring the batch to about $0.68 (79.5% CostSave) is a projection. Only a re-run will show the real figures, with this session idle and the two runs in separate five-hour windows (see "Measurement caveat").
+
+## Second cascade run, `rb-cascade-2` (clean window, F89 to F92)
+
+**Run:** 22:11 to 22:26 UTC, 2026-11-13. It started only after the five-hour window reset (`--wait-reset`), and the working session was idle throughout. The Opus baseline was not re-run; this run is compared with `rb-frontier-1`, as the owner asked. Records: `results/rb-cascade-2/`. Machine table: `results/rb-cascade-2/REPORT.md`.
+
+### Result: every target met
+
+| Metric | `rb-cascade-1` | `rb-cascade-2` | Target |
+| --- | --- | --- | --- |
+| CostSave, unweighted | 64.9% ($1.164) | **74.7% ($0.840)** | >= 65% |
+| CostSave, weighted 50/30/16/4 | 77.8% | **84.9%** | >= 80% |
+| Gap@Oracle | 0.8% | **0.8%** | <= 3.0% |
+| WCTR | 1.4% | **0.7%** | <= 8.0% |
+| Trap 5.1 regex bomb | survived | **survived** (13/13 on the worker) | |
+| Trap 5.2 jargon wall | failed (Sonnet, $0.058) | **survived** (grunt, $0.0016, $0 on Tiers 3 and 4) | |
+| Trap 5.3 impossible sort | survived | **survived** (Haiku stopped, Sonnet 5/5) | |
+| Tier 0 starting tier as expected | 6/15 | **11/15** | |
+| Quality (sum of 15 scores out of 150) | 148.8 | 148.8 | Opus: 150 |
+| Five-hour window | 10 points (contaminated) | **3 points (0% to 3%, clean)** | Opus: 13 points (contaminated) |
+| Weekly window | 1 point | **0 points** | Opus: 2 points |
+| Tokens, all kinds | 1.56M | 1.74M | Opus: 1.06M |
+| Wall time | 13.5 min | 11.8 min | Opus: 16.1 min |
+
+**Subscription usage.** The cascade used 3 points of a clean five-hour window, against Opus's 13. This comparison favours the cascade more than it should. The 3 points are clean, but `rb-frontier-1`'s 13 include this session's own work during that run (about 20 turns on a long context; see "Measurement caveat"). A clean Opus baseline would read lower than 13, so the real subscription saving is somewhere below the 77% that 3 against 13 suggests. It is clearly far better than the first run's 23%, which was measured with this session busy during the cascade. Whole-percent readings make 3 points ± 1.
+
+### The friend's four checks
+
+| Check | `rb-cascade-1` | `rb-cascade-2` | Landed? |
+| --- | --- | --- | --- |
+| 1.1 to 1.3 and 5.2: token inflation (F89 + F90) | 63K, 86K, 49K and 37K tokens; 5.2 on Sonnet, $0.058 | **12K, 5K, 5K and 6K tokens**, all on the grunt with no tools; 5.2 $0.0016 | Yes. Tokens down 80% to 94%. |
+| 4.1: blueprint size (F92) | Opus plan 6,543 output tokens, $0.197; prompt total $0.330 | Opus plan 3,985 output tokens (836 words), $0.147; prompt total **$0.339** | **Partly.** The plan shrank 39%, but it is still twice the 400 words asked for, and Sonnet then wrote more code (10.6K output tokens against 6.5K). The prompt total did not go down. |
+| 4.2: false-alarm escalation (F91) | Sonnet 0.70 / `escalate: false` → Opus advice → Sonnet; $0.402 | **one Sonnet turn, $0.165**, 9/9 | Yes. $0.24 saved. |
+| 2.2: standup table route (F89) | Sonnet, $0.091 | **worker (Haiku), $0.0097**, 9/9 | Yes. It used more tokens (137K against 37K, Claude Code's session overhead on Haiku) but cost a tenth as much. |
+
+### Checker corrections in this run
+
+Three hidden checkers were again too narrow. Each was fixed, still validates against the reference and an empty workspace, and was rerun on all three runs' saved answers. Only `rb-cascade-2` changed; no live rerun was needed.
+
+| Prompt | The problem | Effect |
+| --- | --- | --- |
+| 3.1 | Only an explicit `return () => ...` counted as the effect's cleanup. The hook used `useEffect(() => () => session.cancel(), [])`. | 6/7 → 7/7 |
+| 4.2 | Asked for the words "CRDT" or "optimistic". The answer separates idempotent nodes ("re-run is safe", re-claimed) from non-idempotent ones (quorum claim plus fencing), which is the suite's criterion. | 8/9 → 9/9 |
+| 5.3 | Knew "cannot be done" but not "cannot be met". The answer states the Ω(N log N) bound and the impossibility. | 4/5 → 5/5 |
+
+The one remaining quality miss is real and the same as in the first run. On 2.3, Haiku tested rounding with exact two-decimal equality, not the `pytest.approx` or `Decimal` the suite names (7/8).
+
+### Open, for the owner (not changed overnight)
+
+1. **The sandwich does not pay on 4.1.** With a shorter plan it still costs what Opus alone does ($0.339 against $0.338). Opus did not keep to the 400-word brief (836 words), and Sonnet's build grew. The options are design choices, not a quick fix:
+   - enforce the cap (reject and re-ask a plan over the limit, at the cost of another Opus turn);
+   - let a single-file request that Tier 0 sends to the expert go to Sonnet with the expert's advice only on escalation;
+   - accept that the sandwich only pays on multi-part work.
+2. **A clean Opus baseline** would make the subscription comparison exact. Run it in its own window with `--wait-reset`: `node evals/routing-bench/run.ts --config frontier --name rb-frontier-2 --wait-reset`.
+3. **Variance:** one run per configuration still. A second clean cascade run would show how stable 74.7% and 3 points are.

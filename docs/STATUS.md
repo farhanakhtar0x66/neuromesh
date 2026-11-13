@@ -278,9 +278,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     the instruction, not pasted material, and sends inline transforms to the
     grunt (F89; starting tier right on 11 of 15, was 6), which answers them with
     no tools (F90). The gate trusts `escalate: false` above 0.55 (F91), and the
-    expert's blueprint is capped by its brief (F92). Next: re-run both
-    configurations with the working session idle and in separate five-hour
-    windows.
+    expert's blueprint is capped by its brief (F92).
+30. **Routing benchmark, clean cascade re-run (2026-11-14, `rb-cascade-2`).**
+    Every target met against the first Opus baseline: CostSave 74.7% (84.9%
+    weighted), Gap@Oracle 0.8%, WCTR 0.7%, all three traps survived, 3 points
+    of a clean five-hour window against Opus's 13 (contaminated). Open: the
+    sandwich still costs as much as Opus on 4.1 (Opus wrote 836 words against
+    a 400-word brief). See `evals/routing-bench/REPORT.md`.
 
 ## Next steps
 

@@ -17,11 +17,11 @@
   "finalTier": "senior",
   "status": "applied",
   "score": {
-    "passed": 8,
+    "passed": 9,
     "total": 9
   },
-  "quality": 8.88888888888889,
-  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nFAIL optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 8/9",
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nPASS optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 9/9",
   "wallMs": 72498,
   "turns": [
     {
@@ -64,5 +64,9 @@
     }
   },
   "runId": "20261114-035028-a390",
-  "finishedAt": "2026-11-13T22:21:45.012Z"
+  "finishedAt": "2026-11-13T22:21:45.012Z",
+  "scoreAtRun": {
+    "passed": 8,
+    "total": 9
+  }
 }
