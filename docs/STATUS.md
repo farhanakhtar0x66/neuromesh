@@ -242,14 +242,22 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     more. Since then 1,620 ordinary and 400 kill-and-resume seeds kept every
     rule. `docs/16-fault-harness.md`.
 
+25. **Benchmark against single Opus (2026-11-13, started).** Eight tasks with
+    hidden checks, three of them the owner's own build prompts with scored
+    batteries; the eval reads quota around each task and can build from a
+    frozen spec to test one role at a time. First number: single Opus built
+    the expense tracker to 33/33 in 1.7 minutes for about $0.44. The run then
+    hit the 5-hour limit, used up mostly by the working session itself. F77
+    direct-build (one-answer workers, no tools) is built and not yet tried
+    live. `docs/17-benchmark.md`.
+
 ## Next steps
 
-0. Next live run: the bookshelf prompt with the worker on its own quota
-   (`factory-opus-flash`, or `factory-opus-luna` when Luna is back), with both
-   quota bars before and after. Then the role tests on a prompt the owner
-   gives. Before changing the engine, run `node evals/chaos.ts --seeds 1000`
-   and `--kill 1 --seeds 400`; add any new kind of failure to the harness
-   first, then fix it.
+0. Next: the order of work in `docs/17-benchmark.md` (finish the single-Opus
+   baseline, Haiku alone, plan-first, then one-answer workers on the same
+   specs). Run it from a short session on Opus 5.5, idle while an eval runs.
+   Before changing the engine, run `node evals/chaos.ts --seeds 1000` and
+   `--kill 1 --seeds 400`.
 1. Done 2026-11-12: the telemetry endpoint is live at
    `https://neuromesh-telemetry.farhanakhtar.workers.dev` (checked end to end;
    requests without keys are refused). `neuromesh telemetry pull` reads it.

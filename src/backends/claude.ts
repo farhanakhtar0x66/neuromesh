@@ -23,6 +23,10 @@ const WRITE_TOOLS = "Bash,Edit,Write,Read,Grep,Glob";
 export const READ_ONLY_SYSTEM_PROMPT =
   "You are a senior software engineer. You are working in the repository in the current directory, which you can read with the Read, Grep and Glob tools but not change. Read what you need, think carefully, and answer precisely and concisely. When a JSON format is required, give your final answer in exactly that format.";
 
+/** [F77 direct-build] */
+export const DIRECT_SYSTEM_PROMPT =
+  "You are a careful senior software developer. You have no tools: you cannot read files or run anything. Everything you need is in the message. Think it through, then answer once, in exactly the required JSON format.";
+
 export function claudeArgs(request: AgentRequest): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose"];
   if (request.model) args.push("--model", request.model);
@@ -32,6 +36,11 @@ export function claudeArgs(request: AgentRequest): string[] {
   // [F08 lean-claude]
   const lean = isOn("lean-claude");
   if (lean) args.push(...LEAN);
+  // [F77 direct-build] No tools and a one-line system prompt: one model call, a prompt of a few thousand tokens.
+  if (request.direct) {
+    args.push("--tools", "", "--system-prompt", DIRECT_SYSTEM_PROMPT, "--permission-mode", "plan");
+    return args;
+  }
   if (request.access === "write") {
     if (lean) args.push("--tools", WRITE_TOOLS);
     args.push("--permission-mode", "acceptEdits", "--allowedTools", "Bash", "Edit", "Write");
@@ -184,6 +193,7 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
 export const claude: AgentBackend = {
   id: "claude",
   displayName: "Claude Code",
+  direct: true,
   version: () => capture("claude", ["--version"]),
   run(request: AgentRequest): Promise<AgentResult> {
     return runCli({

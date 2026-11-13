@@ -172,6 +172,9 @@ export interface TaskState extends PlannedTask {
   fromSplit?: boolean;
   /** [F68 split-ask] The worker asked for a split and the expert answered. */
   splitAsked?: boolean;
+  /** [F77 direct-build] One-answer turns taken on this task, and whether they are given up for it. */
+  directTurns?: number;
+  directOff?: boolean;
   /** [F68 split-ask] Nobody can divide this task now (no lead engineer, or no budget for one): the worker is not offered a split. */
   noSplit?: boolean;
   /** [F56 env-blocked] Turns spent on environment problems (not counted as repair rounds). */
@@ -221,6 +224,8 @@ export interface RunState {
   facts?: string[];
   /** [F65 spec-plan] The tasks are the spec's build plan for a new program. */
   planFromSpec?: boolean;
+  /** [F77 direct-build] The preset asks for one-answer workers. */
+  direct?: boolean;
   preset: string;
   mode: "solo" | "team";
   roles: RoleChain;

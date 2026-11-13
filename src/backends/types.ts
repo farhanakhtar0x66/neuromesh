@@ -52,6 +52,12 @@ export interface Activity {
 export interface AgentRequest {
   cwd: string;
   prompt: string;
+  /**
+   * [F77 direct-build] Answer in one go, with no tools: the prompt holds
+   * everything, and the answer (files as JSON) is all that comes back. Only
+   * backends with `direct` set can do this.
+   */
+  direct?: boolean;
   model?: string;
   effort?: string;
   access: Access;
@@ -131,6 +137,8 @@ export interface AgentBackend {
    * not for the turn (Codex does). The engine subtracts the earlier turns.
    */
   sessionTotals?: boolean;
+  /** [F77 direct-build] The tool can be run with no tools at all, for an answer in one model call. */
+  direct?: boolean;
 }
 
 export function addUsage(a: Usage, b: Usage): Usage {

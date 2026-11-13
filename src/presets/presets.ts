@@ -49,6 +49,11 @@ export interface Preset {
    * Every task starts on the first rung; a stuck worker climbs before the expert is asked.
    */
   workerLadder?: RoleConfig[];
+  /**
+   * [F77 direct-build] Workers write a planned part in one answer with no
+   * tools; Neuromesh writes the files and runs the checks. Experimental.
+   */
+  direct?: boolean;
 }
 
 export const DEFAULT_PRESET = "factory-opus-luna";
@@ -109,6 +114,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     expertBudgetUsd: typeof p.expertBudgetUsd === "number" && p.expertBudgetUsd > 0 ? p.expertBudgetUsd : undefined,
     test: p.test === "no-checks" ? "no-checks" : "always",
     workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
+    direct: p.direct === true ? true : undefined,
   };
 }
 

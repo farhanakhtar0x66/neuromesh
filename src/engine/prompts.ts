@@ -21,6 +21,27 @@ export const REPORT_SCHEMA = {
   additionalProperties: false,
 };
 
+/** [F77 direct-build] A worker's whole answer: the files of its part. */
+export const DIRECT_SCHEMA = {
+  type: "object",
+  properties: {
+    files: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { path: { type: "string" }, content: { type: "string" } },
+        required: ["path", "content"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+    notes: { type: "string" },
+    run: { type: "string" },
+  },
+  required: ["files", "summary", "notes", "run"],
+  additionalProperties: false,
+};
+
 export const SPEC_SCHEMA = {
   type: "object",
   properties: {
@@ -347,6 +368,64 @@ export function reviewFixPrompt(task: TaskState): string {
 ${findingText(task.verdict?.findings ?? [])}
 
 Fix them, run the checks again, then give your final answer in the same JSON format as before.`;
+}
+
+/**
+ * [F77 direct-build] The whole of a planned part in one answer. The worker has
+ * no tools, so the prompt carries the spec, its task, and the project's files
+ * as they are; Neuromesh writes what comes back and runs the checks.
+ */
+export function directPrompt(state: RunState, task: TaskState, project: { path: string; content: string }[]): string {
+  const owned = task.owned.length > 0 ? task.owned.join(", ") : "whatever the request needs";
+  const show = (files: { path: string; content: string }[]): string => files.map((f) => `--- ${f.path} ---\n${f.content}${f.content.endsWith("\n") ? "" : "\n"}--- end of ${f.path} ---`).join("\n");
+  const isMine = (path: string): boolean => task.owned.some((o) => path === o || path.startsWith(`${o.replace(/\/+$/, "")}/`));
+  const mine = project.filter((f) => isMine(f.path));
+  const others = project.filter((f) => !isMine(f.path));
+  const again =
+    task.next === "review-fix"
+      ? `\n\nYour earlier answer was written to the project. A reviewer then found these problems:\n\n${findingText(task.verdict?.findings ?? [])}\n\nFix them.`
+      : task.next === "repair"
+        ? `\n\nYour earlier answer was written to the project, and the project's checks then failed:\n\n${failureText(task.latest ?? [], state.baseline)}\n\nFind the cause and fix it. If a test of yours is wrong, fix the test; if the code is wrong, fix the code.`
+        : "";
+  return `You are one developer on a team building a program. You write your part in one answer. You have no tools: you cannot read other files or run anything. Neuromesh writes the files you return, then runs the project's checks, and comes back to you with the exact failures if there are any.
+
+The request, with its spec and build plan:
+${state.prompt}
+
+Your part: ${task.title}
+${task.brief}
+Files you own: ${owned}
+${others.length > 0 ? `\nThe project as it is now (built by others, or there before; rely on it, and return one of these files only if your part cannot be done without changing it):\n${show(others)}\n` : ""}${mine.length > 0 ? `\nYour files as they are now:\n${show(mine)}\n` : ""}
+${checkList(state.checks)}${again}
+
+Rules:
+- Return every file you create or change, complete, with its path relative to the project folder. A file you do not return stays as it is.
+- Follow the spec's file names, function names, signatures, output formats and exit codes exactly: the other parts and the tests rely on them.
+- Write the tests the plan gives your part. They are run for real: write only tests you are sure pass against your code, and keep them focused.
+- You cannot try anything, so be exact about the things usually found by running: imports, argument order, off-by-one edges, what a function returns for empty input.
+- Use only what the request and the spec allow (standard library unless a package is named there).
+
+Answer in the required JSON format: files (each with path and content), summary (what you built, two or three sentences), notes (what a reviewer must know, or an empty string), run (the command that starts the program, or an empty string).`;
+}
+
+/** [F77 direct-build] The files and report of a one-answer turn; undefined when the answer cannot be used. */
+export function parseDirect(result: AgentResult): { files: { path: string; content: string }[]; report: WorkerReport } | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { files?: unknown; summary?: unknown; notes?: unknown; run?: unknown } | undefined;
+  if (!raw || !Array.isArray(raw.files)) return undefined;
+  const files = raw.files.flatMap((f) => {
+    const file = f as { path?: unknown; content?: unknown } | null;
+    return file && typeof file.path === "string" && file.path.trim() !== "" && typeof file.content === "string" ? [{ path: file.path.trim(), content: file.content }] : [];
+  });
+  if (files.length === 0) return undefined;
+  return {
+    files,
+    report: {
+      status: "done",
+      summary: typeof raw.summary === "string" && raw.summary.trim() !== "" ? raw.summary : `Wrote ${files.map((f) => f.path).join(", ")}.`,
+      notes: typeof raw.notes === "string" && raw.notes.trim() !== "" ? raw.notes : undefined,
+      run: typeof raw.run === "string" && raw.run.trim() !== "" ? raw.run.trim() : undefined,
+    },
+  };
 }
 
 /** When the session cannot be continued (a different model, or resuming failed). */

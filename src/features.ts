@@ -713,6 +713,15 @@ export const FEATURES: Feature[] = [
     what: "Every program a turn, a check or an acceptance run starts carries a tag in its environment. When the tool has exited, or was stopped at a time limit or by the person, whatever still carries the tag is stopped, and the turn ends even if its output pipe is still held open. A program the tool left running in a group of its own (a server started in the background) used to keep the turn waiting for as long as it lived, past every time limit, and survived the run. Found while reviewing the process runner for the fault harness.",
     optional: true,
   },
+  {
+    id: "F77",
+    key: "direct-build",
+    name: "A worker writes a planned part in one answer; the engine runs the checks",
+    added: "2026-11-13",
+    files: ["src/engine/run.ts (directApplies, directTurn, writeDirect)", "src/engine/prompts.ts (directPrompt, parseDirect)", "src/backends/claude.ts (claudeArgs)"],
+    what: "Experimental, and only in presets that set \"direct\": true. For a worker's part of a program that has a spec, the worker is run with no tools: its prompt holds the spec, its task and the project's files, and its one answer holds its files. Neuromesh writes them and runs the checks; a failure goes back to it once the same way, and after that the worker gets its tools as before. One model call with a prompt of a few thousand tokens, in place of dozens of calls that each reread the whole conversation. After the owner's earlier research (a tight context and one low-effort answer) and the bookshelf run, where Haiku's agent turns were most of the quota.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

@@ -346,3 +346,26 @@ test("the Claude parser counts the calls over 100K apart, and reports the larges
   assert.deepEqual(run.usage.long, { input: 2, cacheRead: 260_000, cacheWrite: 2_000, output: 4_000 });
   assert.equal(run.peakPrompt, 141_001);
 });
+
+test("direct build: each planned part is written from one answer with no tools, and later parts see the files built so far", async () => {
+  const repo = threePartRepo();
+  const { ctx, fake } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if (isSpec(req)) return { structured: SPEC };
+    if (isTest(req)) return { structured: { verdict: "pass", summary: "ok", findings: [] } };
+    if (req.direct) {
+      const file = /Your part: part a/.test(req.prompt) ? "a.txt" : /Your part: part b/.test(req.prompt) ? "b.txt" : "fixed.txt";
+      return { structured: { files: [{ path: file, content: file === "fixed.txt" ? "ok\n" : "x\n" }, { path: "../outside.txt", content: "no" }], summary: "wrote it", notes: "", run: "" } };
+    }
+    throw new Error("no turn with tools is expected");
+  });
+  fake.direct = true;
+  const state = await startRun({ cwd: repo, prompt: "build a command-line tool that writes three files", preset: preset({ briefer: [EXPERT], tester: [TESTER] }, { brief: true, direct: true }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  const builds = fake.calls.filter((c) => c.direct);
+  assert.equal(builds.length, 3, "one answer per part");
+  assert.ok(builds.every((c) => c.access === "read-only"));
+  assert.match(builds[1]!.prompt, /--- a\.txt ---/, "the second part is shown the first part's file");
+  assert.ok(!state.outcome!.files.some((f) => f.path.includes("outside")), "a path that leaves the folder is refused");
+});

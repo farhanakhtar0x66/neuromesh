@@ -1,0 +1,79 @@
+{
+  "name": "factory-opus-haiku-direct",
+  "description": "Experimental (2026-11-13). factory-opus-haiku with one-answer workers (F77 direct-build): Opus 5.5 writes the spec and plan, Haiku 5.5 writes each part in one answer with no tools, Neuromesh runs the checks, and Haiku with tools reviews the whole program once.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high"
+      }
+    ],
+    "briefer": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high"
+      }
+    ],
+    "tester": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "medium"
+      }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 4,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 250000,
+  "expertBudgetUsd": 0.6,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "medium"
+    },
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "high"
+    }
+  ],
+  "direct": true
+}

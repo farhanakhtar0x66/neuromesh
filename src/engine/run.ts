@@ -18,8 +18,8 @@
 // next model in the role's list takes over; when none is left the run pauses.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
@@ -65,7 +65,10 @@ import {
   parseAdvice,
   escalationPrompt,
   envRepairPrompt,
+  DIRECT_SCHEMA,
   FACTS_SCHEMA,
+  directPrompt,
+  parseDirect,
   fixInPlacePrompt,
   parseFacts,
   scoutPrompt,
@@ -312,6 +315,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     test: preset.test ?? "always",
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
+    direct: preset.direct,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: follow?.base ?? repo.head,
     branch: `neuromesh/${id}`,
@@ -691,6 +695,8 @@ interface TurnRequest {
   chain?: RoleConfig[];
   /** A shorter time limit than the run's, for a turn that is only a help. */
   timeoutMs?: number;
+  /** [F77 direct-build] One answer, no tools. */
+  direct?: boolean;
 }
 
 interface TurnResult {
@@ -871,6 +877,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     result = await backend.run({
     cwd: req.cwd,
     prompt,
+    direct: req.direct,
     model: config.model,
     effort: config.effort,
     access: req.access,
@@ -1395,6 +1402,111 @@ function roleFor(state: RunState, task: TaskState): Role {
   return "worker";
 }
 
+/** [F77 direct-build] One-answer turns a task gets (the build and one repair) before a worker with tools takes over. */
+const DIRECT_TURNS = 2;
+/** [F77 direct-build] Most characters of project files shown to a one-answer worker. */
+const DIRECT_PROJECT_CHARS = 120_000;
+
+/** [F77 direct-build] The worker models this task would use now, first choice first. */
+function workerChain(state: RunState, task: TaskState): RoleConfig[] {
+  const chain = state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : (state.roles.worker ?? []);
+  return chain.filter((c) => !state.exhausted.includes(modelKey(c)));
+}
+
+/**
+ * [F77 direct-build] A worker's part of a program that has a spec, on a tool
+ * that can answer with no tools, for the build and one repair. After that, or
+ * when an answer cannot be used, the worker gets its tools as before.
+ */
+function directApplies(run: RunCtx, task: TaskState): boolean {
+  const { state, ctx } = run;
+  if (!isOn("direct-build") || !state.direct || !state.brief?.spec) return false;
+  if (task.owner !== "worker" || task.escalated || task.advised || task.directOff || task.envProblem) return false;
+  if ((task.directTurns ?? 0) >= DIRECT_TURNS || !["initial", "repair", "review-fix"].includes(task.next)) return false;
+  const first = workerChain(state, task)[0];
+  return first !== undefined && ctx.backends[first.backend]?.direct === true;
+}
+
+/** [F77 direct-build] The project's text files, smallest first up to a size limit, for a worker that cannot read. */
+function projectFiles(dir: string, exclude: string[]): { path: string; content: string }[] {
+  const listed = git(dir, "ls-files", "--cached", "--others", "--exclude-standard").split("\n").filter(Boolean);
+  const files: { path: string; content: string }[] = [];
+  for (const path of listed) {
+    if (exclude.some((e) => path === e || path.startsWith(`${e}/`)) || /(^|\/)(node_modules|\.venv|__pycache__)\//.test(path) || /\.(lock|png|jpg|jpeg|gif|ico|pdf|zip|gz|bin|joblib|db|sqlite)$/i.test(path)) continue;
+    try {
+      const text = readFileSync(join(dir, path), "utf8");
+      if (text.length > 40_000 || text.includes("\u0000")) continue;
+      files.push({ path, content: text });
+    } catch {
+      // Deleted, or not a regular file.
+    }
+  }
+  files.sort((a, b) => a.content.length - b.content.length);
+  let total = 0;
+  return files.filter((f) => (total += f.content.length) <= DIRECT_PROJECT_CHARS).sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** [F77 direct-build] Write a worker's files into its folder; paths that leave it, or point into git or a prepared folder, are refused. */
+export function writeDirect(dir: string, files: { path: string; content: string }[], exclude: string[]): { written: string[]; refused: string[] } {
+  const root = realpathSync(dir);
+  const written: string[] = [];
+  const refused: string[] = [];
+  for (const f of files) {
+    // A model sometimes gives the whole path of the folder it was started in.
+    const given = isAbsolute(f.path) ? relative(root, f.path.startsWith(root) ? f.path : resolve(root, relative(dir, f.path))) : f.path;
+    const path = normalize(given).replace(/^(\.\/)+/, "");
+    const first = path.split("/")[0] ?? "";
+    if (path === "" || path === "." || path.startsWith("..") || isAbsolute(path) || first === ".git" || exclude.includes(first) || written.length >= 60) {
+      refused.push(f.path);
+      continue;
+    }
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), f.content);
+    written.push(path);
+  }
+  return { written, refused };
+}
+
+/** [F77 direct-build] One turn: ask for the part's files, write them, and hand over to the checks. */
+async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const mode = task.next;
+  const { result } = await turn(run, {
+    key: task.id,
+    role: "worker",
+    kind: mode,
+    task: task.id,
+    round: task.round,
+    cwd: task.worktree,
+    prompt: directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
+    access: "read-only",
+    schema: DIRECT_SCHEMA,
+    direct: true,
+    chain: workerChain(state, task),
+  });
+  task.directTurns = (task.directTurns ?? 0) + 1;
+  if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {
+    saveState(state);
+    return stopFor(result, "worker");
+  }
+  const answer = result.stop === "done" ? optional(run, "direct-build", undefined, () => parseDirect(result)) : undefined;
+  const outcome = answer ? optional(run, "direct-build", undefined, () => writeDirect(task.worktree, answer.files, task.prepared)) : undefined;
+  if (!answer || !outcome || outcome.written.length === 0) {
+    task.directOff = true;
+    saveState(state);
+    log.emit("note", { feature: "F77", message: `Task ${task.id}: the one-answer turn gave nothing usable (${result.stop}${result.detail ? `: ${result.detail.slice(0, 120)}` : ""}); the worker gets its tools.` });
+    return undefined;
+  }
+  task.report = answer.report;
+  task.sessionId = undefined;
+  task.sessionModel = undefined;
+  task.step = "checks";
+  saveState(state);
+  log.emit("task.direct", { feature: "F77", task: task.id, mode, files: outcome.written, refused: outcome.refused });
+  if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role: "worker", status: answer.report.status, summary: answer.report.summary.slice(0, 8_000), notes: answer.report.notes?.slice(0, 4_000) });
+  return undefined;
+}
+
 /**
  * [F75 sync-before-checks] Bring a task's folder up to date with the work other
  * tasks have merged since it started, so its checks test the program as it is
@@ -1462,6 +1574,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // [F73 heal-worktree] An interrupted turn may have left the folder unusable for the next one.
       healTask(run, task);
       const role = roleFor(state, task);
+      // [F77 direct-build] A planned part in one answer, the checks run by the engine.
+      if (directApplies(run, task)) {
+        const stop = await directTurn(run, task);
+        if (stop) return stop;
+        continue;
+      }
       // [F68 split-ask] Offered only while someone can do the dividing.
       task.noSplit = !canSplit(state, task);
       const kind: AttemptKind = task.escalated && task.next === "initial" ? "escalation" : task.next;
