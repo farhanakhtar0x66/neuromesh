@@ -1,0 +1,63 @@
+{
+  "id": "3.2",
+  "slug": "t32-heap-refactor",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nPASS orders by expiry date (FIFO)\nPASS handles partial quantities across warehouses\nPASS returns a dict\nSCORE 7/7",
+  "wallMs": 53813,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 52770,
+      "usage": {
+        "input": 10,
+        "output": 5476,
+        "reasoning": 1242,
+        "cacheRead": 52524,
+        "cacheWrite": 10153
+      },
+      "tokens": 68163,
+      "costUsd": 0.2012888,
+      "quotaUsed": {
+        "five_hour": 0.58,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 68163,
+  "discardedTokens": 0,
+  "costUsd": 0.2012888,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.57,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.58,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012533-763f",
+  "finishedAt": "2026-11-13T19:56:31.189Z"
+}
