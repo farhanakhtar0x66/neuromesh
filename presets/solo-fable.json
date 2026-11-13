@@ -1,0 +1,13 @@
+{
+  "name": "solo-fable",
+  "description": "One Claude Fable 5.2 agent at high effort through Claude Code, given the request exactly as typed. The strongest single agent; the bar for the hard task (docs/18-hard-task.md). Uses the scarce Claude subscription heavily.",
+  "mode": "solo",
+  "worker": {
+    "tier": "expert",
+    "backend": "claude",
+    "model": "claude-fable-5-2",
+    "effort": "high"
+  },
+  "repairs": 1,
+  "turnTimeoutMinutes": 90
+}
