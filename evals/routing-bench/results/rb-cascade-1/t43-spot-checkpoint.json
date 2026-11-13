@@ -1,0 +1,68 @@
+{
+  "id": "4.3",
+  "slug": "t43-spot-checkpoint",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(math)>T2(sim)",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 9
+  },
+  "quality": 7.777777777777778,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS Young/Daly checkpoint interval\nPASS square-root optimum sqrt(2*delta/lambda)\nPASS uses the eviction rates as failure rates\nPASS checkpoint cost includes I/O and compute time\nPASS instance selection policy\nPASS sim.py exists\nFAIL sim.py runs to completion\nFAIL sim.py prints results\nSCORE 7/9",
+  "wallMs": 95336,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 92946,
+      "usage": {
+        "input": 16,
+        "output": 20228,
+        "reasoning": 9340,
+        "cacheRead": 168337,
+        "cacheWrite": 28150
+      },
+      "tokens": 216731,
+      "costUsd": 0.017428970000000002,
+      "quotaUsed": {
+        "five_hour": 0.75,
+        "seven_day": 0.6
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 216731,
+  "discardedTokens": 0,
+  "costUsd": 0.017428970000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.75,
+      "seven_day": 0.6
+    },
+    "after": {
+      "five_hour": 0.75,
+      "seven_day": 0.6
+    }
+  },
+  "runId": "20261114-015232-f890",
+  "finishedAt": "2026-11-13T20:24:12.613Z"
+}

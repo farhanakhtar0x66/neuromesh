@@ -39,3 +39,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-13 20:20:09 UTC: 4.2 task.early-exit senior: A design doc plus a small, testable pure-JS state machine and merge module is feasible in one sitting.
 - 2026-11-13 20:20:35 UTC: 4.2 task.advised: the senior developer judged the task beyond it: A design doc plus a small, testable pure-JS state machine and merge modu
 - 2026-11-13 20:22:27 UTC: 4.2 t42-edge-dag: applied, quality 8.9/10 (8/9), path senior, 173,067 tokens, est. $0.4017 (API list prices), 2.3 min; quota before five_hour 72%, seven_day 60%, after five_hour 75%, seven_day 60%
+- 2026-11-13 20:22:29 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
+- 2026-11-13 20:22:32 UTC: 4.3 route.tier worker
+- 2026-11-13 20:24:12 UTC: 4.3 t43-spot-checkpoint: applied, quality 7.8/10 (7/9), path worker, 216,731 tokens, est. $0.0174 (API list prices), 1.6 min; quota before five_hour 75%, seven_day 60%, after five_hour 75%, seven_day 60%
