@@ -1,0 +1,68 @@
+{
+  "id": "1.3",
+  "slug": "t13-env-example",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like grunt work (100% of the match), but it builds something: worker"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS .env.example exists\nPASS DATABASE_URL= line\nPASS REDIS_HOST= line\nPASS JWT_SECRET_KEY= line\nPASS RAZORPAY_WEBHOOK_SECRET= line\nPASS every variable line matches ^[A-Z0-9_]+=.*$\nPASS only the 4 variables\nPASS a # comment for each (at least 4 comment lines)\nPASS blank: no secret values filled in\nSCORE 9/9",
+  "wallMs": 10784,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 9672,
+      "usage": {
+        "input": 10,
+        "output": 1296,
+        "reasoning": 154,
+        "cacheRead": 40671,
+        "cacheWrite": 7430
+      },
+      "tokens": 49407,
+      "costUsd": 0.00254171,
+      "quotaUsed": {
+        "five_hour": 0.67,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 49407,
+  "discardedTokens": 0,
+  "costUsd": 0.00254171,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.67,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.67,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-014132-c647",
+  "finishedAt": "2026-11-13T20:11:46.825Z"
+}
