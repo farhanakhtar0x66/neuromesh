@@ -1,0 +1,68 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 20269,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 18988,
+      "usage": {
+        "input": 6,
+        "output": 3163,
+        "reasoning": 1600,
+        "cacheRead": 29139,
+        "cacheWrite": 8945
+      },
+      "tokens": 41253,
+      "costUsd": 0.0036624899999999996,
+      "quotaUsed": {
+        "five_hour": 0.76,
+        "seven_day": 0.61
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 41253,
+  "discardedTokens": 0,
+  "costUsd": 0.0036624899999999996,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.75,
+      "seven_day": 0.61
+    },
+    "after": {
+      "five_hour": 0.76,
+      "seven_day": 0.61
+    }
+  },
+  "runId": "20261114-015418-72df",
+  "finishedAt": "2026-11-13T20:24:43.136Z"
+}
