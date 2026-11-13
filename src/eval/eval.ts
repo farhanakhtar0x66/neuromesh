@@ -359,6 +359,7 @@ export function recheckEval(home: string, name: string, tasks: EvalTask[]): { ta
     const hidden = check.code === 0 ? "pass" : "fail";
     changes.push({ task: task.name, before: result.hidden, after: hidden });
     result.hidden = hidden;
+    result.score = scoreOf(check.output);
     result.hiddenTail = hidden === "fail" ? check.output.split("\n").slice(-20).join("\n") : undefined;
   }
   saveReport(home, report);

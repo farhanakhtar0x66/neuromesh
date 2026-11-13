@@ -109,11 +109,7 @@ def t_large():
     t = time.time(); c, d, _ = js(big); secs = time.time() - t
     return c == 0 and sum(v["count"] for v in d["services"].values()) == 200_000 and secs < 8
 case("200,000 lines in a few seconds", t_large)
-def t_head():
-    big = "\n".join(line(level="INFO", service=f"svc{i}", latency_ms=1) for i in range(3000))
-    p = subprocess.run(f"{sys.executable} logstat.py | head -n 2", shell=True, input=big, capture_output=True, text=True, timeout=30)
-    return "Traceback" not in p.stderr
-case("output piped into head does not print a traceback", t_head)
+# Removed 2026-11-13: "output piped into head does not print a traceback" (the prompt does not ask for it).
 def t_unicode():
     c, d, _ = js(line(level="INFO", service="café-日本", latency_ms=3) + "\n")
     return d["services"]["café-日本"]["count"] == 1

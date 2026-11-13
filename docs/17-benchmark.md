@@ -21,7 +21,7 @@ Eight tasks under `evals/tasks`, each with a hidden check the agents never see:
 | `hard-py-cron` | hard | cron `next_run`, many edge rules |
 | `hard-ts-expr` | hard | an expression parser and evaluator |
 | `large-js-shop` | large | five modules that depend on each other |
-| `build-logstat` | build | the owner's logstat prompt, 26 hidden cases |
+| `build-logstat` | build | the owner's logstat prompt, 25 hidden cases |
 | `build-expenses` | build | the expense tracker prompt, 33 hidden cases |
 | `build-sitewatch` | build | the website watcher prompt, 22 hidden cases against local sites |
 
