@@ -1,0 +1,63 @@
+{
+  "id": "4.3",
+  "slug": "t43-spot-checkpoint",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(math)>T2(sim)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS Young/Daly checkpoint interval\nPASS square-root optimum sqrt(2*delta/lambda)\nPASS uses the eviction rates as failure rates\nPASS checkpoint cost includes I/O and compute time\nPASS instance selection policy\nPASS sim.py exists\nPASS sim.py runs to completion\nPASS sim.py prints results\nSCORE 9/9",
+  "wallMs": 145957,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 143019,
+      "usage": {
+        "input": 12,
+        "output": 14369,
+        "reasoning": 4115,
+        "cacheRead": 87578,
+        "cacheWrite": 19893
+      },
+      "tokens": 121852,
+      "costUsd": 0.4640876,
+      "quotaUsed": {
+        "five_hour": 0.65,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 121852,
+  "discardedTokens": 0,
+  "costUsd": 0.4640876,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.63,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.65,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-013529-d114",
+  "finishedAt": "2026-11-13T20:08:01.295Z"
+}

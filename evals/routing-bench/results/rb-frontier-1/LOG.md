@@ -25,3 +25,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-13 20:01:34 UTC: 4.1 t41-arm64-ringbuf: applied, quality 10.0/10 (10/10), path frontier, 104,299 tokens, est. $0.3378 (API list prices), 1.7 min; quota before five_hour 60%, seven_day 58%, after five_hour 61%, seven_day 59%
 - 2026-11-13 20:01:36 UTC: 4.2 t42-edge-dag: reading quota, then running
 - 2026-11-13 20:05:23 UTC: 4.2 t42-edge-dag: applied, quality 10.0/10 (9/9), path frontier, 100,845 tokens, est. $0.6344 (API list prices), 3.7 min; quota before five_hour 61%, seven_day 59%, after five_hour 63%, seven_day 59%
+- 2026-11-13 20:05:25 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
+- 2026-11-13 20:08:01 UTC: 4.3 t43-spot-checkpoint: applied, quality 10.0/10 (9/9), path frontier, 121,852 tokens, est. $0.4641 (API list prices), 2.4 min; quota before five_hour 63%, seven_day 59%, after five_hour 65%, seven_day 59%
