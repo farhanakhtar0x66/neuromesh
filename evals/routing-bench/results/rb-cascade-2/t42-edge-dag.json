@@ -1,0 +1,68 @@
+{
+  "id": "4.2",
+  "slug": "t42-edge-dag",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "senior",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (60% senior); past runs give senior a 85% chance"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 9
+  },
+  "quality": 8.88888888888889,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nFAIL optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 8/9",
+  "wallMs": 72498,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 72017,
+      "usage": {
+        "input": 8,
+        "output": 10155,
+        "reasoning": 875,
+        "cacheRead": 42203,
+        "cacheWrite": 14774
+      },
+      "tokens": 67140,
+      "costUsd": 0.16488229999999998,
+      "quotaUsed": {
+        "five_hour": 0.03,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 67140,
+  "discardedTokens": 0,
+  "costUsd": 0.16488229999999998,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.02,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0.03,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-035028-a390",
+  "finishedAt": "2026-11-13T22:21:45.012Z"
+}
