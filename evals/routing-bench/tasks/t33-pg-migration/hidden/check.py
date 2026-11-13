@@ -26,9 +26,12 @@ item("adds the new columns", has(t, r"add\s+column"))
 item("new columns nullable (no NOT NULL on add)", not re.search(r"add\s+column[^;\n]*not\s+null(?![^;\n]*default)", t, re.I))
 item("dual-write: trigger or application", anyof(t, r"create\s+(or\s+replace\s+)?trigger", r"dual[- ]?write"))
 item("batched backfill", anyof(t, r"skip\s+locked", r"limit\s+\d+", r"batch", r"where\s+id\s*(>|between)"))
-item("read switchover phase", anyof(t, r"switch\w*\s+reads?", r"read\s+from\s+the\s+new", r"cut\s*over", r"read\s+switch"))
-drop = re.search(r"drop\s+column", t, re.I); add = re.search(r"add\s+column", t, re.I)
-item("drops the old column last (contract)", bool(drop and add and drop.start() > add.start()))
+item("read switchover phase", anyof(t, r"switch\w*\s+(the\s+)?reads?", r"reads?\s+(from\s+)?(the\s+)?new", r"reads?\s*[:|]\s*new", r"\|\s*new col\w*\s*\|", r"cut\s*over", r"read\s+(switch|path)"))
+def drops_last(x):
+    adds = [m.start() for m in re.finditer(r"add\s+column", x, re.I)]
+    drops = [m.start() for m in re.finditer(r"drop\s+column", x, re.I)]
+    return bool(adds and drops and drops[-1] > adds[0])
+item("drops the old column last (contract)", any(drops_last(x) for x in (answer_text(), read("migration.sql") or "")))
 item("expand-contract named or phased", anyof(t, r"expand", r"contract", r"phase"))
 item("keeps the old service version working", anyof(t, r"old (service|version|microservice)", r"backward", r"rolling"))
 

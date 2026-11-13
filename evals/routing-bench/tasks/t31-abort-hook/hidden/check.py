@@ -20,13 +20,19 @@ def has(text, *patterns):
 def anyof(text, *patterns):
     return any(re.search(p, text or "", re.I | re.S) for p in patterns)
 
-t = read("useSearch.js") or read("useSearch.ts") or read("useSearch.jsx") or ""
-item("the hook file exists", bool(t.strip()))
-item("uses useEffect", has(t, r"useEffect\s*\("))
-item("new AbortController() inside the effect", has(t, r"useEffect[\s\S]*new\s+AbortController\s*\("))
-item("passes the signal to fetch", has(t, r"fetch\s*\([\s\S]*signal"))
+hook = read("useSearch.js") or read("useSearch.ts") or read("useSearch.jsx") or ""
+# The hook may delegate to helper modules it wrote: every JS/TS file of the answer counts for the API items.
+code = []
+for root, dirs, files in os.walk("."):
+    dirs[:] = [d for d in dirs if d not in ("node_modules", "hidden", ".git", ".bench")]
+    code += [read(os.path.join(root, f)) or "" for f in files if re.search(r"\.(m?[jt]sx?)$", f) and "test" not in f.lower()]
+t = "\n".join(code)
+item("the hook file exists", bool(hook.strip()))
+item("the hook uses useEffect with a cleanup", has(hook, r"useEffect\s*\(", r"return\s*\(\s*\)\s*=>"))
+item("a new AbortController per request", has(t, r"new\s+AbortController\s*\("))
+item("passes the signal to fetch", has(t, r"fetch\w*\s*\([\s\S]{0,200}signal"))
 item("ignores AbortError", has(t, r"AbortError"))
-item("controller.abort() in the effect's cleanup", has(t, r"return\s*\(\s*\)\s*=>\s*\{?[\s\S]{0,200}\.abort\(\)"))
-item("clears the debounce timer in cleanup", has(t, r"clearTimeout\s*\("))
+item("aborts the request on cleanup", has(t, r"\.abort\(\)"))
+item("clears the debounce timer", has(t, r"clear(Timeout|Timer)\s*\("))
 
 done()

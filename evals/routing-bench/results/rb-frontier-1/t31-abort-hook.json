@@ -17,7 +17,7 @@
     "total": 7
   },
   "quality": 10,
-  "hiddenOutput": "PASS the hook file exists\nPASS uses useEffect\nPASS new AbortController() inside the effect\nPASS passes the signal to fetch\nPASS ignores AbortError\nPASS controller.abort() in the effect's cleanup\nPASS clears the debounce timer in cleanup\nSCORE 7/7",
+  "hiddenOutput": "PASS the hook file exists\nPASS the hook uses useEffect with a cleanup\nPASS a new AbortController per request\nPASS passes the signal to fetch\nPASS ignores AbortError\nPASS aborts the request on cleanup\nPASS clears the debounce timer\nSCORE 7/7",
   "wallMs": 28156,
   "turns": [
     {

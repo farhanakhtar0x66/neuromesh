@@ -266,8 +266,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     the stuck developer's own diagnosis (F84), writes the blueprint and builds
     nothing (F85), and sees at most two tasks per run (F86); the run's measured
     tier mix and overhead (F87); and a shadow sample graded on request (F88).
-    Preset `cascade`. Fake backend and fault harness only, no live run yet. See
-    `docs/19-cascade.md`.
+    Preset `cascade`. See `docs/19-cascade.md`.
+28. **Routing benchmark, first live run (2026-11-14).** The owner's 15-prompt
+    suite, Claude only: `cascade-claude` against Opus alone. Quality matched
+    (Gap@Oracle 0.8%, waste 1.4%), but CostSave was 64.9% (target 65%), 77.8%
+    weighted (target 80%), and the five-hour window moved 10 points against
+    13. The expert's 6.5K-token plan on 4.1, a gate false alarm on 4.2, and a
+    Tier 0 that never picks the grunt (trap 5.2 failed) are the gaps. See
+    `docs/20-routing-benchmark.md`.
 
 ## Next steps
 

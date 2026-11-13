@@ -28,7 +28,10 @@ item("checkpoint cost includes I/O and compute time", has(a, r"0\.10|\$0\.1\b", 
 item("instance selection policy", has(a, r"(select|choose|pick|polic)"))
 s = read("sim.py"); item("sim.py exists", s is not None)
 try:
-    r = subprocess.run([sys.executable, "sim.py"], capture_output=True, text=True, timeout=120)
+    # The Python the engine built and checked the work with (uv picks the newest python3), not the system's 3.9.
+    import shutil
+    py = os.environ.get("BENCH_PYTHON") or next((c for c in ["/opt/homebrew/bin/python3", shutil.which("python3")] if c and os.path.exists(c)), sys.executable)
+    r = subprocess.run([py, "sim.py"], capture_output=True, text=True, timeout=120)
     item("sim.py runs to completion", r.returncode == 0)
     item("sim.py prints results", len(r.stdout.strip()) > 0)
 except Exception:

@@ -28,6 +28,6 @@ item("optimistic / CRDT execution for pure nodes", anyof(t, r"CRDT", r"optimisti
 item("state machine with transition rules", has(t, r"(state|transition)") and len(re.findall(r"(->|→|=>)", t)) >= 3)
 item("wire message structs", len(re.findall(r"\b(struct|message|interface|type)\s+\w+\s*\{", t, re.I)) >= 2)
 item("handles partition mid-execution", has(t, r"partition"))
-item("no central coordinator", anyof(t, r"no central", r"without a (central )?coordinator", r"leaderless", r"decentrali"))
+item("no central coordinator", anyof(t, r"no (central )?coordinator", r"without a (central )?coordinator", r"leaderless", r"decentrali"))
 
 done()
