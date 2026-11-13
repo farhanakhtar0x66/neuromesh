@@ -1,0 +1,63 @@
+{
+  "id": "4.1",
+  "slug": "t41-arm64-ringbuf",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS explains x86 TSO / strong store ordering\nPASS explains ARM64 weak ordering / reordering\nPASS Release on the producer's tail store\nPASS Acquire on the consumer's tail load\nPASS SeqCst not needed\nPASS src/lib.rs exists\nPASS uses Ordering::Release in code\nPASS uses Ordering::Acquire in code\nPASS UnsafeCell<MaybeUninit<T>> slots\nPASS cargo build passes\nSCORE 10/10",
+  "wallMs": 100717,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 99333,
+      "usage": {
+        "input": 12,
+        "output": 10073,
+        "reasoning": 1570,
+        "cacheRead": 79155,
+        "cacheWrite": 15059
+      },
+      "tokens": 104299,
+      "costUsd": 0.337811,
+      "quotaUsed": {
+        "five_hour": 0.61,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 104299,
+  "discardedTokens": 0,
+  "costUsd": 0.337811,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.6,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.61,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-012949-0f75",
+  "finishedAt": "2026-11-13T20:01:34.045Z"
+}
