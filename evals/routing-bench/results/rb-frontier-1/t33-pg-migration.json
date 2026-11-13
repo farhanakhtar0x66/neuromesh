@@ -1,0 +1,63 @@
+{
+  "id": "3.3",
+  "slug": "t33-pg-migration",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 9
+  },
+  "quality": 7.777777777777778,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS adds the new columns\nPASS new columns nullable (no NOT NULL on add)\nPASS dual-write: trigger or application\nPASS batched backfill\nFAIL read switchover phase\nFAIL drops the old column last (contract)\nPASS expand-contract named or phased\nPASS keeps the old service version working\nSCORE 7/9",
+  "wallMs": 183441,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 182507,
+      "usage": {
+        "input": 14,
+        "output": 19229,
+        "reasoning": 7337,
+        "cacheRead": 124704,
+        "cacheWrite": 23369
+      },
+      "tokens": 167316,
+      "costUsd": 0.5965288000000001,
+      "quotaUsed": {
+        "five_hour": 0.59,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 167316,
+  "discardedTokens": 0,
+  "costUsd": 0.5965288000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.58,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.6,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012637-0246",
+  "finishedAt": "2026-11-13T19:59:44.123Z"
+}
