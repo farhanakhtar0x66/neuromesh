@@ -1,0 +1,115 @@
+{
+  "id": "4.1",
+  "slug": "t41-arm64-ringbuf",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "expert",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (50% expert); past runs give expert a 85% chance"
+  ],
+  "tierPath": [
+    "expert-plan",
+    "worker",
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS explains x86 TSO / strong store ordering\nPASS explains ARM64 weak ordering / reordering\nPASS Release on the producer's tail store\nPASS Acquire on the consumer's tail load\nPASS SeqCst not needed\nPASS src/lib.rs exists\nPASS uses Ordering::Release in code\nPASS uses Ordering::Acquire in code\nPASS UnsafeCell<MaybeUninit<T>> slots\nPASS cargo build passes\nSCORE 10/10",
+  "wallMs": 104695,
+  "turns": [
+    {
+      "role": "orchestrator",
+      "kind": "plan",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 38908,
+      "usage": {
+        "input": 4,
+        "output": 3985,
+        "reasoning": 1000,
+        "cacheRead": 7247,
+        "cacheWrite": 8246
+      },
+      "tokens": 19482,
+      "costUsd": 0.1471334,
+      "quotaUsed": {
+        "five_hour": 0.01,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 48826,
+      "usage": {
+        "input": 8,
+        "output": 10235,
+        "reasoning": 4203,
+        "cacheRead": 52427,
+        "cacheWrite": 17484
+      },
+      "tokens": 80154,
+      "costUsd": 0.009139369999999999,
+      "quotaUsed": {
+        "five_hour": 0.02,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 64699,
+      "usage": {
+        "input": 10,
+        "output": 10645,
+        "reasoning": 501,
+        "cacheRead": 64084,
+        "cacheWrite": 17555
+      },
+      "tokens": 92294,
+      "costUsd": 0.1830984,
+      "quotaUsed": {
+        "five_hour": 0.02,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 191930,
+  "discardedTokens": 0,
+  "costUsd": 0.33937117,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.01,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0.02,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-034835-d94a",
+  "finishedAt": "2026-11-13T22:20:23.225Z"
+}
