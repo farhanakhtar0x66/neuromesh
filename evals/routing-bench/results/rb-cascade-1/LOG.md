@@ -12,3 +12,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-13 20:11:28 UTC: 1.3 t13-env-example: reading quota, then running
 - 2026-11-13 20:11:32 UTC: 1.3 route.tier worker
 - 2026-11-13 20:11:46 UTC: 1.3 t13-env-example: applied, quality 10.0/10 (9/9), path worker, 49,407 tokens, est. $0.0025 (API list prices), 0.2 min; quota before five_hour 67%, seven_day 59%, after five_hour 67%, seven_day 59%
+- 2026-11-13 20:11:48 UTC: 2.1 t21-hmac-webhook: reading quota, then running
+- 2026-11-13 20:11:52 UTC: 2.1 route.tier worker
+- 2026-11-13 20:12:50 UTC: 2.1 t21-hmac-webhook: applied, quality 10.0/10 (10/10), path worker, 197,550 tokens, est. $0.0085 (API list prices), 0.9 min; quota before five_hour 67%, seven_day 59%, after five_hour 68%, seven_day 59%

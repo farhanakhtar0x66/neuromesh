@@ -1,0 +1,68 @@
+{
+  "id": "2.1",
+  "slug": "t21-hmac-webhook",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS app.py exists\nPASS ast.parse passes\nPASS imports hmac\nPASS uses hmac.compare_digest\nPASS reads the raw body with await request.body()\nPASS HMAC with SHA-256\nPASS reads the X-Signature header\nPASS secret from the environment\nPASS POST /webhooks/payment route\nPASS returns 400 when invalid\nSCORE 10/10",
+  "wallMs": 54661,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 53170,
+      "usage": {
+        "input": 24,
+        "output": 7567,
+        "reasoning": 1675,
+        "cacheRead": 174946,
+        "cacheWrite": 15013
+      },
+      "tokens": 197550,
+      "costUsd": 0.00853796,
+      "quotaUsed": {
+        "five_hour": 0.68,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 197550,
+  "discardedTokens": 0,
+  "costUsd": 0.00853796,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.67,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.68,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-014152-1087",
+  "finishedAt": "2026-11-13T20:12:50.788Z"
+}
