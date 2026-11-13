@@ -27,3 +27,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-13 20:05:23 UTC: 4.2 t42-edge-dag: applied, quality 10.0/10 (9/9), path frontier, 100,845 tokens, est. $0.6344 (API list prices), 3.7 min; quota before five_hour 61%, seven_day 59%, after five_hour 63%, seven_day 59%
 - 2026-11-13 20:05:25 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
 - 2026-11-13 20:08:01 UTC: 4.3 t43-spot-checkpoint: applied, quality 10.0/10 (9/9), path frontier, 121,852 tokens, est. $0.4641 (API list prices), 2.4 min; quota before five_hour 63%, seven_day 59%, after five_hour 65%, seven_day 59%
+- 2026-11-13 20:08:03 UTC: 5.1 t51-regex-bomb: reading quota, then running
+- 2026-11-13 20:08:35 UTC: 5.1 t51-regex-bomb: applied, quality 10.0/10 (13/13), path frontier, 54,722 tokens, est. $0.0967 (API list prices), 0.4 min; quota before five_hour 65%, seven_day 59%, after five_hour 65%, seven_day 59%

@@ -1,0 +1,63 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 24247,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 23328,
+      "usage": {
+        "input": 10,
+        "output": 1887,
+        "reasoning": 371,
+        "cacheRead": 46631,
+        "cacheWrite": 6194
+      },
+      "tokens": 54722,
+      "costUsd": 0.0966582,
+      "quotaUsed": {
+        "five_hour": 0.65,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 54722,
+  "discardedTokens": 0,
+  "costUsd": 0.0966582,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.65,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.65,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-013807-b613",
+  "finishedAt": "2026-11-13T20:08:35.256Z"
+}
