@@ -1,0 +1,63 @@
+{
+  "id": "1.3",
+  "slug": "t13-env-example",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS .env.example exists\nPASS DATABASE_URL= line\nPASS REDIS_HOST= line\nPASS JWT_SECRET_KEY= line\nPASS RAZORPAY_WEBHOOK_SECRET= line\nPASS every variable line matches ^[A-Z0-9_]+=.*$\nPASS only the 4 variables\nPASS a # comment for each (at least 4 comment lines)\nPASS blank: no secret values filled in\nSCORE 9/9",
+  "wallMs": 13437,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 12535,
+      "usage": {
+        "input": 8,
+        "output": 807,
+        "reasoning": 0,
+        "cacheRead": 35099,
+        "cacheWrite": 5070
+      },
+      "tokens": 40984,
+      "costUsd": 0.0637518,
+      "quotaUsed": {
+        "five_hour": 0.54,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 40984,
+  "discardedTokens": 0,
+  "costUsd": 0.0637518,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.54,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.54,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012215-de1e",
+  "finishedAt": "2026-11-13T19:52:33.948Z"
+}
