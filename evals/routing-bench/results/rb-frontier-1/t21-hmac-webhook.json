@@ -1,0 +1,63 @@
+{
+  "id": "2.1",
+  "slug": "t21-hmac-webhook",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 10
+  },
+  "quality": 9,
+  "hiddenOutput": "PASS app.py exists\nPASS ast.parse passes\nPASS imports hmac\nPASS uses hmac.compare_digest\nPASS reads the raw body with await request.body()\nPASS HMAC with SHA-256\nFAIL reads the X-Signature header\nPASS secret from the environment\nPASS POST /webhooks/payment route\nPASS returns 400 when invalid\nSCORE 9/10",
+  "wallMs": 28699,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 27218,
+      "usage": {
+        "input": 10,
+        "output": 2378,
+        "reasoning": 124,
+        "cacheRead": 48164,
+        "cacheWrite": 7106
+      },
+      "tokens": 57658,
+      "costUsd": 0.1140808,
+      "quotaUsed": {
+        "five_hour": 0.55,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 57658,
+  "discardedTokens": 0,
+  "costUsd": 0.1140808,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.54,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.55,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012239-c2d7",
+  "finishedAt": "2026-11-13T19:53:12.674Z"
+}
