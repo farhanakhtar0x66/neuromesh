@@ -1,0 +1,68 @@
+{
+  "id": "3.2",
+  "slug": "t32-heap-refactor",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nPASS orders by expiry date (FIFO)\nPASS handles partial quantities across warehouses\nPASS returns a dict\nSCORE 7/7",
+  "wallMs": 28698,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 27502,
+      "usage": {
+        "input": 6,
+        "output": 3197,
+        "reasoning": 320,
+        "cacheRead": 25951,
+        "cacheWrite": 7850
+      },
+      "tokens": 37004,
+      "costUsd": 0.06597710000000001,
+      "quotaUsed": {
+        "five_hour": 0.7,
+        "seven_day": 0.6
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 37004,
+  "discardedTokens": 0,
+  "costUsd": 0.06597710000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.69,
+      "seven_day": 0.6
+    },
+    "after": {
+      "five_hour": 0.7,
+      "seven_day": 0.6
+    }
+  },
+  "runId": "20261114-014554-03e9",
+  "finishedAt": "2026-11-13T20:16:26.324Z"
+}
