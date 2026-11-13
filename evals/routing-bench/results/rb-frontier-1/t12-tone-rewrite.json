@@ -1,0 +1,63 @@
+{
+  "id": "1.2",
+  "slug": "t12-tone-rewrite",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists and is not empty\nPASS 15 to 120 words\nPASS mentions the API keys\nPASS mentions the DevOps ticket\nPASS mentions the blocked build\nPASS drops the irritation\nSCORE 6/6",
+  "wallMs": 12524,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 11610,
+      "usage": {
+        "input": 6,
+        "output": 811,
+        "reasoning": 0,
+        "cacheRead": 24528,
+        "cacheWrite": 4900
+      },
+      "tokens": 30245,
+      "costUsd": 0.060349599999999996,
+      "quotaUsed": {
+        "five_hour": 0.54,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 30245,
+  "discardedTokens": 0,
+  "costUsd": 0.060349599999999996,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.53,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.54,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012152-38f5",
+  "finishedAt": "2026-11-13T19:52:08.850Z"
+}
