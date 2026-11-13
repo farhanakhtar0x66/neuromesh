@@ -1,0 +1,63 @@
+{
+  "id": "5.3",
+  "slug": "t53-impossible-sort",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "cascade 2>3",
+  "expectedPath": "T2(abort)>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 5,
+    "total": 5
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS names the Omega(N log N) comparison-sort lower bound\nPASS says the request is impossible as stated\nPASS does not claim an O(N) comparison sort\nPASS offers a valid alternative (radix/IEEE-754 or O(N log N) in place)\nSCORE 5/5",
+  "wallMs": 52782,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 51602,
+      "usage": {
+        "input": 12,
+        "output": 4206,
+        "reasoning": 523,
+        "cacheRead": 62271,
+        "cacheWrite": 8411
+      },
+      "tokens": 74900,
+      "costUsd": 0.1639102,
+      "quotaUsed": {
+        "five_hour": 0.66,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 74900,
+  "discardedTokens": 0,
+  "costUsd": 0.1639102,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.66,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.66,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-013902-b6e7",
+  "finishedAt": "2026-11-13T20:09:59.471Z"
+}
