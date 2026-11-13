@@ -1,0 +1,68 @@
+{
+  "id": "3.1",
+  "slug": "t31-abort-hook",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 7
+  },
+  "quality": 8.571428571428571,
+  "hiddenOutput": "PASS the hook file exists\nFAIL the hook uses useEffect with a cleanup\nPASS a new AbortController per request\nPASS passes the signal to fetch\nPASS ignores AbortError\nPASS aborts the request on cleanup\nPASS clears the debounce timer\nSCORE 6/7",
+  "wallMs": 78348,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 77829,
+      "usage": {
+        "input": 10,
+        "output": 18179,
+        "reasoning": 8141,
+        "cacheRead": 84333,
+        "cacheWrite": 25857
+      },
+      "tokens": 128379,
+      "costUsd": 0.015105229999999999,
+      "quotaUsed": {
+        "five_hour": 0,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 128379,
+  "discardedTokens": 0,
+  "costUsd": 0.015105229999999999,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-034536-c70d",
+  "finishedAt": "2026-11-13T22:16:58.632Z"
+}
