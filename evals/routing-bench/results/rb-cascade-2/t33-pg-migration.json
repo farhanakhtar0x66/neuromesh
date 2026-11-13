@@ -1,0 +1,68 @@
+{
+  "id": "3.3",
+  "slug": "t33-pg-migration",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS adds the new columns\nPASS new columns nullable (no NOT NULL on add)\nPASS dual-write: trigger or application\nPASS batched backfill\nPASS read switchover phase\nPASS drops the old column last (contract)\nPASS expand-contract named or phased\nPASS keeps the old service version working\nSCORE 9/9",
+  "wallMs": 40142,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 39662,
+      "usage": {
+        "input": 6,
+        "output": 5318,
+        "reasoning": 270,
+        "cacheRead": 25703,
+        "cacheWrite": 10031
+      },
+      "tokens": 41058,
+      "costUsd": 0.09588630000000001,
+      "quotaUsed": {
+        "five_hour": 0.01,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 41058,
+  "discardedTokens": 0,
+  "costUsd": 0.09588630000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.01,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0.01,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-034746-2d71",
+  "finishedAt": "2026-11-13T22:18:29.765Z"
+}
