@@ -27,3 +27,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-13 20:15:49 UTC: 3.2 t32-heap-refactor: reading quota, then running
 - 2026-11-13 20:15:54 UTC: 3.2 route.tier senior
 - 2026-11-13 20:16:26 UTC: 3.2 t32-heap-refactor: applied, quality 10.0/10 (7/7), path senior, 37,004 tokens, est. $0.0660 (API list prices), 0.5 min; quota before five_hour 69%, seven_day 60%, after five_hour 70%, seven_day 60%
+- 2026-11-13 20:16:28 UTC: 3.3 t33-pg-migration: reading quota, then running
+- 2026-11-13 20:16:32 UTC: 3.3 route.tier senior
+- 2026-11-13 20:17:16 UTC: 3.3 t33-pg-migration: applied, quality 10.0/10 (9/9), path senior, 40,067 tokens, est. $0.0890 (API list prices), 0.7 min; quota before five_hour 70%, seven_day 60%, after five_hour 71%, seven_day 60%
