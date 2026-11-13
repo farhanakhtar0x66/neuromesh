@@ -18,3 +18,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-13 20:12:52 UTC: 2.2 t22-standup-table: reading quota, then running
 - 2026-11-13 20:12:56 UTC: 2.2 route.tier senior
 - 2026-11-13 20:13:28 UTC: 2.2 t22-standup-table: applied, quality 10.0/10 (9/9), path senior, 37,429 tokens, est. $0.0911 (API list prices), 0.5 min; quota before five_hour 68%, seven_day 59%, after five_hour 68%, seven_day 60%
+- 2026-11-13 20:13:30 UTC: 2.3 t23-gst-tests: reading quota, then running
+- 2026-11-13 20:13:34 UTC: 2.3 route.tier worker
+- 2026-11-13 20:14:19 UTC: 2.3 t23-gst-tests: applied, quality 8.8/10 (7/8), path worker, 176,873 tokens, est. $0.0084 (API list prices), 0.7 min; quota before five_hour 68%, seven_day 60%, after five_hour 69%, seven_day 60%
