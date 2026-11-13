@@ -1,0 +1,114 @@
+{
+  "id": "4.2",
+  "slug": "t42-edge-dag",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "senior",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (60% senior); past runs give senior a 85% chance"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 9
+  },
+  "quality": 8.88888888888889,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nPASS optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nFAIL no central coordinator\nSCORE 8/9",
+  "wallMs": 139831,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "earlyExit": true,
+      "stop": "error",
+      "durationMs": 5237,
+      "usage": {
+        "input": 2,
+        "cacheRead": 5333,
+        "cacheWrite": 4721,
+        "output": 271,
+        "estimated": true
+      },
+      "tokens": 10327,
+      "costUsd": 0.0221313,
+      "quotaUsed": {
+        "five_hour": 0.72,
+        "seven_day": 0.6
+      },
+      "discarded": true
+    },
+    {
+      "role": "escalation",
+      "kind": "advice",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 26199,
+      "usage": {
+        "input": 4,
+        "output": 2414,
+        "reasoning": 359,
+        "cacheRead": 6805,
+        "cacheWrite": 7578
+      },
+      "tokens": 16801,
+      "costUsd": 0.110281,
+      "quotaUsed": {
+        "five_hour": 0.73,
+        "seven_day": 0.6
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "advised-fix",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 106284,
+      "usage": {
+        "input": 14,
+        "output": 16877,
+        "reasoning": 2157,
+        "cacheRead": 106581,
+        "cacheWrite": 22467
+      },
+      "tokens": 145939,
+      "costUsd": 0.26932409999999996,
+      "quotaUsed": {
+        "five_hour": 0.75,
+        "seven_day": 0.6
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 173067,
+  "discardedTokens": 10327,
+  "costUsd": 0.4017364,
+  "discardedCostUsd": 0.0221313,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.72,
+      "seven_day": 0.6
+    },
+    "after": {
+      "five_hour": 0.75,
+      "seven_day": 0.6
+    }
+  },
+  "runId": "20261114-015003-207c",
+  "finishedAt": "2026-11-13T20:22:27.139Z"
+}
