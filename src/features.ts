@@ -722,6 +722,15 @@ export const FEATURES: Feature[] = [
     what: "Experimental, and only in presets that set \"direct\": true. For a worker's part of a program that has a spec, the worker is run with no tools: its prompt holds the spec, its task and the project's files, and its one answer holds its files. Neuromesh writes them and runs the checks; a failure goes back to it once the same way, and after that the worker gets its tools as before. One model call with a prompt of a few thousand tokens, in place of dozens of calls that each reread the whole conversation. After the owner's earlier research (a tight context and one low-effort answer) and the bookshelf run, where Haiku's agent turns were most of the quota.",
     optional: true,
   },
+  {
+    id: "F78",
+    key: "three-tier",
+    name: "Three tiers by difficulty: cheap workers, a senior tier, the expert",
+    added: "2026-11-13",
+    files: ["src/engine/run.ts (startRung, newTask, planFromSpec)", "src/engine/prompts.ts (specPrompt, parsePlan)", "src/presets/presets.ts (seniorLadder)"],
+    what: "Only in presets that set a seniorLadder. The lead engineer marks each part of the build plan by how hard it is: \"worker\" (routine and fully specified; the cheapest model), \"senior\" (design judgement or many interacting rules; a mid-priced model) or \"expert\" (the hardest logical core; the lead engineer builds it, within the expert budget). The senior rungs sit above the worker rungs on one ladder: a senior part starts on the first senior rung, and a worker stuck on its last rung climbs to the senior rungs before the expert is asked. The spec is also told the preset's task limit, so its plan is not cut off. The owner's idea (2026-11-13): Opus plans and takes what would defeat the others, Sonnet builds the moderately hard parts, Haiku the easy repetitive ones.",
+    optional: false,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

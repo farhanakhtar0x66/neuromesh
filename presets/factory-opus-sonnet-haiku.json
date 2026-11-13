@@ -1,0 +1,42 @@
+{
+  "name": "factory-opus-sonnet-haiku",
+  "description": "Experimental (2026-11-13), three tiers by difficulty (F78). Claude Opus 5.5 writes the spec and the plan and builds only the hardest logical core; Claude Sonnet 5.5 builds the moderately hard parts and reviews the whole program; Claude Haiku 5.5 builds the routine, repetitive parts. A stuck Haiku climbs to Sonnet before Opus is asked.",
+  "mode": "team",
+  "routing": "worker-first",
+  "roles": {
+    "orchestrator": [
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" },
+      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" }
+    ],
+    "escalation": [
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" },
+      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" }
+    ],
+    "briefer": [
+      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium", "tier": "expert" },
+      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" }
+    ],
+    "worker": [
+      { "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }
+    ],
+    "tester": [
+      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" },
+      { "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }
+    ]
+  },
+  "repairs": 2,
+  "maxTasks": 8,
+  "maxParallel": 2,
+  "turnTimeoutMinutes": 30,
+  "expertBudget": 900000,
+  "expertBudgetUsd": 3,
+  "test": "always",
+  "workerLadder": [
+    { "backend": "claude", "model": "claude-haiku-5-5", "effort": "medium" },
+    { "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }
+  ],
+  "seniorLadder": [
+    { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" },
+    { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" }
+  ]
+}

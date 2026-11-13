@@ -122,8 +122,12 @@ export interface PlannedTask {
   brief: string;
   owned: string[];
   dependsOn: string[];
-  /** "expert" for work the orchestrator judged too hard to hand out. */
-  owner: "worker" | "expert";
+  /**
+   * "expert" for work the orchestrator judged too hard to hand out.
+   * [F78 three-tier] "senior" for a moderately hard part: it starts on the
+   * first senior rung of the ladder (a mid-priced model) instead of the cheapest.
+   */
+  owner: "worker" | "senior" | "expert";
 }
 
 export interface Plan {
@@ -244,6 +248,8 @@ export interface RunState {
   test?: "always" | "no-checks";
   /** Worker rungs, cheapest first: a stuck worker climbs before the expert is asked. */
   workerLadder?: RoleConfig[];
+  /** [F78 three-tier] The first senior rung of workerLadder (the preset's seniorLadder follows its worker rungs). */
+  seniorRung?: number;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

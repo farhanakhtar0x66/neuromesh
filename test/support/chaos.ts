@@ -157,6 +157,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const pricedExpert = d.chance(0.5);
   const EXPERT: RoleConfig = { backend: "fake", model: pricedExpert ? "claude-opus-5-5" : "fake-expert", tier: "expert" };
   const rungs = d.int(0, 3);
+  const tierDice = dice(seed + 9_999_991);
+  const seniorRungs = tierDice.chance(0.35) ? tierDice.int(1, 2) : 0;
   const ladder: RoleConfig[] = Array.from({ length: rungs }, (_, i) => ({ backend: "fake", model: `worker-${i + 1}`, tier: "worker" as const }));
   const roles: RoleChain = { worker: d.chance(0.15) ? [{ backend: "fake", model: "worker-a", tier: "worker" }, { backend: "fake", model: "worker-b", tier: "worker" }] : [ladder.at(-1) ?? { backend: "fake", model: "worker-1", tier: "worker" }] };
   if (d.chance(0.6)) roles.tester = [{ backend: "fake", model: "fake-tester", tier: "worker" }];
@@ -182,6 +184,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     advise: d.chance(0.6),
     test: d.pick(["always", "always", "no-checks"] as const),
     workerLadder: rungs > 0 ? ladder : undefined,
+    // [F78 three-tier] Senior rungs in a third of the runs (their own dice, so older seeds keep their scenario).
+    seniorLadder: seniorRungs > 0 ? Array.from({ length: seniorRungs }, (_, i) => ({ backend: "fake", model: `senior-${i + 1}`, tier: "worker" as const })) : undefined,
     expertBudgetUsd: d.weighted({ none: 4, tiny: 2, small: 3, large: 2 }) === "none" ? undefined : d.pick([0.05, 0.3, 0.6, 3]),
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
@@ -206,7 +210,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calm = trouble === "none" && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
@@ -231,7 +235,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         brief: shape === "noBrief" && i === 0 ? "" : `Write ${owned.join(", ")}`,
         owned: d.chance(0.1) ? [] : owned,
         depends_on: i > 0 && d.chance(0.6) ? [`${idBase}${d.int(1, i)}`] : [],
-        owner: d.chance(0.2) ? "expert" : "worker",
+        owner: d.chance(0.2) ? "expert" : seniorRungs > 0 && tierDice.chance(0.4) ? "senior" : "worker",
       };
     });
     if (shape === "cycle" && tasks.length > 1) {

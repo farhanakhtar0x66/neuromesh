@@ -50,6 +50,12 @@ export interface Preset {
    */
   workerLadder?: RoleConfig[];
   /**
+   * [F78 three-tier] Mid-priced rungs above the worker rungs. The lead engineer
+   * marks a moderately hard part "senior" and it starts here; a worker stuck on
+   * its last rung climbs here before the expert is asked.
+   */
+  seniorLadder?: RoleConfig[];
+  /**
    * [F77 direct-build] Workers write a planned part in one answer with no
    * tools; Neuromesh writes the files and runs the checks. Experimental.
    */
@@ -114,6 +120,7 @@ export function validatePreset(raw: unknown, file: string): Preset {
     expertBudgetUsd: typeof p.expertBudgetUsd === "number" && p.expertBudgetUsd > 0 ? p.expertBudgetUsd : undefined,
     test: p.test === "no-checks" ? "no-checks" : "always",
     workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
+    seniorLadder: p.seniorLadder === undefined ? undefined : chain(p.seniorLadder, "worker", file),
     direct: p.direct === true ? true : undefined,
   };
 }

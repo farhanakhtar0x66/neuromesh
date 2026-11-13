@@ -70,7 +70,7 @@ export const SPEC_SCHEMA = {
           brief: { type: "string" },
           owned: { type: "array", items: { type: "string" } },
           depends_on: { type: "array", items: { type: "string" } },
-          owner: { type: "string", enum: ["worker", "expert"] },
+          owner: { type: "string", enum: ["worker", "senior", "expert"] },
         },
         required: ["id", "title", "brief", "owned", "depends_on", "owner"],
         additionalProperties: false,
@@ -95,7 +95,7 @@ export const PLAN_SCHEMA = {
           brief: { type: "string" },
           owned: { type: "array", items: { type: "string" } },
           depends_on: { type: "array", items: { type: "string" } },
-          owner: { type: "string", enum: ["worker", "expert"] },
+          owner: { type: "string", enum: ["worker", "senior", "expert"] },
         },
         required: ["id", "title", "brief", "owned", "depends_on", "owner"],
         additionalProperties: false,
@@ -187,7 +187,13 @@ function isWholeRequest(state: RunState, task: TaskState): boolean {
 }
 
 /** A cheap model turns a request too short to build from into a product spec. */
-export function specPrompt(request: string, brief?: string, facts?: string[]): string {
+export function specPrompt(request: string, brief?: string, facts?: string[], team: { tiers?: boolean; maxTasks?: number } = {}): string {
+  // The plan is cut off above the preset's task limit, so the lead engineer is told the limit.
+  const most = Math.max(2, Math.min(team.maxTasks ?? 5, team.tiers ? 12 : 5));
+  // [F78 three-tier]
+  const owners = team.tiers
+    ? `Three kinds of developer build it, and you choose one per task by how hard the task is. "worker": the cheapest and fastest; give it what is routine, repetitive and fully specified by your brief (command-line glue, reading and writing files, formatting, simple data handling, a long list of similar cases, tests from stated examples). "senior": about three times the price; give it a part that needs design judgement or has many rules that interact (a parser, state handling, a module with many edge cases behind a clear interface). "expert": you, about five times the price of a worker and counted against a budget; take only the hardest logical core, the part the others would likely get wrong even with a good brief and that everything else depends on (a tricky algorithm, subtle semantics), and keep it small with a narrow interface. Most programs need no expert task, and many need no senior task; never give a harder kind than the task needs.`
+    : `Mark a task "expert" only if it needs reasoning a cheap model would likely get wrong (a tricky algorithm, subtle concurrency); you will build that one yourself.`;
   // [F63 scout-facts] Checked on this machine before you write, so the spec does not guess.
   const checked = facts && facts.length > 0 ? `\nFacts checked on this machine and against the real data just now (trust these over memory; design for them):\n${facts.map((f) => `- ${f}`).join("\n")}\n` : "";
   // [F54 work-env]
@@ -209,7 +215,7 @@ Give your answer in the required JSON format:
 - out_of_scope: what not to build, so that it stays one sitting of work (accounts, network features, settings nobody asked for).
 - design: ${isOn("spec-cap") ? "5 to 8" : "6 to 12"} points on how to build it: the files or modules and what each one does, the data model, how input flows to the screen or output, and the hard parts with exactly how to handle them (the mistakes a less experienced developer would make here).
 - acceptance: ${isOn("acceptance-runs") ? "2 to 4 real uses of the finished program, each a shell command run from the project folder (relative paths only, no installs, under 2 minutes, no keyboard input) and what must be true of its result: its output, or the files it writes (name them). Use the real thing the program is for (a real website, a real file), not a test fixture: these catch what tests on made-up samples miss. A terminal program that needs a keyboard gets an empty list." : "an empty list."}
-- tasks: ${isOn("spec-plan") ? `the build order. Cheap, fast developers build it, each in a fresh session that sees the spec, your task brief and the files so far; a session that has to hold more than about 300 lines of new code and its tests gets slow and expensive. So split the program into 2 to 5 tasks of that size, each owning its own files (its module and that module's tests; the README and the entry point in the last task), with depends_on for tasks that need another's code. Each brief names the exact functions, signatures and data shapes others rely on, and how to tell it is done. Mark a task "expert" only if it needs reasoning a cheap model would likely get wrong (a tricky algorithm, subtle concurrency); you will build that one yourself. A program under about 300 lines in all is one task.` : "an empty list."}
+- tasks: ${isOn("spec-plan") ? `the build order. Cheap, fast developers build it, each in a fresh session that sees the spec, your task brief and the files so far; a session that has to hold more than about 300 lines of new code and its tests gets slow and expensive. So split the program into 2 to ${most} tasks of that size, each owning its own files (its module and that module's tests; the README and the entry point in the last task), with depends_on for tasks that need another's code. Each brief names the exact functions, signatures and data shapes others rely on, and how to tell it is done. ${owners} A program under about 300 lines in all is one task.` : "an empty list."}
 
 Rules:
 - Do not contradict the request, and do not choose the programming language unless the request does.
@@ -274,7 +280,7 @@ export function parseFacts(result: AgentResult): string[] {
 
 /** [F68 split-ask] A worker may hand a task that is too big or too hard back to the lead engineer, once. */
 function splitNote(task: TaskState): string {
-  if (!isOn("split-ask") || task.owner !== "worker" || task.fromSplit || task.splitAsked || task.escalated || task.noSplit) return "";
+  if (!isOn("split-ask") || task.owner === "expert" || task.fromSplit || task.splitAsked || task.escalated || task.noSplit) return "";
   return `\n\nIf this task turns out much bigger than one short sitting (well over about 300 lines of new code and its tests), or needs reasoning you are not confident you can get right (a tricky algorithm, subtle concurrency), do not push on: stop early and answer with status "split", saying in notes what makes it big or hard. The lead engineer then divides it, or builds the hard part, and hands the rest back. Keep what you wrote; it is kept.`;
 }
 
@@ -743,7 +749,7 @@ export function parseVerdict(result: AgentResult): Verdict | undefined {
 }
 
 /** Check a plan from the orchestrator and turn it into tasks. Throws with a reason the planner can act on. */
-export function parsePlan(result: AgentResult, maxTasks: number): Plan {
+export function parsePlan(result: AgentResult, maxTasks: number, tiers = false): Plan {
   const raw = (result.structured ?? parseStructured(result.finalText)) as
     | { summary?: unknown; tasks?: { id?: unknown; title?: unknown; brief?: unknown; owned?: unknown; depends_on?: unknown; owner?: unknown }[] }
     | undefined;
@@ -758,7 +764,8 @@ export function parsePlan(result: AgentResult, maxTasks: number): Plan {
       brief: t.brief.trim(),
       owned: Array.isArray(t.owned) ? t.owned.filter((p): p is string => typeof p === "string" && p.trim() !== "").map((p) => p.trim()) : [],
       dependsOn: Array.isArray(t.depends_on) ? t.depends_on.filter((d): d is string => typeof d === "string") : [],
-      owner: t.owner === "expert" ? "expert" : "worker",
+      // [F78 three-tier] Without a senior tier, a "senior" part is a worker's.
+      owner: t.owner === "expert" ? "expert" : t.owner === "senior" && tiers ? "senior" : "worker",
     };
   });
   const ids = new Set(tasks.map((t) => t.id));

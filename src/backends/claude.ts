@@ -78,6 +78,9 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
       const type = str(event.type);
       if (type === "system" && event.subtype === "thinking_tokens") {
         thinking += num(event.estimated_tokens_delta) ?? 0;
+        // A model can think for many minutes before its first message; the
+        // engine's budget and a cut turn's kept usage must see that as it happens.
+        reportUsage();
         return;
       }
       if (type === "system" && event.subtype === "init") {

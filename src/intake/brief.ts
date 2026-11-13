@@ -58,7 +58,7 @@ export interface Spec {
    * worker session each, in build order. Raw from the spec writer; the engine
    * checks it with parsePlan.
    */
-  tasks?: { id: string; title: string; brief: string; owned: string[]; depends_on: string[]; owner: "worker" | "expert" }[];
+  tasks?: { id: string; title: string; brief: string; owned: string[]; depends_on: string[]; owner: "worker" | "senior" | "expert" }[];
 }
 
 export interface Brief {

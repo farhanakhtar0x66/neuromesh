@@ -233,6 +233,9 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   let brief: Brief | undefined;
   resetFeatures();
   disable(preset.disable);
+  // [F78 three-tier] The preset's senior rungs follow its worker rungs on one ladder.
+  const workerRungs = preset.workerLadder ?? roles.worker ?? [];
+  const senior = isOn("three-tier") && Object.keys(override).length === 0 && workerRungs.length > 0 && (preset.seniorLadder?.length ?? 0) > 0 ? preset.seniorLadder : undefined;
   const featureErrors: NonNullable<RunState["featureErrors"]> = [];
   // [F01 brief-engine] Optional: if it fails, the run goes on with the request as typed.
   if (preset.brief && isOn("brief-engine")) {
@@ -314,7 +317,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // An explicitly chosen worker model replaces the ladder.
-    workerLadder: Object.keys(override).length > 0 ? undefined : preset.workerLadder,
+    workerLadder: Object.keys(override).length > 0 ? undefined : senior ? [...workerRungs, ...senior] : preset.workerLadder,
+    seniorRung: senior ? workerRungs.length : undefined,
     direct: preset.direct,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: follow?.base ?? repo.head,
@@ -398,10 +402,16 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
   return drive(state, ctx, log);
 }
 
+/** [F78 three-tier] A senior part starts on the first senior rung; any other part on the cheapest. */
+function startRung(state: RunState, owner: PlannedTask["owner"]): number | undefined {
+  return owner === "senior" && state.seniorRung !== undefined ? state.seniorRung : undefined;
+}
+
 function newTask(state: RunState, planned: PlannedTask): TaskState {
   const dir = join(state.dir, "tasks", planned.id);
-  // The brief engine may start a task on the strongest worker rung.
-  const rung = state.brief?.staffing.rung === "top" && state.workerLadder ? state.workerLadder.length - 1 : undefined;
+  // The brief engine may start a task on the strongest worker rung (below the senior rungs).
+  const top = state.workerLadder ? (state.seniorRung ?? state.workerLadder.length) - 1 : -1;
+  const rung = startRung(state, planned.owner) ?? (state.brief?.staffing.rung === "top" && top >= 0 ? top : undefined);
   return {
     rung,
     id: planned.id,
@@ -1013,7 +1023,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
     kind: "spec",
     round: 0,
     cwd: state.worktree,
-    prompt: specPrompt(brief.request, renderBrief(brief), state.facts),
+    prompt: specPrompt(brief.request, renderBrief(brief), state.facts, { tiers: state.seniorRung !== undefined, maxTasks: state.maxTasks }),
     access: "read-only",
     schema: SPEC_SCHEMA,
   });
@@ -1034,14 +1044,22 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
 }
 
 /** [F65 spec-plan] The spec writer split the build: those tasks are the plan, with no planning turn. */
+/**
+ * The most tasks a spec's build plan may have. The spec writer is asked to keep
+ * to the preset's task limit, but a plan that is already paid for is not thrown
+ * away for going a task or two over it (the first hard-task run lost a good
+ * five-task plan to a limit of four, and Haiku then built everything alone).
+ */
+const SPEC_PLAN_MOST = 12;
+
 function planFromSpec(run: RunCtx, spec: Spec, config: RoleConfig | undefined): void {
   const { state, log } = run;
   if (!isOn("spec-plan") || (spec.tasks?.length ?? 0) < 2) return;
   optional(run, "spec-plan", undefined, () => {
-    const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, state.maxTasks);
+    const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, Math.max(state.maxTasks, SPEC_PLAN_MOST), state.seniorRung !== undefined);
     state.plan = plan;
-    // Small tasks start on the first worker rung; the ladder still climbs when one is stuck.
-    state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: undefined }));
+    // Small tasks start on the first worker rung (a senior part on the first senior rung); the ladder still climbs when one is stuck.
+    state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: startRung(state, t.owner) }));
     state.mode = "team";
     state.maxParallel = state.parallelLimit ?? 1;
     state.planFromSpec = true;
@@ -1182,7 +1200,7 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
     if (result.stop !== "done") return stopFor(result, "orchestrator");
     state.planSession = result.sessionId;
     try {
-      const plan = parsePlan(result, state.maxTasks);
+      const plan = parsePlan(result, state.maxTasks, state.seniorRung !== undefined);
       state.plan = plan;
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
@@ -1950,7 +1968,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
 
 /** [F68 split-ask] A worker task the expert may still divide. */
 function canSplit(state: RunState, task: TaskState): boolean {
-  return isOn("split-ask") && task.owner === "worker" && !task.fromSplit && !task.splitAsked && !task.escalated && roleChain(state, "orchestrator").length > 0 && (isOn("budget-handoff") ? expertCanTake(state) : budgetLeft(state));
+  return isOn("split-ask") && task.owner !== "expert" && !task.fromSplit && !task.splitAsked && !task.escalated && roleChain(state, "orchestrator").length > 0 && (isOn("budget-handoff") ? expertCanTake(state) : budgetLeft(state));
 }
 
 /**
@@ -2009,8 +2027,9 @@ async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" |
   removeWorktree(state.repo, task.worktree, task.branch);
   const id = (sub: string): string => `${task.id}.${sub}`;
   const parts = plan.tasks.map((t) => ({
-    ...newTask(state, { ...t, id: id(t.id), dependsOn: [...t.dependsOn.map(id), ...task.dependsOn] }),
-    rung: undefined,
+    // [F78 three-tier] The parts of a senior task stay with the senior tier.
+    ...newTask(state, { ...t, id: id(t.id), dependsOn: [...t.dependsOn.map(id), ...task.dependsOn], owner: t.owner === "worker" && task.owner === "senior" ? "senior" : t.owner }),
+    rung: startRung(state, task.owner),
     fromSplit: true,
   }));
   for (const other of state.tasks) {
