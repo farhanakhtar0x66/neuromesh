@@ -1,0 +1,69 @@
+{
+  "id": "1.1",
+  "slug": "t11-pdf-table-json",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (100 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.json exists\nPASS parses as JSON\nPASS a list of exactly 3 objects\nPASS keys are exactly name, role, salary_inr\nPASS salary_inr values are integers\nPASS salaries are 1850000, 1100000, 360000\nPASS names are Rahul Sharma, Priya Patel, Aman Verma\nSCORE 7/7",
+  "wallMs": 33423,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 32810,
+      "usage": {
+        "input": 2,
+        "output": 7970,
+        "reasoning": 4307,
+        "cacheRead": 0,
+        "cacheWrite": 4412
+      },
+      "tokens": 12384,
+      "costUsd": 0.004867600000000001,
+      "quotaUsed": {
+        "five_hour": 0,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 12384,
+  "discardedTokens": 0,
+  "costUsd": 0.004867600000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-034138-0c57",
+  "finishedAt": "2026-11-13T22:12:15.133Z"
+}
