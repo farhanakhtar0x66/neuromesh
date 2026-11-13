@@ -1,0 +1,68 @@
+{
+  "id": "1.2",
+  "slug": "t12-tone-rewrite",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists and is not empty\nPASS 15 to 120 words\nPASS mentions the API keys\nPASS mentions the DevOps ticket\nPASS mentions the blocked build\nPASS drops the irritation\nSCORE 6/6",
+  "wallMs": 35583,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 34372,
+      "usage": {
+        "input": 10,
+        "output": 7578,
+        "reasoning": 2796,
+        "cacheRead": 64507,
+        "cacheWrite": 14338
+      },
+      "tokens": 86433,
+      "costUsd": 0.00730267,
+      "quotaUsed": {
+        "five_hour": 0.67,
+        "seven_day": 0.59
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 86433,
+  "discardedTokens": 0,
+  "costUsd": 0.00730267,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.67,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.67,
+      "seven_day": 0.59
+    }
+  },
+  "runId": "20261114-014047-7973",
+  "finishedAt": "2026-11-13T20:11:26.888Z"
+}
