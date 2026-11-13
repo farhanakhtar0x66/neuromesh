@@ -1,0 +1,68 @@
+{
+  "id": "5.2",
+  "slug": "t52-jargon-log-csv",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0(tail intent)>T1",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (67% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.csv exists\nPASS header is timestamp,pid\nPASS two columns on every row\nPASS row 14209.881045,412\nPASS row 14209.881102,1984\nPASS row 14209.881290,1984\nPASS row 14210.004112,882\nPASS row 14210.119402,519\nPASS no wrong rows\nPASS no duplicate rows\nSCORE 10/10",
+  "wallMs": 24486,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 22717,
+      "usage": {
+        "input": 6,
+        "output": 2490,
+        "reasoning": 233,
+        "cacheRead": 26546,
+        "cacheWrite": 7641
+      },
+      "tokens": 36683,
+      "costUsd": 0.0581306,
+      "quotaUsed": {
+        "five_hour": 0.76,
+        "seven_day": 0.61
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 36683,
+  "discardedTokens": 0,
+  "costUsd": 0.0581306,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.76,
+      "seven_day": 0.61
+    },
+    "after": {
+      "five_hour": 0.77,
+      "seven_day": 0.61
+    }
+  },
+  "runId": "20261114-015449-4139",
+  "finishedAt": "2026-11-13T20:25:17.453Z"
+}
