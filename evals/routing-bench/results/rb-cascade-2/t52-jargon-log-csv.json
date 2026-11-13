@@ -1,0 +1,69 @@
+{
+  "id": "5.2",
+  "slug": "t52-jargon-log-csv",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "grunt",
+  "expectedPath": "T0(tail intent)>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (581 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.csv exists\nPASS header is timestamp,pid\nPASS two columns on every row\nPASS row 14209.881045,412\nPASS row 14209.881102,1984\nPASS row 14209.881290,1984\nPASS row 14210.004112,882\nPASS row 14210.119402,519\nPASS no wrong rows\nPASS no duplicate rows\nSCORE 10/10",
+  "wallMs": 9859,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 9264,
+      "usage": {
+        "input": 2,
+        "output": 1638,
+        "reasoning": 1254,
+        "cacheRead": 629,
+        "cacheWrite": 3998
+      },
+      "tokens": 6267,
+      "costUsd": 0.00162509,
+      "quotaUsed": {
+        "five_hour": 0.03,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 6267,
+  "discardedTokens": 0,
+  "costUsd": 0.00162509,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.03,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0.03,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-035451-c859",
+  "finishedAt": "2026-11-13T22:25:05.335Z"
+}
