@@ -51,7 +51,7 @@ export function claudeArgs(request: AgentRequest): string[] {
   return args;
 }
 
-export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage">): StreamParser {
+export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage" | "onText">): StreamParser {
   const run: ParsedRun = { finalText: "", usage: {} };
   let quotaBlocked = false;
   // [F60 no-rebuild] Usage so far in the turn. Input and cache counts come per
@@ -110,6 +110,8 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
           if (b?.type === "text" && str(b.text)) {
             writtenChars += str(b.text)!.length;
             request.onActivity?.({ kind: "text", summary: short(b.text, 160) });
+            // [F83 early-exit]
+            request.onText?.(str(b.text)!);
           } else if (b?.type === "tool_use") {
             writtenChars += JSON.stringify(b.input ?? "").length;
             request.onActivity?.({ kind: "tool", summary: `${str(b.name) ?? "tool"} ${short(b.input, 100)}` });

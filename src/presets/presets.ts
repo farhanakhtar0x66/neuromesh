@@ -60,6 +60,27 @@ export interface Preset {
    * tools; Neuromesh writes the files and runs the checks. Experimental.
    */
   direct?: boolean;
+  /**
+   * [F82 grunt-tier] The cheapest rungs, below the worker rungs: mechanical
+   * work checked only by deterministic checks. A grunt that fails them is not
+   * repaired; the task goes straight to the first worker rung.
+   */
+  gruntLadder?: RoleConfig[];
+  /** The routing cascade (F80 to F88). Present means on; each part can still be switched off by its feature key. */
+  cascade?: CascadeConfig;
+}
+
+export interface CascadeConfig {
+  /** [F83 early-exit] Confidence thresholds per tier (the architecture's tau_2 and tau_3). */
+  thresholds?: { worker?: number; senior?: number };
+  /** [F85 blueprint-expert] The expert plans and writes the hardest part's design, and builds nothing. Default true. */
+  blueprint?: boolean;
+  /** [F86 escalation-breaker] Most tasks per run that may go to the expert. Default 2. */
+  maxEscalations?: number;
+  /** [F88 shadow-eval] Share of cheap-tier passes kept for grading. Default 0.01. */
+  shadowRate?: number;
+  /** [F81 route-calibration] The quality bar for stage 0C. Default 0.8. */
+  alpha?: number;
 }
 
 export const DEFAULT_PRESET = "factory-opus-luna";
@@ -122,6 +143,29 @@ export function validatePreset(raw: unknown, file: string): Preset {
     workerLadder: p.workerLadder === undefined ? undefined : chain(p.workerLadder, "worker", file),
     seniorLadder: p.seniorLadder === undefined ? undefined : chain(p.seniorLadder, "worker", file),
     direct: p.direct === true ? true : undefined,
+    gruntLadder: p.gruntLadder === undefined ? undefined : chain(p.gruntLadder, "worker", file),
+    cascade: cascadeConfig(p.cascade, file),
+  };
+}
+
+function cascadeConfig(raw: unknown, file: string): CascadeConfig | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: cascade must be an object`);
+  const c = raw as Record<string, unknown>;
+  const share = (v: unknown, name: string): number | undefined => {
+    if (v === undefined) return undefined;
+    if (typeof v !== "number" || !(v >= 0 && v <= 1)) throw new Error(`Preset ${file}: cascade ${name} must be between 0 and 1`);
+    return v;
+  };
+  const t = (c.thresholds ?? {}) as Record<string, unknown>;
+  const max = c.maxEscalations;
+  if (max !== undefined && (typeof max !== "number" || !Number.isInteger(max) || max < 0)) throw new Error(`Preset ${file}: cascade maxEscalations must be a whole number`);
+  return {
+    thresholds: { worker: share(t.worker, "thresholds.worker"), senior: share(t.senior, "thresholds.senior") },
+    blueprint: c.blueprint === undefined ? undefined : c.blueprint === true,
+    maxEscalations: max as number | undefined,
+    shadowRate: share(c.shadowRate, "shadowRate"),
+    alpha: share(c.alpha, "alpha"),
   };
 }
 

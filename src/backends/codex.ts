@@ -26,7 +26,7 @@ export function codexArgs(request: AgentRequest, schemaPath?: string): string[] 
   return args;
 }
 
-export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSchema">): StreamParser {
+export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSchema" | "onText">): StreamParser {
   const run: ParsedRun = { finalText: "", usage: {} };
   let lastError: string | undefined;
   let completed = false;
@@ -45,6 +45,8 @@ export function codexParser(request: Pick<AgentRequest, "onActivity" | "outputSc
         if (item.type === "agent_message" && type === "item.completed") {
           run.finalText = str(item.text) ?? run.finalText;
           request.onActivity?.({ kind: "text", summary: short(item.text, 160) });
+          // [F83 early-exit]
+          if (str(item.text)) request.onText?.(str(item.text)!);
         } else if (item.type === "command_execution" && type === "item.started") {
           request.onActivity?.({ kind: "tool", summary: `$ ${short(item.command, 110)}` });
         } else if (item.type === "file_change" && type === "item.completed") {

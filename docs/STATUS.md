@@ -258,6 +258,16 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     limit was thrown away, thinking was not counted until the next message, and
     review findings went to the cheapest worker whatever file they were in
     (F79). Fable alone has not finished a run yet. See `docs/18-hard-task.md`.
+27. **The routing cascade (2026-11-14, branch `neuromesh-routing`).** The
+    owner's five-tier routing architecture, mapped onto the engine: Tier 0
+    picks the starting tier with no model call (F80, F81); a grunt tier gated
+    only by checks (F82); worker and senior turns that judge the task first and
+    are stopped at once when it is beyond them (F83); the expert advises from
+    the stuck developer's own diagnosis (F84), writes the blueprint and builds
+    nothing (F85), and sees at most two tasks per run (F86); the run's measured
+    tier mix and overhead (F87); and a shadow sample graded on request (F88).
+    Preset `cascade`. Fake backend and fault harness only, no live run yet. See
+    `docs/19-cascade.md`.
 
 ## Next steps
 

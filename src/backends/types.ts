@@ -96,6 +96,11 @@ export interface AgentRequest {
   onUsage?: (usage: Usage) => void;
   /** Display only. Never used to make decisions. */
   onActivity?: (activity: Activity) => void;
+  /**
+   * [F83 early-exit] Each text message the agent writes, in full, as it
+   * arrives. The engine reads the first one for the cascade's preamble.
+   */
+  onText?: (text: string) => void;
   /** Called with the tool's process id (also its process group) once started. */
   onSpawn?: (pid: number) => void;
 }

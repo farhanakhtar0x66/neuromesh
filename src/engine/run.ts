@@ -60,6 +60,9 @@ import {
   climbPrompt,
   advisedFixPrompt,
   advisePrompt,
+  DIAGNOSE_SCHEMA,
+  diagnosePrompt,
+  parseDiagnosis,
   continuePrompt,
   freshAdvisedFixPrompt,
   parseAdvice,
@@ -96,7 +99,14 @@ import {
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import type { AttemptKind, AttemptRecord, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, saveCalibration } from "../routing/calibration.ts";
+import { DEFAULT_THRESHOLDS, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
+import type { Preamble } from "../routing/preamble.ts";
+import { routeTier } from "../routing/router.ts";
+import type { CascadeTier } from "../routing/router.ts";
+import { DEFAULT_SHADOW_RATE, maybeEnqueue } from "../routing/shadow.ts";
+import { describeSummary, routingSummary } from "../routing/summary.ts";
 
 export interface EngineContext {
   home: string;
@@ -198,6 +208,8 @@ const ENV_REPAIRS = 2;
 const SESSION_CAP = 90_000;
 /** [F60 no-rebuild] Why an expert turn was stopped part way. */
 const BUDGET_CUT = "stopped: the expert budget was reached during this turn";
+/** [F83 early-exit] The detail of a turn the early-exit gate stopped. */
+const EARLY_EXIT = "stopped: the developer judged the task beyond it";
 /** A tool that prints nothing for this long has stalled; the turn is stopped and retried once. */
 const IDLE_MS = 10 * 60_000;
 const MAX_CONFLICTS = 2;
@@ -236,6 +248,9 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   // [F78 three-tier] The preset's senior rungs follow its worker rungs on one ladder.
   const workerRungs = preset.workerLadder ?? roles.worker ?? [];
   const senior = isOn("three-tier") && Object.keys(override).length === 0 && workerRungs.length > 0 && (preset.seniorLadder?.length ?? 0) > 0 ? preset.seniorLadder : undefined;
+  // [F82 grunt-tier] The preset's grunt rungs come before its worker rungs, on the same ladder.
+  const grunt = isOn("grunt-tier") && Object.keys(override).length === 0 && (preset.gruntLadder?.length ?? 0) > 0 ? preset.gruntLadder! : [];
+  const upper = senior ? [...workerRungs, ...senior] : (preset.workerLadder ?? (grunt.length > 0 && workerRungs.length > 0 ? workerRungs : undefined));
   const featureErrors: NonNullable<RunState["featureErrors"]> = [];
   // [F01 brief-engine] Optional: if it fails, the run goes on with the request as typed.
   if (preset.brief && isOn("brief-engine")) {
@@ -281,6 +296,42 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     }
   }
   if (brief && options.spec) brief.spec = options.spec;
+  // The routing cascade (F80 to F88): only for presets that ask for it, and only with the preset's own ladder.
+  let cascade: CascadeState | undefined;
+  if (preset.cascade && Object.keys(override).length === 0) {
+    const c = preset.cascade;
+    cascade = {
+      thresholds: { worker: c.thresholds?.worker ?? DEFAULT_THRESHOLDS.worker, senior: c.thresholds?.senior ?? DEFAULT_THRESHOLDS.senior },
+      blueprint: c.blueprint ?? true,
+      maxEscalations: c.maxEscalations ?? 2,
+      shadowRate: c.shadowRate ?? DEFAULT_SHADOW_RATE,
+      alpha: c.alpha ?? DEFAULT_ALPHA,
+    };
+    // [F80 tier-router] Tier 0: which tier the request starts on, with no model call.
+    if (brief && isOn("tier-router")) {
+      try {
+        const b = brief;
+        const table = isOn("route-calibration") ? calibrated(loadCalibration(ctx.home), cascade.alpha) : undefined;
+        cascade.route = inFeature("tier-router", () =>
+          routeTier(
+            {
+              request: b.request,
+              kind: b.kind,
+              totalWords: [b.request, ...b.attached.map((a) => a.text)].join(" ").split(/\s+/).filter(Boolean).length,
+              namedFiles: new Set(b.request.match(/[\w./-]+\.(?:[jt]sx?|py|rs|go|md|json|toml|ya?ml|css|html)\b/g) ?? []).size,
+            },
+            table,
+          ),
+        );
+        b.staffing.reasons.push(`Tier 0: ${cascade.route.tier} (${cascade.route.reasons.join("; ")})`);
+        // A request that needs the expert from the start gets the sandwich: the expert plans and blueprints, the tiers below build.
+        if (cascade.route.tier === "expert" && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0) b.staffing.plan = true;
+      } catch (error) {
+        featureErrors.push(failure(error, "tier-router"));
+        disable("tier-router");
+      }
+    }
+  }
   if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
     mode = brief.staffing.plan ? "team" : "solo";
@@ -317,8 +368,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // An explicitly chosen worker model replaces the ladder.
-    workerLadder: Object.keys(override).length > 0 ? undefined : senior ? [...workerRungs, ...senior] : preset.workerLadder,
-    seniorRung: senior ? workerRungs.length : undefined,
+    workerLadder: Object.keys(override).length > 0 ? undefined : upper ? [...grunt, ...upper] : undefined,
+    seniorRung: senior ? grunt.length + workerRungs.length : undefined,
+    workerRung: grunt.length > 0 && upper ? grunt.length : undefined,
+    cascade,
     direct: preset.direct,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: follow?.base ?? repo.head,
@@ -351,6 +404,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     prompt: options.prompt,
   });
   for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
+  if (cascade?.route) log.emit("route.tier", { feature: "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons });
   if (brief) {
     log.emit("brief", { kind: brief.kind, surface: brief.surface, attached: brief.attached.map((a) => a.path), standards: brief.standards.length, staffing: brief.staffing });
   } else if (why) {
@@ -404,15 +458,50 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
 
 /** [F78 three-tier] A senior part starts on the first senior rung; any other part on the cheapest. */
 function startRung(state: RunState, owner: PlannedTask["owner"]): number | undefined {
-  return owner === "senior" && state.seniorRung !== undefined ? state.seniorRung : undefined;
+  if (owner === "senior" && state.seniorRung !== undefined) return state.seniorRung;
+  // [F82 grunt-tier] With grunt rungs below them, worker parts start on the first worker rung; grunt parts on the cheapest.
+  if (owner === "worker" && state.workerRung !== undefined) return state.workerRung;
+  return undefined;
+}
+
+/** [F82 grunt-tier] The cascade tier a rung of the ladder belongs to. */
+export function tierAtRung(state: RunState, rung: number | undefined): CascadeTier {
+  const r = rung ?? 0;
+  if (state.workerRung !== undefined && r < state.workerRung) return "grunt";
+  if (state.seniorRung !== undefined && r >= state.seniorRung) return "senior";
+  return "worker";
+}
+
+/** [F83 early-exit] The first rung of the next tier up, or nothing at the top of the ladder. */
+function nextTierRung(state: RunState, rung: number | undefined): number | undefined {
+  const tier = tierAtRung(state, rung);
+  if (tier === "grunt") return state.workerRung;
+  if (tier === "worker") return state.seniorRung;
+  return undefined;
+}
+
+/** [F80 tier-router] The first rung of the tier Tier 0 chose. An expert request that is not planned starts on the strongest rung. */
+function rungForTier(state: RunState, tier: CascadeTier): number {
+  const top = (state.workerLadder?.length ?? 1) - 1;
+  if (tier === "grunt") return 0;
+  if (tier === "worker") return state.workerRung ?? 0;
+  return state.seniorRung ?? top;
+}
+
+/** The tier a task is on now: the expert's once it took over or owned the part. */
+function taskTier(state: RunState, task: TaskState): CascadeTier {
+  return task.owner === "expert" || task.escalated ? "expert" : tierAtRung(state, task.rung);
 }
 
 function newTask(state: RunState, planned: PlannedTask): TaskState {
   const dir = join(state.dir, "tasks", planned.id);
   // The brief engine may start a task on the strongest worker rung (below the senior rungs).
   const top = state.workerLadder ? (state.seniorRung ?? state.workerLadder.length) - 1 : -1;
-  const rung = startRung(state, planned.owner) ?? (state.brief?.staffing.rung === "top" && top >= 0 ? top : undefined);
+  // [F80 tier-router] The run's one task, when it was not planned, starts where Tier 0 sent the request.
+  const routed = isOn("tier-router") && planned.id === "main" && !state.plan && state.cascade?.route !== undefined && state.workerLadder !== undefined;
+  const rung = routed ? rungForTier(state, state.cascade!.route!.tier) : (startRung(state, planned.owner) ?? (state.brief?.staffing.rung === "top" && top >= 0 ? top : undefined));
   return {
+    ...(routed ? { routed: true } : {}),
     rung,
     id: planned.id,
     title: planned.title,
@@ -572,6 +661,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
             failure: "agent",
           });
         }
+        // [F87 routing-summary] [F81 route-calibration]
+        if (state.cascade) cascadeEnd(run);
         state.status = "finished";
         state.pid = undefined;
         saveState(state);
@@ -707,6 +798,12 @@ interface TurnRequest {
   timeoutMs?: number;
   /** [F77 direct-build] One answer, no tools. */
   direct?: boolean;
+  /** [F83 early-exit] The agent's first message is its preamble; below this confidence (or asked to escalate) the turn stops. */
+  preamble?: number;
+  /** [F83 early-exit] Set when the gate stopped the turn. */
+  exited?: Preamble;
+  /** [F87 routing-summary] The task's rung, to tell which tier a ladder model ran on. */
+  rungBase?: number;
 }
 
 interface TurnResult {
@@ -882,6 +979,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   const watch = tier === "expert" && isOn("no-rebuild") && isOn("dollar-budget") && state.expertBudgetUsd !== undefined;
   const spentBefore = watch ? expertDollars(state) : 0;
   let streamed: Usage | undefined;
+  // [F83 early-exit] Only the agent's first text message counts.
+  let firstText = true;
+  const gate = req.preamble;
   let result: AgentResult;
   try {
     result = await backend.run({
@@ -912,6 +1012,20 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     logPath,
     signal: AbortSignal.any([run.signal, turnStop.signal]),
     onActivity: (a) => log.emit("agent.activity", { task: req.task, role: req.role, activity: a.kind, summary: a.summary }),
+    onText:
+      gate === undefined
+        ? undefined
+        : (text) => {
+            if (!firstText) return;
+            firstText = false;
+            const p = optional(run, "early-exit", undefined, () => parsePreamble(text));
+            if (!p) return;
+            log.emit("agent.preamble", { feature: "F83", task: req.task, confidence: p.confidence, escalate: p.escalate, reason: p.reason });
+            if (shouldExit(p, gate)) {
+              req.exited = p;
+              turnStop.abort();
+            }
+          },
     onSpawn: (pid) => {
       const f = state.inFlight[req.key];
       if (f) f.pid = pid;
@@ -927,6 +1041,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   }
 
   if (cut && !run.signal.aborted) result = { ...result, stop: "error", detail: BUDGET_CUT };
+  // [F83 early-exit]
+  if (req.exited && !cut && !run.signal.aborted) result = { ...result, stop: "error", detail: `${EARLY_EXIT}: ${req.exited.reason}` };
   delete state.inFlight[req.key];
   const usage =
     // [F09 codex-session-totals]
@@ -955,6 +1071,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     peakPrompt: result.peakPrompt,
     // [F72 quota-log]
     quotaUsed: isOn("quota-log") ? result.quotaUsed : undefined,
+    // [F87 routing-summary]
+    cascadeTier: cascadeTierOf(state, req, config),
+    earlyExit: result.detail?.startsWith(EARLY_EXIT) ? true : undefined,
   };
   state.attempts.push(record);
   saveState(state);
@@ -976,6 +1095,18 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     quotaResets: isOn("quota-windows") ? result.quotaResets : undefined,
   });
   return result;
+}
+
+/** [F87 routing-summary] The cascade tier of a task's build turn; nothing for turns outside the ladder (spec, plan, review, advice). */
+function cascadeTierOf(state: RunState, req: TurnRequest, config: RoleConfig): CascadeTier | undefined {
+  if (!state.cascade || !req.task) return undefined;
+  if (req.role === "worker" && state.workerLadder) {
+    const base = req.rungBase ?? 0;
+    const i = state.workerLadder.findIndex((c, n) => n >= base && modelKey(c) === modelKey(config));
+    return tierAtRung(state, i >= 0 ? i : base);
+  }
+  if ((req.role === "escalation" || req.role === "orchestrator") && req.kind !== "advice") return "expert";
+  return undefined;
 }
 
 /**
@@ -1023,7 +1154,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
     kind: "spec",
     round: 0,
     cwd: state.worktree,
-    prompt: specPrompt(brief.request, renderBrief(brief), state.facts, { tiers: state.seniorRung !== undefined, maxTasks: state.maxTasks }),
+    prompt: specPrompt(brief.request, renderBrief(brief), state.facts, { tiers: state.seniorRung !== undefined, maxTasks: state.maxTasks, grunt: state.workerRung !== undefined, blueprint: blueprintOn(state) }),
     access: "read-only",
     schema: SPEC_SCHEMA,
   });
@@ -1043,6 +1174,11 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
   return undefined;
 }
 
+/** [F85 blueprint-expert] The expert writes the plan and the hardest part's design, and builds nothing. */
+function blueprintOn(state: RunState): boolean {
+  return state.cascade?.blueprint === true && isOn("blueprint-expert");
+}
+
 /** [F65 spec-plan] The spec writer split the build: those tasks are the plan, with no planning turn. */
 /**
  * The most tasks a spec's build plan may have. The spec writer is asked to keep
@@ -1056,7 +1192,7 @@ function planFromSpec(run: RunCtx, spec: Spec, config: RoleConfig | undefined): 
   const { state, log } = run;
   if (!isOn("spec-plan") || (spec.tasks?.length ?? 0) < 2) return;
   optional(run, "spec-plan", undefined, () => {
-    const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, Math.max(state.maxTasks, SPEC_PLAN_MOST), state.seniorRung !== undefined);
+    const plan = parsePlan({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { summary: `${spec.name}: the spec's build plan`, tasks: spec.tasks } }, Math.max(state.maxTasks, SPEC_PLAN_MOST), state.seniorRung !== undefined, { grunt: state.workerRung !== undefined, blueprint: blueprintOn(state) });
     state.plan = plan;
     // Small tasks start on the first worker rung (a senior part on the first senior rung); the ladder still climbs when one is stuck.
     state.tasks = plan.tasks.map((t) => ({ ...newTask(state, t), rung: startRung(state, t.owner) }));
@@ -1200,7 +1336,7 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
     if (result.stop !== "done") return stopFor(result, "orchestrator");
     state.planSession = result.sessionId;
     try {
-      const plan = parsePlan(result, state.maxTasks, state.seniorRung !== undefined);
+      const plan = parsePlan(result, state.maxTasks, state.seniorRung !== undefined, { grunt: state.workerRung !== undefined, blueprint: blueprintOn(state) });
       state.plan = plan;
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
@@ -1292,9 +1428,12 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
 /** The tester costs a full agent session; with test "no-checks" it only runs where nothing else verifies the work. */
 function wantsTester(state: RunState, task: TaskState): boolean {
   if (!state.roles.tester || task.escalated) return false;
-  if (state.brief && !state.brief.staffing.tester) return false;
+  // [F82 grunt-tier] A grunt's work that no check verifies is reviewed, whatever the staffing says.
+  const uncheckedGrunt = state.checks.length === 0 && isOn("grunt-tier") && state.workerRung !== undefined && tierAtRung(state, task.rung) === "grunt";
+  if (state.brief && !state.brief.staffing.tester && !uncheckedGrunt) return false;
   // [F71 one-review] A new program built in parts is reviewed once, when it is whole.
   if (reviewsWhole(state) && task !== state.tasks.at(-1) && !isLastOpen(state, task)) return false;
+  if (uncheckedGrunt) return true;
   return state.test !== "no-checks" || state.checks.length === 0;
 }
 
@@ -1382,7 +1521,8 @@ function canClimb(state: RunState, task: TaskState): boolean {
 function onStuck(run: RunCtx, task: TaskState, reason: string): void {
   const { state, log } = run;
   if (canClimb(state, task)) {
-    climbTo(run, task, (task.rung ?? 0) + 1, reason);
+    // [F82 grunt-tier] A stuck grunt is not tried on another grunt rung.
+    climbTo(run, task, gruntGate(state, task) ? state.workerRung! : (task.rung ?? 0) + 1, reason, gruntGate(state, task) ? "F82" : undefined);
     return;
   }
   task.escalationReason = reason;
@@ -1430,6 +1570,111 @@ function strongerOwner(state: RunState, task: TaskState, findings: Finding[]): {
     }
   }
   return best;
+}
+
+/**
+ * [F82 grunt-tier] Gate 1: a grunt's work is checked only by deterministic
+ * checks, and a grunt is never asked to repair it or to judge itself; a
+ * failure goes to the first worker rung with the errors.
+ */
+function gruntGate(state: RunState, task: TaskState): boolean {
+  return isOn("grunt-tier") && state.workerRung !== undefined && !task.escalated && !task.advised && task.owner !== "expert" && tierAtRung(state, task.rung) === "grunt";
+}
+
+/**
+ * [F86 escalation-breaker] Escalation is acyclic and capped: once this many
+ * tasks of the run have gone to the expert, another stuck task does not.
+ */
+function breakerTripped(state: RunState, task: TaskState): boolean {
+  const max = state.cascade?.maxEscalations;
+  if (max === undefined || !isOn("escalation-breaker") || task.advised || task.escalated) return false;
+  return state.tasks.filter((t) => t !== task && (t.advised || t.escalated)).length >= max;
+}
+
+/** [F83 early-exit] The confidence threshold for this turn's preamble, or nothing when the turn gets none. */
+function preambleGate(state: RunState, task: TaskState, role: Role): number | undefined {
+  if (!state.cascade || !isOn("early-exit") || role !== "worker" || !state.workerLadder) return undefined;
+  if (task.noPreamble || task.escalated || task.advised || task.owner === "expert" || (task.next !== "initial" && task.next !== "climb")) return undefined;
+  const tier = tierAtRung(state, task.rung);
+  // The grunt never judges itself: its gate is the deterministic checks (F82).
+  if (tier === "grunt") return undefined;
+  // Nowhere to send it (no higher tier, no expert, or the breaker is open): asking would only risk a stopped turn.
+  if (nextTierRung(state, task.rung) === undefined && (!canEscalate(state) || breakerTripped(state, task))) return undefined;
+  return tier === "senior" ? state.cascade.thresholds.senior : state.cascade.thresholds.worker;
+}
+
+/** [F84 bottleneck-diagnostic] Gate 3: in its own session, the stuck developer isolates the one sub-problem for the expert. */
+async function diagnoseStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const config = state.workerLadder?.[task.rung ?? 0];
+  if (!config || modelKey(config) !== task.sessionModel || !task.sessionId) return undefined;
+  const { result } = await turn(run, {
+    key: `${task.id}-diagnose`,
+    role: "worker",
+    kind: "diagnose",
+    task: task.id,
+    round: task.round,
+    cwd: task.worktree,
+    prompt: diagnosePrompt(),
+    access: "read-only",
+    schema: DIAGNOSE_SCHEMA,
+    resume: { sessionId: task.sessionId, model: task.sessionModel },
+    chain: [config],
+    timeoutMs: 5 * 60_000,
+    rungBase: task.rung,
+  });
+  if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "worker");
+  const text = result.stop === "done" ? parseDiagnosis(result) : undefined;
+  if (text) {
+    task.bottleneck = text;
+    saveState(state);
+    log.emit("task.diagnosed", { feature: "F84", task: task.id, bottleneck: text });
+  }
+  return undefined;
+}
+
+/** [F88 shadow-eval] Keep a share of the cheap tiers' passes for a stronger model to grade later. */
+function shadowSample(run: RunCtx, task: TaskState): void {
+  const { state, ctx, log } = run;
+  const tier = taskTier(state, task);
+  if (!state.cascade || (tier !== "grunt" && tier !== "worker")) return;
+  const model = state.attempts.filter((a) => a.task === task.id && a.cascadeTier === tier).at(-1)?.model;
+  const path = maybeEnqueue(ctx.home, { run: state.id, task: task.id, title: task.title, brief: task.brief, cluster: task.routed ? state.cascade.route?.cluster : undefined, tier, model, diff: diffOf(task) }, state.cascade.shadowRate);
+  if (path) log.emit("shadow.sampled", { feature: "F88", task: task.id, tier });
+}
+
+/** At the end of a finished run: the cascade's measured economics (F87) and what Tier 0 learns from it (F81). */
+function cascadeEnd(run: RunCtx): void {
+  const { state, ctx, log } = run;
+  if (!state.cascade) return;
+  if (isOn("routing-summary")) {
+    optional(run, "routing-summary", undefined, () => {
+      const summary = routingSummary(
+        state.attempts.map((a) => ({ task: a.task, tier: a.cascadeTier ?? "other", model: a.model, usage: a.usage, earlyExit: a.earlyExit })),
+        state.tasks.map((t) => ({ id: t.id, passed: t.status === "passed", tier: taskTier(state, t) })),
+        (roleChain(state, "escalation")[0] ?? roleChain(state, "orchestrator")[0])?.model,
+      );
+      log.emit("routing.summary", { feature: "F87", ...summary, lines: describeSummary(summary) });
+    });
+  }
+  // [F81 route-calibration] Recorded once: a resumed run does not count its tasks again.
+  if (isOn("route-calibration") && state.cascade.route && !state.cascade.recorded) {
+    state.cascade.recorded = true;
+    saveState(state);
+    optional(run, "route-calibration", undefined, () => {
+      const table = loadCalibration(ctx.home);
+      let n = 0;
+      for (const t of state.tasks.filter((x) => x.routed)) {
+        const visited = state.attempts.filter((a) => a.task === t.id && a.cascadeTier).map((a) => a.cascadeTier!);
+        recordOutcome(table, { cluster: state.cascade!.route!.cluster, tiers: [...visited, taskTier(state, t)], passed: t.status === "passed" });
+        n += 1;
+      }
+      if (n > 0) {
+        saveCalibration(ctx.home, table);
+        log.emit("routing.calibrated", { feature: "F81", tasks: n, cluster: state.cascade!.route!.cluster ?? "none" });
+      }
+    });
+  }
 }
 
 /** Advice first, takeover second. */
@@ -1646,20 +1891,26 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         : task.next === "continue" ? continuePrompt(state, task) + env
         : task.escalated ? (task.patch ? patchPrompt(state, task) : isOn("no-rebuild") ? fixInPlacePrompt(state, task, observedFor(state, task)) : escalationPrompt(state, task)) + env
         : taskPrompt(state, task) + env;
-      const { result, config } = await turn(run, {
+      // [F83 early-exit] A worker or senior judges the task first; the grunt and the expert do not.
+      const gate = preambleGate(state, task, role);
+      const asked = gate !== undefined ? prompt + preambleInstruction() : prompt;
+      const request: TurnRequest = {
         key: task.id,
         role,
         kind,
         task: task.id,
         round: task.round,
         cwd: task.worktree,
-        prompt,
-        freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : prompt) + (followUp ? env : ""),
+        prompt: asked,
+        freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : asked) + (followUp ? env : ""),
         access: "write",
         schema: REPORT_SCHEMA,
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
         chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
-      });
+        preamble: gate,
+        rungBase: task.rung,
+      };
+      const { result, config } = await turn(run, request);
       task.envProblem = undefined;
       // [F73 heal-worktree] Before the engine uses the folder the agent has just left.
       healTask(run, task);
@@ -1681,6 +1932,30 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       if (result.detail === "expert budget reached" && task.owner === "expert" && !task.escalated && isOn("budget-handoff")) {
         handToWorker(run, task, "no expert budget is left");
+        saveState(state);
+        continue;
+      }
+      // [F83 early-exit] Gate 2: before starting, the developer said the task is beyond it. A whole tier up, now.
+      if (request.exited && result.detail?.startsWith(EARLY_EXIT)) {
+        const p = request.exited;
+        const from = tierAtRung(state, task.rung);
+        task.history.push({ diff: diffOf(task), failures: `Before starting, the ${from} developer judged the task beyond it (confidence ${p.confidence}): ${p.reason}` });
+        // [F84 bottleneck-diagnostic] Its account of the sub-problem is what the expert will see.
+        if (p.bottleneck && isOn("bottleneck-diagnostic")) task.bottleneck = p.bottleneck;
+        log.emit("task.early-exit", { feature: "F83", task: task.id, tier: from, confidence: p.confidence, reason: p.reason });
+        const target = nextTierRung(state, task.rung);
+        if (target !== undefined && target > (task.rung ?? 0)) {
+          climbTo(run, task, target, `early exit: ${p.reason || `beyond the ${from} tier`}`, "F83");
+          continue;
+        }
+        if (canEscalate(state) && !breakerTripped(state, task)) {
+          task.escalationReason = `the ${from} developer judged the task beyond it: ${p.reason}`;
+          task.step = nextEscalation(state, task);
+          saveState(state);
+          continue;
+        }
+        // Nowhere higher to go: the same developer works on, without being asked again.
+        task.noPreamble = true;
         saveState(state);
         continue;
       }
@@ -1781,6 +2056,11 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       task.history.push({ diff, failures: failureSummary(results, state.baseline) });
+      // [F82 grunt-tier] Gate 1: the grunt is not repaired; the task goes up a tier with the checks' errors.
+      if (gruntGate(state, task) && canClimb(state, task)) {
+        climbTo(run, task, state.workerRung!, `the grunt's work failed the checks (${failing.map((r) => r.name).join(", ") || "a regression"})`, "F82");
+        continue;
+      }
       if (task.escalated) {
         if (task.round < ESCALATION_REPAIRS) {
           nextRound(run, task, "repair");
@@ -1865,6 +2145,11 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         climbTo(run, task, owner.rung, `the reviewer's findings are in ${owner.file}, which a stronger developer built`, "F79");
         continue;
       }
+      // [F82 grunt-tier] Nor is a grunt asked to fix what the reviewer rejected.
+      if (gruntGate(state, task) && canClimb(state, task)) {
+        climbTo(run, task, state.workerRung!, "the reviewer rejected the grunt's work", "F82");
+        continue;
+      }
       // [F07 review-only-merge]
       if (isOn("review-only-merge") && task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
         // The project's checks pass, the expert's advice has been tried, and only the
@@ -1893,6 +2178,19 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       if (outcome === "split") return undefined;
       if (outcome) return outcome;
       continue;
+    }
+
+    // [F86 escalation-breaker]
+    if ((task.step === "advise" || task.step === "escalate") && breakerTripped(state, task)) {
+      const max = state.cascade!.maxEscalations!;
+      if (state.checks.length > 0 && checksPass(task)) {
+        log.emit("note", { feature: "F86", message: `Task ${task.id}: ${max} task(s) already went to the expert in this run; it keeps its work (the checks pass) with the open findings recorded.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
+      log.emit("note", { feature: "F86", message: `Task ${task.id}: ${max} task(s) already went to the expert in this run; the circuit breaker stops it here.` });
+      return failTask(run, task, `${task.escalationReason ?? "the worker is stuck"}, and the escalation circuit breaker is open (${max} per run)`);
     }
 
     if ((task.step === "advise" || task.step === "escalate") && !budgetLeft(state)) {
@@ -1924,6 +2222,11 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "advise") {
+      // [F84 bottleneck-diagnostic]
+      if (state.cascade && isOn("bottleneck-diagnostic") && !task.bottleneck && task.owner !== "expert") {
+        const stop = await optionalAsync(run, "bottleneck-diagnostic", undefined, () => diagnoseStep(run, task));
+        if (stop) return stop;
+      }
       const { result } = await turn(run, {
         key: `${task.id}-advice`,
         role: "escalation",
@@ -1931,7 +2234,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         task: task.id,
         round: task.round,
         cwd: task.worktree,
-        prompt: advisePrompt(state, task, observedFor(state, task)),
+        prompt: advisePrompt(state, task, observedFor(state, task), state.cascade && isOn("bottleneck-diagnostic") ? task.bottleneck : undefined),
         access: "read-only",
         schema: ADVICE_SCHEMA,
       });
@@ -1990,6 +2293,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         saveState(state);
         continue;
       }
+      // [F88 shadow-eval]
+      if (state.cascade && isOn("shadow-eval")) optional(run, "shadow-eval", undefined, () => shadowSample(run, task));
       removeWorktree(state.repo, task.worktree, task.branch);
       task.status = "passed";
       task.step = "done";
@@ -2034,7 +2339,8 @@ async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" |
   let plan: Plan | undefined;
   if (result.stop === "done") {
     try {
-      plan = parsePlan(result, state.maxTasks);
+      // [F85 blueprint-expert] A split gives the expert no part either.
+      plan = parsePlan(result, state.maxTasks, false, { blueprint: blueprintOn(state) });
     } catch (error) {
       log.emit("note", { feature: "F68", message: `The split for task ${task.id} was not usable (${error instanceof Error ? error.message : String(error)}).` });
     }

@@ -70,7 +70,7 @@ export const SPEC_SCHEMA = {
           brief: { type: "string" },
           owned: { type: "array", items: { type: "string" } },
           depends_on: { type: "array", items: { type: "string" } },
-          owner: { type: "string", enum: ["worker", "senior", "expert"] },
+          owner: { type: "string", enum: ["grunt", "worker", "senior", "expert"] },
         },
         required: ["id", "title", "brief", "owned", "depends_on", "owner"],
         additionalProperties: false,
@@ -95,7 +95,7 @@ export const PLAN_SCHEMA = {
           brief: { type: "string" },
           owned: { type: "array", items: { type: "string" } },
           depends_on: { type: "array", items: { type: "string" } },
-          owner: { type: "string", enum: ["worker", "senior", "expert"] },
+          owner: { type: "string", enum: ["grunt", "worker", "senior", "expert"] },
         },
         required: ["id", "title", "brief", "owned", "depends_on", "owner"],
         additionalProperties: false,
@@ -186,12 +186,29 @@ function isWholeRequest(state: RunState, task: TaskState): boolean {
   return state.tasks.length === 1 && task.brief === state.prompt;
 }
 
+/**
+ * [F85 blueprint-expert] How the lead engineer assigns parts when it builds
+ * nothing itself: the Architect-Worker sandwich of the routing architecture.
+ * Its effort goes into the hardest part's design, written into that part's
+ * brief for a mid-priced developer to build exactly.
+ */
+export function cascadeOwners(senior: boolean, grunt: boolean): string {
+  const kinds = [
+    grunt ? `"grunt": the cheapest of all; only mechanical work your brief fully determines and the checks can verify (data files, formatting, docs, renaming, boilerplate).` : "",
+    `"worker": cheap and fast; routine, fully specified work (glue code, reading and writing files, simple data handling, tests from stated examples).`,
+    senior ? `"senior": about three times the price; a part that needs design judgement or has many rules that interact.` : "",
+  ].filter(Boolean);
+  return `${kinds.length} kinds of developer build it, and you choose one per task by how hard the task is: ${kinds.join(" ")} You build nothing yourself: your value is the design. For the hardest part, the one the others would get wrong, give it to the ${senior ? "senior" : "worker"} and write its blueprint into its brief: the decision, the algorithm as numbered steps, and the invariants it must keep (each as "Invariant: ..."), concrete enough to build without guessing; put the invariants that bind the whole program in the design too. Keep the rest of your answer short. Never give a harder kind than the task needs.`;
+}
+
 /** A cheap model turns a request too short to build from into a product spec. */
-export function specPrompt(request: string, brief?: string, facts?: string[], team: { tiers?: boolean; maxTasks?: number } = {}): string {
+export function specPrompt(request: string, brief?: string, facts?: string[], team: { tiers?: boolean; maxTasks?: number; grunt?: boolean; blueprint?: boolean } = {}): string {
   // The plan is cut off above the preset's task limit, so the lead engineer is told the limit.
   const most = Math.max(2, Math.min(team.maxTasks ?? 5, team.tiers ? 12 : 5));
-  // [F78 three-tier]
-  const owners = team.tiers
+  // [F78 three-tier] [F82 grunt-tier] [F85 blueprint-expert]
+  const owners = team.blueprint
+    ? cascadeOwners(Boolean(team.tiers), Boolean(team.grunt))
+    : team.tiers
     ? `Three kinds of developer build it, and you choose one per task by how hard the task is. "worker": the cheapest and fastest; give it what is routine, repetitive and fully specified by your brief (command-line glue, reading and writing files, formatting, simple data handling, a long list of similar cases, tests from stated examples). "senior": about three times the price; give it a part that needs design judgement or has many rules that interact (a parser, state handling, a module with many edge cases behind a clear interface). "expert": you, about five times the price of a worker and counted against a budget; take only the hardest logical core, the part the others would likely get wrong even with a good brief and that everything else depends on (a tricky algorithm, subtle semantics), and keep it small with a narrow interface. Most programs need no expert task, and many need no senior task; never give a harder kind than the task needs.`
     : `Mark a task "expert" only if it needs reasoning a cheap model would likely get wrong (a tricky algorithm, subtle concurrency); you will build that one yourself.`;
   // [F63 scout-facts] Checked on this machine before you write, so the spec does not guess.
@@ -494,7 +511,12 @@ How the team works:
 - Independent tasks are built at the same time by different workers, so splitting saves time; every task also costs a fixed overhead for starting a worker. Give parts that live in separate files and do not need each other's code their own tasks. Keep a part together when splitting it would make workers edit the same files. If the request is really one change to one place, plan exactly one task. Never plan more than ${state.maxTasks}.
 - Give each task the files or folders it owns; tasks that can run side by side must not own the same files. A task that only needs another task's interface still depends on it, unless your brief spells that interface out exactly (names, signatures, return values), in which case both can start at once.
 - A task that needs another task's result lists it in depends_on.
-- Mark a task "expert" only if it needs deep reasoning a cheap model would likely get wrong (subtle concurrency, tricky algorithms, delicate design). You will do those yourself. Everything else is "worker".
+${
+    // [F85 blueprint-expert]
+    state.cascade?.blueprint && isOn("blueprint-expert")
+      ? `- ${cascadeOwners(state.seniorRung !== undefined, state.workerRung !== undefined)}`
+      : `- Mark a task "expert" only if it needs deep reasoning a cheap model would likely get wrong (subtle concurrency, tricky algorithms, delicate design). You will do those yourself. Everything else is "worker".`
+  }
 - Each brief must stand on its own: what to build, exact names and behaviour (function signatures, formats, error cases) that other tasks rely on, which tests to add, and how to tell it is done. Copy the exact requirements from the request; do not summarise them away.
 
 Give your answer in the required JSON format: summary (one sentence) and tasks (id, title, brief, owned, depends_on, owner). Use short ids like "t1".`;
@@ -583,8 +605,12 @@ export function compactAttempts(task: TaskState): string {
 }
 
 /** The cheap first step of escalation: the expert looks, explains, and the worker fixes. */
-export function advisePrompt(state: RunState, task: TaskState, observed?: string): string {
-  const attempts = isOn("advice-cap") ? compactAttempts(task) : attemptsText(task);
+export function advisePrompt(state: RunState, task: TaskState, observed?: string, bottleneck?: string): string {
+  // [F84 bottleneck-diagnostic] The developer's own account of where it is stuck, in place of the attempt history.
+  const lastFailure = task.history.at(-1)?.failures ?? "";
+  const attempts = bottleneck
+    ? `The developer's bottleneck diagnostic (its own account of the one sub-problem beyond it; check it, do not assume it):\n${bottleneck}${lastFailure ? `\n\nThe latest failure:\n${lastFailure.slice(0, 2_000)}` : ""}`
+    : isOn("advice-cap") ? compactAttempts(task) : attemptsText(task);
   return `You are the lead engineer. A worker on your team is stuck on the task below, and you are asked for advice, not to do the work. Do not change any files. The current directory holds the worker's latest attempt.
 
 ${isWholeRequest(state, task) ? `The request:\n${state.prompt}` : `The overall request:\n${state.prompt}\n\nThe task: ${task.title}\n${task.brief}`}
@@ -601,6 +627,28 @@ Read only what you need, find the real cause, and tell the worker how to fix it.
 Give your answer in the required JSON format:
 - diagnosis: what is actually wrong, in a few sentences
 - steps: the changes to make, in order`;
+}
+
+/** [F84 bottleneck-diagnostic] Asked in the stuck developer's own session, before the expert is called. */
+export const DIAGNOSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: { bottleneck: { type: "string" } },
+  required: ["bottleneck"],
+};
+
+export function diagnosePrompt(): string {
+  return `Stop working on the task. A stronger engineer will now help, and will see only what you write here, not this conversation. Do not change any files.
+
+In at most 150 words, isolate the one sub-problem you are stuck on: what exactly fails (the input, the expected and the actual result), where in the code, and what you already ruled out. Leave out everything that works.
+
+Give your answer in the required JSON format: bottleneck.`;
+}
+
+export function parseDiagnosis(result: AgentResult): string | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { bottleneck?: unknown } | undefined;
+  const text = typeof raw?.bottleneck === "string" ? raw.bottleneck.trim() : "";
+  return text ? text.split(/\s+/).slice(0, 150).join(" ") : undefined;
 }
 
 function adviceText(advice: Advice | undefined): string {
@@ -749,7 +797,7 @@ export function parseVerdict(result: AgentResult): Verdict | undefined {
 }
 
 /** Check a plan from the orchestrator and turn it into tasks. Throws with a reason the planner can act on. */
-export function parsePlan(result: AgentResult, maxTasks: number, tiers = false): Plan {
+export function parsePlan(result: AgentResult, maxTasks: number, tiers = false, cascade: { grunt?: boolean; blueprint?: boolean } = {}): Plan {
   const raw = (result.structured ?? parseStructured(result.finalText)) as
     | { summary?: unknown; tasks?: { id?: unknown; title?: unknown; brief?: unknown; owned?: unknown; depends_on?: unknown; owner?: unknown }[] }
     | undefined;
@@ -765,7 +813,13 @@ export function parsePlan(result: AgentResult, maxTasks: number, tiers = false):
       owned: Array.isArray(t.owned) ? t.owned.filter((p): p is string => typeof p === "string" && p.trim() !== "").map((p) => p.trim()) : [],
       dependsOn: Array.isArray(t.depends_on) ? t.depends_on.filter((d): d is string => typeof d === "string") : [],
       // [F78 three-tier] Without a senior tier, a "senior" part is a worker's.
-      owner: t.owner === "expert" ? "expert" : t.owner === "senior" && tiers ? "senior" : "worker",
+      owner:
+        // [F85 blueprint-expert] The expert builds nothing: its part goes to the strongest tier below it.
+        t.owner === "expert" ? (cascade.blueprint ? (tiers ? "senior" : "worker") : "expert")
+        : t.owner === "senior" && tiers ? "senior"
+        // [F82 grunt-tier] Without grunt rungs, a grunt part is a worker's.
+        : t.owner === "grunt" && cascade.grunt ? "grunt"
+        : "worker",
     };
   });
   const ids = new Set(tasks.map((t) => t.id));

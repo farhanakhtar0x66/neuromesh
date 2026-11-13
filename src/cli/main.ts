@@ -22,6 +22,7 @@ import { disable, feature, featureTable, hint, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
+import { ROUTING_HELP, commandRouting } from "./routing.ts";
 import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
 const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
@@ -54,7 +55,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
   neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
-  neuromesh                     (no command, in a terminal) open the TUI; also \`neuromesh tui\` [--preset <name>]
+${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open the TUI; also \`neuromesh tui\` [--preset <name>]
   neuromesh features            the features added since v0.1, their ids and whether they are on
                                 (--disable <id or key,...> switches features off for any command)
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
@@ -540,6 +541,8 @@ async function main(): Promise<number> {
       return commandTelemetry(parsed);
     case "doctor":
       return commandDoctor(parsed);
+    case "routing":
+      return commandRouting(parsed.positional, parsed.flags, backends);
     default:
       process.stderr.write(`Unknown command "${command}".\n\n${HELP}`);
       return 2;

@@ -3,6 +3,7 @@ import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import type { FileChange } from "../workspace/workspace.ts";
 import type { ProgressHistory } from "./progress.ts";
 import type { Brief } from "../intake/brief.ts";
+import type { CascadeTier, TierRoute } from "../routing/router.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -50,7 +51,9 @@ export type AttemptKind =
   | "climb"
   | "integration"
   | "scout"
-  | "split";
+  | "split"
+  // [F84 bottleneck-diagnostic]
+  | "diagnose";
 
 export interface AttemptRecord {
   role: Role;
@@ -72,6 +75,10 @@ export interface AttemptRecord {
   peakPrompt?: number;
   /** [F72 quota-log] The tool's subscription quota readings (fraction used per window), when it reports them. */
   quotaUsed?: Record<string, number>;
+  /** [F87 routing-summary] The cascade tier a build turn ran on (grunt, worker, senior, or expert for a takeover). */
+  cascadeTier?: CascadeTier;
+  /** [F83 early-exit] The early-exit gate stopped this turn after the agent's preamble. */
+  earlyExit?: boolean;
 }
 
 export type InFlight = Omit<AttemptRecord, "stop" | "durationMs" | "usage" | "costUsdEquivalent" | "sessionId" | "detail"> & {
@@ -127,7 +134,7 @@ export interface PlannedTask {
    * [F78 three-tier] "senior" for a moderately hard part: it starts on the
    * first senior rung of the ladder (a mid-priced model) instead of the cheapest.
    */
-  owner: "worker" | "senior" | "expert";
+  owner: "grunt" | "worker" | "senior" | "expert";
 }
 
 export interface Plan {
@@ -188,6 +195,30 @@ export interface TaskState extends PlannedTask {
   outOfScope?: string[];
   files?: FileChange[];
   error?: string;
+  /** [F80 tier-router] This task's first rung came from Tier 0 (its outcome teaches the calibration, F81). */
+  routed?: boolean;
+  /** [F84 bottleneck-diagnostic] The developer's own account of the one sub-problem it is stuck on, for the expert. */
+  bottleneck?: string;
+  /** [F83 early-exit] Nowhere higher to go: the preamble is no longer asked for on this task. */
+  noPreamble?: boolean;
+}
+
+/** The cascade's settings for one run (the routing architecture; F80 to F88). */
+export interface CascadeState {
+  /** [F80 tier-router] Where Tier 0 sent the request. */
+  route?: TierRoute;
+  /** [F83 early-exit] Below this self-reported confidence, a worker or senior turn is stopped and climbs. */
+  thresholds: { worker: number; senior: number };
+  /** [F85 blueprint-expert] The expert writes the blueprint and builds nothing. */
+  blueprint: boolean;
+  /** [F86 escalation-breaker] Most tasks per run that may go to the expert. */
+  maxEscalations?: number;
+  /** [F88 shadow-eval] Share of cheap-tier passes kept for grading later. */
+  shadowRate: number;
+  /** [F81 route-calibration] The quality bar for stage 0C. */
+  alpha: number;
+  /** [F81 route-calibration] This run's outcomes are already in the table. */
+  recorded?: boolean;
 }
 
 export interface RunOutcome {
@@ -250,6 +281,10 @@ export interface RunState {
   workerLadder?: RoleConfig[];
   /** [F78 three-tier] The first senior rung of workerLadder (the preset's seniorLadder follows its worker rungs). */
   seniorRung?: number;
+  /** [F82 grunt-tier] The first worker rung of workerLadder, when grunt rungs come before it. */
+  workerRung?: number;
+  /** The routing cascade (F80 to F88), for presets that set "cascade". */
+  cascade?: CascadeState;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

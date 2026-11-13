@@ -97,7 +97,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -105,6 +105,8 @@ function callKind(r: AgentRequest): Call {
   if ("tasks" in p) return "plan";
   if ("verdict" in p) return "review";
   if ("diagnosis" in p) return "advice";
+  // [F84 bottleneck-diagnostic]
+  if ("bottleneck" in p) return "diagnose";
   return "build";
 }
 
@@ -159,6 +161,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const rungs = d.int(0, 3);
   const tierDice = dice(seed + 9_999_991);
   const seniorRungs = tierDice.chance(0.35) ? tierDice.int(1, 2) : 0;
+  const cascadeDice = dice(seed + 4_444_441);
+  const withCascade = cascadeDice.chance(0.35);
+  const gruntRungs = withCascade && cascadeDice.chance(0.6) ? cascadeDice.int(1, 2) : 0;
   const ladder: RoleConfig[] = Array.from({ length: rungs }, (_, i) => ({ backend: "fake", model: `worker-${i + 1}`, tier: "worker" as const }));
   const roles: RoleChain = { worker: d.chance(0.15) ? [{ backend: "fake", model: "worker-a", tier: "worker" }, { backend: "fake", model: "worker-b", tier: "worker" }] : [ladder.at(-1) ?? { backend: "fake", model: "worker-1", tier: "worker" }] };
   if (d.chance(0.6)) roles.tester = [{ backend: "fake", model: "fake-tester", tier: "worker" }];
@@ -189,6 +194,17 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudgetUsd: d.weighted({ none: 4, tiny: 2, small: 3, large: 2 }) === "none" ? undefined : d.pick([0.05, 0.3, 0.6, 3]),
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
+    // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
+    gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
+    cascade: withCascade
+      ? {
+          thresholds: { worker: cascadeDice.pick([0.5, 0.75, 0.9]), senior: cascadeDice.pick([0.5, 0.8, 0.9]) },
+          blueprint: cascadeDice.chance(0.7),
+          maxEscalations: cascadeDice.pick([0, 1, 2, 5]),
+          shadowRate: cascadeDice.pick([0, 0.5, 1]),
+          alpha: cascadeDice.pick([0.5, 0.8, 0.95]),
+        }
+      : undefined,
   };
   const prompt = d.pick([
     "make the test pass",
@@ -210,7 +226,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calm = trouble === "none" && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
@@ -250,6 +266,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calls: AgentRequest[] = [];
   let aborter = new AbortController();
   let runaway = false;
+  // [F82 grunt-tier] A grunt must never be asked to judge itself.
+  let gruntAsked = false;
   const never = new Promise<Partial<AgentResult>>(() => {});
   let sessions = 0;
 
@@ -309,12 +327,24 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       return { ...extra, structured: id ? planFor(owners.get(id) ?? files, `${id}.`, "p") : planFor(files, "", "t") };
     }
     if (kind === "advice") return { ...extra, structured: { diagnosis: "the file is wrong", steps: ["write ok into it"] } };
+    if (kind === "diagnose") return { ...extra, structured: { bottleneck: "the file says the wrong thing" } };
     if (kind === "review") {
       const view = d.weighted({ pass: 6, blocker: p * 8, phantom: p * 6, minor: p * 6, noCheck: p * 4, vandal: p * 2 });
       if (view === "vandal") rmSync(req.cwd, { recursive: true, force: true });
       if (view === "pass" || view === "vandal") return { ...extra, structured: { verdict: "pass", summary: "fine", findings: [] } };
       const check = view === "blocker" ? "false" : view === "phantom" ? d.pick(["true", "definitely-not-a-command"]) : "";
       return { ...extra, structured: { verdict: "fail", summary: "a problem", findings: [{ problem: "it is wrong", file: files[0], reproduce: "run it", severity: view === "minor" ? "minor" : "blocker", check }] } };
+    }
+    // [F83 early-exit] Asked for a preamble: a good developer is confident; a troubled one may escalate or garble it.
+    if (req.onText) {
+      if (/^grunt-/.test(req.model ?? "")) gruntAsked = true;
+      const view = d.chance(p) ? d.weighted({ escalate: 3, low: 2, garbage: 1, none: 1 }) : d.weighted({ confident: 4, none: 1 });
+      if (view === "escalate") req.onText(JSON.stringify({ confidence: 0.2, escalate: true, reason: "beyond me", bottleneck: d.chance(0.5) ? "the hard part" : undefined }));
+      if (view === "low") req.onText(JSON.stringify({ confidence: 0.1, escalate: false, reason: "unsure" }));
+      if (view === "garbage") req.onText(d.pick(['{"confidence": "high", "escalate": "maybe"}', "{", "Sure, here goes."]));
+      if (view === "confident") req.onText(JSON.stringify({ confidence: 0.95, escalate: false, reason: "routine" }));
+      // Stopped by the engine, as a real tool would be.
+      if (view === "escalate" || view === "low") return never;
     }
     // A build, repair or fix turn.
     const report = (status: string, summary: string, notes = ""): Partial<AgentResult> => ({ ...extra, sessionId: `s${++sessions}`, structured: { status, summary, notes, run: "" } });
@@ -532,6 +562,27 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         }
       }
     }
+    // [F82 grunt-tier] [F83 early-exit] The grunt's gate is the checks, never its own word.
+    if (gruntAsked) broke("a grunt turn was asked for a confidence preamble");
+    // [F80-F86] A task's tier on the ladder only goes up.
+    const rank = { grunt: 0, worker: 1, senior: 2 } as Record<string, number>;
+    const lastTier = new Map<string, number>();
+    for (const a of state.attempts) {
+      if (!a.task || !a.cascadeTier || a.cascadeTier === "expert") continue;
+      const r = rank[a.cascadeTier]!;
+      if (r < (lastTier.get(a.task) ?? -1)) {
+        broke(`task ${a.task} went down the ladder to ${a.cascadeTier}`);
+        break;
+      }
+      lastTier.set(a.task, r);
+    }
+    // [F86 escalation-breaker]
+    if (state.cascade?.maxEscalations !== undefined && !off.includes("escalation-breaker")) {
+      const helped = new Set(state.attempts.filter((a) => a.task && (a.kind === "advice" || a.kind === "escalation")).map((a) => a.task));
+      if (helped.size > state.cascade.maxEscalations) broke(`${helped.size} tasks went to the expert; the breaker allows ${state.cascade.maxEscalations}`);
+    }
+    // [F85 blueprint-expert]
+    if (state.cascade?.blueprint && !off.includes("blueprint-expert") && state.tasks.some((t) => t.owner === "expert")) broke("the expert owns a part in blueprint mode");
     // A task is not worked on forever.
     const perTask = new Map<string, number>();
     for (const a of state.attempts) perTask.set(a.task ?? "-", (perTask.get(a.task ?? "-") ?? 0) + 1);

@@ -41,7 +41,7 @@ export function opencodePrompt(request: AgentRequest): string {
   return `${request.prompt}\n\nEnd your turn with only a JSON object (no other text, no code fence) matching this JSON Schema:\n${JSON.stringify(request.outputSchema)}`;
 }
 
-export function opencodeParser(request: Pick<AgentRequest, "onActivity" | "outputSchema">): StreamParser {
+export function opencodeParser(request: Pick<AgentRequest, "onActivity" | "outputSchema" | "onText">): StreamParser {
   const run: ParsedRun = { finalText: "", usage: {} };
   let lastText = "";
   let finished = false;
@@ -64,6 +64,8 @@ export function opencodeParser(request: Pick<AgentRequest, "onActivity" | "outpu
         if (text.trim()) {
           lastText = text;
           request.onActivity?.({ kind: "text", summary: short(text, 160) });
+          // [F83 early-exit]
+          request.onText?.(text);
         }
         return;
       }
