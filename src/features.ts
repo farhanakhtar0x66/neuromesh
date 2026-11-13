@@ -731,6 +731,15 @@ export const FEATURES: Feature[] = [
     what: "Only in presets that set a seniorLadder. The lead engineer marks each part of the build plan by how hard it is: \"worker\" (routine and fully specified; the cheapest model), \"senior\" (design judgement or many interacting rules; a mid-priced model) or \"expert\" (the hardest logical core; the lead engineer builds it, within the expert budget). The senior rungs sit above the worker rungs on one ladder: a senior part starts on the first senior rung, and a worker stuck on its last rung climbs to the senior rungs before the expert is asked. The spec is also told the preset's task limit, so its plan is not cut off. The owner's idea (2026-11-13): Opus plans and takes what would defeat the others, Sonnet builds the moderately hard parts, Haiku the easy repetitive ones.",
     optional: false,
   },
+  {
+    id: "F79",
+    key: "finding-owner",
+    name: "A reviewer's finding is fixed on the rung that built the file it names",
+    added: "2026-11-13",
+    files: ["src/engine/run.ts (strongerOwner, climbTo)"],
+    what: "The finished program gets one review, and its findings used to go to the last task's worker, usually the cheapest model, whatever file they were in. When a finding names a file that another task built on a stronger rung (a senior part, or the expert's), the fix now starts on that rung in a fresh session that is told the findings. From the first three-tier run on the hard task (2026-11-13): a flaw in the senior tier's number formatting went to Haiku, which first documented it as a known difference, then needed 19 minutes and 200K output tokens over two more turns; that loop was 21 of the run's 49 minutes.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

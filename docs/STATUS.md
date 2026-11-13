@@ -250,6 +250,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     hit the 5-hour limit, used up mostly by the working session itself. F77
     direct-build (one-answer workers, no tools) is built and not yet tried
     live. `docs/17-benchmark.md`.
+26. **The hard task (2026-11-13).** `hard-py-minidb`: a pure-Python SQL engine
+    checked on 197 cases against the real SQLite. Three tiers by difficulty
+    (F78: Opus plans and builds the hardest part, Sonnet the moderate parts,
+    Haiku the routine ones) passed it 197/197 in 49 minutes on the first full
+    run. Engine faults it exposed and that are fixed: a spec plan over the task
+    limit was thrown away, thinking was not counted until the next message, and
+    review findings went to the cheapest worker whatever file they were in
+    (F79). Fable alone has not finished a run yet. See `docs/18-hard-task.md`.
 
 ## Next steps
 

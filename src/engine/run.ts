@@ -96,7 +96,7 @@ import {
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import type { AttemptKind, AttemptRecord, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 
 export interface EngineContext {
   home: string;
@@ -1382,23 +1382,54 @@ function canClimb(state: RunState, task: TaskState): boolean {
 function onStuck(run: RunCtx, task: TaskState, reason: string): void {
   const { state, log } = run;
   if (canClimb(state, task)) {
-    const ladder = state.workerLadder!;
-    const from = ladder[task.rung ?? 0]!;
-    task.rung = (task.rung ?? 0) + 1;
-    const to = ladder[task.rung]!;
-    task.round = 0;
-    task.progress = newHistory();
-    task.next = "climb";
-    task.sessionId = undefined;
-    task.sessionModel = undefined;
-    task.step = "agent";
-    saveState(state);
-    log.emit("task.climbed", { task: task.id, from: modelKey(from), to: modelKey(to), reason });
+    climbTo(run, task, (task.rung ?? 0) + 1, reason);
     return;
   }
   task.escalationReason = reason;
   task.step = nextEscalation(state, task);
   saveState(state);
+}
+
+/** Move a task to a stronger rung of the ladder: a fresh session there, told exactly what went wrong. */
+function climbTo(run: RunCtx, task: TaskState, rung: number, reason: string, feature?: string): void {
+  const { state, log } = run;
+  const ladder = state.workerLadder!;
+  const from = ladder[task.rung ?? 0]!;
+  task.rung = rung;
+  const to = ladder[rung]!;
+  task.round = 0;
+  task.progress = newHistory();
+  task.next = "climb";
+  task.sessionId = undefined;
+  task.sessionModel = undefined;
+  task.step = "agent";
+  saveState(state);
+  log.emit("task.climbed", { ...(feature ? { feature } : {}), task: task.id, from: modelKey(from), to: modelKey(to), reason });
+}
+
+/**
+ * [F79 finding-owner] A reviewer's finding names a file that another task
+ * built on a stronger rung (or the expert built): the fix needs at least that
+ * rung. Returns the rung and the file, or nothing when this task's own rung is
+ * enough. (The first three-tier run gave a flaw in the senior tier's number
+ * formatting to the cheapest worker, which documented it instead of fixing it,
+ * then spent 19 minutes on it.)
+ */
+function strongerOwner(state: RunState, task: TaskState, findings: Finding[]): { rung: number; file: string } | undefined {
+  const ladder = state.workerLadder;
+  if (!ladder || task.owner === "expert" || task.escalated || task.advised) return undefined;
+  const clean = (p: string): string => p.trim().replace(/^\.\//, "");
+  let best: { rung: number; file: string } | undefined;
+  for (const f of findings) {
+    if (!f.file) continue;
+    const file = clean(f.file);
+    for (const other of state.tasks) {
+      if (other.id === task.id || !other.owned.some((o) => clean(o) === file)) continue;
+      const rung = other.owner === "expert" || other.escalated ? ladder.length - 1 : Math.min(other.rung ?? 0, ladder.length - 1);
+      if (rung > (task.rung ?? 0) && (!best || rung > best.rung)) best = { rung, file };
+    }
+  }
+  return best;
 }
 
 /** Advice first, takeover second. */
@@ -1828,6 +1859,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       task.history.push({ diff, failures: "", findings: verdict.findings });
+      // [F79 finding-owner]
+      const owner = isOn("finding-owner") ? optional(run, "finding-owner", undefined, () => strongerOwner(state, task, verdict.findings)) : undefined;
+      if (owner) {
+        climbTo(run, task, owner.rung, `the reviewer's findings are in ${owner.file}, which a stronger developer built`, "F79");
+        continue;
+      }
       // [F07 review-only-merge]
       if (isOn("review-only-merge") && task.round >= repairLimit(state, task) && task.advised && checksPass(task)) {
         // The project's checks pass, the expert's advice has been tried, and only the

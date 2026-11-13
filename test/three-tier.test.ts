@@ -172,3 +172,28 @@ test("a spec plan one task over the preset's limit is kept, not thrown away", as
   assert.equal(builds(fake.calls).length, 3);
   assert.ok(!events.some((e) => e.type === "feature.failed"), "the plan feature did not fail");
 });
+
+test("a reviewer's finding in a senior part's file is fixed on the senior rung, not by the cheapest worker", async () => {
+  let reviews = 0;
+  const { ctx, fake, events } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if (isSpec(req)) return { structured: spec(["worker", "senior", "worker"]) };
+    if (isTest(req)) {
+      reviews += 1;
+      return reviews === 1
+        ? { structured: { verdict: "fail", summary: "b is wrong", findings: [{ problem: "b.txt has the wrong text", file: "./b.txt", severity: "blocker", check: "false" }] } }
+        : { structured: { verdict: "pass", summary: "ok", findings: [] } };
+    }
+    if (/Your task: part a/.test(req.prompt)) write(req.cwd, "a.txt", "a");
+    else if (/Your task: part b/.test(req.prompt)) write(req.cwd, "b.txt", "b");
+    else write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: threePartRepo(), prompt: "build a command-line tool that writes three files", preset: preset({ test: "always", roles: { worker: [WORKERS[1]!], briefer: [EXPERT], orchestrator: [EXPERT], escalation: [EXPERT], tester: [{ backend: "fake", model: "fake-tester", tier: "worker" }] } }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(reviews, 2);
+  const last = fake.calls.filter((c) => !isTest(c) && !isSpec(c) && !isScout(c)).map((c) => c.model);
+  assert.deepEqual(last, ["worker-medium", "senior-medium", "worker-medium", "senior-medium"], "the fix ran on the rung that built b.txt");
+  assert.ok(events.some((e) => e.type === "task.climbed" && e.feature === "F79"));
+  assert.match(fake.calls.at(-2)!.prompt, /b\.txt has the wrong text/, "the fresh session is told the finding");
+});
