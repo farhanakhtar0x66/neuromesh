@@ -1,0 +1,68 @@
+{
+  "id": "2.3",
+  "slug": "t23-gst-tests",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 8
+  },
+  "quality": 8.75,
+  "hiddenOutput": "PASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nPASS pytest.raises(ValueError) for negative amounts\nFAIL pytest.approx or Decimal rounding\nPASS tests zero\nPASS tests interstate and intrastate\nPASS calls calculate_gst_split\nSCORE 7/8",
+  "wallMs": 46057,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 45259,
+      "usage": {
+        "input": 18,
+        "output": 9183,
+        "reasoning": 2627,
+        "cacheRead": 117095,
+        "cacheWrite": 15448
+      },
+      "tokens": 141744,
+      "costUsd": 0.00885385,
+      "quotaUsed": {
+        "five_hour": 0,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 141744,
+  "discardedTokens": 0,
+  "costUsd": 0.00885385,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-034440-452c",
+  "finishedAt": "2026-11-13T22:15:31.086Z"
+}
