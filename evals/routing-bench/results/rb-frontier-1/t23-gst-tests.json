@@ -1,0 +1,63 @@
+{
+  "id": "2.3",
+  "slug": "t23-gst-tests",
+  "config": "frontier",
+  "preset": "solo-opus",
+  "name": "rb-frontier-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nPASS pytest.raises(ValueError) for negative amounts\nPASS pytest.approx or Decimal rounding\nPASS tests zero\nPASS tests interstate and intrastate\nPASS calls calculate_gst_split\nSCORE 8/8",
+  "wallMs": 61579,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 60291,
+      "usage": {
+        "input": 12,
+        "output": 6863,
+        "reasoning": 991,
+        "cacheRead": 72656,
+        "cacheWrite": 11347
+      },
+      "tokens": 90878,
+      "costUsd": 0.2426152,
+      "quotaUsed": {
+        "five_hour": 0.56,
+        "seven_day": 0.58
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 90878,
+  "discardedTokens": 0,
+  "costUsd": 0.2426152,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.55,
+      "seven_day": 0.58
+    },
+    "after": {
+      "five_hour": 0.56,
+      "seven_day": 0.58
+    }
+  },
+  "runId": "20261114-012344-4fa2",
+  "finishedAt": "2026-11-13T19:54:50.408Z"
+}
