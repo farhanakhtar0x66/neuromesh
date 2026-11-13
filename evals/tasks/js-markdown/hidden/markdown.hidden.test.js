@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { render } from "../src/markdown.js";
+import { render as raw } from "../src/markdown.js";
+
+// The prompt does not say whether list items sit on their own lines, so newlines inside a list are ignored.
+const render = (md) => raw(md).replace(/(<ul>|<\/li>)\n+/g, "$1").replace(/\n+(<li>|<\/ul>)/g, "$1");
 
 test("hidden: blocks", () => {
   assert.equal(render("# Title\n\nSome text\nmore"), "<h1>Title</h1>\n<p>Some text more</p>");

@@ -69,7 +69,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate"]);
 
 interface Parsed {
   positional: string[];
