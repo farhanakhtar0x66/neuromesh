@@ -21,3 +21,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-13 20:13:30 UTC: 2.3 t23-gst-tests: reading quota, then running
 - 2026-11-13 20:13:34 UTC: 2.3 route.tier worker
 - 2026-11-13 20:14:19 UTC: 2.3 t23-gst-tests: applied, quality 8.8/10 (7/8), path worker, 176,873 tokens, est. $0.0084 (API list prices), 0.7 min; quota before five_hour 68%, seven_day 60%, after five_hour 69%, seven_day 60%
+- 2026-11-13 20:14:21 UTC: 3.1 t31-abort-hook: reading quota, then running
+- 2026-11-13 20:14:25 UTC: 3.1 route.tier worker
+- 2026-11-13 20:15:47 UTC: 3.1 t31-abort-hook: applied, quality 2.9/10 (2/7), path worker, 173,194 tokens, est. $0.0150 (API list prices), 1.3 min; quota before five_hour 69%, seven_day 60%, after five_hour 69%, seven_day 60%
