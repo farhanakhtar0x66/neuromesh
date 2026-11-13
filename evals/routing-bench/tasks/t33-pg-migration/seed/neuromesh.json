@@ -1,0 +1,8 @@
+{
+  "checks": [
+    {
+      "name": "format",
+      "command": "python3 -I .bench/format-check"
+    }
+  ]
+}

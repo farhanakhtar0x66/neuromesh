@@ -1,0 +1,9 @@
+# The deterministic gate for this request: the output's format, not its correctness.
+import os, re, sys, json, ast, subprocess
+try:
+    n = len(open("ANSWER.md").read().split())
+    assert 15 <= n <= 120, f"{n} words; expected 15 to 120"
+    print("format ok")
+except Exception as e:
+    print(f'format check failed: {e}')
+    sys.exit(1)

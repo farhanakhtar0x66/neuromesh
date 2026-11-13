@@ -1,0 +1,10 @@
+{
+  "kind": "routing",
+  "language": "mixed",
+  "hiddenCheck": "python3 -I hidden/check.py",
+  "bench": {
+    "id": "5.1",
+    "expectedTier": "cascade 1>2>3",
+    "expectedPath": "T1(fail)>T2(abort)>T3"
+  }
+}

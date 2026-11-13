@@ -1,0 +1,14 @@
+# The deterministic gate for this request: the output's format, not its correctness.
+import os, re, sys, json, ast, subprocess
+try:
+    import shutil
+    pat = open("regex.txt").read().strip()
+    def ok(s):
+        r = subprocess.run(["perl", "-e", 'my $p=$ENV{P}; $p =~ s{^/(.*)/[a-z]*$}{$1}s; exit((($ENV{S} =~ /$p/) ? 0 : 1))'], env={**os.environ, "P": pat, "S": s}, capture_output=True, text=True)
+        return r.returncode == 0
+    assert ok("[({()})]"), "must accept [({()})]"
+    assert not ok("[(])"), "must reject [(])"
+    print("format ok")
+except Exception as e:
+    print(f'format check failed: {e}')
+    sys.exit(1)

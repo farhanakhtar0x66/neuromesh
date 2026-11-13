@@ -1,0 +1,1 @@
+Young/Daly: tau* = sqrt(2*delta/lambda), with delta = 12 min (0.2 h) plus the $0.10 I/O cost, lambda = eviction rate (0.05, 0.15, 0.3 per hour). Instance selection policy: choose the instance minimising cost per useful hour.

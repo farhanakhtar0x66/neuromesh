@@ -1,0 +1,3 @@
+im writing a lock-free single-producer multi-consumer ring buffer in Rust using AtomicUsize for head and tail indices. on x86 it passes all stress tests, but on Apple Silicon ARM64 worker threads occasionally read stale uninitialized payload data even after observing the updated tail index. explain the exact ARM64 weak memory ordering hazard happening here, which Acquire/Release/SeqCst fences fix it with minimal cache-coherency overhead, and give the corrected ring buffer implementation
+
+Write the explanation to ANSWER.md and the corrected implementation to src/lib.rs (Cargo.toml is already there).

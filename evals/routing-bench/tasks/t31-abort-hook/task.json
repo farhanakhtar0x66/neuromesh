@@ -1,0 +1,10 @@
+{
+  "kind": "routing",
+  "language": "mixed",
+  "hiddenCheck": "python3 -I hidden/check.py",
+  "bench": {
+    "id": "3.1",
+    "expectedTier": "senior",
+    "expectedPath": "T0>T3"
+  }
+}

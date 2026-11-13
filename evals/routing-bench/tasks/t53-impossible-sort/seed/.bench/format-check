@@ -1,0 +1,8 @@
+# The deterministic gate for this request: the output's format, not its correctness.
+import os, re, sys, json, ast, subprocess
+try:
+    assert open("ANSWER.md").read().strip(), "ANSWER.md is empty"
+    print("format ok")
+except Exception as e:
+    print(f'format check failed: {e}')
+    sys.exit(1)

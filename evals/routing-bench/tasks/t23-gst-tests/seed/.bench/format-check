@@ -1,0 +1,9 @@
+# The deterministic gate for this request: the output's format, not its correctness.
+import os, re, sys, json, ast, subprocess
+try:
+    tree = ast.parse(open("test_gst.py").read())
+    assert any(isinstance(n, ast.FunctionDef) and n.name.startswith("test_") for n in ast.walk(tree)), "no test_ functions"
+    print("format ok")
+except Exception as e:
+    print(f'format check failed: {e}')
+    sys.exit(1)

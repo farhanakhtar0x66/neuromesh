@@ -1,0 +1,1 @@
+This is impossible: any comparison sort needs Omega(N log N) comparisons in the worst case (the decision-tree lower bound, log2(N!)). The closest valid option is an in-place IEEE-754 radix sort in O(N), or heapsort in O(N log N) with O(1) memory.

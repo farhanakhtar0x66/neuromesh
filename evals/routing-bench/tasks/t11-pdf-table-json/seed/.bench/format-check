@@ -1,0 +1,11 @@
+# The deterministic gate for this request: the output's format, not its correctness.
+import os, re, sys, json, ast, subprocess
+try:
+    d = json.loads(open("output.json").read())
+    assert isinstance(d, list) and len(d) == 3, "expected a list of 3 objects"
+    for o in d:
+        assert isinstance(o, dict) and {"name","role","salary_inr"} <= set(o), "each object needs name, role, salary_inr"
+    print("format ok")
+except Exception as e:
+    print(f'format check failed: {e}')
+    sys.exit(1)
