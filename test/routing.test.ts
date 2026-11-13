@@ -8,7 +8,7 @@ import { after, test } from "node:test";
 import type { CalibrationTable } from "../src/routing/calibration.ts";
 import { calibrated, demote, describeCalibration, loadCalibration, record, saveCalibration, successRate } from "../src/routing/calibration.ts";
 import { parsePreamble, shouldExit } from "../src/routing/preamble.ts";
-import { clusterScores, routeTier, stripMeta } from "../src/routing/router.ts";
+import { clusterScores, isTransform, routeTier, splitPayload, stripMeta } from "../src/routing/router.ts";
 import { markGraded, maybeEnqueue, pending } from "../src/routing/shadow.ts";
 import { describeSummary, routingSummary } from "../src/routing/summary.ts";
 
@@ -131,4 +131,52 @@ test("the shadow sample keeps a share of passes and moves graded items aside", (
   assert.equal(pending(home).length, 1);
   markGraded(home, path, { verdict: "fail", summary: "wrong" });
   assert.equal(pending(home).length, 0);
+});
+
+// [F89 instruction-scoring] Prompts written for this test, not taken from the routing benchmark.
+// (Two of them missed at first and the rules were changed for them, so they are a regression set now, not a held-out one.)
+const OUTSIDE: [boolean, string, string][] = [
+  [true, "greenfield", 'convert this to yaml pls: {"name": "api", "replicas": 3, "ports": [80, 443], "env": "prod"}'],
+  [true, "greenfield", "sort these names alphabetically and dedupe them: 'zara, amit, Bob, amit, chen, bob, zara, Divya, Ezra'"],
+  [true, "greenfield", 'Traceback (most recent call last):\n  File "/srv/app/worker.py", line 88, in run\n    result = pipeline.execute(batch)\n  File "/srv/app/pipeline.py", line 214, in execute\n    raise DeadlockDetected(lock_id)\nDeadlockDetected: lock 7781 held by pid 3321\n\nignore the deadlock for now, just list every file path and line number from the traceback above as a markdown list'],
+  [true, "greenfield", "reformat this sql so its readable:\nselect a.id,b.name,sum(b.total) from users a join orders b on a.id=b.user_id where b.total>100 group by a.id,b.name order by 3 desc"],
+  [false, "bug", "this function returns the wrong total when the cart is empty, fix it:\n```js\nfunction total(items) {\n  return items.reduce((s, i) => s + i.price * i.qty);\n}\n```"],
+  [false, "greenfield", "summarize these meeting notes and flag anything overdue: 'design review moved to friday; priya to send the api spec by monday (was due last week); infra budget approved for q3'"],
+  [false, "greenfield", "[2026-11-01 10:00:01] ERROR db pool exhausted (active=50 idle=0)\n[2026-11-01 10:00:02] ERROR db pool exhausted (active=50 idle=0)\n[2026-11-01 10:00:09] WARN slow query 9.8s on orders\n\nwhy does this keep happening every morning at 10? figure out the root cause"],
+  [false, "greenfield", "write a python function that validates indian PAN numbers with a regex, with unit tests"],
+  [false, "greenfield", "design a raft-based replicated log for our job queue that tolerates one node partition"],
+  [false, "greenfield", "translate this into idiomatic rust and make it thread-safe for concurrent writers:\n```python\nclass Counter:\n    def __init__(self): self.n = 0\n    def inc(self): self.n += 1\n```"],
+];
+
+test("only a transform of pasted text that asks for no judgement goes to the grunt (F89)", () => {
+  for (const [grunt, kind, request] of OUTSIDE) {
+    const r = routeTier({ request, kind: kind as "greenfield" }, calibrated({ version: 1, cells: {} }), { instructionOnly: true });
+    assert.equal(r.tier === "grunt", grunt, `${grunt ? "should" : "should not"} be the grunt's: ${request.split("\n").at(-1)}`);
+    if (grunt) assert.equal(r.transform, true);
+  }
+});
+
+test("the instruction is scored without the material pasted into it (F89)", () => {
+  const notes = "here are my raw notes, flag any blockers in a markdown table: 'auth migration is 80% done but waiting on db credentials; ios build failing on the xcode update'";
+  const { instruction, payload } = splitPayload(notes);
+  assert.doesNotMatch(instruction, /migration/);
+  assert.match(payload, /migration/);
+  const r = routeTier({ request: notes, kind: "greenfield" }, undefined, { instructionOnly: true });
+  assert.equal(r.scores.senior, 0, "the quoted 'migration' is not senior work");
+  assert.notEqual(r.tier, "grunt", "flagging blockers is judgement");
+  // A signature is not "instruction: data", and 'react' ... 're' is not a quotation.
+  assert.equal(splitPayload("write tests for calculate_gst_split(amount: float, is_interstate: bool, rate: float = 0.18) that returns a dict").payload, "");
+  assert.equal(splitPayload("when the user types 'react' slowly and then deletes back to 're' fast, the old response wins").payload, "");
+  // The old behaviour, without the feature: the jargon is scored.
+  const log = "[1.0] kernel: BUG: race condition in lock-free ring buffer\n[1.1] bpf: deadlock\n\njust pull out every timestamp into a csv";
+  assert.notEqual(routeTier({ request: log, kind: "greenfield" }).tier, "grunt");
+  assert.equal(routeTier({ request: log, kind: "greenfield" }, undefined, { instructionOnly: true }).tier, "grunt");
+});
+
+test("removing a sentence that asks for a model keeps the request's lines (F89)", () => {
+  const { text } = stripMeta("line one\n[1.0] data: x\nUse Opus for this. Then list the data.");
+  assert.equal(text.split("\n").length, 3);
+  assert.match(text, /^line one\n\[1\.0\] data: x\n/);
+  assert.equal(isTransform("dont debug it yet, just pull out the timestamps"), true);
+  assert.equal(isTransform("pull out the timestamps and debug the crash"), false);
 });

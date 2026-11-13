@@ -274,6 +274,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     13. The expert's 6.5K-token plan on 4.1, a gate false alarm on 4.2, and a
     Tier 0 that never picks the grunt (trap 5.2 failed) are the gaps. See
     `docs/20-routing-benchmark.md`.
+29. **Fixes from the benchmark (2026-11-14), not yet re-run.** Tier 0 scores
+    the instruction, not pasted material, and sends inline transforms to the
+    grunt (F89; starting tier right on 11 of 15, was 6), which answers them with
+    no tools (F90). The gate trusts `escalate: false` above 0.55 (F91), and the
+    expert's blueprint is capped by its brief (F92). Next: re-run both
+    configurations with the working session idle and in separate five-hour
+    windows.
 
 ## Next steps
 

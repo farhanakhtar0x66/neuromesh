@@ -266,3 +266,75 @@ test("the shipped cascade preset loads with its grunt rung and its settings", ()
   assert.equal(p.cascade?.maxEscalations, 2);
   assert.throws(() => validatePreset({ ...p, cascade: { alpha: 3 } }, "x.json"), /alpha must be between 0 and 1/);
 });
+
+const TRANSFORM = "turn this into fixed.txt, just the word that repeats: 'ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok ok'";
+
+test("an inline transform goes to the grunt, which answers once with no tools (F89, F90)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (req.direct) return { structured: { files: [{ path: "fixed.txt", content: "ok\n" }], summary: "wrote it", notes: "", run: "" } };
+    return report("n/a");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  const state = await startRun({ cwd: repo(), prompt: TRANSFORM, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  const route = events.find((e) => e.type === "route.tier");
+  assert.equal(route?.tier, "grunt");
+  assert.equal(state.cascade?.route?.transform, true);
+  assert.equal(fake.calls.length, 1, "one call");
+  assert.equal(fake.calls[0]!.direct, true, "with no tools");
+  assert.equal(fake.calls[0]!.model, "grunt");
+  assert.equal(state.attempts[0]?.cascadeTier, "grunt");
+});
+
+test("an unusable one-answer grunt gets its tools; failing checks then go to the worker (F90, F82)", async () => {
+  const { ctx, fake } = context((req) => {
+    if (req.direct) return { structured: { nothing: true } };
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", req.model === "grunt" ? "not ok" : "ok");
+    return report("done");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  const state = await startRun({ cwd: repo(), prompt: TRANSFORM, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(fake.calls.map((c) => [c.model, Boolean(c.direct)]), [["grunt", true], ["grunt", false], ["worker", false]]);
+});
+
+test("the gate trusts escalate: false above the floor, and stops below it (F91)", async () => {
+  const script = (confidence: number): FakeScript => (req) => {
+    if (!isBuild(req)) return report("n/a");
+    preamble(req, req.model === "worker" ? confidence : 0.9, false);
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  };
+  const sure = context(script(0.7));
+  const a = await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, sure.ctx);
+  assert.equal(a.status, "finished", a.reason);
+  assert.deepEqual(sure.fake.calls.filter(isBuild).map((c) => c.model), ["worker"], "0.70 with escalate false is let through");
+  const unsure = context(script(0.3));
+  const b = await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, unsure.ctx);
+  assert.equal(b.status, "finished", b.reason);
+  assert.deepEqual(unsure.fake.calls.filter(isBuild).map((c) => c.model), ["worker", "senior"], "0.30 is stopped");
+  process.env.NEUROMESH_DISABLE = "gate-floor";
+  try {
+    const old = context(script(0.7));
+    await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, old.ctx);
+    assert.deepEqual(old.fake.calls.filter(isBuild).map((c) => c.model), ["worker", "senior"], "without the floor, 0.70 is under 0.75");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("the blueprint is asked to stay under about 400 words with no function bodies (F92)", async () => {
+  const { ctx, fake } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if (isSpec(req)) return { structured: { name: "x", summary: "s", features: ["f"], behaviour: [], out_of_scope: [], design: ["d"], acceptance: [], tasks: [] } };
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  await startRun({ cwd: repo(), prompt: "build a command-line tool that writes three files", preset: preset() }, ctx);
+  const asked = fake.calls.find(isSpec)?.prompt ?? "";
+  assert.match(asked, /under about 400 words/);
+  assert.match(asked, /No function bodies/);
+});

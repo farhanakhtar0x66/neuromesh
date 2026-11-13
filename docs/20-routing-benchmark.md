@@ -100,3 +100,18 @@ corrections the metrics were Gap@Oracle about 7% in Opus's favour; after them,
    whether 4.2-like false alarms go away without losing 5.3-like catches.
 4. Run each configuration two more times before trusting any of these
    numbers: one run per prompt is not a measurement of variance.
+
+## Changes after the run (F89 to F92)
+
+Made the same day, not yet measured live; details and the reasoning for each
+are in `evals/routing-bench/REPORT.md`, "After this report":
+
+- F89 `instruction-scoring`: Tier 0 scores the instruction, not pasted material; an inline transform with no judgement goes to the grunt. Also fixes a bug where removing a model request flattened the request's lines.
+- F90 `direct-grunt`: those grunt turns are one call with no tools.
+- F91 `gate-floor`: the gate stops on `escalate: true` or confidence below 0.55.
+- F92 `blueprint-cap`: the expert's blueprint is asked to stay under about 400 words.
+
+Rejected after checking the records: dropping the sandwich's Haiku hop (it cost
+$0.008 against about $0.15 on Sonnet) and adding this suite's words to the
+worker's keywords (fitting the router to its own test).
+

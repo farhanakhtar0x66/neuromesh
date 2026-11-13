@@ -24,6 +24,15 @@ export interface Preamble {
 /** The architecture's thresholds: tau_2 for the Haiku-class worker tier, tau_3 for the Sonnet-class senior tier. */
 export const DEFAULT_THRESHOLDS = { worker: 0.75, senior: 0.8 };
 
+/**
+ * [F91 gate-floor] Trust the developer's own "escalate": without it, only a
+ * confidence below this stops the turn. The first benchmark run (2026-11-14):
+ * Sonnet said 0.70 and escalate false on 4.2, the 0.80 threshold sent it to
+ * Opus anyway, and Sonnet then built it (no gain, $0.11 more). Haiku said 0.30
+ * on the impossible sort, which this floor still catches.
+ */
+export const GATE_FLOOR = 0.55;
+
 /** The instruction added to a worker's or senior's first prompt of a task. */
 export function preambleInstruction(): string {
   return `

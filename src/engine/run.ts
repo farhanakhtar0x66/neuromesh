@@ -60,6 +60,7 @@ import {
   climbPrompt,
   advisedFixPrompt,
   advisePrompt,
+  directAnswerPrompt,
   DIAGNOSE_SCHEMA,
   diagnosePrompt,
   parseDiagnosis,
@@ -101,7 +102,7 @@ import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
 import type { AttemptKind, AttemptRecord, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, saveCalibration } from "../routing/calibration.ts";
-import { DEFAULT_THRESHOLDS, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
+import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
 import type { Preamble } from "../routing/preamble.ts";
 import { routeTier } from "../routing/router.ts";
 import type { CascadeTier } from "../routing/router.ts";
@@ -301,7 +302,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   if (preset.cascade && Object.keys(override).length === 0) {
     const c = preset.cascade;
     cascade = {
-      thresholds: { worker: c.thresholds?.worker ?? DEFAULT_THRESHOLDS.worker, senior: c.thresholds?.senior ?? DEFAULT_THRESHOLDS.senior },
+      // [F91 gate-floor] The preset's thresholds, else the floor; with the feature off, the architecture's tau_2 and tau_3.
+      thresholds: isOn("gate-floor")
+        ? { worker: c.thresholds?.worker ?? GATE_FLOOR, senior: c.thresholds?.senior ?? GATE_FLOOR }
+        : DEFAULT_THRESHOLDS,
       blueprint: c.blueprint ?? true,
       maxEscalations: c.maxEscalations ?? 2,
       shadowRate: c.shadowRate ?? DEFAULT_SHADOW_RATE,
@@ -321,6 +325,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
               namedFiles: new Set(b.request.match(/[\w./-]+\.(?:[jt]sx?|py|rs|go|md|json|toml|ya?ml|css|html)\b/g) ?? []).size,
             },
             table,
+            // [F89 instruction-scoring]
+            { instructionOnly: isOn("instruction-scoring") },
           ),
         );
         b.staffing.reasons.push(`Tier 0: ${cascade.route.tier} (${cascade.route.reasons.join("; ")})`);
@@ -1714,11 +1720,26 @@ function workerChain(state: RunState, task: TaskState): RoleConfig[] {
  */
 function directApplies(run: RunCtx, task: TaskState): boolean {
   const { state, ctx } = run;
+  // [F90 direct-grunt] A transform of text the request contains: the grunt answers once, with no tools.
+  if (directGrunt(state, task)) {
+    const first = workerChain(state, task)[0];
+    return first !== undefined && ctx.backends[first.backend]?.direct === true;
+  }
   if (!isOn("direct-build") || !state.direct || !state.brief?.spec) return false;
   if (task.owner !== "worker" || task.escalated || task.advised || task.directOff || task.envProblem) return false;
   if ((task.directTurns ?? 0) >= DIRECT_TURNS || !["initial", "repair", "review-fix"].includes(task.next)) return false;
   const first = workerChain(state, task)[0];
   return first !== undefined && ctx.backends[first.backend]?.direct === true;
+}
+
+/**
+ * [F90 direct-grunt] Tier 0 found a mechanical transform of text the request
+ * contains, and the task is on a grunt rung: one answer, no tools, so the
+ * grunt does not load Claude Code's tool definitions to format a few lines.
+ * One try; after that (or an unusable answer) the usual path takes over.
+ */
+function directGrunt(state: RunState, task: TaskState): boolean {
+  return isOn("direct-grunt") && state.cascade?.route?.transform === true && task.routed === true && !task.escalated && !task.advised && !task.directOff && (task.directTurns ?? 0) < 1 && task.next === "initial" && tierAtRung(state, task.rung) === "grunt";
 }
 
 /** [F77 direct-build] The project's text files, smallest first up to a size limit, for a worker that cannot read. */
@@ -1772,11 +1793,12 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
     task: task.id,
     round: task.round,
     cwd: task.worktree,
-    prompt: directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
+    prompt: directGrunt(state, task) ? directAnswerPrompt(state, projectFiles(task.worktree, task.prepared)) : directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
     access: "read-only",
     schema: DIRECT_SCHEMA,
     direct: true,
     chain: workerChain(state, task),
+    rungBase: task.rung,
   });
   task.directTurns = (task.directTurns ?? 0) + 1;
   if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {

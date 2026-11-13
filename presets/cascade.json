@@ -5,23 +5,60 @@
   "routing": "worker-first",
   "roles": {
     "orchestrator": [
-      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" },
-      { "backend": "codex", "model": "gpt-6.1-sol", "effort": "medium" }
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "medium"
+      }
     ],
     "escalation": [
-      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" },
-      { "backend": "codex", "model": "gpt-6.1-sol", "effort": "high" }
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6.1-sol",
+        "effort": "high"
+      }
     ],
     "briefer": [
-      { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium", "tier": "expert" },
-      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" }
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium",
+        "tier": "expert"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      }
     ],
     "worker": [
-      { "backend": "claude", "model": "claude-haiku-5-5", "effort": "medium" }
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "medium"
+      }
     ],
     "tester": [
-      { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" },
-      { "backend": "codex", "model": "gpt-6-luna", "effort": "high" }
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high"
+      }
     ]
   },
   "repairs": 2,
@@ -32,18 +69,41 @@
   "expertBudgetUsd": 3,
   "test": "always",
   "gruntLadder": [
-    { "backend": "codex", "model": "gpt-6-luna", "effort": "low" }
+    {
+      "backend": "codex",
+      "model": "gpt-6-luna",
+      "effort": "low"
+    }
   ],
   "workerLadder": [
-    { "backend": "claude", "model": "claude-haiku-5-5", "effort": "medium" },
-    { "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "medium"
+    },
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "high"
+    }
   ],
   "seniorLadder": [
-    { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "medium" },
-    { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" }
+    {
+      "backend": "claude",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium"
+    },
+    {
+      "backend": "claude",
+      "model": "claude-sonnet-5-5",
+      "effort": "high"
+    }
   ],
   "cascade": {
-    "thresholds": { "worker": 0.75, "senior": 0.8 },
+    "thresholds": {
+      "worker": 0.55,
+      "senior": 0.55
+    },
     "blueprint": true,
     "maxEscalations": 2,
     "shadowRate": 0.01,

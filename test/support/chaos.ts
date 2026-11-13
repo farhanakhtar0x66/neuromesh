@@ -206,7 +206,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         }
       : undefined,
   };
-  const prompt = d.pick([
+  const drawn = d.pick([
     "make the test pass",
     "make the test pass",
     `build a command-line tool that writes ${fileCount} files`,
@@ -214,6 +214,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     "fix the typo in the readme",
     "refactor the check so it is easier to read, keeping its behaviour",
   ]);
+  // [F89 instruction-scoring] [F90 direct-grunt] Some cascade runs get a transform of pasted text (the cascade's own dice).
+  const prompt = withCascade && cascadeDice.chance(0.3) ? `turn this list into ${fileCount} files, one value each: 'alpha=1, beta=2, gamma=3, delta=4, epsilon=5, zeta=6, eta=7'` : drawn;
   // How badly the agents behave in this run: none at all (the engine must then
   // succeed), or a share of the turns.
   const trouble = d.weighted({ none: 1.5, some: 4, much: 3, most: 1 });
@@ -348,6 +350,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     }
     // A build, repair or fix turn.
     const report = (status: string, summary: string, notes = ""): Partial<AgentResult> => ({ ...extra, sessionId: `s${++sessions}`, structured: { status, summary, notes, run: "" } });
+    // [F77 direct-build] [F90 direct-grunt] A one-answer turn: the files come back in the answer.
+    if (req.direct) {
+      const view = d.weighted({ good: 10, wrong: p * 8, garbage: p * 5, none: p * 3 });
+      if (view === "garbage") return { ...extra, structured: d.pick([{}, { files: "all of them" }, { files: [{ path: 3 }] }]) };
+      if (view === "none") return { ...extra, structured: { files: [], summary: "nothing", notes: "", run: "" } };
+      return { ...extra, structured: { files: mine(req.cwd).map((f) => ({ path: f, content: view === "good" ? "ok" : "not ok" })), summary: "wrote them", notes: "", run: "" } };
+    }
     if (req.access !== "write") return report("done", "looked");
     // A split is asked for where the engine offers one; a troubled worker may ask anyway.
     const offered = /answer with status "split"/.test(req.prompt);
@@ -409,6 +418,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const backend: AgentBackend = {
     id: "fake",
     displayName: "Chaos",
+    // [F77 direct-build] [F90 direct-grunt] It can answer with no tools.
+    direct: true,
     version: async () => "chaos-1",
     async run(request: AgentRequest): Promise<AgentResult> {
       const t = Date.now();

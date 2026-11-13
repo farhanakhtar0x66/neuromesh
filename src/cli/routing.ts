@@ -49,7 +49,7 @@ export async function commandRouting(positional: string[], flags: Map<string, st
     const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
     const repo = findRepo(flags.get("repo") ?? process.cwd());
     const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: false });
-    const r = routeTier({ request: brief.request, kind: brief.kind, totalWords: [brief.request, ...brief.attached.map((a) => a.text)].join(" ").split(/\s+/).filter(Boolean).length }, calibrated(loadCalibration(home), alpha));
+    const r = routeTier({ request: brief.request, kind: brief.kind, totalWords: [brief.request, ...brief.attached.map((a) => a.text)].join(" ").split(/\s+/).filter(Boolean).length }, calibrated(loadCalibration(home), alpha), { instructionOnly: true });
     const scores = Object.entries(r.scores).map(([t, s]) => `${t} ${s}`).join(", ");
     process.stdout.write(
       `Tier: ${r.tier} (stage ${r.stage === "rules" ? "0A rules" : r.stage === "similarity" ? "0B similarity" : "0C calibrated"})\n` +

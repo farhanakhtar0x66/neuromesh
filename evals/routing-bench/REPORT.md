@@ -157,3 +157,23 @@ Before the corrections, Gap@Oracle read about 7% in Opus's favour. After them it
 2. **Expert blueprint:** cap its size by prompt, and measure it against the suite's 500-token target.
 3. **Early-exit gate:** act on `escalate: true` only, or lower the senior threshold. Measure whether false alarms like 4.2 disappear while catches like 5.3 remain.
 4. **Re-run both setups** at least twice, with this session idle and the runs in separate five-hour windows, before trusting the subscription numbers.
+
+## After this report: what was changed (F89 to F92, not yet re-run)
+
+The owner's own list and a friend's four suggestions were checked against this run's records. These were taken:
+
+| Change | Feature | Prompted by | Expected effect (to be measured) |
+| --- | --- | --- | --- |
+| Tier 0 scores the instruction, not the pasted material. An instruction that only changes the form of the pasted text (turn into, rewrite, extract, list...) and asks for no judgement (flag, summarise, debug, fix, make it thread-safe...) goes to the grunt, empty workspace or not. | F89 `instruction-scoring` | 5.2 failed; 2.2 went to Sonnet because the quoted notes mention a "migration"; Tier 0 never picked the grunt | Starting tier right on 11 of 15 prompts (was 6): 1.1, 1.2, 1.3 and 5.2 to the grunt, 2.2 to the worker. 10 of 10 on prompts written outside the suite. Two of those first missed and the rule was changed for them, so they are a regression set now, not a held-out one. |
+| Those grunt transforms are answered in one call with no tools: no Claude Code tool definitions, the files returned as JSON. An unusable answer gives the grunt its tools; failing checks send the task to the worker. | F90 `direct-grunt` | Haiku processed 30K to 86K tokens per formatting prompt, most of it Claude Code's own session prompt | Fewer tokens, and so less quota, on 1.x and 5.2 |
+| The early-exit gate stops a turn on `escalate: true`, or on confidence below 0.55, not below 0.75/0.80 | F91 `gate-floor` | 4.2: Sonnet said 0.70 and `escalate: false`, was sent to Opus anyway, then built it | About $0.11 and one Opus turn saved on 4.2; 5.3 (0.30) is still caught |
+| The expert's blueprint is asked to stay under about 400 words: bullet points, invariants and signatures, no function bodies | F92 `blueprint-cap` | 4.1: Opus's plan was 6,543 output tokens ($0.197) | Most of that $0.197 saved, if Opus follows the brief (the CLI cannot enforce a limit) |
+
+Not taken:
+
+- **Dropping the third hop of the sandwich** (Opus → Sonnet only). On 4.1, the Haiku part cost $0.0079. The same tokens at Sonnet's prices would cost about $0.15, so the third session saved money here rather than costing it.
+- **Adding "standup", "meeting notes", "action items" to the worker's keywords.** That would fit the router to this suite's prompts. Scoring the instruction rather than the quoted notes routes 2.2 to the worker without it.
+
+A bug was also found and fixed while doing this. Removing a sentence that asks for a model (the router's prompt-injection guard) used to flatten the request onto one line. That hid the line structure of pasted logs, so trap 5.2 would have scored its jargon even with F89.
+
+A suggestion that these changes bring the batch to about $0.68 (79.5% CostSave) is a projection. Only a re-run will show the real figures, with this session idle and the two runs in separate five-hour windows (see "Measurement caveat").

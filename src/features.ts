@@ -821,6 +821,42 @@ export const FEATURES: Feature[] = [
     what: "Only in presets that set \"cascade\" (default 1%). When a task passes on the grunt or worker tier, its brief and diff are kept, with that chance, in ~/.neuromesh/routing/shadow on this machine. `neuromesh routing grade` (live model calls, run only when asked) has the preset's senior model grade them; a rejected pass counts as a failure in the calibration table (F81), so Tier 0 learns where it routed too low.",
     optional: true,
   },
+  {
+    id: "F89",
+    key: "instruction-scoring",
+    name: "Tier 0 scores the instruction, not pasted material, and sends inline transforms to the grunt",
+    added: "2026-11-14",
+    files: ["src/routing/router.ts (splitPayload, isTransform, stripMeta)", "src/engine/run.ts (startRun)"],
+    what: "Only with the cascade. The request is split into its instruction and the material pasted into it (quoted text, fenced code, log and data lines, a block after a line ending in a colon, data after a colon). Only the instruction is scored, so a quoted note that mentions a migration, or a kernel log full of eBPF jargon, no longer looks like senior or expert work. A request whose instruction only changes the form of the pasted text (turn into, rewrite, extract, list, sort...) and asks for no judgement (flag, summarise, debug, fix, make it thread-safe...) goes to the grunt, empty workspace or not; negated verbs (\"dont debug it yet\") do not count. Also keeps the request's line breaks when sentences asking for a model are removed (they used to be flattened). From the first routing benchmark run (2026-11-14): Tier 0 picked the suite's starting tier for 6 of 15 prompts and never the grunt; with this, 11 of 15, and 10 of 10 on prompts outside the suite.",
+    optional: true,
+  },
+  {
+    id: "F90",
+    key: "direct-grunt",
+    name: "The grunt answers an inline transform once, with no tools",
+    added: "2026-11-14",
+    files: ["src/engine/run.ts (directGrunt, directApplies, directTurn)", "src/engine/prompts.ts (directAnswerPrompt)"],
+    what: "Only with the cascade, when Tier 0 found an inline transform (F89) and the task is on a grunt rung. The grunt gets one call with no tools (F77's one-answer mode: no Claude Code tool definitions, a one-line system prompt) holding the request and the project's few files, and returns the files as JSON; Neuromesh writes them and runs the checks. An unusable answer gives the grunt its tools; failing checks send the task to the worker (F82). On the first benchmark run Haiku processed 30K to 86K tokens per formatting prompt, most of them Claude Code's own session prompt.",
+    optional: true,
+  },
+  {
+    id: "F91",
+    key: "gate-floor",
+    name: "The early-exit gate trusts the developer's own escalate: false above a floor",
+    added: "2026-11-14",
+    files: ["src/routing/preamble.ts (GATE_FLOOR)", "src/engine/run.ts (startRun)"],
+    what: "Only with the cascade. A worker or senior turn is stopped when its preamble says escalate: true, or when its confidence is below the floor (0.55, or the preset's thresholds), instead of below the architecture's 0.75 and 0.80. From the first benchmark run: Sonnet reported 0.70 and escalate false on prompt 4.2, the 0.80 threshold sent it to Opus anyway, and Sonnet then built it with no gain ($0.11 more). Haiku's 0.30 on the impossible sort is still caught. Off, the gate uses 0.75 and 0.80.",
+    optional: true,
+  },
+  {
+    id: "F92",
+    key: "blueprint-cap",
+    name: "The expert's blueprint is asked to stay under about 400 words",
+    added: "2026-11-14",
+    files: ["src/engine/prompts.ts (cascadeOwners)"],
+    what: "Only with the cascade's blueprint mode (F85). The lead engineer's plan is asked to stay under about 400 words: bullet points, invariants and the signatures the parts build against, with no function bodies, full code blocks or prose about what the developers will write. The CLIs have no output-token limit, so the limit is in the brief. On the first benchmark run Opus's plan for 4.1 was 6,543 output tokens ($0.20), and the sandwich cost as much as Opus alone.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

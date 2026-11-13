@@ -198,7 +198,12 @@ export function cascadeOwners(senior: boolean, grunt: boolean): string {
     `"worker": cheap and fast; routine, fully specified work (glue code, reading and writing files, simple data handling, tests from stated examples).`,
     senior ? `"senior": about three times the price; a part that needs design judgement or has many rules that interact.` : "",
   ].filter(Boolean);
-  return `${kinds.length} kinds of developer build it, and you choose one per task by how hard the task is: ${kinds.join(" ")} You build nothing yourself: your value is the design. For the hardest part, the one the others would get wrong, give it to the ${senior ? "senior" : "worker"} and write its blueprint into its brief: the decision, the algorithm as numbered steps, and the invariants it must keep (each as "Invariant: ..."), concrete enough to build without guessing; put the invariants that bind the whole program in the design too. Keep the rest of your answer short. Never give a harder kind than the task needs.`;
+  return `${kinds.length} kinds of developer build it, and you choose one per task by how hard the task is: ${kinds.join(" ")} You build nothing yourself: your value is the design. For the hardest part, the one the others would get wrong, give it to the ${senior ? "senior" : "worker"} and write its blueprint into its brief: the decision, the algorithm as numbered steps, and the invariants it must keep (each as "Invariant: ..."), concrete enough to build without guessing; put the invariants that bind the whole program in the design too. Keep the rest of your answer short. Never give a harder kind than the task needs.${
+    // [F92 blueprint-cap] The CLI has no output limit, so the limit is in the brief: the first benchmark run's plan was 6,500 output tokens.
+    isOn("blueprint-cap")
+      ? " Your whole answer stays under about 400 words: bulleted points, the invariants, and the signatures (types, structs, traits, function signatures) the parts build against. No function bodies, no full code blocks, no prose explanations of what the developers will write. Stop as soon as the plan is complete."
+      : ""
+  }`;
 }
 
 /** A cheap model turns a request too short to build from into a product spec. */
@@ -429,6 +434,27 @@ Rules:
 - Use only what the request and the spec allow (standard library unless a package is named there).
 
 Answer in the required JSON format: files (each with path and content), summary (what you built, two or three sentences), notes (what a reviewer must know, or an empty string), run (the command that starts the program, or an empty string).`;
+}
+
+/**
+ * [F90 direct-grunt] The grunt's one answer to a request that only changes the
+ * form of text it contains: no tools, the request and the project's few files
+ * in the prompt, the files back as JSON.
+ */
+export function directAnswerPrompt(state: RunState, project: { path: string; content: string }[]): string {
+  const show = project.map((f) => `--- ${f.path} ---\n${f.content}${f.content.endsWith("\n") ? "" : "\n"}--- end of ${f.path} ---`).join("\n");
+  return `You have no tools: you cannot read files or run anything. Everything you need is below. Answer in one go. Neuromesh writes the files you return into the project folder and then runs the project's checks.
+
+The request:
+${state.prompt}
+${project.length > 0 ? `\nThe project's files now:\n${show}\n` : ""}
+${checkList(state.checks)}
+
+Rules:
+- Return every file the request asks for, complete, with its path relative to the project folder. A file you do not return stays as it is.
+- Use the exact file names, keys and formats the request gives. Do not add anything it did not ask for.
+
+Answer in the required JSON format: files (each with path and content), summary (one sentence), notes (an empty string unless something in the request was unclear), run (an empty string).`;
 }
 
 /** [F77 direct-build] The files and report of a one-answer turn; undefined when the answer cannot be used. */

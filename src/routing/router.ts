@@ -30,6 +30,15 @@ export interface TierRoute {
   /** Sentences removed because they told the router what to pick. */
   stripped: string[];
   reasons: string[];
+  /** [F89 instruction-scoring] A mechanical transform of text the request itself contains (the grunt's work). */
+  transform?: boolean;
+  /** [F89 instruction-scoring] Characters of pasted material that were left out of the scoring. */
+  payloadChars?: number;
+}
+
+export interface RouteOptions {
+  /** [F89 instruction-scoring] Score the instruction, not the material pasted into the request. */
+  instructionOnly?: boolean;
 }
 
 export interface RouterInput {
@@ -94,14 +103,17 @@ const META =
 
 /** [F80 tier-router] Remove sentences that try to choose the model; returns the rest and what was removed. */
 export function stripMeta(request: string): { text: string; stripped: string[] } {
-  const sentences = request.split(/(?<=[.!?])\s+|\n+/);
   const stripped: string[] = [];
-  const kept: string[] = [];
-  for (const s of sentences) {
-    if (META.test(s)) stripped.push(s.trim());
-    else kept.push(s);
-  }
-  return { text: kept.join(" ").trim(), stripped };
+  // Line by line, so the request's line structure survives (pasted logs and data are found by their lines, F89).
+  const lines = request.split("\n").map((line) => {
+    const kept: string[] = [];
+    for (const s of line.split(/(?<=[.!?])[ \t]+/)) {
+      if (META.test(s)) stripped.push(s.trim());
+      else kept.push(s);
+    }
+    return kept.join(" ");
+  });
+  return { text: lines.join("\n").trim(), stripped };
 }
 
 /** [F80 tier-router] Match score per cluster: the weights of the patterns the text matches. */
@@ -116,9 +128,63 @@ export interface Calibrated {
   pick(cluster: CascadeTier | undefined): { tier: CascadeTier; p: number } | undefined;
 }
 
+// [F89 instruction-scoring] Material pasted into a request: data, logs, quoted messages, code.
+const DATA_LINE = /^\s*(\[[\d.:\s-]+\]|\d{4}-\d\d-\d\d|[-*]\s+\S+=|\s{2,}\S|[{}\[\]]|\w[\w.-]*:\s*$|```)/;
+// A quotation opens after a space, colon or bracket and closes before punctuation or a space ('react' ... 're' is not one).
+const QUOTED = /(^|[\s:(])(["'“‘`])(?=\S)((?:(?!\2)[\s\S]){40,}?)\2(?=[\s.,;:!?)]|$)/g;
+const FENCED = /```[\s\S]*?```/g;
+/** Verbs that change the form of given text without judging it. */
+const TRANSFORM = /\b(turn|convert|transform|reformat|format|rewrite|rephrase|reword|translate|extract|pull out|grab|list|collect|strip|clean ?up|dedupe|de-?duplicate|sort|normali[sz]e|tabulate|parse)\b/i;
+/** Verbs that ask for judgement, analysis or new logic: not the grunt's, whatever the input. */
+const JUDGEMENT = /\b(flag|summari[sz]e|analy[sz]e|explain|debug|diagnose|why|decide|prioriti[sz]e|recommend|review|fix|optimi[sz]e|refactor|design|implement|architect|prove|derive|find the|root cause|what went wrong)\b|\b(make it|add|thread[- ]?safe|concurren\w*|secure|faster|performan\w*)\b/i;
+/** "dont debug it yet": a negated verb is not an instruction. */
+const NEGATED = /\b(don'?t|do not|no need to|not yet|never)\s+(\w+\s+){0,2}?\w+/gi;
+
+/**
+ * [F89 instruction-scoring] Split a request into its instruction and the
+ * material pasted into it (quoted text, fenced code, data and log lines, a
+ * block after a line ending in a colon, data after a colon on one line).
+ */
+export function splitPayload(request: string): { instruction: string; payload: string } {
+  const payload: string[] = [];
+  let text = request.replace(FENCED, (m) => (payload.push(m), " "));
+  text = text.replace(QUOTED, (m, lead: string) => (payload.push(m.slice(lead.length)), `${lead} `));
+  const lines = text.split("\n");
+  const kept: string[] = [];
+  let block = false;
+  for (const line of lines) {
+    if (block && line.trim() === "") block = false;
+    if (block || DATA_LINE.test(line)) {
+      payload.push(line);
+      continue;
+    }
+    if (/:\s*$/.test(line) && lines.length > 1) block = true;
+    // One line: "do this to the data: <data with digits and separators>".
+    const inline = line.match(/^(.{10,}?):\s+(.{40,})$/);
+    const open = (x: string): number => (x.match(/\(/g) ?? []).length - (x.match(/\)/g) ?? []).length;
+    if (inline && open(inline[1]!) === 0 && (inline[2]!.match(/[\d,|/;=-]/g) ?? []).length >= 6) {
+      kept.push(inline[1]!);
+      payload.push(inline[2]!);
+      continue;
+    }
+    kept.push(line);
+  }
+  return { instruction: kept.join("\n").replace(/\s+/g, " ").trim(), payload: payload.join("\n").trim() };
+}
+
+/** [F89 instruction-scoring] A transform of given text that asks for no judgement. */
+export function isTransform(instruction: string): boolean {
+  const said = instruction.replace(NEGATED, " ");
+  return TRANSFORM.test(said) && !JUDGEMENT.test(said);
+}
+
 /** [F80 tier-router] Tier 0: which tier a request starts on. */
-export function routeTier(input: RouterInput, calibrated?: Calibrated): TierRoute {
-  const { text, stripped } = stripMeta(input.request);
+export function routeTier(input: RouterInput, calibrated?: Calibrated, options: RouteOptions = {}): TierRoute {
+  const { text: whole, stripped } = stripMeta(input.request);
+  // [F89 instruction-scoring]
+  const split = options.instructionOnly ? splitPayload(whole) : undefined;
+  const hasPayload = split !== undefined && split.payload.length >= 40 && split.instruction.length > 0;
+  const text = hasPayload ? split!.instruction.replace(NEGATED, " ") : whole;
   const scores = clusterScores(text);
   const total = CASCADE_TIERS.reduce((n, t) => n + scores[t], 0);
   // Ties go to the cheaper tier: the cascade catches an under-estimate, nothing catches waste.
@@ -126,9 +192,14 @@ export function routeTier(input: RouterInput, calibrated?: Calibrated): TierRout
   const confidence = best && total > 0 ? scores[best] / total : 0;
   const reasons: string[] = [];
   if (stripped.length > 0) reasons.push(`ignored ${stripped.length} sentence(s) that asked for a model`);
-  const base = { cluster: best, scores, confidence, stripped };
+  const base = { cluster: best, scores, confidence, stripped, ...(hasPayload ? { payloadChars: split!.payload.length } : {}) };
+  if (hasPayload) reasons.push(`scored the instruction only (${split!.payload.length} characters of pasted material left out)`);
 
   // ---- 0A: rules.
+  // [F89 instruction-scoring] Changing the form of text the request contains is the grunt's, however scary the text.
+  if (hasPayload && isTransform(split!.instruction)) {
+    return { ...base, tier: "grunt", stage: "rules", transform: true, reasons: [...reasons, "a mechanical transform of text the request contains: the grunt"] };
+  }
   if (input.kind === "trivial") return { ...base, tier: "grunt", stage: "rules", reasons: [...reasons, "a small, mechanical change: the cheapest tier"] };
   // Very long requests are many parts: the expert plans (the brief engine's own sizes decide that); the parts route themselves.
   const words = input.totalWords ?? text.split(/\s+/).filter(Boolean).length;
