@@ -1,0 +1,93 @@
+{
+  "id": "5.3",
+  "slug": "t53-impossible-sort",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-2",
+  "expectedTier": "cascade 2>3",
+  "expectedPath": "T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker",
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 4,
+    "total": 5
+  },
+  "quality": 8,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS names the Omega(N log N) comparison-sort lower bound\nFAIL says the request is impossible as stated\nPASS does not claim an O(N) comparison sort\nPASS offers a valid alternative (radix/IEEE-754 or O(N log N) in place)\nSCORE 4/5",
+  "wallMs": 30190,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "earlyExit": true,
+      "stop": "error",
+      "durationMs": 7152,
+      "usage": {
+        "input": 2,
+        "cacheRead": 5333,
+        "cacheWrite": 5622,
+        "output": 966,
+        "estimated": true
+      },
+      "tokens": 11923,
+      "costUsd": 0.0016609300000000001,
+      "quotaUsed": {
+        "five_hour": 0.03,
+        "seven_day": 0.63
+      },
+      "discarded": true
+    },
+    {
+      "role": "worker",
+      "kind": "climb",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 22392,
+      "usage": {
+        "input": 6,
+        "output": 2319,
+        "reasoning": 173,
+        "cacheRead": 26295,
+        "cacheWrite": 7144
+      },
+      "tokens": 35764,
+      "costUsd": 0.0544075,
+      "quotaUsed": {
+        "five_hour": 0.03,
+        "seven_day": 0.63
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 47687,
+  "discardedTokens": 11923,
+  "costUsd": 0.056068429999999995,
+  "discardedCostUsd": 0.0016609300000000001,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.03,
+      "seven_day": 0.63
+    },
+    "after": {
+      "five_hour": 0.03,
+      "seven_day": 0.63
+    }
+  },
+  "runId": "20261114-035510-7438",
+  "finishedAt": "2026-11-13T22:25:44.600Z"
+}
