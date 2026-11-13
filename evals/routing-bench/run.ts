@@ -119,16 +119,39 @@ function tokensOf(u: Usage): number {
   return (u.input ?? 0) + (u.cacheRead ?? 0) + (u.cacheWrite ?? 0) + (u.output ?? 0);
 }
 
-async function quota(): Promise<Record<string, number> | undefined> {
+async function quotaReading(): Promise<{ used?: Record<string, number>; resets?: Record<string, number> }> {
   const dir = mkdtempSync(join(tmpdir(), "routing-bench-quota-"));
   try {
     const r = await backends.claude!.run({ cwd: dir, prompt: "Reply with the single word: ok", model: "claude-haiku-5-5", effort: "low", access: "read-only", timeoutMs: 120_000, idleMs: 120_000 });
-    return r.quotaUsed;
+    return { used: r.quotaUsed, resets: r.quotaResets };
   } catch {
-    return undefined;
+    return {};
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+async function quota(): Promise<Record<string, number> | undefined> {
+  return (await quotaReading()).used;
+}
+
+/**
+ * --wait-reset: start only once the Claude five-hour window has reset, so the
+ * run's readings are not mixed with whatever used the window before it.
+ */
+async function waitForReset(note: (line: string) => void): Promise<void> {
+  const { used, resets } = await quotaReading();
+  const at = resets?.five_hour;
+  if (at === undefined) {
+    note("--wait-reset: the five-hour window's reset time is unknown; starting now");
+    return;
+  }
+  const ms = at * 1000 - Date.now() + 90_000;
+  if (ms <= 0) return;
+  note(`--wait-reset: five-hour window at ${Math.round((used?.five_hour ?? 0) * 100)}%; waiting until it resets at ${new Date(at * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC (${Math.round(ms / 60_000)} min)`);
+  await new Promise((r) => setTimeout(r, ms));
+  const after = await quota();
+  note(`--wait-reset: five-hour window now at ${after?.five_hour === undefined ? "unknown" : `${Math.round(after.five_hour * 100)}%`}; starting`);
 }
 
 function seed(taskDir: string, into: string): string {
@@ -201,6 +224,7 @@ async function main(): Promise<number> {
     process.stderr.write(stamped);
   };
   const benchHome = join(homedir(), ".neuromesh-bench", name);
+  if (process.argv.includes("--wait-reset") && !FAKE) await waitForReset(note);
   note(`started: ${slugs.length} prompt(s) on preset ${preset.name}`);
 
   for (const slug of slugs) {
