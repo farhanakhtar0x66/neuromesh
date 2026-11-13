@@ -1,0 +1,68 @@
+{
+  "id": "2.2",
+  "slug": "t22-standup-table",
+  "config": "cascade",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (67% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS a markdown table with a header separator\nPASS a row for Siddharth\nPASS a row for Neha\nPASS a row for Rohan\nPASS Siddharth's blocker: DB credentials from infra\nPASS Rohan's blocker: iOS build on Xcode 16\nPASS Neha is not flagged as blocked\nPASS a column or marker for blockers\nSCORE 9/9",
+  "wallMs": 28560,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 27656,
+      "usage": {
+        "input": 6,
+        "output": 3494,
+        "reasoning": 490,
+        "cacheRead": 20413,
+        "cacheWrite": 13516
+      },
+      "tokens": 37429,
+      "costUsd": 0.09105730000000001,
+      "quotaUsed": {
+        "five_hour": 0.68,
+        "seven_day": 0.6
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 37429,
+  "discardedTokens": 0,
+  "costUsd": 0.09105730000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.68,
+      "seven_day": 0.59
+    },
+    "after": {
+      "five_hour": 0.68,
+      "seven_day": 0.6
+    }
+  },
+  "runId": "20261114-014256-75d1",
+  "finishedAt": "2026-11-13T20:13:28.649Z"
+}
