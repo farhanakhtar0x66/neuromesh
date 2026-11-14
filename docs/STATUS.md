@@ -352,9 +352,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     capped. One run each. The builder's own notes had said the same; the
     summary cuts them short. See `docs/21-phase-2-review.md`.
 39. **The path to the goal (2026-11-14).** A plan, nothing built: nine
-    tracks, about seventy items, nine phases with a gate each, and what would
-    make it wrong. It starts with a benchmark that can tell configurations
-    apart. `docs/22-path-to-the-goal.md`.
+    tracks, about seventy items, and nine phases, each with its question, its
+    approach step by step, the decisions to make first, its budget of live
+    calls, its gate and what to do if the gate is missed; then what would
+    make it a breakthrough and what would make the plan wrong. It starts with
+    a benchmark that can tell configurations apart (40 tasks from real
+    commits, three runs each, a frozen Opus baseline).
+    `docs/22-path-to-the-goal.md`.
 
 ## Next steps
 

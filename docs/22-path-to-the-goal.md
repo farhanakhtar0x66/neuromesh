@@ -2,9 +2,15 @@
 
 Written 2026-11-14, after the phase-2 review (`docs/21-phase-2-review.md`).
 The owner asked for the full list of what could make Neuromesh the best
-model-agnostic multi-agent engineering system, as a plan only. Items have
-plan ids (M1, O3, ...), not feature ids: an item gets an F number when it is
-built.
+model-agnostic multi-agent engineering system, and then for how to approach
+each phase, as a plan only. Items have plan ids (M1, O3, ...), not feature
+ids: an item gets an F number when it is built.
+
+How to read it: the goal; what the end looks like; the one idea; the items by
+track (what could be built); then the nine phases in order, each with its
+question, its approach, the decisions to make first, its budget of live
+calls, its gate, and what to do if the gate is missed; then what would make
+it a breakthrough, and what would make the plan wrong.
 
 ## The goal, stated so it can be checked
 
@@ -196,21 +202,18 @@ the first lever on R is making more of the task executable.
 | E4 | Long work across days: a project's goals, decisions and open tasks kept between sessions, so a large build resumes from its plan, not from a re-reading of the code. |
 | E5 | The result as a pull request with its evidence: what was tested and how, what the review said, what was dropped (blind tests, findings), cost. |
 
-## The order
-
-Each phase has a gate. A phase that misses its gate is where the work stops
-and the plan is reread.
+## The order, in short
 
 | Phase | Items | Gate |
 | --- | --- | --- |
 | 1. A benchmark that can tell | M1, M2, M3, M9; then M4, M5 | Two configurations known to differ are told apart; the frontier baseline has an interval. |
-| 2. Clear the backlog | M7 on F93 to F104; S1; the remaining live checks of doc 21; D6 (it costs nothing) | Every feature on trial is kept, changed or removed on a number. |
-| 3. Oracles | O1, O2, O7, O8, then M8, O3, O5 | R on M1's bugs and refactors rises at no more than 10% more cost. |
-| 4. Replay and the record | M6, L1, D3 | A policy change is priced offline. |
+| 2. Clear the backlog | M7 on F93 to F104; S1; the remaining live checks of doc 21; D6 | Every feature on trial is kept, changed or removed on a number. |
+| 3. Oracles | O1, O2, O7, O8, then M8, O3, O5 | R on the suite's bugs and refactors rises at no more than 10% more cost. |
+| 4. Replay and the record | L1, M6, D3 | A policy change is priced offline and agrees with a live re-run. |
 | 5. The controller | R1, R2, R5, D1, D2 | Same R as phase 3 at measurably lower C, with the hand-set thresholds gone. |
 | 6. Any model | A1, A2, A4, A5, A6 | A model never seen is placed by the probe and used in a run with no edit. |
-| 7. Context | C1, C2, C9, C10, then C3, C5, C6 | Tokens per resolved task down, R unchanged. |
-| 8. Search | S2, S3, S4, S5 | R above the frontier baseline's interval on M1, C still under it. This is the goal. |
+| 7. Context | C1, C2, C9, C10, then C3, C5, C6 | Tokens per resolved task down by a third, R unchanged. |
+| 8. Search | S4, S2, S3, S5 | R above the frontier baseline's interval, C still under it. This is the goal. |
 | 9. Keep it true | L2, L3, A3, L6, E1 to E5 | The numbers hold a month later, on models that have changed. |
 
 Why this order and not the note's: context work (phase 7) is where the note
@@ -219,6 +222,664 @@ context cost found so far (session start-up) is not the one the note names.
 Search (phase 8) is where R passes the frontier, and it is only worth its
 cost on top of strong oracles (phase 3) and a controller that knows when to
 use it (phase 5).
+
+What can overlap: phase 2 needs only phase 1's suite. The run record (L1, in
+phase 4) can start the day phase 1 does, because every benchmark run should
+land in it. The probe (A1, phase 6) runs on the cheap plans and needs nothing
+but the task format. Phases 5 and 8 cannot be moved earlier: each spends what
+the phases before it measure.
+
+    1 ──┬── 2 ── 3 ──┬── 5 ── 8 ── 9
+        ├── 4 (record first, replay second) ──┘
+        └── 6 (probe first) ── 7
+
+## Rules for every phase
+
+1. **One change at a time against a frozen baseline.** The frontier baseline
+   is run once per model version and kept. It is the dearest thing in this
+   plan and the easiest to spoil (a working session on the same plan spoils
+   its quota readings).
+2. **A week's live budget is set before the week.** The Claude weekly window
+   is the binding limit (84% used on 2026-11-14). Each phase below states
+   what it is expected to spend. A phase that would pass the budget waits for
+   the next window; it does not borrow from the baseline's.
+3. **Fake backend and fault harness before any live call.** As now.
+4. **Every item becomes a feature id with a switch when it is built**, and
+   its row in the ablation table (M7) decides whether it stays.
+5. **A kill rule is written before the measurement**, not after: the number
+   below which the item is removed. The tracks above have one per item.
+6. **A result is one sentence with an interval**, or it is recorded as "one
+   run" and treated as a hint.
+7. **Nothing is tuned on the tasks it is judged on.** The suite is split once
+   into a tuning half and a held-out half (phase 1); thresholds, prompts and
+   lambda are tuned on the first and reported on the second.
+
+---
+
+## Phase 1: a benchmark that can tell
+
+**The question.** Can two configurations that really differ be told apart,
+and what exactly is the frontier model's resolution rate and cost?
+
+**Where it starts.** 29 tasks in `evals/tasks` (a prompt, a seed repository,
+a hidden check), `neuromesh eval` with `--quota` and `--spec-from`,
+`evals/bench.ts` for the table and the quota fit. Luna passes the 25 ordinary
+ones alone. One Opus baseline task finished cleanly before the window ran out
+(`docs/17-benchmark.md`).
+
+**How to approach it.**
+
+1. *Write the task recipe before any task.* A task is a real change from a
+   real repository:
+   - the seed is the commit before the change;
+   - the prompt is written from the issue or the commit message, with the
+     solution left out;
+   - the hidden check is the tests that came with the change, split into
+     those that fail before and pass after ("fail to pass") and those that
+     must keep passing ("pass to pass");
+   - the reference solution is the real commit.
+   This is the recipe public benchmarks use; it gives tasks nobody wrote to
+   be solved.
+2. *Choose where tasks come from.* Two sources, for two reasons:
+   - the owner's own repositories: private, so no model has seen the answer,
+     and they are the work this tool exists for;
+   - open-source repositories under permissive licences, changes made after
+     the models' training cut-offs. A famous repository's old bug fix may be
+     remembered rather than solved; recent commits are the guard.
+3. *Admit a task only when it is validated (M9).* On the seed the fail-to-pass
+   tests fail; on the reference they pass; the check is run three times on
+   the reference to show it is not flaky; and one independent solution (a
+   frontier model's, read by a person) also passes, which catches a check
+   that only the original author's solution satisfies. A script does the
+   first three with no model call.
+4. *Set the difficulty by measurement.* Run Luna alone once on every
+   candidate. Keep a mix: about a third Luna passes, a third it fails, a
+   third in between over three tries. Tasks the frontier model fails three
+   times out of three are kept to at most a tenth of the suite (they show
+   headroom, and they tell nothing apart).
+5. *Balance the kinds*, because phases 3 and 8 are judged per kind: bug
+   (40%), feature across several files (30%), refactor that must keep
+   behaviour (15%), new program (15%). Languages: JavaScript or TypeScript,
+   Python, Rust, as in the current suite.
+6. *Split once* into a tuning half and a held-out half, by repository, so no
+   repository is in both.
+7. *Fix the statistics in code (M2).* Each task is run three times per
+   configuration; a task's score is the share of its runs that pass; two
+   configurations are compared by the mean of per-task differences, with an
+   interval from resampling tasks 10,000 times. No dependency. "Not worse by
+   more than d" is shown when the lower end of the 90% interval is above -d.
+8. *Run the baselines (M3)*: Luna alone, Opus alone, and `factory-opus-luna`
+   as it is today. The Opus runs go one task at a time through
+   `evals/until-done.ts`, from a session that is otherwise idle, on days the
+   window is not needed for anything else.
+9. *Record both costs for every turn (M4) and where the tokens went (M5).*
+   The split of a turn's input into start-up, prompt, reads, command output
+   and earlier turns is read from the tools' own logs, which are already
+   kept per turn.
+
+**How many tasks.** What can be shown depends on how often the two systems
+disagree on a task. If they disagree on about 15% of tasks:
+
+| Tasks | Margin that can be shown |
+| --- | --- |
+| 40 | about 10 points |
+| 120 | about 6 points |
+| 400 | about 3 points |
+
+So 40 tasks cannot support "matches the frontier within 3 points", and the
+plan does not pretend otherwise. Stage it: 40 tasks first (enough to tell a
+real difference of 10 points, and to rank features in phase 2); 120 by the
+end of phase 3; a public benchmark of several hundred tasks for the 3-point
+claim in phase 8.
+
+**Decisions to make first.**
+
+| Decision | Recommendation |
+| --- | --- |
+| Which frontier model is "the frontier" | Claude Opus 5.5 at medium effort through Claude Code, as in every comparison so far. Add GPT-6.1 Sol alone as a second baseline when the ChatGPT window allows; it is cheap to add and guards against a claim that holds against one vendor only. |
+| The margin d | 10 points at 40 tasks, stated as such; 3 points is the phase 8 claim. |
+| Whether rating counts in R | Not in the benchmark (no rater). The rating stays the measure on real use (L3). |
+| One run or three | Three. One run cannot separate a feature from luck. |
+
+**What gets built.** `evals/make-task.ts` (a commit into a task folder),
+`evals/validate-task.ts` (M9, no model), the resampling interval and the
+"shown / not shown" line in `evals/bench.ts`, the tuning and held-out lists,
+the five-part token split in the turn record and the TUI meter.
+
+**Live budget (estimates from the routing benchmark: Opus alone moved the
+five-hour window about 0.9 points and the weekly about 0.13 per prompt; these
+tasks are larger, so twice that).** Opus alone, 40 tasks three times: about
+30 points of one weekly window, spread over several five-hour windows. Luna
+alone and the validation solves: the ChatGPT plan, small. This is the dearest
+step in the whole plan and it is done once.
+
+**Gate.** (a) Luna alone 40 to 70%, Opus alone 80% or more, each with an
+interval. (b) Two configurations known to differ (Luna alone against Opus
+alone) are separated. (c) Two runs of the same configuration are *not*
+separated. (c) is the one that shows the instrument is not inventing
+differences.
+
+**If the gate is missed.** If Luna passes 85% of real tasks from the owner's
+repositories, the finding is that the cheap model alone is enough for this
+work; the plan narrows to phases 6 and 7 (any model, cheaper context) and the
+rest is dropped. If the same configuration separates from itself, there are
+flaky checks or too few runs: fix the checks first (O7), then go to five
+runs.
+
+**Hands on.** The suite, the baseline, the interval, the cost in both
+currencies, the token split.
+
+---
+
+## Phase 2: clear the backlog
+
+**The question.** Which of the features nobody has measured are worth
+keeping?
+
+**Where it starts.** 104 features; most of F54 to F104 have at most one live
+run. F100 and F101 have one each way; F102 to F104 none.
+
+**How to approach it.**
+
+1. *Do D6 first*: show a developer's "choices made" and "left open" in full.
+   It costs no tokens and the first live run showed the information is
+   already there.
+2. *Measure bundles before features (M7).* 104 features times three runs
+   times 40 tasks is not affordable. Group them by what they act on and
+   leave one bundle out at a time:
+   - routing (F80, F81, F89, F91, F93, F94, F99, F103);
+   - gates and escalation (F82 to F86, F96, F102);
+   - context (F12, F13, F100, F67);
+   - review (the tester, F05 to F07, F59, F71, F98);
+   - blind tests and stubs (F95, F101);
+   - one-answer modes (F77, F90).
+   Six configurations, the tuning half of the suite, two runs each. Most of
+   these turns are on the worker's plan.
+3. *Open only the bundles that matter.* Inside a bundle whose removal moved R
+   or C beyond the interval, switch features off one at a time. A bundle
+   whose removal moved nothing is examined for cost only: features in it that
+   add turns or tokens go off by default.
+4. *Three outcomes per feature, decided by the rule written beforehand:*
+   kept (it moved R up or C down beyond the interval), off by default (no
+   measurable effect; code stays one phase, then goes), changed (it helps one
+   kind of task and hurts another: restrict it).
+5. *The live checks left over from doc 21* happen inside this: F104 on a day
+   the window is above 70%; F102 now has tasks Luna fails, so it triggers.
+6. *Write the result into `src/features.ts`*: each feature's line says what
+   was measured, on what, and when.
+
+**Decisions to make first.** The removal rule. Recommendation: a feature
+that adds any cost and shows no gain in R on two measurements is off by
+default; its code is deleted when the next phase ends unless something
+depends on it. Features that only make failures legible (the harness's
+protective ones, event tags) are not in the contest.
+
+**What gets built.** `neuromesh eval --ablate <bundle or ids>`, a bundles
+file, the ablation table in `evals/bench.ts`.
+
+**Live budget.** About 480 task-runs, nearly all on the worker's plan; the
+expert only where a task escalates. A few weekly points of Claude.
+
+**Gate.** Every feature from F54 on has a line saying kept, off or changed,
+with the numbers.
+
+**If the gate is missed.** If no bundle shows any effect, either the suite
+still cannot tell (back to phase 1's gate (b) and (c)) or the engine's
+extras really do nothing on this work; the second is a result, and the
+default becomes the simplest configuration that matches.
+
+**Hands on.** A smaller engine, and the first real probabilities for phase
+5 (how often each action changed an outcome).
+
+---
+
+## Phase 3: oracles
+
+**The question.** How much of a task can be made checkable before and while
+it is built, and does that raise the resolution rate of cheap models?
+
+**Where it starts.** The gate for every cheap tier is the project's own
+checks plus F95 (stubs) and F101 (blind tests). On a bug, "the tests pass"
+often means the bug was never exercised. On a refactor it means little.
+
+**How to approach it.** In this order, because each is cheaper and surer
+than the next:
+
+1. *O7, flaky checks.* A failing check is run once more before anything
+   reacts to it. Passing the second time marks it flaky for the run: it
+   neither repairs nor escalates. No model call. Do this first because every
+   later measurement is cleaner for it.
+2. *O8, the project's own static gates*, where its tools are installed:
+   type-check, lint, a secret scan on the diff. No model call.
+3. *O1, reproduce first (bugs).* A new step before the developer's first
+   turn, for requests the brief engine calls a bug:
+   - a cheap turn writes one test that should fail for the reported reason;
+   - the engine runs it on the untouched code. It must fail, and not because
+     it cannot load (F101's rule for that already exists);
+   - the developer then gets the task with "this test must pass, and you may
+     not change it"; the engine checks the file is unchanged and now passes.
+   If no failing test comes in one try, the task goes on as today. The step
+   never blocks: a bug that cannot be reproduced cheaply is still fixed the
+   old way.
+4. *O2, characterise first (refactors).* A cheap turn writes tests that
+   record what the code does now, using inputs from existing tests and call
+   sites. The engine runs them three times on the untouched code (all three
+   must pass, which filters the flaky ones), then requires them to pass
+   after the change.
+5. *M8, measure the gate.* Mutate the lines a run changed (a comparison
+   flipped, a constant moved by one, a statement removed), at most 20
+   mutants per task, and count how many the checks catch. No model call.
+   This is the first number for "how good is the gate", and it is how O1,
+   O2 and O3 are judged besides R.
+6. *O5, changed lines no test reaches*, where the language has coverage
+   built in (Node's test runner, coverage.py). One cheap turn writes tests
+   for them.
+7. *O3, blind tests from the spec*, before the build, when there is a spec.
+8. *O9, O4, O6* only if M8 shows the gate is still weak after the above.
+
+**Decisions to make first.**
+
+| Decision | Recommendation |
+| --- | --- |
+| Who writes the reproduction | The first worker rung, a different model from the builder when the preset has two cheap ones (their mistakes differ). |
+| May the developer change the reproduction | No. If it believes the test is wrong it says so and the engine falls back to today's path; one cheap turn lost at most, the same bound as F101. |
+| Are generated tests kept in the result | Reproductions and characterisations, yes: they are the regression tests a reviewer would ask for. Blind tests only when they found something (as now). |
+
+**What gets built.** Two new task steps (`reproduce`, `characterise`) with
+their prompts and harness cases; a re-run in the checks step; a mutation
+runner in `src/checks`; the task kinds in `evals/bench.ts` so R is reported
+per kind.
+
+**Live budget.** Each oracle is an ablation on the tasks of its kind (about
+16 bugs and 6 refactors in a 40-task suite): too few. This is why the suite
+grows to 120 during this phase, weighted to bugs and refactors. Worker plan
+mostly.
+
+**Gate.** On bugs and refactors, R up by more than the interval; cost per
+task up by no more than 10%; mutation score up.
+
+**If the gate is missed.** If cheap models cannot write a correct
+reproduction most of the time, record the rate, keep O7 and O8 (they are
+free), and move the reproduction to the senior tier for the cases where
+Tier 0 already expects trouble. If that fails too, phase 8's search has less
+to choose with and its expected gain is cut; say so then.
+
+**Hands on.** Tasks with an executable definition of done, which is what
+makes trying twice (phase 8) worth more than trying once.
+
+---
+
+## Phase 4: the record and replay
+
+**The question.** Can a change of policy be judged on past runs, for
+nothing?
+
+**Where it starts.** Each run keeps `run.json`, `events.jsonl` and a log per
+agent turn in its own folder; the usage log keeps one line per run; the
+routing table keeps counts. The data exists in 50-odd project folders and no
+single place.
+
+**How to approach it.**
+
+1. *L1 first, and early.* One append-only record, one line per turn and one
+   per decision the engine made (started on tier X, asked for a review,
+   skipped the preamble), each with what was known then and what happened
+   after. Start it when phase 1 starts so every benchmark run is in it. A
+   backfill script reads the existing run folders.
+2. *Keep the engine's inputs to each decision*, not only its outcome. A
+   decision can be replayed only if what it saw was recorded.
+3. *M6, replay, in its honest form.* A recorded backend answers a turn when
+   the model, the prompt and the state of the files match a recorded one.
+   That covers "what if the engine had decided differently about something
+   it already paid for": stopped earlier, skipped a review that found
+   nothing, started on the tier the task ended on, not raced. It does not
+   cover "what would another model have written"; there replay answers
+   "unknown" and counts how often. The share of unknowns is reported with
+   every replay result.
+4. *D3, regret*, from the record alone: for each finished run, the cheapest
+   recorded path to the same result.
+5. *Check replay against reality once*: take one threshold change, replay
+   it, then run it live on 20 tasks.
+
+**Decisions to make first.** Where the record lives and its form.
+Recommendation: JSON lines under `~/.neuromesh/record/`, no database (the
+no-dependency rule holds; hundreds of thousands of lines are fast enough to
+scan), with an index file rebuilt on demand. Testers' records stay on their
+machines; only the consented counts travel (L4).
+
+**What gets built.** `src/record/` (write, backfill, query), a `replay`
+backend beside `fake`, `neuromesh replay --set <option=value>`,
+`neuromesh regret [run]`.
+
+**Live budget.** 20 task-runs for the one check. Everything else is free.
+
+**Gate.** The replayed estimate of one policy change agrees with the live
+re-run within the interval, on tasks where both exist, and the unknown share
+is under a third.
+
+**If the gate is missed.** If most counterfactuals are unknown, replay is
+kept for the narrow class it covers (skip, stop, accept) and phase 5 tunes
+lambda live on the tuning half instead, which costs more runs but still
+works.
+
+**Hands on.** Probabilities per action, kind and tier for the controller; a
+way to test it without paying.
+
+---
+
+## Phase 5: the controller
+
+**The question.** Can one price of cost replace the dozen thresholds, and
+reach the same resolution rate for less?
+
+**Where it starts.** Thresholds set by hand or from one benchmark run: 800
+words and 12 files (plan), 0.55 (preamble), 0.80 (calibration bar), 3
+subsystems (breadth), 5 tries (evidence), 70% (window), 2 repair rounds, 2
+tasks to the expert, 1% shadow sample.
+
+**How to approach it.**
+
+1. *List every optional action with what it costs and what it can change.*
+
+   | Action | It changes the outcome when |
+   | --- | --- |
+   | Preamble question | the developer would have failed and says so |
+   | Review | it finds a blocker the checks missed |
+   | Blind tests | a test fails for a real defect |
+   | Reproduction, characterisation | the fix would have passed without fixing |
+   | Race | a racer passes and the escalation is avoided |
+   | Climb, advice, takeover | the next tier passes where this one did not |
+   | Expert plan | the unplanned build would have failed or split late |
+   | Second candidate at build (phase 8) | the first fails and the second passes |
+
+2. *Estimate each "when" from the record*: counts per action, kind of work
+   and tier, on top of a stated prior. The prior is today's behaviour, so
+   with no data the controller acts exactly as the thresholds do. That is
+   the safety of the whole phase: its worst case is the present.
+3. *The rule*: act when P(changes the outcome) times the value of a resolved
+   task is more than lambda times the action's cost. Cost is in the owner's
+   C (phase 1), so a full Claude window makes Claude actions dearer without
+   a separate rule; F104's threshold becomes a consequence.
+4. *R2 with it*: the starting tier by least expected cost over the whole
+   ladder, which is the same rule applied to "start here or one up".
+5. *R5*: each model's stated confidence corrected by its own curve before
+   it enters the rule.
+6. *Tune lambda on replay, confirm live.* Sweep lambda over the record; pick
+   the largest value at which R on the tuning half stays within the margin;
+   confirm at that value and one on each side, live, on the held-out half.
+7. *D2*: a run's budget in C, with each task's share set by its risk.
+8. *Remove a hand threshold only when the controller has matched it* on the
+   held-out half. Presets keep an override.
+
+**Decisions to make first.**
+
+| Decision | Recommendation |
+| --- | --- |
+| The value of a resolved task | Not a number of dollars to argue about: fix it at 1 and let lambda carry the trade. The owner sets lambda per preset or per run ("thorough", "normal", "cheap"), and the benchmark says what each one buys. |
+| How much data before a count overrules the prior | The same rule as F103: a handful is not a rate. Start at 5 and tune on replay. |
+
+**What gets built.** `src/control/` (the rule, the estimates, the budget),
+each feature's gate rewritten as "ask the controller", the three named
+settings, a line per decision in the record saying what the controller
+expected.
+
+**Live budget.** Three configurations on the held-out half, three runs
+each, mostly worker turns.
+
+**Gate.** At the chosen lambda: R not worse than phase 3's by more than the
+margin, C lower beyond the interval, and no hand-set threshold left in the
+default path.
+
+**If the gate is missed.** The thresholds stay, with values re-tuned on the
+tuning half by the same sweep. The record and the estimates are still worth
+having: they are what D3 and L2 report to the owner.
+
+**Hands on.** A single dial; a controller that can price a new action,
+which is what phase 8 adds.
+
+---
+
+## Phase 6: any model
+
+**The question.** Can a model nobody has configured be measured, placed and
+used with no edit to code or presets?
+
+**Where it starts.** 26 hand-written presets. Four tools behind adapters
+with a conformance check (M0). Prices in `src/usage/prices.ts`. A local
+Gemma model is already on the owner's Mac.
+
+**How to approach it.**
+
+1. *A1, the probe.* Twenty tasks, five for each tier's kind of work
+   (mechanical, routine, judgement, hard), each under two minutes, each with
+   a check a script can run. Besides pass or fail the probe records cost in
+   both currencies, speed, whether structured answers parse, whether tools
+   are used correctly, and how stated confidence compares with results.
+   Output: one profile file per model and version.
+2. *Keep the probe apart from the benchmark.* The probe places models; the
+   benchmark judges the system. A model is never placed by the tasks the
+   system is then scored on.
+3. *A4, capability flags from the conformance check*, so the engine asks
+   "can this tool answer without tools, resume a session, report its
+   window?" and never "is this Claude?".
+4. *A2, the team from the profiles*: for each tier, the cheapest model whose
+   profile clears that tier's bar, with a second choice from another plan
+   where there is one. The engine proposes; the owner confirms; the result
+   is a preset file like any other, so it can still be read and edited.
+5. *A5, the local model*, first as grunt only (its gate is the checks, so a
+   weak model costs retries and no wrong results), then as reviewer if its
+   profile allows.
+6. *A6, the allocator*: one table of every plan's windows, reset times and
+   current price; the controller's cost reads from it. Pacing: a window is
+   not allowed past the share of it that has elapsed plus a reserve, unless
+   the owner says the run matters more.
+7. *A3, drift*: five probe tasks per model each week; a move beyond the
+   probe's own noise ages that model's counts in the record.
+
+**Decisions to make first.** The bars per tier. Recommendation: take them
+from the profiles of the models that hold each tier today, so the first
+proposed team is the current one, and anything new is measured against
+models whose behaviour in the system is already known.
+
+**What gets built.** `evals/probe/` and `neuromesh probe <model>`, profile
+files, `neuromesh team propose`, the plans table, the capability flags in
+`src/backends/types.ts`.
+
+**Live budget.** A probe is 20 short tasks per model: small on any plan, and
+run on the model's own plan.
+
+**Gate.** (a) A model that was in no preset is probed, placed and used in a
+benchmark run with no file edited by hand. (b) The proposed team does not
+score worse than the hand-written preset. (c) With the local model as grunt,
+cost falls and R does not.
+
+**If the gate is missed.** If the probe's ranking does not predict how
+models do inside the system, the probe tasks are wrong, not the idea:
+replace them with the tasks from the record where tiers differed most.
+
+**Hands on.** The claim "model-agnostic" as something anyone can test with a
+model released that week.
+
+---
+
+## Phase 7: the cost of context
+
+**The question.** Where do the tokens go, and which of those can be removed
+without touching R?
+
+**Where it starts.** Phase 1's token split (M5). Known already: each session
+reloads the tool's system prompt and tool definitions (17k to 33k tokens
+with tools, about 3k without), and that, not exploration, made the cascade
+process 47% more tokens than Opus alone.
+
+**How to approach it.** Attack the parts in the order of their measured
+share, and stop when the next part is under 5% of tokens:
+
+1. *C1, start-up*, per tool and per role: the smallest tool set each role
+   needs; no-tools mode wherever a turn reads nothing (F77 and F90 exist for
+   Claude; A4 says which other tools can).
+2. *C2, cache order.* Rules and format first, then what changes per run,
+   then per task, then per turn. Workers of one run share the first two
+   parts word for word, so the second worker reads them from the cache.
+3. *C9, the project's own fixers* before a model is paid to repair a failed
+   check: the formatter, `--fix` modes, then the check again.
+4. *C10, the project profile*: how to install, build, test and run, written
+   once by a cheap turn, verified by the engine running each command, kept
+   with the repository's record and refreshed when a command stops working.
+5. *C7 and C8*: command output cut before the model sees it; a session
+   restarted when re-reading costs more than re-briefing at that model's
+   prices.
+6. *C3, the index*, only now: definitions, imports, and which tests reach
+   which files, kept between runs and updated from git. Then *C5* (affected
+   tests first) and, if F100 survived phase 2, *C4* (slices that follow the
+   code).
+7. *C6, edits as patches* in one-answer mode.
+
+**Decisions to make first.** Whether to take a parser as a dependency for
+C3. Recommendation: no, until the regular-expression map is shown to be the
+limit; the rule is "no runtime dependency unless a milestone needs one", and
+phase 2 will say whether leads matter enough to deserve better ones.
+
+**What gets built.** Per-role tool sets in the adapters, a prompt builder
+that keeps the stable part first, `src/checks/fixers.ts`, the project
+profile, `src/context/index.ts`.
+
+**Live budget.** Each step is an ablation on the tuning half; worker plan.
+
+**Gate.** Tokens per resolved task down by a third against phase 5, cost in
+C down beyond the interval, R unchanged.
+
+**If the gate is missed.** If start-up cannot be trimmed because the tools
+do not allow it, that is the argument for A5 (a local model has no fixed
+start-up) and for longer-lived sessions shared across a run's tasks; try
+those before giving up the third.
+
+**Hands on.** A lower cost per attempt, which is what makes the extra
+attempts of phase 8 affordable.
+
+---
+
+## Phase 8: search, and the claim
+
+**The question.** With strong oracles, a controller and cheap attempts, does
+the system resolve more than the frontier model alone, for less?
+
+**Where it starts.** F102 (two repairs by the same model). Phase 3's
+executable definitions of done. Phase 5's controller, which can price an
+extra attempt. Phase 6's second cheap plan.
+
+**How to approach it.**
+
+1. *S4 first: the reviewer from another vendor than the builder.* A preset
+   change. It tests the idea under all of this phase (different models fail
+   differently) at no engineering cost.
+2. *S2: racers from two vendors.* The measurement that matters: of the tasks
+   one model fails, how many does the other pass? If the answer is "few",
+   the models share their failures and the rest of this phase is worth
+   less; find that out here.
+3. *S3: two candidates at the first build*, only where the record says the
+   tier passes between 40 and 70% of such tasks, and only where phase 3 gave
+   the task an executable check. The controller decides per task.
+4. *S6: choosing among candidates that pass*: fewest changes outside the
+   task's files, then mutation score (M8) of each candidate's own tests,
+   then a cheap judge.
+5. *S5: two cheap plans before an expert plan.*
+6. *The claim, on the held-out half*: three runs, the interval, both costs.
+7. *Then the same on a public benchmark of several hundred tasks*, chosen
+   when this phase starts (the public ones change; pick the one that is
+   current, maintained, and has tasks newer than the models). This is the
+   only way to the 3-point margin and the only result other people can
+   compare with their own.
+
+**Decisions to make first.**
+
+| Decision | Recommendation |
+| --- | --- |
+| How many candidates | Two. The gain from a third is smaller than from the second and the cost is the same. Let the controller ask for a third only where the record supports it. |
+| What is published | Cost per resolved task and resolution rate, each with its interval, for the frontier model alone, the cheap model alone and the system; the task list; the commands to repeat it. A claim nobody can repeat is not one. |
+
+**What gets built.** Candidates as a generalisation of F102's lanes (the
+copies, the checks and the choice are already there), cross-vendor presets,
+the selection rule, a public-benchmark adapter that turns its tasks into
+`evals/tasks` folders.
+
+**Live budget.** The largest after phase 1: the system on the held-out half
+three times, then the public benchmark once for the system. The frontier
+baseline on the public benchmark is taken from its published results where
+they exist for the same model, and run only on a sample to confirm.
+
+**Gate.** On the held-out half, the system's resolution rate is above the
+frontier baseline's interval and its cost in C is below the baseline's.
+Then, on the public benchmark, not worse by more than 3 points at less than
+half the cost.
+
+**If the gate is missed.** Report what was reached: "matches within d at a
+fraction of the cost" is the result the engine has pointed at since v0.1 and
+is worth shipping by itself. Then read the regret report (D3) for where the
+remaining failures are; if they are tasks no cheap model gets near, the
+remedy is a stronger senior tier, not more attempts.
+
+**Hands on.** The number this project exists for.
+
+---
+
+## Phase 9: keep it true
+
+**The question.** Do the numbers hold next month, on other people's
+machines, with models that have changed?
+
+**How to approach it.**
+
+1. *A3 and L2 as habits*: the weekly five-task probe; `neuromesh learn`
+   showing what the record would change and asking before it does.
+2. *L3*: a sample of passes on real work graded in bulk by a stronger model
+   when a window would otherwise go unused. It is the only measure of R
+   where there is no hidden check.
+3. *The benchmark re-run on a schedule*: the tuning half monthly on the
+   worker plans; the frontier baseline only when the frontier model
+   changes.
+4. *L4*: testers' pooled counts as the prior a new install starts from.
+5. *E1 to E3*: the harness extended to what it does not model, the Linux
+   sandbox, cleanup on entry as a harness rule for every step.
+6. *E4 and E5*: work across days from a kept plan; the result as a pull
+   request with its evidence.
+7. *L6*: prompt variants tried on replay, kept on a measured gain.
+8. *A release is a set of numbers*: each one states the suite version, the
+   models and their versions, and the three rates and costs.
+
+**Gate.** A month after phase 8, with at least one model changed, the
+held-out result is inside its earlier interval, or the drift watch flagged
+the change before the benchmark did.
+
+---
+
+## What would make it a breakthrough, and what would not
+
+A longer feature list would not. Every agent tool has one. What does not
+exist yet, as far as this project's record shows, is a system that can make
+all of these statements at once and let anyone repeat them:
+
+1. **A resolution rate above a frontier model's, at under half its cost,
+   with intervals, on tasks the cheap model alone fails a third of.**
+   (Phases 1, 3, 5, 8.)
+2. **No model named in the code.** A model released this week is probed,
+   placed and used the same day. (Phase 6.)
+3. **Every action it takes is priced and explained.** "The review was
+   skipped because on this kind of work it has found a blocker twice in 140
+   runs." (Phases 4, 5.)
+4. **It asks instead of guessing** where the request leaves something open,
+   and it learns which questions were worth asking. (D5 to D7.)
+5. **It runs on what the person already pays for**: subscriptions, with the
+   plans' windows as the cost being minimised. (A6.)
+6. **Its own claims have kill rules.** Features that do not measure up are
+   removed, and the table of what was removed is published with the result.
+   (Phase 2.)
+
+The first is the claim; the other five are why it would be believed and
+used. None is certain. The gates are placed so that the two findings that
+would end the plan early (the cheap model is already enough; cheap models
+share their failures) arrive in phases 1 and 8's first steps, before most of
+the work is spent.
 
 ## What would make this plan wrong
 
