@@ -317,6 +317,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     second request exposed an F89 false positive: a sentence after "In
     <file>:" with numbers was taken as data. F99 fixes it; the friend's ringbuf
     example now routes to the expert again, benchmark routes unchanged.
+36. **`main` brought up to `neuromesh-testing` (2026-11-14).** A fast-forward
+    of 80 commits: F54 to F99, the fault harness, the logstat and routing
+    benchmarks. `neuromesh-research` had nothing of its own. Defaults are
+    unchanged (`factory-opus-luna`); the cascade is the opt-in preset
+    `cascade-claude`, still experimental. Not yet measured on real use, and
+    so still on trial although in `main`: F93 to F99 (only F96 has one live
+    run), and F95 and F97, which apply to every preset. The cascade numbers are
+    one run per configuration against a contaminated Opus baseline. Not
+    tagged as a release.
 
 ## Next steps
 
