@@ -177,6 +177,10 @@ export function formatSummary(state: RunState): string {
     const extra = [t.escalated ? magenta("expert") : "", t.verdict ? `tester ${t.verdict.verdict}` : ""].filter(Boolean).join(", ");
     lines.push(`  ${label} ${statusColor(t.status)(t.status)}${extra ? ` (${extra})` : ""} · ${summary}`);
     if (t.report?.notes) lines.push(dim(`           ${oneLine(t.report.notes, 200)}`));
+    // [F105 choices-shown] The developer's own decisions and what it left open, in full.
+    for (const [label, text] of [["choices made", t.report?.choices], ["left open", t.report?.open]] as const) {
+      if (text && isOn("choices-shown")) lines.push(`           ${label}:`, ...text.split("\n").map((l) => `             ${l}`));
+    }
     // [F101 blind-tests] What the request leaves open, for the person to decide.
     for (const q of t.openQuestions ?? []) lines.push(`           open question: ${oneLine(q.question, 240)}`);
   }

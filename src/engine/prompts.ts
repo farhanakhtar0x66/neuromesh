@@ -9,7 +9,7 @@ import { isOn } from "../features.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Advice, BlindTest, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
-export const REPORT_SCHEMA = {
+const REPORT_SCHEMA_BASE = {
   type: "object",
   properties: {
     status: { type: "string", enum: ["done", "blocked", "split"] },
@@ -22,7 +22,7 @@ export const REPORT_SCHEMA = {
 };
 
 /** [F77 direct-build] A worker's whole answer: the files of its part. */
-export const DIRECT_SCHEMA = {
+const DIRECT_SCHEMA_BASE = {
   type: "object",
   properties: {
     files: {
@@ -41,6 +41,14 @@ export const DIRECT_SCHEMA = {
   required: ["files", "summary", "notes", "run"],
   additionalProperties: false,
 };
+
+/** [F105 choices-shown] The report's two extra fields, when the feature is on. */
+function withChoices<T extends { properties: Record<string, unknown>; required: string[] }>(schema: T): T {
+  if (!isOn("choices-shown")) return schema;
+  return { ...schema, properties: { ...schema.properties, choices: { type: "string" }, open: { type: "string" } }, required: [...schema.required, "choices", "open"] };
+}
+export const reportSchema = (): typeof REPORT_SCHEMA_BASE => withChoices(REPORT_SCHEMA_BASE);
+export const directSchema = (): typeof DIRECT_SCHEMA_BASE => withChoices(DIRECT_SCHEMA_BASE);
 
 export const SPEC_SCHEMA = {
   type: "object",
@@ -154,7 +162,10 @@ function checkList(checks: CheckSpec[]): string {
   return `Neuromesh runs these checks after you finish. Run them yourself before you stop:\n${checks.map((c) => `- ${c.name}: \`${c.command}\``).join("\n")}`;
 }
 
-const WORKER_RULES = `Rules:
+/** [F105 choices-shown] Wording for the one-answer prompts. */
+const choiceAsk = (): string => (isOn("choices-shown") ? "choices (each decision you made alone, one line each, or an empty string), open (what you left out or could not settle, or an empty string), " : "");
+
+const workerRules = (): string => `Rules:
 - Work only inside the current directory.
 - Do not commit, push, switch branches or change git settings. Neuromesh collects your changes from the files.
 - Keep the change focused on your task. Do not reformat or rewrite unrelated code.
@@ -164,7 +175,9 @@ const WORKER_RULES = `Rules:
 When you finish, give your final answer in the required JSON format:
 - status: "done", or "blocked" if you could not complete the task
 - summary: one or two sentences on what you changed
-- notes: anything the reviewer should know (assumptions, things left undone); empty if none
+- notes: anything the reviewer should know; empty if none${isOn("choices-shown") ? `
+- choices: each decision you made alone because nobody could be asked (a limit you set or did not set, a format you picked, a reading of an unclear request), one line each; empty if none
+- open: what you left out or could not settle, and the question a person should answer about it; empty if none` : ""}
 - run: the shell command that starts the program from this directory, if it is a program a person runs; empty otherwise`;
 
 /** Absolute path of the agents' tool, so any CLI can run it from any directory. */
@@ -322,7 +335,7 @@ ${state.prompt}${contextSection(state)}${startSection(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}${splitNote(task)}`;
+${workerRules()}${splitNote(task)}`;
   }
   const owned = task.owned.length > 0 ? `\nFiles and folders you own for this task: ${task.owned.join(", ")}. Change other files only if the task cannot be done without it, and say so in your notes.` : "";
   return `You are one worker on a team building a change to this software project. Another part of the team planned the work; you do one task of it.
@@ -337,7 +350,7 @@ Other tasks of the plan are done by others. Do not do them, but do not break the
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}${splitNote(task)}`;
+${workerRules()}${splitNote(task)}`;
 }
 
 /**
@@ -439,7 +452,7 @@ Rules:
 - You cannot try anything, so be exact about the things usually found by running: imports, argument order, off-by-one edges, what a function returns for empty input.
 - Use only what the request and the spec allow (standard library unless a package is named there).
 
-Answer in the required JSON format: files (each with path and content), summary (what you built, two or three sentences), notes (what a reviewer must know, or an empty string), run (the command that starts the program, or an empty string).`;
+Answer in the required JSON format: files (each with path and content), summary (what you built, two or three sentences), notes (what a reviewer must know, or an empty string), ${choiceAsk()}run (the command that starts the program, or an empty string).`;
 }
 
 /**
@@ -460,12 +473,12 @@ Rules:
 - Return every file the request asks for, complete, with its path relative to the project folder. A file you do not return stays as it is.
 - Use the exact file names, keys and formats the request gives. Do not add anything it did not ask for.
 
-Answer in the required JSON format: files (each with path and content), summary (one sentence), notes (an empty string unless something in the request was unclear), run (an empty string).`;
+Answer in the required JSON format: files (each with path and content), summary (one sentence), notes (an empty string unless something in the request was unclear), ${choiceAsk()}run (an empty string).`;
 }
 
 /** [F77 direct-build] The files and report of a one-answer turn; undefined when the answer cannot be used. */
 export function parseDirect(result: AgentResult): { files: { path: string; content: string }[]; report: WorkerReport } | undefined {
-  const raw = (result.structured ?? parseStructured(result.finalText)) as { files?: unknown; summary?: unknown; notes?: unknown; run?: unknown } | undefined;
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { files?: unknown; summary?: unknown; notes?: unknown; choices?: unknown; open?: unknown; run?: unknown } | undefined;
   if (!raw || !Array.isArray(raw.files)) return undefined;
   const files = raw.files.flatMap((f) => {
     const file = f as { path?: unknown; content?: unknown } | null;
@@ -478,6 +491,7 @@ export function parseDirect(result: AgentResult): { files: { path: string; conte
       status: "done",
       summary: typeof raw.summary === "string" && raw.summary.trim() !== "" ? raw.summary : `Wrote ${files.map((f) => f.path).join(", ")}.`,
       notes: typeof raw.notes === "string" && raw.notes.trim() !== "" ? raw.notes : undefined,
+      ...choiceFields(raw),
       run: typeof raw.run === "string" && raw.run.trim() !== "" ? raw.run.trim() : undefined,
     },
   };
@@ -833,7 +847,7 @@ Fix these problems with the smallest changes that do it. Keep the worker's struc
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}`;
+${workerRules()}`;
 }
 
 /**
@@ -853,7 +867,7 @@ Fix what is wrong in the worker's code with the smallest changes that do it. Kee
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}`;
+${workerRules()}`;
 }
 
 /** [F56 env-blocked] The environment, not the code, was at fault; this does not count as a repair round. */
@@ -883,7 +897,7 @@ ${attempts || "(no attempt was recorded)"}${contextSection(state)}${toolsNote()}
 
 ${checkList(state.checks)}
 
-Do the task yourself. ${WORKER_RULES}`;
+Do the task yourself. ${workerRules()}`;
 }
 
 export function integrationPrompt(state: RunState, failing: CheckResult[]): string {
@@ -902,7 +916,16 @@ Find the problem and fix it with the smallest change that makes the request work
 
 ${checkList(state.checks)}
 
-${WORKER_RULES}`;
+${workerRules()}`;
+}
+
+/** [F105 choices-shown] The two fields, kept whole, when the feature is on and they are not empty. */
+function choiceFields(raw: { choices?: unknown; open?: unknown }): { choices?: string; open?: string } {
+  if (!isOn("choices-shown")) return {};
+  const text = (v: unknown): string | undefined => (typeof v === "string" && v.trim() !== "" ? v.trim() : undefined);
+  const choices = text(raw.choices);
+  const open = text(raw.open);
+  return { ...(choices ? { choices } : {}), ...(open ? { open } : {}) };
 }
 
 export function parseReport(result: AgentResult): WorkerReport {
@@ -912,6 +935,7 @@ export function parseReport(result: AgentResult): WorkerReport {
       status: structured.status === "done" || structured.status === "blocked" || structured.status === "split" ? structured.status : "unknown",
       summary: structured.summary,
       notes: typeof structured.notes === "string" && structured.notes.trim() !== "" ? structured.notes : undefined,
+      ...choiceFields(structured),
       run: typeof structured.run === "string" && structured.run.trim() !== "" ? structured.run.trim() : undefined,
     };
   }

@@ -78,7 +78,7 @@ import {
   parseAdvice,
   escalationPrompt,
   envRepairPrompt,
-  DIRECT_SCHEMA,
+  directSchema,
   FACTS_SCHEMA,
   directPrompt,
   parseDirect,
@@ -100,7 +100,7 @@ import {
   specPrompt,
   redoPrompt,
   repairPrompt,
-  REPORT_SCHEMA,
+  reportSchema,
   reviewFixPrompt,
   taskPrompt,
   testerPrompt,
@@ -1861,7 +1861,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
     cwd: task.worktree,
     prompt: directGrunt(state, task) ? directAnswerPrompt(state, projectFiles(task.worktree, task.prepared)) : directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
     access: "read-only",
-    schema: DIRECT_SCHEMA,
+    schema: directSchema(),
     direct: true,
     chain: workerChain(state, task),
     rungBase: task.rung,
@@ -1885,7 +1885,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
   task.step = "checks";
   saveState(state);
   log.emit("task.direct", { feature: "F77", task: task.id, mode, files: outcome.written, refused: outcome.refused });
-  if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role: "worker", status: answer.report.status, summary: answer.report.summary.slice(0, 8_000), notes: answer.report.notes?.slice(0, 4_000) });
+  if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role: "worker", status: answer.report.status, summary: answer.report.summary.slice(0, 8_000), notes: answer.report.notes?.slice(0, 4_000), choices: answer.report.choices?.slice(0, 8_000), open: answer.report.open?.slice(0, 8_000) });
   return undefined;
 }
 
@@ -2030,7 +2030,7 @@ async function raceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined>
     log.emit("race.started", { feature: "F102", task: task.id, lanes: lanes.length, model: chain[0] ? modelKey(chain[0]) : undefined, reason: why });
     const turns = await Promise.all(
       lanes.map((lane) =>
-        turn(run, { key: `${task.id}-race-${lane.id}`, role: "worker", kind: "race", task: task.id, round: task.round, cwd: lane.dir, prompt: racePrompt(state, task, lane.hint) + env, access: "write", schema: REPORT_SCHEMA, chain, rungBase: task.rung }),
+        turn(run, { key: `${task.id}-race-${lane.id}`, role: "worker", kind: "race", task: task.id, round: task.round, cwd: lane.dir, prompt: racePrompt(state, task, lane.hint) + env, access: "write", schema: reportSchema(), chain, rungBase: task.rung }),
       ),
     );
     if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
@@ -2375,7 +2375,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         prompt: asked,
         freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : asked) + (followUp ? env : ""),
         access: "write",
-        schema: REPORT_SCHEMA,
+        schema: reportSchema(),
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
         chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
         preamble: gate,
@@ -2440,7 +2440,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       if (result.stop === "done") {
         task.report = parseReport(result);
         // [F44 task-report]
-        if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role, status: task.report.status, summary: task.report.summary.slice(0, 8_000), notes: task.report.notes?.slice(0, 4_000) });
+        if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role, status: task.report.status, summary: task.report.summary.slice(0, 8_000), notes: task.report.notes?.slice(0, 4_000), choices: task.report.choices?.slice(0, 8_000), open: task.report.open?.slice(0, 8_000) });
         task.sessionId = result.sessionId;
         task.sessionModel = config ? modelKey(config) : undefined;
         task.step = "checks";
@@ -2989,7 +2989,7 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
       cwd: state.worktree,
       prompt: integrationPrompt(state, failing()),
       access: "write",
-      schema: REPORT_SCHEMA,
+      schema: reportSchema(),
     });
     if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
     // [F73 heal-worktree]

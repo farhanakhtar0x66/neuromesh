@@ -277,6 +277,9 @@ export function buildBlocks(m: Pick<Model, "log" | "ask">, verbose: Verbosity): 
         }
         b?.full.push({ text: summary, tone: "text" });
         if (b && e.notes) b.full.push({ text: String(e.notes), tone: "muted" });
+        // [F105 choices-shown] In full, under their own labels.
+        if (b && e.choices) b.full.push({ text: `Choices made:\n${String(e.choices)}`, tone: "muted" });
+        if (b && e.open) b.full.push({ text: `Left open:\n${String(e.open)}`, tone: "muted" });
         break;
       }
       case "task.merged": {

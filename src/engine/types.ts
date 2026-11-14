@@ -95,6 +95,10 @@ export interface WorkerReport {
   status: "done" | "blocked" | "split" | "unknown";
   summary: string;
   notes?: string;
+  /** [F105 choices-shown] Decisions the worker made alone because nobody could be asked. */
+  choices?: string;
+  /** [F105 choices-shown] What it left out or could not settle, for the person. */
+  open?: string;
   /** How to start the program, when the worker built one. */
   run?: string;
 }

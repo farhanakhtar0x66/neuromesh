@@ -309,7 +309,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
     const last = [...byTask.values()].at(-1)!;
     const role = String(last.role ?? "worker");
     const model = m.agents.get(`${role}:${String(last.task ?? "")}`)?.model;
-    const body = (r: NeuromeshEvent): string => [String(r.summary ?? "").trim(), r.notes ? String(r.notes).trim() : ""].filter(Boolean).join("\n\n");
+    const body = (r: NeuromeshEvent): string => [String(r.summary ?? "").trim(), r.notes ? String(r.notes).trim() : "", r.choices ? `Choices made:\n${String(r.choices).trim()}` : "", r.open ? `Left open:\n${String(r.open).trim()}` : ""].filter(Boolean).join("\n\n");
     if (byTask.size === 1) return { text: body(last), role, model };
     const title = (id: string): string => m.tasks.get(id)?.title ?? id;
     return { text: [...byTask.entries()].map(([id, r]) => `## ${id} · ${title(id)}\n\n${body(r)}`).join("\n\n"), role, model };

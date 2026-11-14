@@ -965,6 +965,15 @@ export const FEATURES: Feature[] = [
     what: "A preset names a tool whose subscription window is watched, a threshold, and another plan's models. Every reading a tool reports is kept in ~/.neuromesh/quota.json; when the window is at or past the threshold, grunt, worker and reviewer turns on that tool go to the other models first, and senior and expert turns stay. A reading whose window has reset, or older than five hours, is unknown, and an unknown moves nothing. From a friend's review. Not yet measured live.",
     optional: true,
   },
+  {
+    id: "F105",
+    key: "choices-shown",
+    name: "What the developer chose alone and left open, shown in full",
+    added: "2026-11-15",
+    files: ["src/engine/prompts.ts (reportSchema, choiceFields)", "src/engine/run.ts (task.report events)", "src/cli/format.ts", "src/tui/blocks.ts, src/tui/app.ts"],
+    what: "A developer's report has two more fields, choices (each decision it made alone because nobody could be asked) and open (what it left out or could not settle). They are kept whole in the task's report and shown in full under the task, instead of being cut to 200 characters inside the notes (the first live run of F101 showed the worker had written \"no size cap; the request did not ask for one\" and the owner never saw it). No extra turn, no extra check. Off, the report is as before. Plan item D6. Not yet measured live.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
