@@ -13,11 +13,11 @@
   "finalTier": "frontier",
   "status": "applied",
   "score": {
-    "passed": 10,
-    "total": 10
+    "passed": 11,
+    "total": 11
   },
   "quality": 10,
-  "hiddenOutput": "PASS app.py exists\nPASS ast.parse passes\nPASS imports hmac\nPASS uses hmac.compare_digest\nPASS reads the raw body with await request.body()\nPASS HMAC with SHA-256\nPASS reads the X-Signature header\nPASS secret from the environment\nPASS POST /webhooks/payment route\nPASS returns 400 when invalid\nSCORE 10/10",
+  "hiddenOutput": "PASS app.py exists\nPASS app.py imports and builds an app\nPASS POST /webhooks/payment route exists\nPASS a correctly signed webhook gets 200\nPASS a signature made over the raw body (odd whitespace) gets 200\nPASS a wrong signature gets 400\nPASS a signature made with another secret gets 400\nPASS a missing X-Signature header gets 400\nPASS a body changed after signing gets 400\nPASS an empty signature gets 400\nPASS compares with hmac.compare_digest\nSCORE 11/11",
   "wallMs": 28699,
   "turns": [
     {

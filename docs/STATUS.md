@@ -379,6 +379,29 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     repeat runs, real repositories) and a beta-release track. The owner's
     installed `neuromesh` now runs `neuromesh-research`.
 
+42. **Checkers that run the code, four of five (2026-11-15, plan item M9).**
+    The hidden checkers for 2.1, 2.3, 3.1 and 3.2 now run the answer instead
+    of matching keywords (no model calls). 2.1 sends the endpoint signed,
+    unsigned, foreign-signed and tampered webhooks (FastAPI is not installed
+    here, so `hidden/fastapi_shim.py` stands in). 2.3 runs the test file
+    against twelve correct implementations (the prompt leaves open what a
+    negative does, what "total" means and how odd paise are rounded) and
+    needs it to fail on eleven broken ones; `hidden/shim/pytest.py` stands in
+    for pytest. 3.1 runs the hook under a stand-in for React's hooks, a fake
+    clock and a slow/fast API, and replays the bug in the prompt. 3.2 calls
+    `allocate` on generated orders and batches and compares with plain FIFO,
+    then times 30,000 against 30,000. The prompt for 3.2 gives no code and no
+    data format, so that checker is tolerant about both; it grades the
+    allocation, not the structure of the returned dict. Every reference still
+    scores full marks and an empty folder fails (`validate.sh`). Rescoring
+    the saved `rb-frontier-1` and `rb-cascade-2` answers: every answer to
+    these four prompts passes in full, in both runs, so the cascade's 148.8
+    of 150 becomes 150 of 150 (the 8.8 on 2.3 was the old rubric). Read it as
+    a ceiling: on these prompts the benchmark cannot tell the two apart.
+    **3.3 is not done**: the migration needs a real Postgres (the answers use
+    plpgsql triggers, `SKIP LOCKED`, `CONCURRENTLY`), and none is installed
+    here; it stays on its rubric until one is.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

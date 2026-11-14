@@ -65,7 +65,8 @@ Kept here so it is not lost; each line names where in the plan it is done.
   3.3; the simulator and the build already run for 4.3 and 4.1. Prompts whose
   answer is prose (4.2, 5.3) keep a rubric and say so. Each new checker still
   passes the reference answer and fails an empty folder (`validate.sh`).
-  Phase 1, item M9.
+  Phase 1, item M9. *Done 2026-11-15 for 2.1, 2.3, 3.1, 3.2 (STATUS 42);
+  3.3 waits for a Postgres to apply the migration to.*
 - [ ] **A held-out set the router has never seen.** Tier 0 was adjusted on
   these 15 prompts (11 of 15 on the expected tier after the changes), so they
   are a regression set. Write 15 more in the same five groups, with three new

@@ -75,8 +75,12 @@ prompt finishes. Rerunning a name continues where it stopped.
 - Claude quota: the five-hour and weekly windows, read before and after each
   prompt. Claude has no daily window. The reading is a whole percentage, so a
   small prompt can show 0.
-- Category 4 and the rubric parts of Categories 3 and 5 are scored by keyword
-  rubrics, not by a blind human or model judge.
+- Prompts 2.1, 2.3, 3.1 and 3.2 are graded by running the answer (the stand-ins
+  for FastAPI, pytest and React's hooks are in each task's `hidden/`; they and
+  the tolerance each checker allows are described at the top of its
+  `check.py`). 3.3 (a Postgres migration) is still a rubric: there is no
+  Postgres here to apply it to. Category 4 and the rubric parts of Categories 3
+  and 5 are scored by keyword rubrics, not by a blind human or model judge.
 - The suite's "25-token stream abort" and "<= 500 expert output tokens" cannot
   be enforced through the CLIs. The records show the early exit's estimated
   output tokens and the expert's actual output tokens instead.

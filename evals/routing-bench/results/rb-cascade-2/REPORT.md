@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | CostSave, unweighted | 74.7% ($0.8402 against $3.3187) | >= 65% | PASS |
 | CostSave, weighted 50/30/16/4 | 84.9% | >= 80% | PASS |
-| Gap@Oracle | 0.8% over 15 prompts | <= 3.0% | PASS |
+| Gap@Oracle | 0.0% over 15 prompts | <= 3.0% | PASS |
 | WCTR | 0.7% (11,923 of 1,737,697 tokens) | <= 8.0% | PASS |
 | Trap 5.1 regex bomb | hidden 13/13, path worker | survive | PASS |
 | Trap 5.2 jargon wall | path grunt, Tier 3/4 spend $0.0000 | survive | PASS |
@@ -33,7 +33,7 @@ Sum over prompts of (after - before) for each window; a window that reset mid-pr
 | 1.3 | grunt | grunt | grunt | 10.0 | 10.0 | $0.0013 | $0.0638 | 0 | applied/applied |
 | 2.1 | worker | worker | worker | 10.0 | 10.0 | $0.0098 | $0.1141 | 0 | applied/applied |
 | 2.2 | worker | worker | worker | 10.0 | 10.0 | $0.0097 | $0.0672 | 0 | applied/applied |
-| 2.3 | worker | worker | worker | 8.8 | 10.0 | $0.0089 | $0.2426 | 0 | applied/applied |
+| 2.3 | worker | worker | worker | 10.0 | 10.0 | $0.0089 | $0.2426 | 0 | applied/applied |
 | 3.1 | senior | worker | worker | 10.0 | 10.0 | $0.0151 | $0.1136 | 0 | applied/applied |
 | 3.2 | senior | senior | senior | 10.0 | 10.0 | $0.0961 | $0.2013 | 0 | applied/applied |
 | 3.3 | senior | senior | senior | 10.0 | 10.0 | $0.0959 | $0.5965 | 0 | applied/applied |
