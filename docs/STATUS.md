@@ -304,6 +304,12 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     became a "continue" turn with no preamble, so it built the 5-module agent
     alone ($0.14, tests passed, rated 4) without being asked about scope. Added
     to the fault harness (4 of 300 seeds broke it), then fixed.
+34. **First live F96 run, and one review per split build (F98, 2026-11-14).**
+    With F94 off, Sonnet answered `scope: true` (329 output tokens), Opus split
+    the agent request into 4 parts, Haiku built them: 19 files, 117 tests
+    passing, ≈$0.53 against $0.14 for Sonnet alone without the question.
+    Per-part Sonnet reviews were $0.22 of it and found no blocker; F98 reviews
+    a planned or split cascade build once, at the end. Not re-run live.
 
 ## Next steps
 

@@ -506,3 +506,48 @@ test("a first turn stopped by a revoked login is asked again as a first turn aft
   assert.deepEqual(builds.map((a) => a.kind), ["initial", "initial"]);
   assert.match(fake.calls.filter(isBuild).at(-1)!.prompt, /very first message/, "the resumed turn has its preamble");
 });
+
+for (const off of [false, true]) {
+  test(`a task the expert split is reviewed ${off ? "part by part with cascade-one-review off" : "once, as a whole, after its last part (F98)"}`, async () => {
+    if (off) process.env.NEUROMESH_DISABLE = "cascade-one-review";
+    try {
+      const TESTER = { backend: "fake", model: "tester", tier: "worker" as const };
+      const { ctx, fake } = context((req) => {
+        if (/A worker on your team started the task below and stopped/.test(req.prompt))
+          return {
+            structured: {
+              summary: "two parts",
+              tasks: [
+                { id: "a", title: "part a", brief: "Write a.txt", owned: ["a.txt"], depends_on: [], owner: "worker" },
+                { id: "b", title: "part b", brief: "Write b.txt and fixed.txt saying ok", owned: ["b.txt", "fixed.txt"], depends_on: ["a"], owner: "worker" },
+              ],
+            },
+          };
+        if ("verdict" in props(req)) return { structured: { verdict: "pass", summary: "fine", findings: [] } };
+        if (!isBuild(req)) return report("n/a");
+        if (/"scope": <true/.test(req.prompt)) {
+          req.onText?.(JSON.stringify({ confidence: 0.9, escalate: false, scope: true, reason: "needs a design" }));
+          return report("stopped");
+        }
+        if (/Your task: part a/.test(req.prompt)) write(req.cwd, "a.txt", "a");
+        else {
+          write(req.cwd, "b.txt", "b");
+          write(req.cwd, "fixed.txt", "ok");
+        }
+        return report("done");
+      });
+      const base = preset({ test: "always" });
+      const state = await startRun({ cwd: repo(true), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: { ...base, roles: { ...base.roles, tester: [TESTER] } } }, ctx);
+      assert.equal(state.status, "finished", state.reason);
+      const reviews = fake.calls.filter((c) => "verdict" in props(c));
+      if (off) assert.equal(reviews.length, 2, "one review per part");
+      else {
+        assert.equal(reviews.length, 1, "one review");
+        assert.match(reviews[0]!.prompt, /this is its only review/);
+        assert.match(reviews[0]!.prompt, /part b/);
+      }
+    } finally {
+      delete process.env.NEUROMESH_DISABLE;
+    }
+  });
+}

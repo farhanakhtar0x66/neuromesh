@@ -1453,7 +1453,10 @@ function wantsTester(state: RunState, task: TaskState): boolean {
 
 /** [F71 one-review] The spec split a new program into parts: one review, of the whole, at the end. */
 function reviewsWhole(state: RunState): boolean {
-  return isOn("one-review") && state.planFromSpec === true && state.tasks.length > 1;
+  if (!isOn("one-review") || state.tasks.length <= 1) return false;
+  if (state.planFromSpec === true) return true;
+  // [F98 cascade-one-review] So is one the cascade's expert planned or split: its parts' briefs share one design.
+  return isOn("cascade-one-review") && state.cascade !== undefined && (state.plan !== undefined || state.tasks.some((t) => t.fromSplit));
 }
 
 /** [F71 one-review] What the final reviewer sees: every file of the program, then the last part's change. */

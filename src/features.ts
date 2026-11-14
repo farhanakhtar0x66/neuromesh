@@ -902,6 +902,15 @@ export const FEATURES: Feature[] = [
     what: "When a task's first turn stops on quota, a revoked login or an interrupt, or the engine dies during it, the next turn used to be a 'continue' turn in case files had changed. A continue turn gets no confidence preamble (F83, F96) and no one-answer mode (F77, F90). Now it is a continue turn only if the task's folder holds changes; otherwise the first turn is asked again. Seen in a real run: resumed after a revoked Claude login, Sonnet's turn on the agent request had no preamble, so the F96 scope question was never asked. Off, as before.",
     optional: false,
   },
+  {
+    id: "F98",
+    key: "cascade-one-review",
+    name: "A build the cascade's expert planned or split is reviewed once, when it is whole",
+    added: "2026-11-14",
+    files: ["src/engine/run.ts (reviewsWhole)"],
+    what: "Only with the cascade. F71's one review of the whole program, which applied only to plans made from a spec, now also applies when the expert planned the run (the sandwich) or split its task (F68, F96). The parts are not reviewed one by one; the last one gets the whole-program review, and the preset's test setting still decides whether that runs ('no-checks': only when the finished program has no checks). From the first live F96 run: three per-part Sonnet reviews were 42% of the cost ($0.22 of $0.53) and found no blocker, while the last part, the one that joined them, was not reviewed because by then the program had tests.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
