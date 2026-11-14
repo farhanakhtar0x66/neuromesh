@@ -325,7 +325,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     }
     // [F101 blind-tests] Tests from the task alone. A good writer's pass; a troubled one's fail, cannot be used, or aim at an existing file.
     if (kind === "blind") {
-      const view = phaseDice.weighted({ good: 6, failing: p * 10, existing: 1, garbage: p * 5, none: 1 });
+      const view = phaseDice.weighted({ good: 6, open: 2, failing: p * 10, existing: 1, garbage: p * 5, none: 1 });
+      // An open probe that fails beside ordinary tests that pass: a question for the person, and not one turn more (good agents included).
+      if (view === "open") return { ...extra, structured: { tests: [{ path: `blind-pass-${index}.txt`, content: "a test", open: false, question: "" }, { path: `blind-fail-open-${index}.txt`, content: "a probe", open: true, question: "does it grow without limit?" }], summary: "long runs" } };
       if (view === "garbage") return { ...extra, structured: d.pick([{}, { tests: "many" }, { tests: [{ path: 9 }] }, null]) };
       if (view === "none") return { ...extra, structured: { tests: [], summary: "nothing to probe" } };
       if (view === "existing") return { ...extra, structured: { tests: [{ path: "check.js", content: "process.exit(1)" }, { path: "../escape.txt", content: "x" }], summary: "replaces the checks" } };
@@ -657,6 +659,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (blind.some((a) => a.tier === "expert")) broke(`task ${t.id}: the expert was asked for blind tests`);
     }
     if (state.status === "finished" && existsSync(state.worktree) && readdirSync(state.worktree).some((f) => /^blind-pass/.test(f))) broke("blind tests that passed were kept in the result");
+    // An open probe is a question for the person: its file never reaches the result, and it is recorded when it failed.
+    if (state.status === "finished" && existsSync(state.worktree) && readdirSync(state.worktree).some((f) => /^blind-fail-open/.test(f))) broke("an open probe's file was kept in the result");
+    if (events.some((e) => e.type === "blind.open") && !state.tasks.some((t) => (t.openQuestions?.length ?? 0) > 0) && !options.resume) broke("an open question was raised and is not in the run's record");
     // [F104 quota-shift] Only cheap turns move to the other tool: never the expert's, never a senior's.
     for (const a of state.attempts) {
       if (a.backend !== "other") continue;
@@ -742,6 +747,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "race.finished") seen.add(e.winner ? "race won" : "race lost");
     if (e.type === "blind.tests") seen.add(`blind tests ${String(e.outcome)}`);
     if (e.type === "blind.dropped") seen.add("blind tests dropped");
+    if (e.type === "blind.open") seen.add("open question");
     if (e.type === "quota.shifted") seen.add("turn moved");
     if (e.type === "context.start-here") seen.add("start-here");
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");

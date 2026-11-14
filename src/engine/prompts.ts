@@ -7,7 +7,7 @@ import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import { fileURLToPath } from "node:url";
 import { isOn } from "../features.ts";
 import type { Spec } from "../intake/brief.ts";
-import type { Advice, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
+import type { Advice, BlindTest, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
 export const REPORT_SCHEMA = {
   type: "object",
@@ -542,8 +542,8 @@ export const BLIND_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        properties: { path: { type: "string" }, content: { type: "string" } },
-        required: ["path", "content"],
+        properties: { path: { type: "string" }, content: { type: "string" }, open: { type: "boolean" }, question: { type: "string" } },
+        required: ["path", "content", "open", "question"],
         additionalProperties: false,
       },
     },
@@ -558,7 +558,13 @@ export const BLIND_SCHEMA = {
  * of what was built, and nothing of the code, so that its tests come from its
  * own reading of the task.
  */
-export function blindPrompt(state: RunState, task: TaskState, signatures: string, tests: string[]): string {
+export function blindPrompt(state: RunState, task: TaskState, signatures: string, tests: string[], usage: { path: string; text: string }[] = []): string {
+  // How the code is called, from tests that were there before this work: the first live run's tester got signatures
+  // only, guessed that a pure function mutated its argument, and 15 of its 22 tests failed for that alone.
+  const calls =
+    usage.length > 0
+      ? `\nHow this code is called, from the project's tests as they were before this work (written by others, for the code as it was; use them for calling conventions, argument shapes and what functions return, not as a list of what to test):\n${usage.map((u) => `--- ${u.path} ---\n${u.text}`).join("\n")}\n`
+      : "";
   const what = isWholeRequest(state, task) ? state.prompt : `${task.title}\n${task.brief}\n\nThe overall request it is part of, for context:\n${state.prompt.slice(0, 3_000)}`;
   return `You write tests for code you have not seen. Another developer has just built the task below. You get the task and the signatures of what they wrote, and deliberately nothing of the code itself, so that your tests do not share its blind spots. Do not look for the code; you could not find it from here.
 
@@ -568,6 +574,7 @@ ${what.slice(0, 12_000)}
 What was written or changed (file, then line: signature):
 ${signatures}
 
+${calls}
 ${tests.length > 0 ? `The project's existing test files (for where tests live, how they are named and what they import): ${tests.join(", ")}` : "The project has no test files yet."}
 The project runs its checks with: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}
 
@@ -575,21 +582,27 @@ Write one new test file (two at most) in the language, test framework and style 
 - the edges: nothing, one, exactly at a stated limit, one past it, very large, the same thing twice;
 - long runs: what must still hold after hundreds or thousands of operations (sizes stay within stated bounds, nothing is lost or counted twice, order holds);
 - invariants and round trips, rather than exact outputs you would have to guess.
-Do not test anything the task leaves open: a test that fails on a correct implementation costs a developer's time. Import only what the signatures show. Use new file names; never an existing path.
+Do not test in these files anything the task leaves open: a test that fails on a correct implementation costs a developer's time. Import only what the signatures show. Use new file names; never an existing path.
 
-Give your answer in the required JSON format: tests (each a path from the project's root and the file's whole content) and summary (one sentence on what they probe).`;
+Then, separately, the open questions. Some things matter to the person who asked and the task says nothing about them. The one to look for above all: something the code keeps per operation (a list, notes, a log, a cache, a file on disk, a prompt it builds) that would grow without limit over a long run, where the task neither sets a limit nor says to keep everything forever. If you see such a thing, write one more test file for it, marked open, that checks the cautious behaviour by comparing sizes, not by a limit you would have to invent: what is kept after 4,000 operations is less than twice what is kept after 1,000. Give it the question for the person in one sentence, naming what grows and how fast ("Notes gain one entry per evicted turn with no limit; should they be capped?"). An open test never blocks the work and no developer sees it: if it fails, the person is asked the question. At most one open file; none if you see nothing of the kind.
+
+Give your answer in the required JSON format: tests (each with path, from the project's root; content, the file's whole content; open, false for an ordinary test file and true for the open one; question, the question for an open file and an empty string otherwise) and summary (one sentence on what they probe).`;
 }
 
 /** [F101 blind-tests] The test files of a blind tester's answer; undefined when it cannot be used. */
-export function parseBlind(result: AgentResult): { tests: { path: string; content: string }[]; summary: string } | undefined {
+export function parseBlind(result: AgentResult): { tests: BlindTest[]; summary: string } | undefined {
   const raw = (result.structured ?? parseStructured(result.finalText)) as { tests?: unknown; summary?: unknown } | undefined;
   if (!raw || typeof raw !== "object" || !Array.isArray(raw.tests)) return undefined;
-  const tests = raw.tests.flatMap((f) => {
-    const file = f as { path?: unknown; content?: unknown } | null;
-    return file && typeof file.path === "string" && file.path.trim() !== "" && typeof file.content === "string" && file.content.trim() !== "" && file.content.length <= 60_000 ? [{ path: file.path.trim(), content: file.content }] : [];
+  const tests = raw.tests.flatMap((f): BlindTest[] => {
+    const file = f as { path?: unknown; content?: unknown; open?: unknown; question?: unknown } | null;
+    if (!file || typeof file.path !== "string" || file.path.trim() === "" || typeof file.content !== "string" || file.content.trim() === "" || file.content.length > 60_000) return [];
+    if (file.open !== true) return [{ path: file.path.trim(), content: file.content }];
+    const question = typeof file.question === "string" && file.question.trim() !== "" ? file.question.trim().slice(0, 300) : "A property the request leaves open does not hold; see the test.";
+    return [{ path: file.path.trim(), content: file.content, open: true, question }];
   });
   if (tests.length === 0) return undefined;
-  return { tests: tests.slice(0, 2), summary: typeof raw.summary === "string" ? raw.summary.slice(0, 400) : "" };
+  // Two ordinary files and one open one at most.
+  return { tests: [...tests.filter((t) => !t.open).slice(0, 2), ...tests.filter((t) => t.open).slice(0, 1)], summary: typeof raw.summary === "string" ? raw.summary.slice(0, 400) : "" };
 }
 
 /** [F101 blind-tests] What the developer is told about blind tests that fail on its work. */

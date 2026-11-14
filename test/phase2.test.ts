@@ -11,6 +11,7 @@ import type { FakeScript } from "../src/backends/fake.ts";
 import type { AgentRequest } from "../src/backends/types.ts";
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../src/checks/blind.ts";
 import { leadTerms, startHere } from "../src/context/packet.ts";
+import { formatSummary } from "../src/cli/format.ts";
 import { MAX_AGE_MS, loadQuota, recordQuota, shiftNow, windowUsed } from "../src/engine/quota.ts";
 import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
@@ -640,4 +641,71 @@ test("F101: an engine stopped while the blind tests run does not pay for them ag
   assert.equal(again.status, "finished", again.reason);
   assert.equal(lost.c.events.filter((e) => e.type === "blind.tests").at(-1)?.outcome, "none");
   assert.ok(!worktrees(lost.repo).some((t) => /tester$/.test(t)), "the copy the dead engine left is gone");
+});
+
+// From the first live run (2026-11-14, scope-test-2): the blind tester got signatures only, misread how the code is
+// called, and 15 of its 22 tests failed for that; and it could not flag the unbounded Notes, which the request leaves open.
+test("F101: the blind tester is shown how the code was called before the work, never the work's own tests or code", async () => {
+  const repo = makeRepo({
+    "README.md": "# demo\n",
+    "package.json": JSON.stringify({ name: "demo", scripts: { test: "node check.js" } }),
+    "check.js": "const fs=require('fs');if(!fs.existsSync('value.txt')){console.error('missing value.txt');process.exit(1)}",
+    "src/cache.js": "function put(key, value) {\n  return {};\n}\nmodule.exports = { put };\n",
+    "test/cache.test.js": "// EXISTING-USAGE\nconst next = put(state, 'a', 1); // returns a new state\n",
+    "test/other.test.js": "// UNRELATED-TEST\n",
+  });
+  const c = context((req) => {
+    if (isBlind(req)) return { structured: { tests: [], summary: "" } };
+    write(req.cwd, "value.txt", "ok");
+    write(req.cwd, "src/cache.js", "function put(key, value) {\n  // SECRET-BODY\n  return {};\n}\nmodule.exports = { put };");
+    write(req.cwd, "test/cache.test.js", "// EXISTING-USAGE\nconst next = put(state, 'a', 1);\n// BUILDER-NEW-TEST");
+    write(req.cwd, "test/cache-extra.test.js", "// BUILDER-OWN-FILE");
+    return report("built");
+  });
+  const state = await startRun({ cwd: repo, prompt: BLIND_REQUEST, preset: preset() }, c.ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const blind = c.fake.calls.find(isBlind)!;
+  assert.match(blind.prompt, /EXISTING-USAGE/, "the tests that were there before show the calling conventions");
+  assert.match(blind.prompt, /returns a new state/);
+  assert.doesNotMatch(blind.prompt, /BUILDER-NEW-TEST|BUILDER-OWN-FILE/, "not what the work itself wrote into the tests");
+  assert.doesNotMatch(blind.prompt, /SECRET-BODY/, "and nothing of the code");
+  assert.doesNotMatch(blind.prompt, /UNRELATED-TEST/, "only the tests of the changed files");
+});
+
+test("F101: an open probe that fails becomes a question for the person: no turn, no gate, nothing kept", async () => {
+  const openTest = { path: "tests/blind_growth.test.js", content: "console.error('AssertionError: notes grew 4x between 1,000 and 4,000 turns');process.exit(1)", open: true, question: "Notes gain one entry per evicted turn with no limit; should they be capped?" };
+  const firm = { ...blindTest("ok"), open: false, question: "" };
+  const c = context(cacheWorker(() => assert.fail("an open probe is never a developer's turn"), [firm, openTest]));
+  const state = await startRun({ cwd: testable(), prompt: BLIND_REQUEST, preset: preset({ escalation: [EXPERT] }) }, c.ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(state.attempts.map((a) => a.kind), ["initial", "blind"]);
+  assert.deepEqual(state.tasks[0]?.openQuestions?.map((q) => q.question), ["Notes gain one entry per evicted turn with no limit; should they be capped?"]);
+  assert.match(state.tasks[0]!.openQuestions![0]!.tail, /notes grew 4x/);
+  const asked = c.events.find((e) => e.type === "blind.open");
+  assert.equal(asked?.feature, "F101");
+  assert.ok(c.events.some((e) => e.type === "note" && /yours to decide/.test(String(e.message))));
+  assert.equal(c.events.find((e) => e.type === "blind.tests")?.outcome, "passed", "the ordinary tests are judged on their own");
+  assert.ok(!state.outcome?.files.some((f) => f.path.startsWith("tests/")), "neither file reaches the person's diff");
+  assert.match(formatSummary(state), /open question: Notes gain one entry/);
+
+  // An open probe that passes, or cannot load, asks nothing.
+  for (const content of ["// passes", "require('./no-such-module')"]) {
+    const quiet = context(cacheWorker(() => assert.fail("no turn"), [firm, { ...openTest, content }]));
+    const b = await startRun({ cwd: testable(), prompt: BLIND_REQUEST, preset: preset() }, quiet.ctx);
+    assert.equal(b.status, "finished", b.reason);
+    assert.equal(b.tasks[0]?.openQuestions, undefined);
+  }
+
+  // A failing ordinary test still gets the developer's one turn, and that turn is not shown the open file.
+  const both = context(cacheWorker((req) => {
+    assert.doesNotMatch(req.prompt, /blind_growth/);
+    write(req.cwd, "value.txt", "ok-bounded");
+  }, [{ ...blindTest("ok-bounded"), open: false, question: "" }, openTest]));
+  const d = await startRun({ cwd: testable(), prompt: BLIND_REQUEST, preset: preset() }, both.ctx);
+  assert.equal(d.status, "finished", d.reason);
+  assert.deepEqual(d.attempts.map((a) => a.kind), ["initial", "blind", "review-fix"]);
+  assert.equal(d.tasks[0]?.openQuestions?.length, 1);
+  assert.ok(d.outcome?.files.some((f) => f.path === "tests/blind_bound.test.js"));
+  assert.ok(!d.outcome?.files.some((f) => f.path === "tests/blind_growth.test.js"));
 });

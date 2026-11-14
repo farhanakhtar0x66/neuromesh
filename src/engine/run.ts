@@ -109,7 +109,7 @@ import {
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import type { AttemptKind, AttemptRecord, BlindTest, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, saveCalibration } from "../routing/calibration.ts";
 import { describeStubs, findStubs } from "../checks/stubs.ts";
 import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
@@ -2182,14 +2182,16 @@ async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, e
 }
 
 /** [F101 blind-tests] The blind tester's turn: its tests, nothing usable (undefined), or a stop the run must make. */
-async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signatures: string): Promise<{ tests: { path: string; content: string }[]; summary: string } | Stop | undefined> {
+async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signatures: string): Promise<{ tests: BlindTest[]; summary: string } | Stop | undefined> {
   const { state, ctx } = run;
   // An empty folder of its own, away from the project and from the run's folders (the task's code is in one of
   // those): a writer that has tools finds nothing of the code beside it, and is not told where it is.
   const scratch = mkdtempSync(join(tmpdir(), "neuromesh-blind-"));
   let result: AgentResult;
   try {
-    const existing = trackedFiles(task.worktree).filter((f) => TEST_PATH.test(f)).slice(0, 12);
+    const all = trackedFiles(task.worktree).filter((f) => TEST_PATH.test(f));
+    const existing = all.slice(0, 12);
+    const usage = blindUsage(task, all);
     ({ result } = await turn(run, {
       key: `${task.id}-blind`,
       role: "tester",
@@ -2197,7 +2199,7 @@ async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signa
       task: task.id,
       round: task.round,
       cwd: scratch,
-      prompt: blindPrompt(state, task, signatures, existing),
+      prompt: blindPrompt(state, task, signatures, existing, usage),
       access: "read-only",
       schema: BLIND_SCHEMA,
       direct: ctx.backends[chain[0]!.backend]?.direct === true ? true : undefined,
@@ -2211,26 +2213,73 @@ async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signa
   return result.stop === "done" ? parseBlind(result) : undefined;
 }
 
+/**
+ * [F101 blind-tests] How the changed code is called: the start of the tests
+ * that were already there for the changed files, as they were before this work.
+ * Tests the work itself added or changed are left out (they share its reading
+ * of the task), and so is every line of the code.
+ */
+function blindUsage(task: TaskState, tests: string[]): { path: string; text: string }[] {
+  if (!task.base) return [];
+  const stems = (task.files ?? []).map((f) => f.path).filter((p) => !TEST_PATH.test(p)).map((p) => p.slice(p.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "").toLowerCase()).filter((s) => s.length >= 3);
+  const out: { path: string; text: string }[] = [];
+  let used = 0;
+  for (const path of tests) {
+    const name = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
+    if (!stems.some((s) => name.includes(s))) continue;
+    const before = tryGit(task.worktree, "show", `${task.base}:${path}`);
+    if (!before) continue;
+    const text = before.split("\n").slice(0, 100).join("\n").slice(0, 4_000);
+    if (used + text.length > 6_000) break;
+    out.push({ path, text });
+    used += text.length;
+    if (out.length >= 2) break;
+  }
+  return out;
+}
+
 /** [F101 blind-tests] Run the blind tests on a copy of the work, and act on what they show. */
-async function blindJudge(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined, tests: { path: string; content: string }[], summary: string): Promise<Stop | undefined> {
+async function blindJudge(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined, all: BlindTest[], summary: string): Promise<Stop | undefined> {
   const { state, log } = run;
+  const tests = all.filter((t) => !t.open);
+  const open = all.filter((t) => t.open);
   const candidate = commitAll(task.worktree, `neuromesh candidate: ${task.title}`, task.prepared);
   const copy = join(state.dir, "tasks", task.id, "tester");
   let written: string[] = [];
   let results: CheckResult[] = [];
+  let openWritten: string[] = [];
+  let openResults: CheckResult[] = [];
   try {
     createDetachedWorktree(state.repo, copy, candidate);
     const prepared = prepareWorktree(state.repo, copy);
     await prepareEnv(run, copy, prepared, task.id);
     written = writeDirect(copy, tests, prepared).written;
     if (written.length > 0) results = await check(run, copy, `${task.id}-blind`);
+    // The open probe is run by itself, so its failure is never confused with a failing ordinary test.
+    if (open.length > 0 && !run.signal.aborted) {
+      for (const f of written) rmSync(join(copy, f), { force: true });
+      openWritten = writeDirect(copy, open, prepared).written;
+      if (openWritten.length > 0) openResults = await check(run, copy, `${task.id}-blind-open`);
+    }
   } finally {
     dropCopy(state.repo, copy);
   }
   if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
-  if (written.length === 0) return next("none");
   // Only a check that passed on the work as it was can be failing because of the new tests.
-  const failing = results.filter((r) => (r.status === "failed" || r.status === "timeout") && task.latest?.find((b) => b.name === r.name)?.status === "passed");
+  const brokeIt = (list: CheckResult[]): CheckResult[] => list.filter((r) => (r.status === "failed" || r.status === "timeout") && task.latest?.find((b) => b.name === r.name)?.status === "passed");
+  // An open probe that fails is a question for the person: recorded, shown with the result, and nothing else. No
+  // developer sees it and no turn is spent on it, because the task does not say what the answer is.
+  const openFailing = brokeIt(openResults);
+  const openOutput = openFailing.map((r) => r.tail).join("\n");
+  if (openFailing.length > 0 && !brokenTest(openOutput)) {
+    const questions = open.filter((t) => openWritten.some((w) => t.path.endsWith(w))).map((t) => ({ question: t.question ?? "", file: t.path, tail: openOutput.slice(-800) }));
+    task.openQuestions = [...(task.openQuestions ?? []), ...questions];
+    saveState(state);
+    log.emit("blind.open", { feature: "F101", task: task.id, questions: questions.map((q) => q.question), files: questions.map((q) => q.file), tail: openOutput.slice(-600) });
+    for (const q of questions) log.emit("note", { feature: "F101", message: `Task ${task.id}: a question the request leaves open, from a blind probe that failed: ${q.question} Nothing was changed for it; it is yours to decide.` });
+  }
+  if (written.length === 0) return next("none");
+  const failing = brokeIt(results);
   if (failing.length === 0) return next("passed", { files: written });
   const output = failing.map((r) => r.tail).join("\n");
   if (brokenTest(output)) return next("broken", { files: written, tail: output.slice(-600) });

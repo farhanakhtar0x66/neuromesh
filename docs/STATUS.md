@@ -342,12 +342,27 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     fixed; then 1,000 ordinary and 400 kill seeds kept every rule. See
     `docs/21-phase-2-review.md`.
 
+38. **First live check of F100 and F101 (2026-11-14).** `scope-test-2`,
+    the Notes request, twice. As first built, the blind tester misread how
+    the code is called (15 of its 22 tests wrong, one developer turn spent
+    correcting them) and did not catch the unbounded Notes, which the request
+    leaves open. Now it is shown the tests that were there before the work,
+    and may raise one open question that never gates: in the second run its
+    ordinary tests passed at once and it asked whether Notes should be
+    capped. One run each. The builder's own notes had said the same; the
+    summary cuts them short. See `docs/21-phase-2-review.md`.
+39. **The path to the goal (2026-11-14).** A plan, nothing built: nine
+    tracks, about seventy items, nine phases with a gate each, and what would
+    make it wrong. It starts with a benchmark that can tell configurations
+    apart. `docs/22-path-to-the-goal.md`.
+
 ## Next steps
 
-0a. F100 to F104 are on `neuromesh-research` and unmeasured. The four live
-   checks, cheapest first, are at the end of `docs/21-phase-2-review.md`; the
-   one that answers the review's main claim is `scope-test-2` with blind
-   tests on. They stay off `neuromesh-testing` until at least that one is run.
+0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
+   run each way; F102 to F104 none. The remaining live checks are at the end
+   of `docs/21-phase-2-review.md`. The order of work from here is
+   `docs/22-path-to-the-goal.md`, phase 1: a suite the cheap worker fails
+   alone.
 0. Next: the order of work in `docs/17-benchmark.md` (finish the single-Opus
    baseline, Haiku alone, plan-first, then one-answer workers on the same
    specs). Run it from a short session on Opus 5.5, idle while an eval runs.

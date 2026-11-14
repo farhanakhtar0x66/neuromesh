@@ -121,6 +121,11 @@ path: of the 1,000, 92 raced (46 won), 151 asked for blind tests (12 failed,
 10 of those dropped), 47 moved a turn to the other tool. One test in
 `test/phase2.test.ts` holds both defects.
 
+After open questions were added to the blind step (the same day), again
+1,000 ordinary and 400 kill-and-resume seeds kept every rule; 21 of the 1,000
+raised an open question, with no extra turn in runs where every agent did
+its work.
+
 This shows the engine keeps these rules against these faults. It does not show
 there are no others. What the harness does not model yet:
 

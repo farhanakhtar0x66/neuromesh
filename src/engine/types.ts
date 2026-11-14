@@ -223,7 +223,23 @@ export interface TaskState extends PlannedTask {
    * if the engine dies during those checks, the resumed run uses it instead of
    * paying for the turn again.
    */
-  blindAnswer?: { tests: { path: string; content: string }[]; summary: string };
+  blindAnswer?: { tests: BlindTest[]; summary: string };
+  /**
+   * [F101 blind-tests] What a blind probe found that the request leaves open
+   * (above all, something that grows without limit). Never a gate and never a
+   * turn: it is for the person to decide, and is shown with the result.
+   */
+  openQuestions?: { question: string; file: string; tail: string }[];
+}
+
+/** [F101 blind-tests] One test file of a blind tester's answer. */
+export interface BlindTest {
+  path: string;
+  content: string;
+  /** It probes something the task does not state: a failure is a question for the person, not a finding. */
+  open?: boolean;
+  /** With `open`: the question, in one sentence. */
+  question?: string;
 }
 
 /** The cascade's settings for one run (the routing architecture; F80 to F88). */

@@ -177,6 +177,8 @@ export function formatSummary(state: RunState): string {
     const extra = [t.escalated ? magenta("expert") : "", t.verdict ? `tester ${t.verdict.verdict}` : ""].filter(Boolean).join(", ");
     lines.push(`  ${label} ${statusColor(t.status)(t.status)}${extra ? ` (${extra})` : ""} · ${summary}`);
     if (t.report?.notes) lines.push(dim(`           ${oneLine(t.report.notes, 200)}`));
+    // [F101 blind-tests] What the request leaves open, for the person to decide.
+    for (const q of t.openQuestions ?? []) lines.push(`           open question: ${oneLine(q.question, 240)}`);
   }
   if (state.latest && state.latest.length > 0) {
     const parts = state.latest.map((r) => {

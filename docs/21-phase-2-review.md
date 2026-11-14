@@ -82,6 +82,20 @@ turn is dropped too, and only the event log says so.
 Not for the expert's own work (the fix turn would be an expert turn) or the
 grunt's.
 
+Two things were added after the first live run (below):
+
+- **How the code is called.** Signatures say what exists, not how it is
+  used. The tester now also gets the start of the tests that were already
+  there for the changed files, as they were before the work: calling
+  conventions, with none of the new code and none of the builder's own tests.
+- **Open questions.** The tester may add one separate probe for something the
+  request leaves open, above all something that grows without limit, checked
+  by comparing sizes (after 4,000 operations less than twice the size after
+  1,000) so that no limit has to be invented. The engine runs it by itself.
+  If it fails, the person gets the tester's one-sentence question with the
+  result (`blind.open`, and "open question:" in the run's summary). No
+  developer sees it, no turn is spent, nothing is kept, and it never gates.
+
 ### F102 `repair-race`: two fresh repairs side by side (2B)
 
 When a task's checks still fail after its repair rounds, and the next step is
@@ -152,9 +166,46 @@ The note's two thresholds (60% and 70%) are one here. A moved follow-up starts
 a fresh session on the other model with the task and what failed, because a
 session cannot move between models.
 
+## The first live check (2026-11-14)
+
+`scope-test-2` at the commit before the Notes change, the same request the
+owner's run got ("fold the evicted facts into Notes instead of silently
+dropping them"), `cascade-claude`, a Neuromesh home of its own. One run per
+row, so each number is one observation.
+
+| | Turns | Ordinary blind tests | Unbounded Notes | Estimated cost |
+| --- | --- | --- | --- | --- |
+| The owner's run, no blind tests | build | - | not noticed; fixed by a second request | $0.012 |
+| Run 1: F101 as first built | build, blind, fix | 15 of 22 failed, every one the tester's mistake about how the code is called; the developer corrected them and changed no code | not caught: "stays bounded" was tested on the history window, not on Notes | $0.032 |
+| Run 2: with usage and open questions | build, blind | all passed the first time | raised as a question: "Notes gain roughly one entry per evicted turn with no cap ... should Notes be capped or further summarized?" | $0.019 |
+
+What it says:
+
+- **The engine held.** Both runs finished with the checks passing and nothing
+  left behind. F100 pointed at `src/context.js` both times (and at
+  `bin/agent.js`, because the request says "agent.js" and two files have that
+  name).
+- **The note's claim, as stated, did not hold.** A test written without
+  seeing the code did not catch the growth in run 1, and could not fairly
+  have: the request does not say Notes are bounded, and "instead of dropping
+  them" is satisfied by keeping everything. It is a gap in the request, not a
+  defect in the code. What works is asking the person.
+- **The builder already knew.** In run 2 Haiku's own notes say: "Notes have
+  no size cap, so a long session grows the Notes section and the prompt
+  without bound. I did not add a cap because the request did not ask for
+  one." The run's summary cuts a developer's notes to 200 characters, so the
+  owner never saw the like of it. Showing the choices a developer says it
+  made may be worth as much as the blind probe, at no cost at all
+  (`docs/22-path-to-the-goal.md`, D6).
+- **Cost.** Run 2 is 1.6 times the run without blind tests, for one question
+  worth asking. Whether that is a good trade on average is what the
+  benchmark has to say; on this request it would have saved the second
+  request.
+
 ## What only a live run can say
 
-None of these is measured. In order of what each would cost:
+Apart from the one check above, none of these is measured. In order of what
+each would cost:
 
 1. **F100.** One planned build on a repository with 15+ files, with and
    without `--disable start-here`: the workers' first-turn tool calls and
@@ -165,9 +216,9 @@ None of these is measured. In order of what each would cost:
 3. **F102.** Needs a task Luna fails alone, which the suite does not have
    (STATUS next step 4). Until then the race rarely triggers, which also
    means it rarely costs anything.
-4. **F101.** The `scope-test-2` build again with blind tests on: does the
-   blind test catch the unbounded `Notes` growth that the builder's own tests
-   passed over? One run answers the note's central claim.
+4. **F101.** Done once (above). Next: the same on a suite of tasks, to see
+   how often the ordinary blind tests find a real defect, how often they are
+   wrong, and how often an open question is one the owner wanted asked.
 
 ## Fault harness
 
