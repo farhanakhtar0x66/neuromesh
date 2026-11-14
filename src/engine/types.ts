@@ -218,6 +218,12 @@ export interface TaskState extends PlannedTask {
    * them out again because the checks still failed with them.
    */
   blind?: { files: string[]; dropped?: boolean };
+  /**
+   * [F101 blind-tests] The blind tester's answer, kept while the engine runs it:
+   * if the engine dies during those checks, the resumed run uses it instead of
+   * paying for the turn again.
+   */
+  blindAnswer?: { tests: { path: string; content: string }[]; summary: string };
 }
 
 /** The cascade's settings for one run (the routing architecture; F80 to F88). */

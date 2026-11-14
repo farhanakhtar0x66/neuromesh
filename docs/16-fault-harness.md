@@ -38,7 +38,12 @@ Each seed draws:
   inside. A reviewer that passes, fails with a real or an empty finding, or
   deletes its copy;
 - optionally an interruption at a random turn, or a kill of the whole engine
-  process a moment after a random turn starts, followed by a resume.
+  process a moment after a random turn starts, followed by a resume;
+- for F100 to F104 (2026-11-14): in a quarter of the runs a request that gets
+  blind tests, in a repository with a definition it names; a blind tester
+  whose tests pass, fail, are nonsense, or aim at an existing file or outside
+  the project; a developer who corrects a failing blind test or leaves it; in
+  a third, a second tool that cheap turns may move to; probes in the cascade.
 
 ## The rules every run must keep
 
@@ -63,6 +68,13 @@ Each seed draws:
 - A first turn that stopped on quota or a revoked login before changing
   anything is asked again as a first turn, not continued (F97; added after a
   real run, 2026-11-14, where a resume skipped the confidence preamble).
+- No racer's copy is left behind. A task is raced to the end once, on its own
+  tier, and never on the expert; good agents are never raced (F102).
+- Blind tests are written once per task and never by the expert; ones that
+  passed are not in the result (F101). That a wrong blind test cannot fail a
+  run is covered by the rule above it: the checks pass on the result.
+- Only worker and reviewer turns move to the other tool, never a senior's or
+  the expert's, and none in a run whose preset names no other tool (F104).
 
 ## What it found (first 320 seeds: 39 broke a rule)
 
@@ -93,6 +105,21 @@ After the fixes: 1,200 ordinary seeds and 400 kill-and-resume seeds kept every
 rule (about 4,500 agent turns). `test/chaos.test.ts` runs 20 ordinary and 8
 kill seeds on every change; `test/reliability.test.ts` holds one test per
 defect above.
+
+**F100 to F104 (2026-11-14).** The first sweep of the new steps: 1,000
+ordinary seeds kept every rule; of 400 kill-and-resume seeds, 5 broke one,
+all from the engine dying while it ran blind tests on its copy.
+
+| Defect | What a real run would have seen | Fix |
+| --- | --- | --- |
+| The blind tester had answered and the engine died during the checks on the copy. On resume the step started over. (Seeds 136, 137, 198, 280.) | The blind tests are paid for twice. | The answer is saved with the task as soon as it arrives and used on resume. |
+| The dead engine left its copy of the work. The resumed pass got an unusable answer and ended before the place where it makes, and afterwards removes, a copy. (Seed 398.) | A work folder left after a finished run, and after applying it. | The blind step removes any copy left behind before it does anything else; the race step likewise when it is switched off. Removal on the way out (`finally`) is not enough for a step a kill can end. |
+
+After the fixes, 1,000 ordinary and 400 kill-and-resume seeds kept every rule
+(about 4,300 agent turns). The sweep now prints how many runs took each new
+path: of the 1,000, 92 raced (46 won), 151 asked for blind tests (12 failed,
+10 of those dropped), 47 moved a turn to the other tool. One test in
+`test/phase2.test.ts` holds both defects.
 
 This shows the engine keeps these rules against these faults. It does not show
 there are no others. What the harness does not model yet:

@@ -337,7 +337,10 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     dearer tier (F102), the calibration table overruling a confident match
     (F103), and cheap turns moving to another plan when the Claude window is
     low (F104, preset `cascade-hybrid`). All checked on the fake backend and
-    the fault harness only; none run live. See `docs/21-phase-2-review.md`.
+    the fault harness only; none run live. The harness's kill sweep found two
+    defects in the blind step (paid twice after a kill; a copy left behind),
+    fixed; then 1,000 ordinary and 400 kill seeds kept every rule. See
+    `docs/21-phase-2-review.md`.
 
 ## Next steps
 

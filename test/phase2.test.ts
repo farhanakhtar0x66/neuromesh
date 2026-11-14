@@ -12,8 +12,9 @@ import type { AgentRequest } from "../src/backends/types.ts";
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../src/checks/blind.ts";
 import { leadTerms, startHere } from "../src/context/packet.ts";
 import { MAX_AGE_MS, loadQuota, recordQuota, shiftNow, windowUsed } from "../src/engine/quota.ts";
-import { startRun } from "../src/engine/run.ts";
+import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
+import { loadState } from "../src/engine/store.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
 import type { RoleChain } from "../src/engine/types.ts";
 import type { Preset } from "../src/presets/presets.ts";
@@ -587,4 +588,56 @@ test("F103: in a run, the record sends a worker-like request to the senior and s
   assert.equal(why?.direction, "up");
   assert.equal(why?.from, "worker");
   assert.equal(c.fake.calls.filter(isBuild)[0]?.model, "senior");
+});
+
+// Found by the fault harness (kill-and-resume seeds 136, 137, 198, 280 and 398, 2026-11-14).
+test("F101: an engine stopped while the blind tests run does not pay for them again, and a copy it left behind is removed", async () => {
+  // A run stopped a moment after the blind tester answered, while the engine runs the tests on its copy; then what
+  // a killed engine leaves that a stopped one does not: that copy.
+  const stoppedInBlindChecks = async () => {
+    // The same project, with a check slow enough to be stopped in.
+    const repo = makeRepo({
+      "README.md": "# demo\n",
+      "package.json": JSON.stringify({ name: "demo", scripts: { test: "node check.js" } }),
+      "check.js": "const fs=require('fs');const t=Date.now();while(Date.now()-t<900){}if(!fs.existsSync('value.txt')||!fs.readFileSync('value.txt','utf8').startsWith('ok')){console.error('expected value.txt to start with ok');process.exit(1)}for(const f of fs.existsSync('tests')?fs.readdirSync('tests'):[])require('./tests/'+f);",
+    });
+    const stop = new AbortController();
+    const asked: number[] = [];
+    const worker = cacheWorker(() => assert.fail("no fix turn"), [blindTest("ok")]);
+    const c = context((req, i) => {
+      if (isBlind(req)) {
+        asked.push(i);
+        if (asked.length > 1) return { structured: { tests: "nonsense" } };
+        setTimeout(() => stop.abort(), 300);
+      }
+      return worker(req, i);
+    });
+    const first = await startRun({ cwd: repo, prompt: BLIND_REQUEST, preset: preset() }, { ...c.ctx, signal: stop.signal });
+    assert.equal(first.status, "interrupted", first.reason);
+    assert.equal(first.tasks[0]?.step, "blind");
+    assert.equal(first.tasks[0]?.blindAnswer?.tests.length, 1, "the answer is kept with the run");
+    execFileSync("git", ["worktree", "add", "--quiet", "--detach", join(first.dir, "tasks", "main", "tester"), "HEAD"], { cwd: repo, stdio: "pipe" });
+    assert.ok(worktrees(repo).some((t) => /tester$/.test(t)));
+    return { repo, c, first, asked };
+  };
+
+  // The kept answer is used: no second turn.
+  const kept = await stoppedInBlindChecks();
+  const state = await resumeRun(loadState(kept.first.dir), kept.c.ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(kept.asked.length, 1, "the blind tester was not asked a second time");
+  assert.equal(state.attempts.filter((a) => a.kind === "blind").length, 1);
+  assert.equal(kept.c.events.filter((e) => e.type === "blind.tests").at(-1)?.outcome, "passed", "the kept tests were run");
+  assert.equal(state.tasks[0]?.blindAnswer, undefined, "and are not kept once judged");
+  assert.ok(!worktrees(kept.repo).some((t) => /tester$/.test(t)), "the copy is gone");
+
+  // Killed before the answer was saved: it is asked again, and this time the answer is unusable, so the pass
+  // ends before it would make a copy of its own. The one left behind still goes.
+  const lost = await stoppedInBlindChecks();
+  const saved = loadState(lost.first.dir);
+  saved.tasks[0]!.blindAnswer = undefined;
+  const again = await resumeRun(saved, lost.c.ctx);
+  assert.equal(again.status, "finished", again.reason);
+  assert.equal(lost.c.events.filter((e) => e.type === "blind.tests").at(-1)?.outcome, "none");
+  assert.ok(!worktrees(lost.repo).some((t) => /tester$/.test(t)), "the copy the dead engine left is gone");
 });

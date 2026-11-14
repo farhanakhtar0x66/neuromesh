@@ -2011,8 +2011,12 @@ async function raceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined>
     }
     return failTask(run, task, `checks still fail (${why})`);
   };
-  if (!isOn("repair-race")) return onward();
   const lanes = RACE_HINTS.map((hint, i) => ({ id: "ab"[i]!, hint, dir: join(state.dir, "tasks", task.id, `race-${"ab"[i]!}`), prepared: [] as string[], ok: false, size: 0, failures: "" }));
+  if (!isOn("repair-race")) {
+    // Copies an engine that died mid-race left behind still go.
+    for (const lane of lanes) dropCopy(state.repo, lane.dir);
+    return onward();
+  }
   try {
     return await inFeature("repair-race", async (): Promise<Stop | undefined> => {
     const chain = raceChain(state, task);
@@ -2130,11 +2134,15 @@ async function blindStep(run: RunCtx, task: TaskState): Promise<Stop | undefined
   const { state, log } = run;
   const next = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
     task.blindDone = true;
+    task.blindAnswer = undefined;
     task.step = wantsTester(state, task) ? "test" : "merge";
     saveState(state);
     log.emit("blind.tests", { feature: "F101", task: task.id, outcome, ...extra });
     return undefined;
   };
+  // The copy an engine that died during this step left behind: gone before anything else, because this pass may
+  // end before it would make (and remove) its own. Found by the fault harness (kill seed 398).
+  dropCopy(state.repo, join(state.dir, "tasks", task.id, "tester"));
   // Blind tests an earlier, cut-short pass through this step put into the folder: out, before anything is committed or checked.
   if (task.blind) {
     for (const f of task.blind.files) rmSync(join(task.worktree, f), { force: true });
@@ -2155,10 +2163,27 @@ async function blindStep(run: RunCtx, task: TaskState): Promise<Stop | undefined
 }
 
 async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined): Promise<Stop | undefined> {
-  const { state, ctx, log } = run;
+  const { state } = run;
   const chain = blindChain(state);
   const signatures = signaturesOf(task.worktree, (task.files ?? []).map((f) => f.path));
   if (signatures.files.length === 0 || chain.length === 0) return next("skipped");
+  // The answer of a pass the engine died in is used as it is: the turn is not paid for twice (kill seeds 136, 137, 198, 280).
+  const answer = task.blindAnswer ?? (await blindAsk(run, task, chain, signatures.text));
+  if (!answer) return next("none");
+  // The turn was stopped (Ctrl-C, a rejected login): the run stops as for any other turn.
+  if ("status" in answer) return answer;
+  const tests = answer.tests.filter((t) => blindPathOk(task.worktree, t.path));
+  if (tests.length === 0) return next("none");
+  if (!task.blindAnswer) {
+    task.blindAnswer = answer;
+    saveState(state);
+  }
+  return blindJudge(run, task, next, tests, answer.summary);
+}
+
+/** [F101 blind-tests] The blind tester's turn: its tests, nothing usable (undefined), or a stop the run must make. */
+async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signatures: string): Promise<{ tests: { path: string; content: string }[]; summary: string } | Stop | undefined> {
+  const { state, ctx } = run;
   // An empty folder of its own, away from the project and from the run's folders (the task's code is in one of
   // those): a writer that has tools finds nothing of the code beside it, and is not told where it is.
   const scratch = mkdtempSync(join(tmpdir(), "neuromesh-blind-"));
@@ -2172,7 +2197,7 @@ async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, e
       task: task.id,
       round: task.round,
       cwd: scratch,
-      prompt: blindPrompt(state, task, signatures.text, existing),
+      prompt: blindPrompt(state, task, signatures, existing),
       access: "read-only",
       schema: BLIND_SCHEMA,
       direct: ctx.backends[chain[0]!.backend]?.direct === true ? true : undefined,
@@ -2183,10 +2208,12 @@ async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, e
     rmSync(scratch, { recursive: true, force: true });
   }
   if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "tester");
-  const answer = result.stop === "done" ? parseBlind(result) : undefined;
-  const tests = (answer?.tests ?? []).filter((t) => blindPathOk(task.worktree, t.path));
-  if (tests.length === 0) return next("none", { stop: result.stop });
+  return result.stop === "done" ? parseBlind(result) : undefined;
+}
 
+/** [F101 blind-tests] Run the blind tests on a copy of the work, and act on what they show. */
+async function blindJudge(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined, tests: { path: string; content: string }[], summary: string): Promise<Stop | undefined> {
+  const { state, log } = run;
   const candidate = commitAll(task.worktree, `neuromesh candidate: ${task.title}`, task.prepared);
   const copy = join(state.dir, "tasks", task.id, "tester");
   let written: string[] = [];
@@ -2219,7 +2246,8 @@ async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, e
   const finding = blindFinding(put, failing[0]!.command, output);
   task.blind = { files: put };
   task.blindDone = true;
-  task.verdict = { verdict: "fail", summary: `Blind tests fail: ${answer?.summary ?? ""}`.trim(), findings: [finding] };
+  task.blindAnswer = undefined;
+  task.verdict = { verdict: "fail", summary: `Blind tests fail: ${summary}`.trim(), findings: [finding] };
   task.history.push({ diff: diffOf(task), failures: "", findings: [finding] });
   log.emit("blind.tests", { feature: "F101", task: task.id, outcome: "failed", files: put, checks: failing.map((r) => r.name), tail: output.slice(-600) });
   nextRound(run, task, "review-fix");

@@ -179,3 +179,10 @@ tests are written once per task and never by the expert; blind tests that
 passed are not in the result; only worker and reviewer turns move to the
 other tool, never a senior's or the expert's. The sweep prints how many runs
 took each path, so a clean sweep can be told from an idle one.
+
+The first kill-and-resume sweep broke a rule on 5 of 400 seeds, all in the
+blind step: an engine killed while running the tests on its copy paid for
+them again on resume, and could leave the copy behind. Both are fixed
+(`docs/16-fault-harness.md`). After that, 1,000 ordinary and 400
+kill-and-resume seeds kept every rule, with 92 races, 151 blind-test runs
+and 47 moved turns among the 1,000.
