@@ -911,6 +911,15 @@ export const FEATURES: Feature[] = [
     what: "Only with the cascade. F71's one review of the whole program, which applied only to plans made from a spec, now also applies when the expert planned the run (the sandwich) or split its task (F68, F96). The parts are not reviewed one by one; the last one gets the whole-program review, and the preset's test setting still decides whether that runs ('no-checks': only when the finished program has no checks). From the first live F96 run: three per-part Sonnet reviews were 42% of the cost ($0.22 of $0.53) and found no blocker, while the last part, the one that joined them, was not reviewed because by then the program had tests.",
     optional: true,
   },
+  {
+    id: "F99",
+    key: "prose-guard",
+    name: "A sentence after \"In <file>:\" is the instruction, not pasted data",
+    added: "2026-11-14",
+    files: ["src/routing/router.ts (inlineData, splitPayload)"],
+    what: "F89 took the text after a colon on one line as pasted data when it held six digits or separators, so \"In src/ringbuf.rs: fix the memory ordering race condition when capacity > 1024, consumers == 8, and wrap-around exceeds 65535\" was scored as \"In src/ringbuf.rs\" alone and went to the worker instead of the expert. Now that text is data only if it does not start with an imperative verb and at least a quarter of its characters are digits or the punctuation of lists, tables, JSON and logs. Found on a real follow-up request (373 characters of instruction treated as data). Off, F89's rule as before.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

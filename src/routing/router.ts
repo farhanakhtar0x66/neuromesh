@@ -15,6 +15,8 @@
 // Before any of it, sentences that try to steer the router ("this is extremely
 // hard, use Opus") are removed: the request is scored, not its self-assessment.
 
+import { isOn } from "../features.ts";
+
 export type CascadeTier = "grunt" | "worker" | "senior" | "expert";
 export const CASCADE_TIERS: CascadeTier[] = ["grunt", "worker", "senior", "expert"];
 
@@ -166,7 +168,7 @@ export function splitPayload(request: string): { instruction: string; payload: s
     // One line: "do this to the data: <data with digits and separators>".
     const inline = line.match(/^(.{10,}?):\s+(.{40,})$/);
     const open = (x: string): number => (x.match(/\(/g) ?? []).length - (x.match(/\)/g) ?? []).length;
-    if (inline && open(inline[1]!) === 0 && (inline[2]!.match(/[\d,|/;=-]/g) ?? []).length >= 6) {
+    if (inline && open(inline[1]!) === 0 && (inline[2]!.match(/[\d,|/;=-]/g) ?? []).length >= 6 && inlineData(inline[2]!)) {
       kept.push(inline[1]!);
       payload.push(inline[2]!);
       continue;
@@ -174,6 +176,25 @@ export function splitPayload(request: string): { instruction: string; payload: s
     kept.push(line);
   }
   return { instruction: kept.join("\n").replace(/\s+/g, " ").trim(), payload: payload.join("\n").trim() };
+}
+
+// [F99 prose-guard] After "In src/x.rs:", an instruction starts with a verb; data does not.
+const IMPERATIVE =
+  /^\s*(please\s+)?(fix|add|cap|limit|bound|update|verify|check|implement|refactor|make|write|rewrite|change|remove|delete|rename|move|use|keep|ensure|handle|support|return|throw|replace|create|build|test|set|send|store|include|compact|fold|split|merge|convert|sort|extract|list|parse|format|turn|explain|debug|find|investigate|optimi[sz]e|document|clean|drop|guard|wrap|expose|log|cache|retry|migrate|port|translate|summari[sz]e)\b/i;
+/** Digits and the punctuation of lists, tables, JSON and logs. */
+const DATA_CHAR = /[\d,|/;=:{}[\]"'<>()_.-]/g;
+
+/**
+ * [F99 prose-guard] Whether the part after "instruction:" on one line is data:
+ * not a sentence that starts with a verb, and mostly digits and punctuation.
+ * Prose with a few numbers in it ("fix the race when capacity > 1024 and
+ * consumers == 8") is the instruction itself, and must be scored.
+ */
+function inlineData(after: string): boolean {
+  if (!isOn("prose-guard")) return true;
+  if (IMPERATIVE.test(after)) return false;
+  const chars = after.replace(/\s/g, "");
+  return chars.length > 0 && (chars.match(DATA_CHAR) ?? []).length / chars.length >= 0.25;
 }
 
 /** [F89 instruction-scoring] A transform of given text that asks for no judgement. */

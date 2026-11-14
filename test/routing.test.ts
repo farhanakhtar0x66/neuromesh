@@ -220,3 +220,23 @@ test("a short new build across three or more subsystems, with no code file named
     assert.equal(b.tier, a.tier, request);
   }
 });
+
+// [F99 prose-guard] A sentence after "In <file>:" is the instruction. The first is the owner's
+// friend's example, the second the real follow-up request where the bug was found (2026-11-14).
+test("prose with numbers after a colon is the instruction, and one-line data is still left out (F99)", () => {
+  const ringbuf = "In src/ringbuf.rs: fix the memory ordering race condition when capacity > 1024, consumers == 8, and sequence wrap-around exceeds 65535.";
+  assert.equal(splitPayload(ringbuf).payload, "");
+  assert.equal(routeTier({ request: ringbuf, kind: "bug" }, undefined, { instructionOnly: true }).tier, "expert");
+  const followUp = "Bound the Notes so neither CONTEXT.md nor the prompt can grow without limit.\n\nIn src/context.js: cap Notes at a maximum of 20 entries and 2,000 total characters on disk. When folding evicted turns (or adding a note) would go beyond either limit, compact the oldest entries into a single rollup line of at most 240 characters.\n\nIn src/agent.js: cap the Notes system message sent to the model at 2,000 characters.";
+  assert.equal(splitPayload(followUp).payload, "");
+  // Data after a colon is still data.
+  const lines: [string, string][] = [
+    ["sort these numbers from low to high: 12, 45, 7, 300, 18, 92, 4, 61, 77, 23, 108, 5, 66", "12, 45, 7, 300, 18, 92, 4, 61, 77, 23, 108, 5, 66"],
+    ["convert this to json please: name=api; replicas=3; ports=80/443; env=prod; region=eu-west-1", "name=api; replicas=3; ports=80/443; env=prod; region=eu-west-1"],
+    ["turn these timestamps into a csv column: 10:00:01, 10:00:02, 10:00:09, 10:01:44, 10:02:10", "10:00:01, 10:00:02, 10:00:09, 10:01:44, 10:02:10"],
+  ];
+  for (const [request, data] of lines) {
+    assert.equal(splitPayload(request).payload, data, request);
+    assert.equal(routeTier({ request, kind: "greenfield" }, undefined, { instructionOnly: true }).tier, "grunt", request);
+  }
+});

@@ -310,6 +310,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     passing, ≈$0.53 against $0.14 for Sonnet alone without the question.
     Per-part Sonnet reviews were $0.22 of it and found no blocker; F98 reviews
     a planned or split cascade build once, at the end. Not re-run live.
+35. **Incremental edits on the F96 build, and F99 (2026-11-14).** Two Haiku
+    turns on `~/Projects/scope-test-2` ($0.012, $0.032) folded evicted turns
+    into Notes and then bounded them (20 entries, 2,000 characters; held under
+    a 500-turn stress check). Tier 0 sent both to the worker with no expert. The
+    second request exposed an F89 false positive: a sentence after "In
+    <file>:" with numbers was taken as data. F99 fixes it; the friend's ringbuf
+    example now routes to the expert again, benchmark routes unchanged.
 
 ## Next steps
 
