@@ -285,6 +285,11 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     of a clean five-hour window against Opus's 13 (contaminated). Open: the
     sandwich still costs as much as Opus on 4.1 (Opus wrote 836 words against
     a 400-word brief). See `evals/routing-bench/REPORT.md`.
+31. **Senior first for a small expert request (F93, 2026-11-14).** The sandwich
+    only runs for a large, many-part request; anything else Tier 0 sends to the
+    expert (4.1) starts on Sonnet, and Opus advises on escalation. Not re-run
+    live. The cascade is merged into `neuromesh-testing` (preset
+    `cascade-claude`) to be judged on real use.
 
 ## Next steps
 

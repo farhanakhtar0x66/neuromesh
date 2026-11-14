@@ -231,3 +231,7 @@ The one remaining quality miss is real and the same as in the first run. On 2.3,
    - accept that the sandwich only pays on multi-part work.
 2. **A clean Opus baseline** would make the subscription comparison exact. Run it in its own window with `--wait-reset`: `node evals/routing-bench/run.ts --config frontier --name rb-frontier-2 --wait-reset`.
 3. **Variance:** one run per configuration still. A second clean cascade run would show how stable 74.7% and 3 points are.
+
+### Decision on 4.1 (owner, 2026-11-14)
+
+The second option was chosen and made F93 (`senior-first-expert`). The sandwich now runs only when Tier 0 sends a request to the expert by its size rule (800 words or 12 files named). A request it sends to the expert by similarity or calibration, as 4.1 is, starts on Sonnet with its preamble gate, and Opus advises from Sonnet's bottleneck if Sonnet escalates. Not re-run live: by the owner's choice, the next evidence is real use on `neuromesh-testing` rather than another benchmark run (items 2 and 3 above were skipped).

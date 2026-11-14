@@ -338,3 +338,62 @@ test("the blueprint is asked to stay under about 400 words with no function bodi
   assert.match(asked, /under about 400 words/);
   assert.match(asked, /No function bodies/);
 });
+
+const LOCK_FREE = "Fix the race condition in queue.js: make it lock-free with atomics and the right memory ordering.";
+
+test("an expert request that is not large starts on the senior, with no plan and no expert turn (F93)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (!isBuild(req)) return report("n/a");
+    preamble(req, 0.8, false);
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo(), prompt: LOCK_FREE, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const route = events.find((e) => e.type === "route.tier");
+  assert.equal(route?.tier, "expert");
+  assert.notEqual(route?.stage, "rules");
+  assert.ok(events.some((e) => e.type === "note" && e.feature === "F93"));
+  assert.ok(!fake.calls.some(isSpec), "no expert plan");
+  assert.deepEqual(fake.calls.filter(isBuild).map((c) => c.model), ["senior"]);
+  assert.match(fake.calls.filter(isBuild)[0]!.prompt, /very first message/, "the senior judges itself and can escalate");
+  assert.ok(!fake.calls.some((c) => c.model === "fake-expert"));
+});
+
+test("when the senior escalates such a request, the expert advises and builds nothing (F93)", async () => {
+  const { ctx, fake } = context((req) => {
+    if (isAdvice(req)) return { structured: { diagnosis: "a Release store is missing", steps: ["write ok into fixed.txt"] } };
+    if (!isBuild(req)) return report("n/a");
+    if (/very first message/.test(req.prompt)) {
+      preamble(req, 0.3, true, { bottleneck: "which fence orders the payload write before the tail store" });
+      return report("stopped");
+    }
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo(), prompt: LOCK_FREE, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.ok(!fake.calls.some(isSpec));
+  assert.match(fake.calls.find(isAdvice)!.prompt, /which fence orders the payload write/);
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert" && isBuild(c)).length, 0);
+});
+
+test("with senior-first-expert disabled, the same request gets the expert's plan (F93 off)", async () => {
+  process.env.NEUROMESH_DISABLE = "senior-first-expert";
+  try {
+    const { ctx, fake, events } = context((req) => {
+      if (isScout(req)) return { structured: { facts: [] } };
+      if (isSpec(req) || "tasks" in props(req))
+        return { structured: { name: "q", summary: "s", features: [], behaviour: [], out_of_scope: [], design: [], acceptance: [], tasks: [{ id: "t1", title: "fix", brief: "Write fixed.txt saying ok", owned: ["fixed.txt"], depends_on: [], owner: "expert" }] } };
+      if (!isBuild(req)) return report("n/a");
+      write(req.cwd, "fixed.txt", "ok");
+      return report("done");
+    });
+    const state = await startRun({ cwd: repo(), prompt: LOCK_FREE, preset: preset() }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.ok(!events.some((e) => e.type === "note" && e.feature === "F93"));
+    assert.ok(fake.calls.some((c) => c.model === "fake-expert"), "the expert planned");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});

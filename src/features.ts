@@ -857,6 +857,15 @@ export const FEATURES: Feature[] = [
     what: "Only with the cascade's blueprint mode (F85). The lead engineer's plan is asked to stay under about 400 words: bullet points, invariants and the signatures the parts build against, with no function bodies, full code blocks or prose about what the developers will write. The CLIs have no output-token limit, so the limit is in the brief. On the first benchmark run Opus's plan for 4.1 was 6,543 output tokens ($0.20), and the sandwich cost as much as Opus alone.",
     optional: true,
   },
+  {
+    id: "F93",
+    key: "senior-first-expert",
+    name: "An expert request that is not large starts on the senior; the expert advises only on escalation",
+    added: "2026-11-14",
+    files: ["src/engine/run.ts (startRun)"],
+    what: "Only with the cascade. Tier 0 sends a request to the expert either by its size rule (800 words or 12 files named: many parts) or by what it is like (similarity or calibration). Only the first gets the sandwich, where the expert plans and blueprints and the tiers below build. The second starts on the senior's first rung with its preamble gate; if the senior escalates, the expert advises from its bottleneck diagnostic (F84) and builds nothing. On both benchmark runs prompt 4.1 (one Rust file and its explanation) cost as much in the sandwich as Opus alone ($0.339 against $0.338): the plan for a single deliverable is nearly the size of the deliverable, and the 400-word cap (F92) was not kept. Off, every expert route gets the sandwich.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

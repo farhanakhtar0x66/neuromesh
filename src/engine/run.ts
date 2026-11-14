@@ -331,7 +331,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
         );
         b.staffing.reasons.push(`Tier 0: ${cascade.route.tier} (${cascade.route.reasons.join("; ")})`);
         // A request that needs the expert from the start gets the sandwich: the expert plans and blueprints, the tiers below build.
-        if (cascade.route.tier === "expert" && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0) b.staffing.plan = true;
+        // [F93 senior-first-expert] Only a large, many-part request (Tier 0's size rule). A smaller expert request starts on
+        // the senior, and the expert advises only when the senior escalates.
+        const sandwich = cascade.route.tier === "expert" && (!isOn("senior-first-expert") || cascade.route.stage === "rules");
+        if (sandwich && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0) b.staffing.plan = true;
       } catch (error) {
         featureErrors.push(failure(error, "tier-router"));
         disable("tier-router");
@@ -411,6 +414,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   });
   for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
   if (cascade?.route) log.emit("route.tier", { feature: "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons });
+  // [F93 senior-first-expert]
+  if (cascade?.route?.tier === "expert" && cascade.route.stage !== "rules" && isOn("senior-first-expert")) {
+    log.emit("note", { feature: "F93", message: "Tier 0 chose the expert for a request that is not large: the senior builds it, and the expert advises if it escalates." });
+  }
   if (brief) {
     log.emit("brief", { kind: brief.kind, surface: brief.surface, attached: brief.attached.map((a) => a.path), standards: brief.standards.length, staffing: brief.staffing });
   } else if (why) {
