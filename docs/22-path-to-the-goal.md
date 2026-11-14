@@ -12,6 +12,60 @@ question, its approach, the decisions to make first, its budget of live
 calls, its gate, and what to do if the gate is missed; then what would make
 it a breakthrough, and what would make the plan wrong.
 
+## Where the engine stands (corrected 2026-11-14, evening)
+
+The first version of this plan was written around the older factory presets
+(an expert lead with GPT-6 Luna workers) and the earlier build tests. That
+was out of date. Since 2026-11-13 the architecture is the **routing
+cascade**, and the owner's real runs since then are all on `cascade-claude`,
+one Claude plan:
+
+| Tier | Who | What it does |
+| --- | --- | --- |
+| 0 | Neuromesh's rules, no model | picks the starting tier |
+| 1 grunt | Haiku 5.5, low | mechanical work, gated only by checks, no tools for inline transforms |
+| 2 worker | Haiku 5.5, medium then high | routine building, judges the task first |
+| 3 senior | Sonnet 5.5 | work that needs judgement |
+| 4 expert | Opus 5.5 | plans and advises, builds nothing |
+
+What it has shown (`evals/routing-bench/REPORT.md`, run `rb-cascade-2`, a
+clean five-hour window, against the first Opus-alone run):
+
+| | Cascade | Opus alone |
+| --- | --- | --- |
+| Quality, 15 prompts | 148.8 of 150 | 150 of 150 |
+| Estimated cost at list prices | $0.84 | $3.32 |
+| Five-hour window | 3 points (clean) | 13 points (includes the working session) |
+| Weekly window | 0 points | 2 points |
+| Wall time | 11.8 min | 16.1 min |
+| Traps (regex bomb, jargon wall, impossible sort) | all three survived | - |
+
+And on real work the same day: a 19-file agent built by Haiku from Opus's
+split, 117 tests passing, for about $0.53 and one point of the five-hour
+window; follow-ups at one to three cents each.
+
+So the older finding that "Haiku shares Opus's window, so one Claude plan
+cannot beat Opus alone" (finding 23, measured on `factory-opus-haiku`) does
+not describe the cascade. With Tier 0 keeping most work off Opus and the
+grunt running without tools, the same plan went about four times further on
+this suite, and faster.
+
+What that result does not yet settle, and what this plan is for:
+
+- it is one run of each, and the Opus reading is not clean (the report's own
+  open items 2 and 3);
+- the 15 prompts start in empty folders: no work inside an existing
+  repository, which is most real work;
+- most checkers are keyword and structure rubrics, not executed code, and
+  eight had to be corrected;
+- the router was tuned on these 15, so they are a regression set now, not a
+  held-out one.
+
+Everything below takes the cascade as the system. The cheap baseline is
+Haiku alone, the frontier baseline is Opus alone, and the cost that matters
+first is the one Claude plan's windows. Other vendors' models and a second
+plan are an extension (track A), not the main line.
+
 ## The goal, stated so it can be checked
 
     minimise   E[C(run)]
@@ -80,7 +134,7 @@ price.
 
 | Id | What | Why it comes first | Done when |
 | --- | --- | --- | --- |
-| M1 | A suite the cheap worker fails alone: 40+ tasks in real, medium-sized repositories (a bug with a failing hidden test, a feature across 3+ files, a refactor that must keep behaviour), from the owner's projects and open-source history. | Luna passes all 25 current tasks alone, so escalation, review, races and blind tests can never show a gain. | Luna alone scores 40 to 70%; a frontier model alone 80%+. |
+| M1 | Beyond the 15 routing prompts (kept as the regression set, with their four metrics and traps): a suite the cheap worker fails alone: 40+ tasks in real, medium-sized repositories (a bug with a failing hidden test, a feature across 3+ files, a refactor that must keep behaviour), from the owner's projects and open-source history. | The routing prompts start in empty folders and are graded mostly by rubric; the older 25 tasks are passed by a cheap model alone. Neither can show what escalation, review, races or blind tests add on real repositories. | Haiku alone scores 40 to 70%; Opus alone 80%+. |
 | M2 | Every configuration run 3 times; results as a rate with an interval; comparisons paired by task. | Every number so far is one run. The cascade's 149/150 against 150/150 cannot be told from chance. | The report prints "not worse than Opus by more than d: shown / not shown". |
 | M3 | A clean frontier baseline: Opus alone on M1, on a Claude plan nothing else is using. | The current baseline's quota readings include the working session. | Baseline R, dollars and window points, three runs. |
 | M4 | Cost in both currencies per turn, and the fitted worth of a window point per model (`bench --fit`, extended to every plan). | C cannot be minimised while its two measures disagree and only one is recorded reliably. | Every run reports dollars and points; the fit is stable across two days. |
@@ -113,7 +167,7 @@ the first lever on R is making more of the task executable.
 | Id | What | Moves | Notes |
 | --- | --- | --- | --- |
 | S1 | Measure the repair race (F102) on M1, and its two hints against two identical ones. | C: does it replace escalations at all? | First live check. |
-| S2 | Racers from different vendors (Luna and Haiku, not Luna twice). | Attempts by different model families fail differently; two tries of one model after it has failed twice mostly fail the same way. | Needs two cheap plans. |
+| S2 | Racers that differ more than by a hint. On one Claude plan: Haiku at high effort against Sonnet at low, or the same model from different starting points. With a second plan or a local model: another model family, which fails differently. | Two tries of one model after it has failed twice mostly fail the same way. | The cross-family form needs track A. |
 | S3 | Best-of-2 at the first build, for tasks where the record says the tier passes 40 to 70% of the time. | Below 40% start higher; above 70% one try is enough. D1 decides. | - |
 | S4 | A reviewer from a different vendor than the builder. | The reviewer's blind spots then differ from the builder's. | Free to try: a preset change. |
 | S5 | Two cheap plans compared before the expert is asked: when they agree, use one; when they differ on structure, that is the signal a design is needed. | C: fewer expert plans. Replaces F94's keyword count with evidence. | - |
@@ -157,7 +211,7 @@ the first lever on R is making more of the task executable.
 | A5 | Local models as grunt and reviewer (through opencode or a CLI of their own). | A tier whose cost is electricity; unlimited tries where an oracle exists. |
 | A6 | Many plans, one allocator: every plan's windows, reset times and current price (the C above); cheap turns go where a point is worth least; spending is paced so a window is not exhausted hours before it resets. | F104 generalised from one threshold to the owner's actual objective. |
 | A7 | Answers that do not parse are repaired without a model call where possible (a trailing comma, a fenced block, a missing field with a default), and each tool's failure rate on structured answers is recorded. | Garbled answers cost a turn today. |
-| A8 | Prompts tested per model: a small set of golden cases per role, run on each model in the probe, so a prompt change that helps one model and hurts another is seen. | Prompts are tuned on Claude and Luna only. |
+| A8 | Prompts tested per model: a small set of golden cases per role, run on each model in the probe, so a prompt change that helps one model and hurts another is seen. | Prompts are tuned on the models in use only. |
 
 ## Track D: one controller
 
@@ -207,7 +261,7 @@ the first lever on R is making more of the task executable.
 | Phase | Items | Gate |
 | --- | --- | --- |
 | 1. A benchmark that can tell | M1, M2, M3, M9; then M4, M5 | Two configurations known to differ are told apart; the frontier baseline has an interval. |
-| 2. Clear the backlog | M7 on F93 to F104; S1; the remaining live checks of doc 21; D6 | Every feature on trial is kept, changed or removed on a number. |
+| 2. Clear the backlog | D6; C1 (start-up tokens, brought forward); M7 on F93 to F104; S1; the remaining live checks of doc 21 | Every feature on trial is kept, changed or removed on a number; tokens per routing prompt down. |
 | 3. Oracles | O1, O2, O7, O8, then M8, O3, O5 | R on the suite's bugs and refactors rises at no more than 10% more cost. |
 | 4. Replay and the record | L1, M6, D3 | A policy change is priced offline and agrees with a live re-run. |
 | 5. The controller | R1, R2, R5, D1, D2 | Same R as phase 3 at measurably lower C, with the hand-set thresholds gone. |
@@ -261,13 +315,29 @@ the phases before it measure.
 **The question.** Can two configurations that really differ be told apart,
 and what exactly is the frontier model's resolution rate and cost?
 
-**Where it starts.** 29 tasks in `evals/tasks` (a prompt, a seed repository,
-a hidden check), `neuromesh eval` with `--quota` and `--spec-from`,
-`evals/bench.ts` for the table and the quota fit. Luna passes the 25 ordinary
-ones alone. One Opus baseline task finished cleanly before the window ran out
-(`docs/17-benchmark.md`).
+**Where it starts.** The routing benchmark is the instrument that exists:
+15 prompts in five groups with three traps, hidden checkers with reference
+answers (`validate.sh`), a runner that reads the windows around every prompt
+and can wait for a window to reset (`run.ts --wait-reset`), a rescorer that
+makes no model calls, and four metrics (CostSave, weighted CostSave,
+Gap@Oracle, wasted cascade tokens). One clean cascade run met every target.
+Also 29 older tasks in `evals/tasks` with seed repositories and hidden
+checks, which cheap models pass alone.
 
 **How to approach it.**
+
+0. *Finish what the routing report left open, before anything new.* It is
+   the cheapest evidence in the whole plan:
+   - a clean Opus baseline in its own window, the working session idle
+     (`run.ts --config frontier --name rb-frontier-2 --wait-reset`);
+   - a second and third clean cascade run, for the spread;
+   - Haiku alone on the same 15 (`solo-haiku`): what the cheapest model does
+     with no cascade at all. Without it, nobody knows how much of the result
+     is the cascade and how much is Haiku.
+   Three numbers with a spread each, for about 20 points of five-hour window
+   in total. If the cascade's lead holds here, the rest of this phase is
+   about making the claim wider; if it does not, that is known for the price
+   of an afternoon.
 
 1. *Write the task recipe before any task.* A task is a real change from a
    real repository:
@@ -292,8 +362,8 @@ ones alone. One Opus baseline task finished cleanly before the window ran out
    frontier model's, read by a person) also passes, which catches a check
    that only the original author's solution satisfies. A script does the
    first three with no model call.
-4. *Set the difficulty by measurement.* Run Luna alone once on every
-   candidate. Keep a mix: about a third Luna passes, a third it fails, a
+4. *Set the difficulty by measurement.* Run Haiku alone once on every
+   candidate. Keep a mix: about a third Haiku passes, a third it fails, a
    third in between over three tries. Tasks the frontier model fails three
    times out of three are kept to at most a tenth of the suite (they show
    headroom, and they tell nothing apart).
@@ -308,8 +378,9 @@ ones alone. One Opus baseline task finished cleanly before the window ran out
    configurations are compared by the mean of per-task differences, with an
    interval from resampling tasks 10,000 times. No dependency. "Not worse by
    more than d" is shown when the lower end of the 90% interval is above -d.
-8. *Run the baselines (M3)*: Luna alone, Opus alone, and `factory-opus-luna`
-   as it is today. The Opus runs go one task at a time through
+8. *Run the baselines (M3)*: Haiku alone, Opus alone, and `cascade-claude`
+   as it is today. Keep the routing suite's four metrics and add resolution
+   rate with its interval; the traps stay in as their own group. The Opus runs go one task at a time through
    `evals/until-done.ts`, from a session that is otherwise idle, on days the
    window is not needed for anything else.
 9. *Record both costs for every turn (M4) and where the tokens went (M5).*
@@ -336,7 +407,8 @@ claim in phase 8.
 
 | Decision | Recommendation |
 | --- | --- |
-| Which frontier model is "the frontier" | Claude Opus 5.5 at medium effort through Claude Code, as in every comparison so far. Add GPT-6.1 Sol alone as a second baseline when the ChatGPT window allows; it is cheap to add and guards against a claim that holds against one vendor only. |
+| Which frontier model is "the frontier" | Claude Opus 5.5 at medium effort through Claude Code, as in the routing benchmark. A second vendor's frontier model is for phase 8's public claim, not now. |
+| What the system under test is | `cascade-claude`, as merged. Not the factory presets. |
 | The margin d | 10 points at 40 tasks, stated as such; 3 points is the phase 8 claim. |
 | Whether rating counts in R | Not in the benchmark (no rater). The rating stays the measure on real use (L3). |
 | One run or three | Three. One run cannot separate a feature from luck. |
@@ -349,20 +421,23 @@ the five-part token split in the turn record and the TUI meter.
 **Live budget (estimates from the routing benchmark: Opus alone moved the
 five-hour window about 0.9 points and the weekly about 0.13 per prompt; these
 tasks are larger, so twice that).** Opus alone, 40 tasks three times: about
-30 points of one weekly window, spread over several five-hour windows. Luna
-alone and the validation solves: the ChatGPT plan, small. This is the dearest
-step in the whole plan and it is done once.
+30 points of one weekly window, spread over several five-hour windows. The
+cascade and Haiku alone are on the same plan and far lighter (the clean
+cascade run moved the five-hour window 3 points for 15 prompts and the
+weekly not at all). Everything here draws on one plan, so the Opus baseline
+is scheduled first and alone. It is the dearest step in the whole plan and
+it is done once.
 
-**Gate.** (a) Luna alone 40 to 70%, Opus alone 80% or more, each with an
-interval. (b) Two configurations known to differ (Luna alone against Opus
+**Gate.** (a) Haiku alone 40 to 70%, Opus alone 80% or more, each with an
+interval. (b) Two configurations known to differ (Haiku alone against Opus
 alone) are separated. (c) Two runs of the same configuration are *not*
 separated. (c) is the one that shows the instrument is not inventing
 differences.
 
-**If the gate is missed.** If Luna passes 85% of real tasks from the owner's
-repositories, the finding is that the cheap model alone is enough for this
-work; the plan narrows to phases 6 and 7 (any model, cheaper context) and the
-rest is dropped. If the same configuration separates from itself, there are
+**If the gate is missed.** If Haiku alone passes 85% of real tasks from the
+owner's repositories, the finding is that the cheapest model with good
+checks is enough for this work, and the cascade's job is only to catch the
+rest; the plan narrows to phase 7 (cheaper context) and the oracles. If the same configuration separates from itself, there are
 flaky checks or too few runs: fix the checks first (O7), then go to five
 runs.
 
@@ -384,6 +459,14 @@ run. F100 and F101 have one each way; F102 to F104 none.
 1. *Do D6 first*: show a developer's "choices made" and "left open" in full.
    It costs no tokens and the first live run showed the information is
    already there.
+1b. *Then C1, the start-up cost, brought forward from phase 7.* On one plan
+   the window follows tokens, and the routing report already measured the
+   lever: the grunt with no tools used 80 to 94% fewer tokens on the same
+   prompts, while a Haiku session with tools processes 30 to 140 thousand
+   tokens for a small task. Extending the no-tools path from the grunt's
+   inline transforms to worker turns that have a spec or a named file is the
+   most direct way to make a $20 plan go further, and it can be measured on
+   the 15 routing prompts in one run.
 2. *Measure bundles before features (M7).* 104 features times three runs
    times 40 tasks is not affordable. Group them by what they act on and
    leave one bundle out at a time:
@@ -394,7 +477,7 @@ run. F100 and F101 have one each way; F102 to F104 none.
    - blind tests and stubs (F95, F101);
    - one-answer modes (F77, F90).
    Six configurations, the tuning half of the suite, two runs each. Most of
-   these turns are on the worker's plan.
+   these turns are Haiku's.
 3. *Open only the bundles that matter.* Inside a bundle whose removal moved R
    or C beyond the interval, switch features off one at a time. A bundle
    whose removal moved nothing is examined for cost only: features in it that
@@ -404,7 +487,9 @@ run. F100 and F101 have one each way; F102 to F104 none.
    measurable effect; code stays one phase, then goes), changed (it helps one
    kind of task and hurts another: restrict it).
 5. *The live checks left over from doc 21* happen inside this: F104 on a day
-   the window is above 70%; F102 now has tasks Luna fails, so it triggers.
+   the window is above 70% (it needs a second plan or a local model to move
+   turns to; without one it does nothing); F102 now has tasks Haiku fails,
+   so it triggers.
 6. *Write the result into `src/features.ts`*: each feature's line says what
    was measured, on what, and when.
 
@@ -417,8 +502,10 @@ protective ones, event tags) are not in the contest.
 **What gets built.** `neuromesh eval --ablate <bundle or ids>`, a bundles
 file, the ablation table in `evals/bench.ts`.
 
-**Live budget.** About 480 task-runs, nearly all on the worker's plan; the
-expert only where a task escalates. A few weekly points of Claude.
+**Live budget.** About 480 task-runs, nearly all Haiku turns; Sonnet and
+Opus only where a task climbs. From the clean cascade run (0.2 points of the
+five-hour window per prompt): on the order of 100 five-hour points spread
+over a week or two, and a few weekly points.
 
 **Gate.** Every feature from F54 on has a line saying kept, off or changed,
 with the numbers.
@@ -492,7 +579,7 @@ per kind.
 
 **Live budget.** Each oracle is an ablation on the tasks of its kind (about
 16 bugs and 6 refactors in a 40-task suite): too few. This is why the suite
-grows to 120 during this phase, weighted to bugs and refactors. Worker plan
+grows to 120 during this phase, weighted to bugs and refactors. Haiku turns
 mostly.
 
 **Gate.** On bugs and refactors, R up by more than the interval; cost per
@@ -644,6 +731,11 @@ which is what phase 8 adds.
 **The question.** Can a model nobody has configured be measured, placed and
 used with no edit to code or presets?
 
+This phase is the extension, not the main line: the cascade's tiers are
+roles, filled today by three Claude models on one plan, and the owner's work
+does not wait on it. It matters for two things: other people (whose plans
+differ), and a tier that costs nothing on the plan (a local model as grunt).
+
 **Where it starts.** 26 hand-written presets. Four tools behind adapters
 with a conformance check (M0). Prices in `src/usage/prices.ts`. A local
 Gemma model is already on the owner's Mac.
@@ -707,7 +799,8 @@ model released that week.
 **The question.** Where do the tokens go, and which of those can be removed
 without touching R?
 
-**Where it starts.** Phase 1's token split (M5). Known already: each session
+**Where it starts.** Phase 1's token split (M5), and C1 already done in
+phase 2. Known already: each session
 reloads the tool's system prompt and tool definitions (17k to 33k tokens
 with tools, about 3k without), and that, not exploration, made the cascade
 process 47% more tokens than Opus alone.
@@ -744,7 +837,7 @@ phase 2 will say whether leads matter enough to deserve better ones.
 that keeps the stable part first, `src/checks/fixers.ts`, the project
 profile, `src/context/index.ts`.
 
-**Live budget.** Each step is an ablation on the tuning half; worker plan.
+**Live budget.** Each step is an ablation on the tuning half; Haiku turns mostly.
 
 **Gate.** Tokens per resolved task down by a third against phase 5, cost in
 C down beyond the interval, R unchanged.
@@ -835,9 +928,8 @@ machines, with models that have changed?
 2. *L3*: a sample of passes on real work graded in bulk by a stronger model
    when a window would otherwise go unused. It is the only measure of R
    where there is no hidden check.
-3. *The benchmark re-run on a schedule*: the tuning half monthly on the
-   worker plans; the frontier baseline only when the frontier model
-   changes.
+3. *The benchmark re-run on a schedule*: the tuning half monthly with the
+   cascade; the frontier baseline only when the frontier model changes.
 4. *L4*: testers' pooled counts as the prior a new install starts from.
 5. *E1 to E3*: the harness extended to what it does not model, the Linux
    sandbox, cleanup on entry as a harness rule for every step.
@@ -884,8 +976,14 @@ the work is spent.
 ## What would make this plan wrong
 
 - **The cheap worker keeps passing everything.** If M1 cannot be built so
-  that Luna fails 30%+, then on the owner's real work the answer is "Luna
-  alone", and most of this plan is unnecessary. That would be a good result.
+  that Haiku alone fails 30%+, then on the owner's real work the answer is
+  "the cheapest tier with good checks", and most of this plan is
+  unnecessary. That would be a good result.
+- **The cascade's lead does not repeat.** One clean run met every target.
+  If the second and third (phase 1, step 0) fall short, or the clean Opus
+  baseline reads close to the cascade's 3 points, the lead on the
+  subscription is smaller than it looks and the start-up work (C1) becomes
+  the first priority instead of the second.
 - **Window points cannot be priced.** If the fit in M4 is unstable (the
   vendor changes how models weigh on the window), C is not well defined and
   the controller optimises a moving target. Then optimise dollars and treat

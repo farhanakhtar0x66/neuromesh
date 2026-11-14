@@ -360,6 +360,16 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     commits, three runs each, a frozen Opus baseline).
     `docs/22-path-to-the-goal.md`.
 
+40. **The plan corrected to the cascade (2026-11-14, evening).** Doc 22 was
+    first written around the factory presets and Luna. The owner's work
+    since 2026-11-13 is all on `cascade-claude`, and its clean benchmark run
+    is the strongest result so far. The plan now takes the cascade as the
+    system, Haiku alone as the cheap baseline, and starts by finishing what
+    the routing report left open (a clean Opus baseline, two more cascade
+    runs, Haiku alone); cutting start-up tokens is brought forward. Still
+    stale and for the owner to decide: `DEFAULT_PRESET` is
+    `factory-opus-luna` and `CLAUDE.md` names Luna as the default worker.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
