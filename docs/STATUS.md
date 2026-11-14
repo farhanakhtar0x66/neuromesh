@@ -366,9 +366,11 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     is the strongest result so far. The plan now takes the cascade as the
     system, Haiku alone as the cheap baseline, and starts by finishing what
     the routing report left open (a clean Opus baseline, two more cascade
-    runs, Haiku alone); cutting start-up tokens is brought forward. Still
-    stale and for the owner to decide: `DEFAULT_PRESET` is
-    `factory-opus-luna` and `CLAUDE.md` names Luna as the default worker.
+    runs, Haiku alone); cutting start-up tokens is brought forward. The
+    owner then made `cascade-claude` the default preset on this branch
+    (`DEFAULT_PRESET`, `CLAUDE.md`, the README, the TUI's favourites);
+    `main` and `neuromesh-testing` still default to `factory-opus-luna`
+    until this branch is merged.
 
 ## Next steps
 

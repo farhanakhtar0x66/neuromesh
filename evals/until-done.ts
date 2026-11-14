@@ -24,7 +24,7 @@ const flag = (name: string, fallback: string): string => {
   args.splice(i, 2);
   return value;
 };
-const preset = flag("preset", "factory-opus-luna");
+const preset = flag("preset", "cascade-claude");
 const hours = Number(flag("hours", "24"));
 const names = args;
 const deadline = Date.now() + hours * 3_600_000;

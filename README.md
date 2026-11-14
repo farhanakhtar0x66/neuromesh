@@ -129,11 +129,12 @@ neuromesh tui --preset demo
 
 ## Teams
 
-Two favourites cover most work (Ctrl+K):
+Three favourites cover most work (Ctrl+K):
 
 | Team | Expert | Workers and tester |
 | --- | --- | --- |
-| `factory-opus-luna` (default) | Claude Opus 5.5, medium: specs, advice, large plans | GPT-6 Luna, low then high effort |
+| `cascade-claude` (default) | Claude Opus 5.5, medium: plans and advises, builds nothing | Claude Haiku 5.5 as grunt and worker, Claude Sonnet 5.5 as senior and reviewer; one Claude plan |
+| `factory-opus-luna` | Claude Opus 5.5, medium: specs, advice, large plans | GPT-6 Luna, low then high effort |
 | `factory-sol-flash` | GPT-6.1 Sol, high | Gemini 3.8 Flash |
 
 **Custom team** (`/team`) puts any model your tools offer, or none, in each

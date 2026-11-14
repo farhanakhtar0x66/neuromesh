@@ -92,7 +92,8 @@ export interface CascadeConfig {
   probe?: number;
 }
 
-export const DEFAULT_PRESET = "factory-opus-luna";
+// The routing cascade on Claude models (owner's decision, 2026-11-14); it was factory-opus-luna before.
+export const DEFAULT_PRESET = "cascade-claude";
 
 export const PRESET_DIR = fileURLToPath(new URL("../../presets/", import.meta.url));
 

@@ -13,8 +13,11 @@ new work is judged on real use: the owner's usage log and testers' reports.
   2026-11-12); their cost is real money and shown as the tool reports it.
 - Testers' run reports (F52) are sent only with their consent, and never hold
   code, diffs, file locations or identity.
-- The default worker is GPT-6 Luna through Codex (cheapest measured, since
-  2026-11-11). Keep the expert models (GPT-6.1 Sol, Claude Opus) to a minimum.
+- The default preset is `cascade-claude` (owner's decision, 2026-11-14): the
+  routing cascade on one Claude plan, with Haiku as grunt and worker, Sonnet
+  as senior, and Opus as the expert that plans and advises and builds
+  nothing. GPT-6 Luna is no longer the default worker. Keep Opus to a
+  minimum.
 - Branches: `main` holds what has been measured to work. `neuromesh-research`
   is for experiments, including unorthodox ones. `neuromesh-testing` is for
   real use: every `neuromesh run` is recorded in the usage log

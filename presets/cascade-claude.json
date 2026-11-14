@@ -1,6 +1,6 @@
 {
   "name": "cascade-claude",
-  "description": "Experimental (2026-11-14), the routing cascade (F80 to F88) on Claude models only, for the routing benchmark (evals/routing-bench). Grunt: Claude Haiku 5.5 low, gated only by checks. Worker: Haiku 5.5 medium, then high. Senior: Claude Sonnet 5.5 medium, then high. Expert: Claude Opus 5.5 medium, which plans and writes blueprints and builds nothing. No spec writer, so the expert is called only when Tier 0 or an escalation asks for it.",
+  "description": "The default team since 2026-11-14: the routing cascade (F80 to F99) on Claude models only, one Claude plan (measured in evals/routing-bench). Grunt: Claude Haiku 5.5 low, gated only by checks. Worker: Haiku 5.5 medium, then high. Senior: Claude Sonnet 5.5 medium, then high. Expert: Claude Opus 5.5 medium, which plans and writes blueprints and builds nothing. No spec writer, so the expert is called only when Tier 0 or an escalation asks for it.",
   "mode": "team",
   "routing": "worker-first",
   "roles": {

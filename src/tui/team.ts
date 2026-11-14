@@ -16,7 +16,7 @@ import type { Preset } from "../presets/presets.ts";
 import { prettyModel } from "./model.ts";
 
 /** The two presets offered first. */
-export const FAVOURITES = ["factory-opus-luna", "factory-sol-flash"];
+export const FAVOURITES = ["cascade-claude", "factory-opus-luna", "factory-sol-flash"];
 export const CUSTOM = "custom";
 
 export interface ModelChoice {
