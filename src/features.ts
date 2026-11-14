@@ -866,6 +866,33 @@ export const FEATURES: Feature[] = [
     what: "Only with the cascade. Tier 0 sends a request to the expert either by its size rule (800 words or 12 files named: many parts) or by what it is like (similarity or calibration). Only the first gets the sandwich, where the expert plans and blueprints and the tiers below build. The second starts on the senior's first rung with its preamble gate; if the senior escalates, the expert advises from its bottleneck diagnostic (F84) and builds nothing. On both benchmark runs prompt 4.1 (one Rust file and its explanation) cost as much in the sandwich as Opus alone ($0.339 against $0.338): the plan for a single deliverable is nearly the size of the deliverable, and the 400-word cap (F92) was not kept. Off, every expert route gets the sandwich.",
     optional: true,
   },
+  {
+    id: "F94",
+    key: "subsystem-breadth",
+    name: "A short new build across three or more subsystems goes to the expert's plan",
+    added: "2026-11-14",
+    files: ["src/routing/router.ts (DOMAINS, buildBreadth, routeTier)", "src/engine/run.ts (startRun)", "src/cli/routing.ts"],
+    what: "Only with the cascade. Tier 0's rules stage counts the technical domains a request to build something names (auth, crypto, network, storage, runtime, interface, ingest, ml). Three or more, with no code file named and the thing to build not a single unit (a function, script, middleware, hook, endpoint...), means several subsystems nobody has designed: the request goes to the expert at the rules stage, so it gets the sandwich (F93). Not for a fix, a refactor or a trivial change. From the owner's friend's review: a 45-word request for an agent that logs in to sites, routes keys through a proxy and keeps state in a file went to Sonnet with no plan, while the plan rules only look at length (800 words, 12 files). Checked against 4 such requests and 3 decoys written outside the project; none of the 15 benchmark prompts changes route.",
+    optional: true,
+  },
+  {
+    id: "F95",
+    key: "stub-gate",
+    name: "Stand-ins for an implementation fail the task like a failing check",
+    added: "2026-11-14",
+    files: ["src/checks/stubs.ts", "src/engine/run.ts (the checks step)"],
+    what: "After each build turn the lines it added to non-test source files are scanned for unambiguous stand-ins: unimplemented!() and todo!() in Rust, raise NotImplementedError, throw new Error(\"not implemented\"), panic(\"todo\"), 'TODO: implement' and the like, and a Python function whose body is only pass or .... Abstract methods, overloads and protocols are exempt, and a plain TODO, a mock_ name or an empty callback is never a stub. A stub adds a failing 'stub-gate' result, so the task is repaired (or climbs, for the grunt) with the places listed. No model call.",
+    optional: true,
+  },
+  {
+    id: "F96",
+    key: "scope-escalate",
+    name: "The developer may say a request needs a design first; the expert then divides it",
+    added: "2026-11-14",
+    files: ["src/routing/preamble.ts (preambleInstruction, parsePreamble, shouldExit)", "src/engine/run.ts (scopeAsked, the early-exit step, splitStep)"],
+    what: "Only with the cascade, and only for the run's one unplanned task (a planned part's design is already in its brief). The worker's or senior's preamble may say scope: true, meaning the work needs 4 or more new source files or modules, interfaces or formats the request does not specify. The turn stops at once and the expert divides the task (F68's split, blueprint-only with F85), instead of a stronger builder taking it whole or the expert only advising. The safety net for a request Tier 0 misjudged (F94). If the split is not usable, the developer starts the task fresh.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

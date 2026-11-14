@@ -8,7 +8,7 @@ import { after, test } from "node:test";
 import type { CalibrationTable } from "../src/routing/calibration.ts";
 import { calibrated, demote, describeCalibration, loadCalibration, record, saveCalibration, successRate } from "../src/routing/calibration.ts";
 import { parsePreamble, shouldExit } from "../src/routing/preamble.ts";
-import { clusterScores, isTransform, routeTier, splitPayload, stripMeta } from "../src/routing/router.ts";
+import { buildBreadth, clusterScores, isTransform, routeTier, splitPayload, stripMeta } from "../src/routing/router.ts";
 import { markGraded, maybeEnqueue, pending } from "../src/routing/shadow.ts";
 import { describeSummary, routingSummary } from "../src/routing/summary.ts";
 
@@ -179,4 +179,44 @@ test("removing a sentence that asks for a model keeps the request's lines (F89)"
   assert.match(text, /^line one\n\[1\.0\] data: x\n/);
   assert.equal(isTransform("dont debug it yet, just pull out the timestamps"), true);
   assert.equal(isTransform("pull out the timestamps and debug the crash"), false);
+});
+
+// [F94 subsystem-breadth] Written by someone outside the project (the owner's friend) after the
+// domain lists were drafted, so the lists are tested against phrasing they were not written for.
+// Words taken from these prompts were removed from the lists before the test was run.
+const BROAD = [
+  "make me a local AI agent that logs into free LLM sites, routes keys via OpenRouter OAuth/BYOK, and manages state in CONTEXT.md",
+  "build a local CLI password vault that encrypts secrets with Argon2 and ChaCha20, syncs encrypted blobs across devices over peer-to-peer mDNS, and exposes a local Unix socket for browser extensions",
+  "create a real-time log monitor that tails docker container stdout streams, buffers spikes in a local sqlite ring table, triggers webhook alerts on regex matches, and streams live metrics over websockets",
+  "make a documentation indexer that crawls a docs site respecting robots.txt, chunks code blocks by AST, stores embeddings in a local vector index, and serves search queries over stdio as an MCP server",
+];
+const NARROW = [
+  "write a Fastify middleware function that reads a Bearer JWT from the Authorization header, checks if its jti claim exists in a Redis blocklist, and attaches the decoded user payload to the request",
+  "write a python cli script that takes a csv file path and a sqlite db path as arguments, creates a table matching the csv headers, and bulk inserts all rows inside a single transaction",
+  "in src/retry_client.ts, implement an HTTP fetch wrapper with exponential backoff, jitter, a circuit breaker that trips after 5 consecutive 5xx responses, and request timeout cancellation",
+  "build a todo app with a list, a form to add items and a button to clear done ones",
+];
+
+test("a short new build across three or more subsystems, with no code file named, goes to the expert's plan (F94)", () => {
+  for (const request of BROAD) {
+    const r = routeTier({ request, kind: "greenfield" }, undefined, { instructionOnly: true, breadth: true });
+    assert.equal(r.tier, "expert", request);
+    assert.equal(r.stage, "rules", "a rules-stage expert route gets the sandwich (F93)");
+    assert.ok((r.domains?.length ?? 0) >= 3);
+  }
+  for (const request of NARROW) {
+    const r = routeTier({ request, kind: "greenfield" }, undefined, { instructionOnly: true, breadth: true });
+    assert.equal(r.domains, undefined, request);
+    assert.notEqual(r.stage === "rules" && r.tier === "expert", true, request);
+  }
+  // A fix or a refactor of something that exists is never a design from nothing.
+  assert.equal(buildBreadth(BROAD[2]!, "bug"), undefined);
+  // Off, the broad requests route as before.
+  assert.equal(routeTier({ request: BROAD[0]!, kind: "greenfield" }, undefined, { instructionOnly: true }).domains, undefined);
+  // The earlier regression set is unchanged by it.
+  for (const [, kind, request] of OUTSIDE) {
+    const a = routeTier({ request, kind: kind as "greenfield" }, undefined, { instructionOnly: true });
+    const b = routeTier({ request, kind: kind as "greenfield" }, undefined, { instructionOnly: true, breadth: true });
+    assert.equal(b.tier, a.tier, request);
+  }
 });

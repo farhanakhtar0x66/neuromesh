@@ -102,6 +102,7 @@ import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
 import type { AttemptKind, AttemptRecord, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
 import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, saveCalibration } from "../routing/calibration.ts";
+import { describeStubs, findStubs } from "../checks/stubs.ts";
 import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
 import type { Preamble } from "../routing/preamble.ts";
 import { routeTier } from "../routing/router.ts";
@@ -326,7 +327,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
             },
             table,
             // [F89 instruction-scoring]
-            { instructionOnly: isOn("instruction-scoring") },
+            { instructionOnly: isOn("instruction-scoring"), breadth: isOn("subsystem-breadth") },
           ),
         );
         b.staffing.reasons.push(`Tier 0: ${cascade.route.tier} (${cascade.route.reasons.join("; ")})`);
@@ -413,7 +414,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     prompt: options.prompt,
   });
   for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
-  if (cascade?.route) log.emit("route.tier", { feature: "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons });
+  if (cascade?.route) log.emit("route.tier", { feature: cascade.route.domains ? "F94" : "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons, ...(cascade.route.domains ? { domains: cascade.route.domains } : {}) });
   // [F93 senior-first-expert]
   if (cascade?.route?.tier === "expert" && cascade.route.stage !== "rules" && isOn("senior-first-expert")) {
     log.emit("note", { feature: "F93", message: "Tier 0 chose the expert for a request that is not large: the senior builds it, and the expert advises if it escalates." });
@@ -1616,6 +1617,11 @@ function preambleGate(state: RunState, task: TaskState, role: Role): number | un
   return tier === "senior" ? state.cascade.thresholds.senior : state.cascade.thresholds.worker;
 }
 
+/** [F96 scope-escalate] Whether this task's preamble may ask for a design first: the run's one unplanned, unsplit task. */
+function scopeAsked(state: RunState, task: TaskState): boolean {
+  return isOn("scope-escalate") && task.routed === true && !task.fromSplit && !state.plan && canSplit(state, task);
+}
+
 /** [F84 bottleneck-diagnostic] Gate 3: in its own session, the stuck developer isolates the one sub-problem for the expert. */
 async function diagnoseStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
   const { state, log } = run;
@@ -1922,7 +1928,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         : taskPrompt(state, task) + env;
       // [F83 early-exit] A worker or senior judges the task first; the grunt and the expert do not.
       const gate = preambleGate(state, task, role);
-      const asked = gate !== undefined ? prompt + preambleInstruction() : prompt;
+      // [F96 scope-escalate] The one unplanned task may also say it needs a design first.
+      const asked = gate !== undefined ? prompt + preambleInstruction({ scope: scopeAsked(state, task) }) : prompt;
       const request: TurnRequest = {
         key: task.id,
         role,
@@ -1971,7 +1978,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         task.history.push({ diff: diffOf(task), failures: `Before starting, the ${from} developer judged the task beyond it (confidence ${p.confidence}): ${p.reason}` });
         // [F84 bottleneck-diagnostic] Its account of the sub-problem is what the expert will see.
         if (p.bottleneck && isOn("bottleneck-diagnostic")) task.bottleneck = p.bottleneck;
-        log.emit("task.early-exit", { feature: "F83", task: task.id, tier: from, confidence: p.confidence, reason: p.reason });
+        log.emit("task.early-exit", { feature: p.scope ? "F96" : "F83", task: task.id, tier: from, confidence: p.confidence, reason: p.reason, ...(p.scope ? { scope: true } : {}) });
+        // [F96 scope-escalate] It needs a design, not a stronger builder: the expert divides it (F68, blueprint-only with F85).
+        if (p.scope && scopeAsked(state, task) && canSplit(state, task) && !breakerTripped(state, task)) {
+          task.report = { status: "split", summary: p.reason || "it needs a design first", notes: [p.reason, p.bottleneck].filter(Boolean).join(" ") || undefined };
+          task.step = "split";
+          saveState(state);
+          continue;
+        }
         const target = nextTierRung(state, task.rung);
         if (target !== undefined && target > (task.rung ?? 0)) {
           climbTo(run, task, target, `early exit: ${p.reason || `beyond the ${from} tier`}`, "F83");
@@ -2046,6 +2060,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
       const diff = diffOf(task);
+      // [F95 stub-gate] Stand-ins for an implementation fail the task like a failing check.
+      if (isOn("stub-gate")) {
+        const stubs = optional(run, "stub-gate", [], () => findStubs(diff));
+        if (stubs.length > 0) {
+          results = [...results, { name: "stub-gate", command: "neuromesh stub gate (F95)", status: "failed", exitCode: 1, durationMs: 0, tail: describeStubs(stubs), logPath: "" }];
+          log.emit("note", { feature: "F95", message: `Task ${task.id} left ${stubs.length} stand-in(s) for an implementation: ${stubs.slice(0, 3).map((x) => `${x.file}:${x.line}`).join(", ")}` });
+        }
+      }
       task.latest = results;
       const files = snapshot(task.worktree, task.base!, task.prepared).files;
       task.files = files;
@@ -2381,7 +2403,8 @@ async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" |
       task.advice = { diagnosis: plan!.summary || "The lead engineer kept the task whole.", steps: [only.brief] };
       task.next = "advised-fix";
     } else {
-      task.next = "continue";
+      // [F96 scope-escalate] A developer that stopped before starting has no session to continue.
+      task.next = task.sessionId ? "continue" : "initial";
     }
     task.step = "agent";
     saveState(state);
@@ -2390,7 +2413,7 @@ async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" |
   }
   commitAll(task.worktree, `neuromesh: ${task.title} (started, then split)`, task.prepared);
   if (mergeBranch(state.worktree, task.branch, `neuromesh: merge the start of task ${task.id} before its split`) === "conflict") {
-    task.next = "continue";
+    task.next = task.sessionId ? "continue" : "initial";
     task.step = "agent";
     saveState(state);
     log.emit("note", { feature: "F68", message: `Task ${task.id}: its work so far does not merge, so it is not split; the worker carries on.` });

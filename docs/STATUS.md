@@ -290,6 +290,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     expert (4.1) starts on Sonnet, and Opus advises on escalation. Not re-run
     live. The cascade is merged into `neuromesh-testing` (preset
     `cascade-claude`) to be judged on real use.
+32. **Breadth, scope and stubs (F94 to F96, 2026-11-14), from a friend's
+    review.** A short new build spanning 3+ subsystems with no code file named
+    goes to the expert's plan (F94); the unplanned developer can say "needs a
+    design first" and the expert divides the task (F96); stand-ins such as
+    `unimplemented!()` fail the checks (F95). Checked offline on 4 broad prompts
+    and 3 decoys written outside the project; the 15 benchmark prompts route as
+    before. Not run live (owner's choice). The one live question is whether
+    Sonnet uses `scope: true`; one run of the agent prompt with
+    `--disable subsystem-breadth` would show it.
 
 ## Next steps
 

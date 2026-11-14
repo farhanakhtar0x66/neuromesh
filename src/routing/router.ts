@@ -34,11 +34,15 @@ export interface TierRoute {
   transform?: boolean;
   /** [F89 instruction-scoring] Characters of pasted material that were left out of the scoring. */
   payloadChars?: number;
+  /** [F94 subsystem-breadth] The technical domains a new build spans, when it spans enough to need a design. */
+  domains?: string[];
 }
 
 export interface RouteOptions {
   /** [F89 instruction-scoring] Score the instruction, not the material pasted into the request. */
   instructionOnly?: boolean;
+  /** [F94 subsystem-breadth] Send a short, unspecified build that spans several subsystems to the expert's plan. */
+  breadth?: boolean;
 }
 
 export interface RouterInput {
@@ -178,6 +182,34 @@ export function isTransform(instruction: string): boolean {
   return TRANSFORM.test(said) && !JUDGEMENT.test(said);
 }
 
+// [F94 subsystem-breadth] Technical domains a build can span. A request that names three or more and
+// no code file is short only because several subsystems were compressed into one sentence: nobody has
+// decided their modules, interfaces or formats yet, which is the expert's work, however few the words.
+const DOMAINS: [string, RegExp][] = [
+  ["auth", /\b(log(s|ging)? ?in(to)?|sign(s|ing)? ?in|credentials?|oauth\w*|passwords?|jwts?|bearer|session tokens?|api keys?|authenticat\w*|authori[sz]ation|secrets?)\b/i],
+  ["crypto", /\b(encrypt\w*|decrypt\w*|aes|ciphers?|hmac|key derivation|signing keys?)\b/i],
+  ["network", /\b(https?|rest|apis?|webhooks?|websockets?|grpc|prox(y|ies)|peer[- ]to[- ]peer|p2p|tcp|udp|mesh|over the network|routes? \w+( \w+)? (via|through))\b/i],
+  ["storage", /\b(databases?|sqlite|postgres\w*|mysql|redis|mongo\w*|cach(e|es|ing)|vector (index|store|db)|embeddings?|persist\w*|state (file|store)s?|[\w-]+\.md)\b/i],
+  ["runtime", /\b(agents?|daemons?|background (service|worker|process|job)s?|schedul\w*|cron|endless\w*|forever|real[- ]time|watch(es|er|ing)|tails?|servers?)\b/i],
+  ["interface", /\b(unix sockets?|sockets?|stdio|ipc|mcp|browser extensions?|cli|tui|gui|dashboards?|web ui|desktop app)\b/i],
+  ["ingest", /\b(crawl\w*|scrap\w*|parser|ast|chunk\w*|stdout|stderr|log (files?|lines|streams?)|ingest\w*|streams?)\b/i],
+  ["ml", /\b(llms?|ai|ml|inference|embeddings?|language models?)\b/i],
+];
+const BUILD_SYSTEM = /\b(build|create|make|write|develop|implement|set up)\s+(me\s+)?(a|an)\b/i;
+/** The thing to build is one unit of code, however many technologies it touches. */
+const ONE_UNIT = /\b(build|create|make|write|develop|implement|set up)\s+(me\s+)?(a|an)\s+(\S+\s+){0,4}?(functions?|methods?|scripts?|class(es)?|hooks?|middlewares?|endpoints?|handlers?|components?|wrappers?|quer(y|ies)|migrations?|helpers?|decorators?|tests?|regex(es)?|one-liners?|snippets?)\b/i;
+/** A code file the request names: the request already says where things go. */
+const CODE_FILE = /(^|[\s(`'"])[\w./-]+\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|rb|php|c|cc|cpp|h|hpp|cs|swift|toml|ya?ml|sql|sh)\b/i;
+const BREADTH_MIN = 3;
+
+/** [F94 subsystem-breadth] The domains a new, unspecified build spans, or nothing when it is not one. */
+export function buildBreadth(instruction: string, kind?: RouterInput["kind"]): string[] | undefined {
+  if (kind === "trivial" || kind === "bug" || kind === "refactor") return undefined;
+  if (!BUILD_SYSTEM.test(instruction) || ONE_UNIT.test(instruction) || CODE_FILE.test(instruction)) return undefined;
+  const domains = DOMAINS.filter(([, re]) => re.test(instruction)).map(([name]) => name);
+  return domains.length >= BREADTH_MIN ? domains : undefined;
+}
+
 /** [F80 tier-router] Tier 0: which tier a request starts on. */
 export function routeTier(input: RouterInput, calibrated?: Calibrated, options: RouteOptions = {}): TierRoute {
   const { text: whole, stripped } = stripMeta(input.request);
@@ -205,6 +237,11 @@ export function routeTier(input: RouterInput, calibrated?: Calibrated, options: 
   const words = input.totalWords ?? text.split(/\s+/).filter(Boolean).length;
   if (words >= 800 || (input.namedFiles ?? 0) >= 12) {
     return { ...base, tier: "expert", stage: "rules", reasons: [...reasons, `a large request (${words} words, ${input.namedFiles ?? 0} files named): the expert blueprints it`] };
+  }
+  // [F94 subsystem-breadth] Short, but several subsystems nobody has designed yet: the expert plans it too.
+  const domains = options.breadth ? buildBreadth(text, input.kind) : undefined;
+  if (domains) {
+    return { ...base, tier: "expert", stage: "rules", domains, reasons: [...reasons, `a new build across ${domains.length} subsystems (${domains.join(", ")}) with no code file named: the expert designs and blueprints it`] };
   }
 
   // ---- 0B: similarity.

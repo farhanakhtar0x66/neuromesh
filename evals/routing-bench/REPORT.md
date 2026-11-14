@@ -235,3 +235,13 @@ The one remaining quality miss is real and the same as in the first run. On 2.3,
 ### Decision on 4.1 (owner, 2026-11-14)
 
 The second option was chosen and made F93 (`senior-first-expert`). The sandwich now runs only when Tier 0 sends a request to the expert by its size rule (800 words or 12 files named). A request it sends to the expert by similarity or calibration, as 4.1 is, starts on Sonnet with its preamble gate, and Opus advises from Sonnet's bottleneck if Sonnet escalates. Not re-run live: by the owner's choice, the next evidence is real use on `neuromesh-testing` rather than another benchmark run (items 2 and 3 above were skipped).
+
+### Breadth, scope and stubs (F94 to F96, 2026-11-14)
+
+From a second review by the owner's friend: request length is a poor measure of how much design a request needs, because a short request can compress several subsystems into one sentence. Three changes, none measured live:
+
+- **F94** (Tier 0): a build request that names 3 or more technical domains, no code file, and not a single unit of code goes to the expert's plan. Tested on 4 short broad prompts and 3 decoys the friend wrote (a JWT/Redis middleware, a CSV-to-SQLite script, a retry wrapper in a named file). Words from those prompts were taken out of the domain lists before the test, so the lists match them by general vocabulary. The decoys stay below 3 domains even without the single-unit and named-file rules. None of the 15 benchmark prompts changes route.
+- **F96** (Gate 2): the preamble of the run's one unplanned task gets a `scope` field. `scope: true` stops the turn, and the expert divides the task into parts with the existing split step, rather than advising.
+- **F95** (checks): unambiguous stand-ins in added non-test code fail the task like a failing check.
+
+Rejected: a separate Haiku call to estimate scope on every unclear prompt. F96 asks the developer the same question inside the preamble it already writes.

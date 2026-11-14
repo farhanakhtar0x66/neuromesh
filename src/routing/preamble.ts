@@ -19,6 +19,8 @@ export interface Preamble {
   reason: string;
   /** [F84 bottleneck-diagnostic] The one sub-problem it is stuck on, when it escalates. */
   bottleneck?: string;
+  /** [F96 scope-escalate] The task needs a design nobody has written yet: the expert should divide it, not advise. */
+  scope?: boolean;
 }
 
 /** The architecture's thresholds: tau_2 for the Haiku-class worker tier, tau_3 for the Sonnet-class senior tier. */
@@ -34,12 +36,17 @@ export const DEFAULT_THRESHOLDS = { worker: 0.75, senior: 0.8 };
 export const GATE_FLOOR = 0.55;
 
 /** The instruction added to a worker's or senior's first prompt of a task. */
-export function preambleInstruction(): string {
+export function preambleInstruction(options: { scope?: boolean } = {}): string {
+  // [F96 scope-escalate] Only for a request nobody has planned: a planned part's design is in its brief.
+  const scope = options.scope
+    ? `, "scope": <true if doing this well needs 4 or more new source files, or modules, interfaces or data formats that the request does not specify and someone must design first>`
+    : "";
+  const scopeNote = options.scope ? " With scope true, the lead engineer designs the parts and divides the work; you are not asked to build all of it." : "";
   return `
 
 Before you do anything else (before reading files or running any command), judge whether this task is within your ability, and write one line of JSON as your very first message, on its own:
-{"confidence": <0.0 to 1.0, how likely you are to finish this task correctly>, "escalate": <true if it needs a stronger developer>, "reason": "<one short sentence>", "bottleneck": "<only when escalating: the exact sub-problem that is beyond you, in at most 150 words>"}
-Be honest: a stronger developer takes over at once if you escalate, and nothing is held against you. Then, unless you escalated, do the task.`;
+{"confidence": <0.0 to 1.0, how likely you are to finish this task correctly>, "escalate": <true if it needs a stronger developer>, "reason": "<one short sentence>", "bottleneck": "<only when escalating: the exact sub-problem that is beyond you, in at most 150 words>"${scope}}
+Be honest: a stronger developer takes over at once if you escalate, and nothing is held against you.${scopeNote} Then, unless you escalated${options.scope ? " or set scope" : ""}, do the task.`;
 }
 
 /**
@@ -82,10 +89,11 @@ export function parsePreamble(text: string): Preamble | undefined {
     escalate: raw.escalate,
     reason: typeof raw.reason === "string" ? raw.reason.trim().slice(0, 300) : "",
     ...(bottleneck ? { bottleneck } : {}),
+    ...(raw.scope === true ? { scope: true } : {}),
   };
 }
 
 /** Stop the turn and climb: the agent asked to, or is less confident than its tier's threshold. */
 export function shouldExit(p: Preamble, threshold: number): boolean {
-  return p.escalate || p.confidence < threshold;
+  return p.escalate || p.scope === true || p.confidence < threshold;
 }

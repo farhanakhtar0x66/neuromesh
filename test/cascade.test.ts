@@ -397,3 +397,93 @@ test("with senior-first-expert disabled, the same request gets the expert's plan
     delete process.env.NEUROMESH_DISABLE;
   }
 });
+
+test("a stand-in for an implementation fails the task and the developer is told where (F95)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (!isBuild(req)) return report("n/a");
+    const first = fake.calls.filter(isBuild).length === 1;
+    write(req.cwd, "pool.py", first ? "def rotate(key):\n    raise NotImplementedError" : "def rotate(key):\n    return key[::-1]");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset({ repairs: 2 }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.ok(events.some((e) => e.type === "note" && e.feature === "F95"));
+  const builds = fake.calls.filter(isBuild);
+  assert.equal(builds.length, 2, "one repair");
+  assert.match(builds[1]!.prompt, /stand-ins[\s\S]*pool\.py:2/);
+});
+
+test("a developer that says the request needs a design first stops, and the expert divides it and builds nothing (F96)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (/A worker on your team started the task below and stopped/.test(req.prompt))
+      return {
+        structured: {
+          summary: "two parts",
+          tasks: [
+            { id: "a", title: "part a", brief: "Write a.txt", owned: ["a.txt"], depends_on: [], owner: "worker" },
+            { id: "b", title: "part b", brief: "Write b.txt and fixed.txt saying ok", owned: ["b.txt", "fixed.txt"], depends_on: ["a"], owner: "expert" },
+          ],
+        },
+      };
+    if (!isBuild(req)) return report("n/a");
+    if (/"scope": <true/.test(req.prompt)) {
+      req.onText?.(JSON.stringify({ confidence: 0.9, escalate: false, scope: true, reason: "five modules nobody has specified" }));
+      return report("stopped");
+    }
+    if (/Your task: part a/.test(req.prompt)) write(req.cwd, "a.txt", "a");
+    else {
+      write(req.cwd, "b.txt", "b");
+      write(req.cwd, "fixed.txt", "ok");
+    }
+    return report("done");
+  });
+  const state = await startRun({ cwd: repo(true), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.ok(events.some((e) => e.type === "task.early-exit" && e.feature === "F96" && e.scope === true));
+  assert.ok(events.some((e) => e.type === "task.split"));
+  const split = fake.calls.find((c) => /A worker on your team started/.test(c.prompt))!;
+  assert.match(split.prompt, /five modules nobody has specified/);
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert" && isBuild(c)).length, 0, "the expert built nothing");
+  // Planned parts are not asked about scope again.
+  assert.ok(fake.calls.filter(isBuild).slice(1).every((c) => !/"scope": <true/.test(c.prompt)));
+});
+
+test("with scope-escalate disabled the preamble has no scope field (F96 off)", async () => {
+  process.env.NEUROMESH_DISABLE = "scope-escalate,stub-gate";
+  try {
+    const { ctx, fake } = context((req) => {
+      if (!isBuild(req)) return report("n/a");
+      write(req.cwd, "pool.py", "def rotate(key):\n    raise NotImplementedError");
+      write(req.cwd, "fixed.txt", "ok");
+      return report("done");
+    });
+    const state = await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.match(fake.calls.filter(isBuild)[0]!.prompt, /very first message/);
+    assert.doesNotMatch(fake.calls.filter(isBuild)[0]!.prompt, /"scope"/);
+    assert.equal(fake.calls.filter(isBuild).length, 1, "no stub repair with stub-gate off");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("a short request spanning several subsystems is planned by the expert from the start (F94)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if ("tasks" in props(req))
+      return { structured: { summary: "s", name: "agent", features: [], behaviour: [], out_of_scope: [], design: [], acceptance: [], tasks: [{ id: "t1", title: "all", brief: "Write fixed.txt saying ok", owned: ["fixed.txt"], depends_on: [], owner: "worker" }] } };
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const prompt = "make me a local AI agent that logs into free LLM sites, routes keys via OpenRouter OAuth/BYOK, and manages state in CONTEXT.md";
+  const state = await startRun({ cwd: repo(), prompt, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const route = events.find((e) => e.type === "route.tier");
+  assert.equal(route?.feature, "F94");
+  assert.equal(route?.tier, "expert");
+  assert.ok((route?.domains as string[]).length >= 3);
+  assert.ok(fake.calls.some((c) => c.model === "fake-expert" && "tasks" in props(c)), "the expert planned it");
+  assert.equal(fake.calls.filter((c) => c.model === "fake-expert" && isBuild(c)).length, 0);
+});
