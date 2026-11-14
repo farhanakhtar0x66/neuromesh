@@ -1,6 +1,6 @@
 # The routing cascade (2026-11-14)
 
-On branch `neuromesh-routing`. The owner brought in a routing architecture: a
+Built on branch `neuromesh-routing` (merged into every branch and deleted, 2026-11-14). The owner brought in a routing architecture: a
 five-tier triage-and-cascade pipeline (a zero-token router, a nano "grunt", a
 Haiku-class worker, a Sonnet-class senior, and a frontier expert), with gates
 that catch a wrong route as it happens and an Architect-Worker sandwich for

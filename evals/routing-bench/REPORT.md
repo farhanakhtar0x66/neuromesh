@@ -1,7 +1,7 @@
 # Routing benchmark report: 5-tier cascade vs single Opus
 
 **Date:** 2026-11-14 (runs 19:51 to 20:26 UTC, 2026-11-13)
-**Branch:** `neuromesh-routing`
+**Branch:** `neuromesh-routing`, since merged into `main`, `neuromesh-testing` and `neuromesh-research` and deleted
 **Runs:** `rb-frontier-1` (single Opus), `rb-cascade-1` (the cascade)
 **Raw records:** `results/<run>/<prompt>.json` and `results/<run>/LOG.md`, committed and pushed as each prompt finished
 **Machine-generated table:** `results/rb-cascade-1/REPORT.md` (`score.ts`)
