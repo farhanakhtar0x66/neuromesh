@@ -33,7 +33,7 @@ clean five-hour window, against the first Opus-alone run):
 
 | | Cascade | Opus alone |
 | --- | --- | --- |
-| Quality, 15 prompts | 148.8 of 150 | 150 of 150 |
+| Quality, 15 prompts | 150 of 150 (after the M9 executable rescore; 148.8 under the old keyword rubric) | 150 of 150 |
 | Estimated cost at list prices | $0.84 | $3.32 |
 | Five-hour window | 3 points (clean) | 13 points (includes the working session) |
 | Weekly window | 0 points | 2 points |

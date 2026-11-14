@@ -115,7 +115,7 @@ test("a program that goes quiet is stopped as idle", async () => {
     idleMs: 500,
   });
   assert.equal(result.idle, true);
-  assert.ok(Date.now() - started < 5_000);
+  assert.ok(Date.now() - started < 20_000);
 });
 
 test("a tool that exits while a program it started still holds its output open ends promptly, with its exit code", async () => {

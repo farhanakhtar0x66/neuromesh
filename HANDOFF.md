@@ -33,7 +33,8 @@ A stuck task climbs; the engine checks everything it can with the project's
 own checks. `docs/19-cascade.md` explains it; `src/engine/run.ts` is it.
 
 **The result so far** (`evals/routing-bench/REPORT.md`, run `rb-cascade-2`):
-148.8 of 150 against Opus alone's 150, an estimated $0.84 against $3.32, 3
+150 of 150 (after the M9 executable rescore; 148.8 under the old
+keyword rubric) against Opus alone's 150, an estimated $0.84 against $3.32, 3
 points of the five-hour window against 13 (of which 1 to 2 are the session
 that ran it), all three traps survived, and faster. One run.
 
