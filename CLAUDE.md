@@ -1,7 +1,8 @@
 # Neuromesh working rules
 
-Read `docs/STATUS.md` before starting work: where things stand and what comes
-next. v0.1 (the engine) and v0.2 (the TUI, the testing build) are released;
+Read `HANDOFF.md` first (what the project is, where it stands, what to do
+next and in what order), then `docs/STATUS.md`: where things stand and what
+comes next. v0.1 (the engine) and v0.2 (the TUI, the testing build) are released;
 new work is judged on real use: the owner's usage log and testers' reports.
 
 - Every change keeps CI green (`.github/workflows/ci.yml`: type-check and tests

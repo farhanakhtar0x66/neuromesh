@@ -50,16 +50,36 @@ not describe the cascade. With Tier 0 keeping most work off Opus and the
 grunt running without tools, the same plan went about four times further on
 this suite, and faster.
 
-What that result does not yet settle, and what this plan is for:
+The Opus reading of 13 points includes the session that ran the benchmark.
+The owner worked that share out at 1 to 2 points, so it does not change the
+picture: about 11 or 12 against 3.
 
-- it is one run of each, and the Opus reading is not clean (the report's own
-  open items 2 and 3);
-- the 15 prompts start in empty folders: no work inside an existing
-  repository, which is most real work;
-- most checkers are keyword and structure rubrics, not executed code, and
-  eight had to be corrected;
-- the router was tuned on these 15, so they are a regression set now, not a
-  held-out one.
+### Checklist: what the evidence still lacks
+
+Kept here so it is not lost; each line names where in the plan it is done.
+
+- [ ] **Grading by running code, not by rubric.** Most of the 15 checkers
+  match keywords and structure, and eight had to be corrected. For every
+  prompt whose answer is code, the checker runs it: tests against the answer
+  for 2.1, 2.3, 3.1, 3.2; the migration applied to a scratch database for
+  3.3; the simulator and the build already run for 4.3 and 4.1. Prompts whose
+  answer is prose (4.2, 5.3) keep a rubric and say so. Each new checker still
+  passes the reference answer and fails an empty folder (`validate.sh`).
+  Phase 1, item M9.
+- [ ] **A held-out set the router has never seen.** Tier 0 was adjusted on
+  these 15 prompts (11 of 15 on the expected tier after the changes), so they
+  are a regression set. Write 15 more in the same five groups, with three new
+  traps, by someone who does not read the router's patterns; record where
+  Tier 0 sends them *before* any change; never tune on them. `routes.ts`
+  then prints both sets, and a router change is judged on the held-out one.
+  Phase 1, rule 7.
+- [ ] **More than one run.** Two more clean cascade runs and Haiku alone on
+  the same 15. Phase 1, step 0.
+- [ ] **Work inside existing repositories.** The owner is testing this by
+  building real projects with the cascade; the usage log and its ratings are
+  the evidence. The benchmark form of it is M1.
+- [x] **The baseline's contamination.** Worked out by the owner: 1 to 2
+  points of the 13.
 
 Everything below takes the cascade as the system. The cheap baseline is
 Haiku alone, the frontier baseline is Opus alone, and the cost that matters
@@ -286,6 +306,20 @@ the phases before it measure.
     1 ──┬── 2 ── 3 ──┬── 5 ── 8 ── 9
         ├── 4 (record first, replay second) ──┘
         └── 6 (probe first) ── 7
+
+## Track B: the beta release
+
+The owner will release a beta and show it to other people, including the
+model vendors. What that needs, beside the phases:
+
+| Id | What | Why |
+| --- | --- | --- |
+| B1 | The claim on one page, with its limits: the routing benchmark's table, what was and was not measured, the commands to repeat it. | A claim people can repeat is the only kind that survives being shown to the vendors. |
+| B2 | `neuromesh doctor` as the first-run experience: which tools are installed and signed in, which team that allows, what to install next. | A tester's first minute decides whether there is a second. |
+| B3 | A first run that cannot hurt: the write sandbox on Linux (E2), nothing applied without the person saying so (as now), a clear line when a plan's window is nearly spent. | Strangers' machines and plans. |
+| B4 | Run reports with consent (F52, in place) read weekly: what failed, on which tool, by kind (L5). | The beta's purpose is this data. |
+| B5 | A way to report a bad run in one command: the run's events with code and paths removed, as F52 already does. | Bug reports that can be acted on without asking for the repository. |
+| B6 | Release notes that are numbers (phase 9, step 8), and a version tag only when the checklist above has no open line on the claim being made. | So the beta's page never says more than was measured. |
 
 ## Rules for every phase
 

@@ -372,6 +372,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     `main` and `neuromesh-testing` still default to `factory-opus-luna`
     until this branch is merged.
 
+41. **Handoff and checklist (2026-11-14).** `HANDOFF.md` at the root is
+    where a new agent starts: what the project is for, the cascade, what not
+    to judge it by, and the next steps in order. Doc 22 has a checklist of
+    what the evidence lacks (checkers that run code, a held-out prompt set,
+    repeat runs, real repositories) and a beta-release track. The owner's
+    installed `neuromesh` now runs `neuromesh-research`.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
