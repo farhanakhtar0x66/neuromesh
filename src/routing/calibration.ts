@@ -13,7 +13,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { CASCADE_TIERS } from "./router.ts";
-import type { Calibrated, CascadeTier } from "./router.ts";
+import type { Calibrated, CascadeTier, Evidence } from "./router.ts";
 
 export interface Cell {
   tries: number;
@@ -71,6 +71,33 @@ export function successRate(table: CalibrationTable, cluster: CascadeTier | unde
   return { p: (cell.passes + PRIOR_WEIGHT * prior(cluster, tier)) / (cell.tries + PRIOR_WEIGHT), tries: cell.tries };
 }
 
+/** [F103 evidence-override] Runs of a tier on a cluster before its record may overrule a confident match. */
+export const MIN_EVIDENCE = 5;
+
+/**
+ * [F103 evidence-override] Whether this machine's record overrules the tier
+ * the similarity stage picked with confidence. Up: the picked tier has been
+ * tried at least MIN_EVIDENCE times on this cluster and its estimate is under
+ * the bar, so the request starts on the cheapest tier above that clears it.
+ * Down: a cheaper tier has that many tries and clears the bar itself. With less
+ * evidence than that, the match stands: a handful of runs is not a rate.
+ */
+export function evidencePick(table: CalibrationTable, cluster: CascadeTier | undefined, tier: CascadeTier, alpha = DEFAULT_ALPHA, tiers: CascadeTier[] = CASCADE_TIERS): Evidence | undefined {
+  const at = tiers.indexOf(tier);
+  if (at < 0) return undefined;
+  const here = successRate(table, cluster, tier);
+  if (here.tries >= MIN_EVIDENCE && here.p < alpha) {
+    const up = tiers.slice(at + 1).find((t) => successRate(table, cluster, t).p >= alpha) ?? tiers.at(-1)!;
+    if (up !== tier) return { tier: up, direction: "up", p: here.p, tries: here.tries, from: tier };
+    return undefined;
+  }
+  for (const t of tiers.slice(0, at)) {
+    const below = successRate(table, cluster, t);
+    if (below.tries >= MIN_EVIDENCE && below.p >= alpha) return { tier: t, direction: "down", p: below.p, tries: below.tries, from: tier };
+  }
+  return undefined;
+}
+
 /** Stage 0C: the cheapest tier i with P(success | i, cluster) >= alpha; the expert when none is. */
 export function calibrated(table: CalibrationTable, alpha = DEFAULT_ALPHA, tiers: CascadeTier[] = CASCADE_TIERS): Calibrated {
   return {
@@ -82,6 +109,8 @@ export function calibrated(table: CalibrationTable, alpha = DEFAULT_ALPHA, tiers
       const top = tiers.at(-1);
       return top ? { tier: top, p: successRate(table, cluster, top).p } : undefined;
     },
+    // [F103 evidence-override]
+    evidence: (cluster, tier) => evidencePick(table, cluster, tier, alpha, tiers),
   };
 }
 
@@ -127,6 +156,18 @@ export function describeCalibration(table: CalibrationTable, alpha = DEFAULT_ALP
       return `${Math.round(p * 100)}% (${cell ? `${cell.passes}/${tries}` : "prior"})`.padStart(16);
     });
     lines.push(`${(c ?? "none").padEnd(10)}${cells.join("")}   ${calibrated(table, alpha).pick(c)?.tier ?? "-"}`);
+  }
+  // [F103 evidence-override] Where the record overrules a confident match, and on what evidence.
+  const overrides = CASCADE_TIERS.flatMap((c) => CASCADE_TIERS.flatMap((t) => evidencePick(table, c, t, alpha) ?? []).map((e) => ({ c, e })));
+  if (overrides.length > 0) {
+    lines.push("", `Overruled by this machine's runs (F103; at least ${MIN_EVIDENCE} tries):`);
+    for (const { c, e } of overrides) {
+      lines.push(
+        e.direction === "up"
+          ? `  ${c}-like requests matched to ${e.from} start on ${e.tier}: ${e.from} is at ${Math.round(e.p * 100)}% over ${e.tries} tries`
+          : `  ${c}-like requests matched to ${e.from} start on ${e.tier}: it is at ${Math.round(e.p * 100)}% over ${e.tries} tries`,
+      );
+    }
   }
   return lines;
 }

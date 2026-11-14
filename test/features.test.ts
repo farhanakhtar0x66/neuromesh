@@ -8,7 +8,7 @@ test("every feature has a unique id and key, a main file and a description", () 
   assert.equal(ids.size, FEATURES.length);
   assert.equal(keys.size, FEATURES.length);
   for (const f of FEATURES) {
-    assert.match(f.id, /^F\d\d$/);
+    assert.match(f.id, /^F\d{2,3}$/);
     assert.ok(f.files.length > 0 && f.what.length > 0, f.key);
   }
   assert.equal(tag("f04"), "F04 screen-check");

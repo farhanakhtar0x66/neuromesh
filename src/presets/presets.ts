@@ -8,6 +8,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { QuotaShift } from "../engine/quota.ts";
 import type { Role, RoleChain, RoleConfig, Tier } from "../engine/types.ts";
 
 export interface Preset {
@@ -68,6 +69,12 @@ export interface Preset {
   gruntLadder?: RoleConfig[];
   /** The routing cascade (F80 to F88). Present means on; each part can still be switched off by its feature key. */
   cascade?: CascadeConfig;
+  /**
+   * [F104 quota-shift] When the named tool's subscription window is this full,
+   * grunt, worker and reviewer turns on that tool go to these models instead
+   * (another plan); senior and expert turns stay.
+   */
+  quotaShift?: QuotaShift;
 }
 
 export interface CascadeConfig {
@@ -81,6 +88,8 @@ export interface CascadeConfig {
   shadowRate?: number;
   /** [F81 route-calibration] The quality bar for stage 0C. Default 0.8. */
   alpha?: number;
+  /** [F103 evidence-override] Share of confident senior matches started on the worker, to learn its rate. Default 0 (off). */
+  probe?: number;
 }
 
 export const DEFAULT_PRESET = "factory-opus-luna";
@@ -145,7 +154,21 @@ export function validatePreset(raw: unknown, file: string): Preset {
     direct: p.direct === true ? true : undefined,
     gruntLadder: p.gruntLadder === undefined ? undefined : chain(p.gruntLadder, "worker", file),
     cascade: cascadeConfig(p.cascade, file),
+    quotaShift: quotaShift(p.quotaShift, file),
   };
+}
+
+/** [F104 quota-shift] */
+function quotaShift(raw: unknown, file: string): QuotaShift | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: quotaShift must be an object`);
+  const q = raw as Record<string, unknown>;
+  if (typeof q.backend !== "string") throw new Error(`Preset ${file}: quotaShift needs the backend whose subscription is watched`);
+  if (typeof q.above !== "number" || !(q.above > 0 && q.above <= 1)) throw new Error(`Preset ${file}: quotaShift above must be a fraction between 0 and 1`);
+  if (q.to === undefined) throw new Error(`Preset ${file}: quotaShift needs the models to move to`);
+  const to = chain(q.to, "worker", file);
+  if (to.some((c) => c.backend === q.backend)) throw new Error(`Preset ${file}: quotaShift moves turns to another tool; ${q.backend} is the one being watched`);
+  return { backend: q.backend, window: typeof q.window === "string" && q.window ? q.window : "five_hour", above: q.above, to };
 }
 
 function cascadeConfig(raw: unknown, file: string): CascadeConfig | undefined {
@@ -166,6 +189,7 @@ function cascadeConfig(raw: unknown, file: string): CascadeConfig | undefined {
     maxEscalations: max as number | undefined,
     shadowRate: share(c.shadowRate, "shadowRate"),
     alpha: share(c.alpha, "alpha"),
+    probe: share(c.probe, "probe"),
   };
 }
 

@@ -4,6 +4,7 @@ import type { FileChange } from "../workspace/workspace.ts";
 import type { ProgressHistory } from "./progress.ts";
 import type { Brief } from "../intake/brief.ts";
 import type { CascadeTier, TierRoute } from "../routing/router.ts";
+import type { QuotaShift } from "./quota.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -53,7 +54,11 @@ export type AttemptKind =
   | "scout"
   | "split"
   // [F84 bottleneck-diagnostic]
-  | "diagnose";
+  | "diagnose"
+  // [F102 repair-race] One of two fresh repair attempts made side by side.
+  | "race"
+  // [F101 blind-tests] Tests written from the task and the signatures alone.
+  | "blind";
 
 export interface AttemptRecord {
   role: Role;
@@ -142,7 +147,7 @@ export interface Plan {
   tasks: PlannedTask[];
 }
 
-export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done";
+export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done" | "race" | "blind";
 
 export interface TaskState extends PlannedTask {
   status: "pending" | "active" | "passed" | "failed";
@@ -201,6 +206,18 @@ export interface TaskState extends PlannedTask {
   bottleneck?: string;
   /** [F83 early-exit] Nowhere higher to go: the preamble is no longer asked for on this task. */
   noPreamble?: boolean;
+  /** [F100 start-here] Where this task most likely begins, found by name before its first turn. */
+  startHere?: string;
+  /** [F102 repair-race] The two side-by-side repair attempts were made (once per task). */
+  raced?: boolean;
+  /** [F101 blind-tests] The blind tests were asked for (once per task). */
+  blindDone?: boolean;
+  /**
+   * [F101 blind-tests] Blind test files that failed and were put into the task's
+   * folder for the developer's one fix turn; `dropped` once the engine took
+   * them out again because the checks still failed with them.
+   */
+  blind?: { files: string[]; dropped?: boolean };
 }
 
 /** The cascade's settings for one run (the routing architecture; F80 to F88). */
@@ -219,6 +236,8 @@ export interface CascadeState {
   alpha: number;
   /** [F81 route-calibration] This run's outcomes are already in the table. */
   recorded?: boolean;
+  /** [F103 evidence-override] Share of confident senior matches started on the worker, to learn its rate. */
+  probe?: number;
 }
 
 export interface RunOutcome {
@@ -285,6 +304,10 @@ export interface RunState {
   workerRung?: number;
   /** The routing cascade (F80 to F88), for presets that set "cascade". */
   cascade?: CascadeState;
+  /** [F104 quota-shift] Where the cheap turns move when a subscription window runs low. */
+  quotaShift?: QuotaShift;
+  /** [F104 quota-shift] The move has been reported in this run. */
+  quotaShifted?: boolean;
   /** Time limit for one agent turn. */
   turnTimeoutMs: number;
   base: string;

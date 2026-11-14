@@ -180,6 +180,145 @@ export function buildPacket(dir: string, request: string, options: PacketOptions
   return out.join("\n");
 }
 
+// [F100 start-here] Where one task most likely begins: the definitions whose
+// names match the task, as line ranges, and the body of the best match when it
+// is short. The packet (F12) maps the repository once for the request; this is
+// per task, from the task's own brief, and it points instead of mapping.
+//
+// The match is lexical, so it can be wrong. Two things follow from that: it is
+// worded as a starting point, never as a boundary ("do not look elsewhere"
+// would turn a wrong guess into a failed task), and when nothing matches by
+// name it says nothing at all.
+
+export interface StartHere {
+  text: string;
+  /** The files it points at, best first. */
+  files: string[];
+}
+
+export interface StartHereOptions {
+  /** Size limit in characters. */
+  maxChars?: number;
+  /** Most files to point at. */
+  maxFiles?: number;
+  /** Longest definition whose body is shown, in lines. */
+  maxBodyLines?: number;
+}
+
+export const TEST_PATH = /(^|\/)(test|tests|__tests__|spec)\/|\.(test|spec)\.|_test\.|(^|\/)test_[^/]*\.py$/;
+/** What a definition scores when the task names it outright, written as an identifier. */
+const STRONG = 6;
+/** The least a file must score to be pointed at: one definition named outright, or several weaker matches together. */
+const START_MIN = 6;
+
+/** Files the last commits touched, and files changed since the last one: where work is going on. */
+function recentFiles(dir: string): Set<string> {
+  const out = new Set<string>();
+  const log = spawnSync("git", ["log", "-n", "15", "--name-only", "--pretty=format:"], { cwd: dir, encoding: "utf8" });
+  if (log.status === 0) for (const f of log.stdout.split("\n")) if (f.trim()) out.add(f.trim());
+  const status = spawnSync("git", ["status", "--porcelain"], { cwd: dir, encoding: "utf8" });
+  if (status.status === 0) for (const l of status.stdout.split("\n")) if (l.length > 3) out.add(l.slice(3).trim());
+  return out;
+}
+
+/**
+ * [F100 start-here] The words of a task, by how much a match on them says.
+ * Strong: written like an identifier (compactNotes, max_size, `flush`,
+ * render()), which a person only types when they mean that definition. Plain:
+ * ordinary words, which also name things by accident ("entry", "layout").
+ */
+export function leadTerms(request: string): { strong: Set<string>; plain: Set<string> } {
+  const strong = new Set<string>();
+  for (const m of request.matchAll(/`([A-Za-z_$][\w$]*)`|\b([A-Za-z_$][\w$]*)\s*\(|\b([A-Za-z]+[a-z][A-Z]\w*|[A-Za-z]\w*_\w+)\b/g)) {
+    const word = (m[1] ?? m[2] ?? m[3])!.toLowerCase();
+    if (word.length >= 4) strong.add(word);
+  }
+  const plain = new Set(terms(request).filter((w) => !strong.has(w)));
+  return { strong, plain };
+}
+
+/**
+ * [F100 start-here] The definitions in `dir` that `request` most likely means,
+ * or undefined when none matches by name (an empty repository, or a request
+ * that names nothing in it).
+ */
+export function startHere(dir: string, request: string, options: StartHereOptions = {}): StartHere | undefined {
+  const maxChars = options.maxChars ?? 2_500;
+  const maxFiles = options.maxFiles ?? 3;
+  const maxBody = options.maxBodyLines ?? 60;
+  const { strong, plain } = leadTerms(request);
+  const named = new Set((request.match(/[\w./-]+\.[A-Za-z]{1,5}\b/g) ?? []).map((n) => n.replace(/^\.\//, "")));
+  if (strong.size === 0 && plain.size === 0 && named.size === 0) return undefined;
+  const recent = recentFiles(dir);
+
+  interface Hit { file: FileInfo; score: number; symbols: { sym: SymbolLine; score: number }[]; named: boolean }
+  const hits: Hit[] = [];
+  for (const file of scanRepo(dir)) {
+    if (language(file.path) === undefined) continue;
+    const base = file.path.slice(file.path.lastIndexOf("/") + 1).replace(/\.[^.]+$/, "").toLowerCase();
+    // The task gives the file's path, or one of its words is the file's own name.
+    const isNamed = named.has(file.path) || [...named].some((n) => file.path.endsWith(`/${n}`));
+    const isCalled = base.length >= 5 && (strong.has(base) || plain.has(base));
+    const symbols = file.symbols
+      .map((sym) => {
+        const name = sym.name.toLowerCase();
+        let s = 0;
+        for (const w of strong) s += name === w ? STRONG : name.includes(w) ? STRONG / 2 : 0;
+        for (const w of plain) s += name === w ? STRONG / 2 : w.length >= 5 && name.includes(w) ? STRONG / 4 : 0;
+        return { sym, score: s };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score || a.sym.line - b.sym.line);
+    if (!isNamed && !isCalled && symbols.length === 0) continue;
+    const path = file.path.toLowerCase();
+    let s = (isNamed ? 50 : 0) + (isCalled ? 8 : 0) + symbols.slice(0, 3).reduce((n, x) => n + x.score, 0) + [...strong, ...plain].filter((w) => path.includes(w)).length * 2;
+    // Recent work breaks ties between files that match; it is not a match by itself.
+    if (recent.has(file.path)) s += 1;
+    if (TEST_PATH.test(file.path) && !isNamed) s *= 0.6;
+    hits.push({ file, score: s, symbols, named: isNamed || isCalled });
+  }
+  hits.sort((a, b) => b.score - a.score || a.file.path.localeCompare(b.file.path));
+  // A lead is a file that clears the bar by itself and is not far behind the best one: next to a definition
+  // the task names outright, a file that only shares two ordinary words with it is noise.
+  const best = hits[0]?.score ?? 0;
+  const top = hits.filter((h) => h.score >= START_MIN && h.score >= best * 0.67).slice(0, maxFiles);
+  if (top.length === 0) return undefined;
+
+  const out: string[] = ["Start here (Neuromesh matched these to your task by name, with no model call; they are where to look first, not a limit on where you may look):"];
+  let used = out[0]!.length;
+  const add = (line: string): boolean => {
+    if (used + line.length + 1 > maxChars) return false;
+    out.push(line);
+    used += line.length + 1;
+    return true;
+  };
+  let shown: { path: string; start: number; lines: string[] } | undefined;
+  for (const hit of top) {
+    const full = join(dir, hit.file.path);
+    const text = existsSync(full) ? readFileSync(full, "utf8") : "";
+    if (hit.symbols.length === 0) {
+      // Named by the task, nothing in it matched by name: its first definitions.
+      const first = hit.file.symbols.slice(0, 4).map((s) => `${s.name} (${s.line})`).join(", ");
+      if (!add(`- ${hit.file.path} [${hit.file.lines} lines]${first ? `: ${first}` : ""}`)) break;
+      continue;
+    }
+    for (const { sym } of hit.symbols.slice(0, 3)) {
+      const body = symbolBody(hit.file.path, text, sym.name);
+      const end = body ? body.start + body.lines.length - 1 : sym.line;
+      if (!add(`- ${hit.file.path}:${sym.line}-${end}  ${sym.text}`)) break;
+      // The body only of a definition the task names outright: lines spent on a weaker guess are wasted more often than not.
+      if (!shown && body && body.lines.length <= maxBody && hit.symbols[0]!.score >= STRONG && sym === hit.symbols[0]!.sym) shown = { path: hit.file.path, start: body.start, lines: body.lines };
+    }
+  }
+  if (out.length === 1) return undefined;
+  if (shown) {
+    const lines = shown;
+    const block = [`\n${lines.path}:${lines.start}-${lines.start + lines.lines.length - 1}, as it is now:`, "```", ...lines.lines.map((l, i) => `${lines.start + i}: ${l}`), "```"].join("\n");
+    if (used + block.length + 1 <= maxChars) out.push(block);
+  }
+  return { text: out.join("\n"), files: top.map((h) => h.file.path) };
+}
+
 /** The body of a symbol: from its definition line to the end of its block. */
 export function symbolBody(path: string, text: string, name: string): { start: number; lines: string[] } | undefined {
   const sym = symbolsOf(path, text).find((s) => s.name === name);

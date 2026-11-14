@@ -176,6 +176,12 @@ function contextSection(state: RunState): string {
   return `\n\nThe repository, mapped by Neuromesh before you started (no need to rediscover it; read only what you need):\n${state.contextPacket}`;
 }
 
+/** [F100 start-here] Where this task most likely begins, when its words matched definitions by name. */
+function startSection(task: TaskState): string {
+  if (!task.startHere || !isOn("start-here")) return "";
+  return `\n\n${task.startHere}`;
+}
+
 /** [F13 nm-tools] How to use the shared tool. */
 function toolsNote(): string {
   if (!isOn("nm-tools")) return "";
@@ -312,7 +318,7 @@ export function taskPrompt(state: RunState, task: TaskState): string {
     return `You are working on a software project. Complete the request below by editing the files in the current directory.
 
 Request:
-${state.prompt}${contextSection(state)}${toolsNote()}
+${state.prompt}${contextSection(state)}${startSection(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -327,7 +333,7 @@ ${state.prompt}
 Your task: ${task.title}
 ${task.brief}${owned}
 
-Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${toolsNote()}
+Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${startSection(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -503,6 +509,97 @@ export function climbPrompt(state: RunState, task: TaskState): string {
 A quicker colleague attempted this task first and got stuck. Its changes are still in the files (\`git diff\` shows them). ${what}
 
 Finish the task correctly: keep what is right in those changes and fix or replace the rest.`;
+}
+
+/**
+ * [F102 repair-race] Two fresh developers get the stuck task side by side, each
+ * told to go about the repair differently, so that the two attempts do not
+ * fail the same way. The first one patches; the second is told not to.
+ */
+export const RACE_HINTS = [
+  "Repair it in place: find the smallest change that makes the failing checks pass, and keep everything that already works.",
+  "Do not patch the failing part again: the earlier repairs of it did not hold. Re-read what the task requires of that part and rewrite that part from the requirement, keeping the rest of the change.",
+];
+
+export function racePrompt(state: RunState, task: TaskState, hint: string): string {
+  // A racer builds or it loses: it is not offered a split.
+  return `${taskPrompt(state, { ...task, noSplit: true })}
+
+A colleague attempted this task and could not get the project's checks to pass in ${task.round + 1} tries. Its changes are in the files (\`git diff\` shows them). What still fails:
+
+${failureText(task.latest ?? [], state.baseline).slice(0, 6_000)}
+
+${hint}
+
+You work in your own copy of the project. Run the checks before you stop: your change is used only if they pass.`;
+}
+
+/** [F101 blind-tests] The blind tester's answer: new test files and what they probe. */
+export const BLIND_SCHEMA = {
+  type: "object",
+  properties: {
+    tests: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { path: { type: "string" }, content: { type: "string" } },
+        required: ["path", "content"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+  },
+  required: ["tests", "summary"],
+  additionalProperties: false,
+};
+
+/**
+ * [F101 blind-tests] Asked of a developer who gets the task and the signatures
+ * of what was built, and nothing of the code, so that its tests come from its
+ * own reading of the task.
+ */
+export function blindPrompt(state: RunState, task: TaskState, signatures: string, tests: string[]): string {
+  const what = isWholeRequest(state, task) ? state.prompt : `${task.title}\n${task.brief}\n\nThe overall request it is part of, for context:\n${state.prompt.slice(0, 3_000)}`;
+  return `You write tests for code you have not seen. Another developer has just built the task below. You get the task and the signatures of what they wrote, and deliberately nothing of the code itself, so that your tests do not share its blind spots. Do not look for the code; you could not find it from here.
+
+The task:
+${what.slice(0, 12_000)}
+
+What was written or changed (file, then line: signature):
+${signatures}
+
+${tests.length > 0 ? `The project's existing test files (for where tests live, how they are named and what they import): ${tests.join(", ")}` : "The project has no test files yet."}
+The project runs its checks with: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}
+
+Write one new test file (two at most) in the language, test framework and style the paths and commands above show, placed and named so that the check command picks it up, that tries to break the implementation using only behaviour the task states or that any correct implementation of it must have:
+- the edges: nothing, one, exactly at a stated limit, one past it, very large, the same thing twice;
+- long runs: what must still hold after hundreds or thousands of operations (sizes stay within stated bounds, nothing is lost or counted twice, order holds);
+- invariants and round trips, rather than exact outputs you would have to guess.
+Do not test anything the task leaves open: a test that fails on a correct implementation costs a developer's time. Import only what the signatures show. Use new file names; never an existing path.
+
+Give your answer in the required JSON format: tests (each a path from the project's root and the file's whole content) and summary (one sentence on what they probe).`;
+}
+
+/** [F101 blind-tests] The test files of a blind tester's answer; undefined when it cannot be used. */
+export function parseBlind(result: AgentResult): { tests: { path: string; content: string }[]; summary: string } | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { tests?: unknown; summary?: unknown } | undefined;
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.tests)) return undefined;
+  const tests = raw.tests.flatMap((f) => {
+    const file = f as { path?: unknown; content?: unknown } | null;
+    return file && typeof file.path === "string" && file.path.trim() !== "" && typeof file.content === "string" && file.content.trim() !== "" && file.content.length <= 60_000 ? [{ path: file.path.trim(), content: file.content }] : [];
+  });
+  if (tests.length === 0) return undefined;
+  return { tests: tests.slice(0, 2), summary: typeof raw.summary === "string" ? raw.summary.slice(0, 400) : "" };
+}
+
+/** [F101 blind-tests] What the developer is told about blind tests that fail on its work. */
+export function blindFinding(files: string[], command: string, output: string): Finding {
+  return {
+    problem: `A second developer, who saw the task and your signatures but not your code, wrote tests for it, and they fail: ${files.join(", ")} (now in your folder). Judge each failing test against the task as it was stated. Where the task requires what the test expects, the test found a real defect: fix your code. Where the test expects something the task does not state, the test is wrong: correct it or delete it, and say which and why in your notes. Do not weaken a test that is right, and do not change code to satisfy a test that is wrong.`,
+    file: files[0],
+    reproduce: `${command}\n${output.slice(-2_500)}`,
+    severity: "blocker",
+  };
 }
 
 export function continuePrompt(state: RunState, task: TaskState): string {

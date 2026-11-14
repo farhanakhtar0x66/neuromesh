@@ -49,10 +49,11 @@ export async function commandRouting(positional: string[], flags: Map<string, st
     const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
     const repo = findRepo(flags.get("repo") ?? process.cwd());
     const brief = buildBrief(prompt, repoFacts(repo.root), { team: preset.mode === "team", maxParallel: preset.maxParallel, canSpec: false });
-    const r = routeTier({ request: brief.request, kind: brief.kind, totalWords: [brief.request, ...brief.attached.map((a) => a.text)].join(" ").split(/\s+/).filter(Boolean).length }, calibrated(loadCalibration(home), alpha), { instructionOnly: true, breadth: true });
+    const r = routeTier({ request: brief.request, kind: brief.kind, totalWords: [brief.request, ...brief.attached.map((a) => a.text)].join(" ").split(/\s+/).filter(Boolean).length }, calibrated(loadCalibration(home), alpha), { instructionOnly: true, breadth: true, evidence: true, probe: preset.cascade?.probe });
     const scores = Object.entries(r.scores).map(([t, s]) => `${t} ${s}`).join(", ");
     process.stdout.write(
-      `Tier: ${r.tier} (stage ${r.stage === "rules" ? "0A rules" : r.stage === "similarity" ? "0B similarity" : "0C calibrated"})\n` +
+      // [F103 evidence-override]
+      `Tier: ${r.tier} (stage ${r.stage === "rules" ? "0A rules" : r.stage === "similarity" ? "0B similarity" : "0C calibrated"}${r.evidence ? ", overruled by past runs" : r.probe ? ", a probe" : ""})\n` +
         `Kind: ${brief.kind}; cluster: ${r.cluster ?? "none"} at ${Math.round(r.confidence * 100)}% of the match (${scores})\n` +
         r.reasons.map((x) => `  - ${x}`).join("\n") +
         (r.stripped.length > 0 ? `\nIgnored:\n${r.stripped.map((x) => `  - ${x}`).join("\n")}` : "") +

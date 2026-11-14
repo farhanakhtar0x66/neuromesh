@@ -54,6 +54,8 @@ export interface ChaosResult {
   ms: number;
   /** Rules the run broke; empty when it kept them all. */
   violations: string[];
+  /** Paths of F100 to F104 this run took (a race, a race that was won, blind tests and what became of them, a moved turn), so a clean sweep can be told from an idle one. */
+  seen?: string[];
 }
 
 /** mulberry32: small, fast, and the same on every machine. */
@@ -97,7 +99,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -107,6 +109,8 @@ function callKind(r: AgentRequest): Call {
   if ("diagnosis" in p) return "advice";
   // [F84 bottleneck-diagnostic]
   if ("bottleneck" in p) return "diagnose";
+  // [F101 blind-tests]
+  if ("tests" in p) return "blind";
   return "build";
 }
 
@@ -129,6 +133,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (!violations.includes(rule)) violations.push(rule);
   };
 
+  // [F100-F104] Their own dice, so the rest of a seed's scenario stays what it was.
+  const phaseDice = dice(seed + 2_222_221);
+  // [F101 blind-tests] A quarter of the runs ask for the kind of work that gets blind tests, in a repository
+  // that has a definition the request names (F100's lead).
+  const withBlind = phaseDice.chance(0.25);
+  // [F104 quota-shift] A third of the runs may move cheap turns to another tool's model.
+  const quotaShift = phaseDice.chance(0.33) ? { backend: "fake", window: "five_hour", above: phaseDice.pick([0.05, 0.22, 0.9]), to: [{ backend: "other", model: "shift-1", tier: "worker" as const }] } : undefined;
   // ---- The repository: its check passes when every listed file says "ok".
   const repo = join(options.scratch, `repo-${seed}`);
   const home = join(options.scratch, `home-${seed}`);
@@ -143,11 +154,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     writeFileSync(join(repo, "package.json"), JSON.stringify({ name: "chaos", private: true, scripts: { test: "node check.js" } }));
     writeFileSync(
       join(repo, "check.js"),
-      `const fs=require('fs');${slowCheck ? "const t=Date.now();while(Date.now()-t<400){}" : ""}for(const f of ${JSON.stringify(files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='ok'){console.error('expected '+f+' to say ok');process.exit(1)}}`,
+      `const fs=require('fs');${slowCheck ? "const t=Date.now();while(Date.now()-t<400){}" : ""}for(const f of ${JSON.stringify(files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='ok'){console.error('expected '+f+' to say ok');process.exit(1)}}for(const f of fs.readdirSync('.')){if(/^blind-fail/.test(f)){console.error('AssertionError: the blind test '+f+' fails');process.exit(1)}}`,
     );
   } else {
     writeFileSync(join(repo, "README.md"), "a project without checks\n");
   }
+  if (!options.resume && withBlind) writeFileSync(join(repo, "queue.js"), "function boundedQueue(limit) {\n  return [];\n}\nmodule.exports = { boundedQueue };\n");
   if (!options.resume) {
     sh(repo, "init", "-q", "-b", "main");
     sh(repo, "add", "-A");
@@ -194,6 +206,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudgetUsd: d.weighted({ none: 4, tiny: 2, small: 3, large: 2 }) === "none" ? undefined : d.pick([0.05, 0.3, 0.6, 3]),
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
+    quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
     cascade: withCascade
@@ -203,6 +216,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
           maxEscalations: cascadeDice.pick([0, 1, 2, 5]),
           shadowRate: cascadeDice.pick([0, 0.5, 1]),
           alpha: cascadeDice.pick([0.5, 0.8, 0.95]),
+          // [F103 evidence-override]
+          probe: phaseDice.pick([0, 0, 0.5, 1]),
         }
       : undefined,
   };
@@ -215,7 +230,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     "refactor the check so it is easier to read, keeping its behaviour",
   ]);
   // [F89 instruction-scoring] [F90 direct-grunt] Some cascade runs get a transform of pasted text (the cascade's own dice).
-  const prompt = withCascade && cascadeDice.chance(0.3) ? `turn this list into ${fileCount} files, one value each: 'alpha=1, beta=2, gamma=3, delta=4, epsilon=5, zeta=6, eta=7'` : drawn;
+  const transform = withCascade && cascadeDice.chance(0.3);
+  const prompt = transform ? `turn this list into ${fileCount} files, one value each: 'alpha=1, beta=2, gamma=3, delta=4, epsilon=5, zeta=6, eta=7'` : withBlind ? "add a bounded queue that drops the oldest entry when full, so that the test passes" : drawn;
   // How badly the agents behave in this run: none at all (the engine must then
   // succeed), or a share of the turns.
   const trouble = d.weighted({ none: 1.5, some: 4, much: 3, most: 1 });
@@ -228,11 +244,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calm = trouble === "none" && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
-  const taskOf = (cwd: string): string | undefined => /[\\/]tasks[\\/]([^\\/]+)[\\/](?:worktree|tester)/.exec(cwd)?.[1];
+  const taskOf = (cwd: string): string | undefined => /[\\/]tasks[\\/]([^\\/]+)[\\/](?:worktree|tester|race-[ab])/.exec(cwd)?.[1];
   const mine = (cwd: string): string[] => owners.get(taskOf(cwd) ?? "") ?? files;
   const put = (cwd: string, file: string, text: string): void => {
     mkdirSync(dirname(join(cwd, file)), { recursive: true });
@@ -307,6 +323,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         return {};
       }
     }
+    // [F101 blind-tests] Tests from the task alone. A good writer's pass; a troubled one's fail, cannot be used, or aim at an existing file.
+    if (kind === "blind") {
+      const view = phaseDice.weighted({ good: 6, failing: p * 10, existing: 1, garbage: p * 5, none: 1 });
+      if (view === "garbage") return { ...extra, structured: d.pick([{}, { tests: "many" }, { tests: [{ path: 9 }] }, null]) };
+      if (view === "none") return { ...extra, structured: { tests: [], summary: "nothing to probe" } };
+      if (view === "existing") return { ...extra, structured: { tests: [{ path: "check.js", content: "process.exit(1)" }, { path: "../escape.txt", content: "x" }], summary: "replaces the checks" } };
+      return { ...extra, structured: { tests: [{ path: view === "good" ? `blind-pass-${index}.txt` : `blind-fail-${index}.txt`, content: "a test" }], summary: "long runs" } };
+    }
     if (kind === "scout") return { ...extra, structured: { facts: d.chance(0.5) ? ["node is installed"] : [] } };
     if (kind === "spec") {
       const plan = planFor(files, "", "t") as { tasks: unknown[] };
@@ -362,6 +386,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     const offered = /answer with status "split"/.test(req.prompt);
     const work = d.weighted({ good: 10, wrong: p * 8, partial: p * 6, nothing: p * 5, blocked: p * 3, split: offered ? p * 4 + (p > 0 ? 0.6 : 0) : p, outside: p * 3, vandal: p * 3 });
     const own = mine(req.cwd);
+    // [F101 blind-tests] Code with a signature, so there is something for a blind tester to be told about.
+    if (withBlind && (work === "good" || work === "wrong" || work === "partial")) put(req.cwd, "helper.js", "function helper() {\n  return 1;\n}");
+    // Given failing blind tests, half the developers correct the test (here: remove it); the others leave it to the engine.
+    if (/A second developer, who saw the task/.test(req.prompt) && existsSync(req.cwd) && phaseDice.chance(0.5)) {
+      for (const f of readdirSync(req.cwd)) if (/^blind-fail/.test(f)) rmSync(join(req.cwd, f), { force: true });
+    }
     if (work === "good") {
       for (const f of own) put(req.cwd, f, "ok");
       return report("done", "built it");
@@ -447,7 +477,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     aborter = new AbortController();
     return {
       home,
-      backends: { fake: backend },
+      // [F104 quota-shift] The same agents under a second tool's name, for the turns that move.
+      backends: { fake: backend, other: { ...backend, id: "other" } },
       signal: aborter.signal,
       onEvent: (e) => {
         events.push(e);
@@ -546,12 +577,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (trouble === "none" && interruptAt < 0 && state.status !== "finished") broke(`every agent did its work, yet the run ${state.status}: ${state.reason}`);
     // Good work is not redone, repaired or sent to the expert.
     if (calm) {
-      const waste = state.attempts.filter((a) => ["repair", "review-fix", "advised-fix", "climb", "redo", "continue", "advice", "escalation", "integration"].includes(a.kind));
+      const waste = state.attempts.filter((a) => ["repair", "review-fix", "advised-fix", "climb", "redo", "continue", "advice", "escalation", "integration", "race"].includes(a.kind));
       if (waste.length > 0) broke(`every agent did its work, yet the engine spent ${waste.length} extra turn(s): ${[...new Set(waste.map((a) => a.kind))].join(", ")}`);
     }
     // Finished or failed for good: nothing of the tasks is left behind.
     const trees = sh(repo, "worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree ")).map((l) => l.slice(9));
     if (trees.some((t) => /[\\/]tester$/.test(t))) broke("a reviewer's copy was left behind");
+    // [F102 repair-race] Nor a racer's copy, whoever won and however the run ended.
+    if (trees.some((t) => /[\\/]race-[ab]$/.test(t))) broke("a race copy was left behind");
     if (state.status === "finished") {
       const left = trees.filter((t) => /[\\/]tasks[\\/]/.test(t));
       if (left.length > 0) broke(`task work folders left after a finished run: ${left.map((t) => t.split("/tasks/")[1]).join(", ")}`);
@@ -604,6 +637,35 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       const helped = new Set(state.attempts.filter((a) => a.task && (a.kind === "advice" || a.kind === "escalation")).map((a) => a.task));
       if (helped.size > state.cascade.maxEscalations) broke(`${helped.size} tasks went to the expert; the breaker allows ${state.cascade.maxEscalations}`);
     }
+    // [F102 repair-race] A task is raced once: a second race only after the first was cut short (a stop, a limit, a kill).
+    const racesBy = new Map<string, NeuromeshEvent[]>();
+    for (const e of events) if (e.type === "race.started" || e.type === "race.finished") racesBy.set(String(e.task), [...(racesBy.get(String(e.task)) ?? []), e]);
+    for (const [task, list] of racesBy) {
+      if (list.filter((e) => e.type === "race.finished").length > 1) broke(`task ${task} was raced to the end more than once`);
+      const seen = state.attempts.filter((a) => a.task === task && a.kind === "race");
+      if (seen.some((a) => a.tier === "expert" || a.cascadeTier === "expert")) broke(`task ${task}: a race attempt ran on the expert`);
+    }
+    // A racer runs on the task's own tier, never a dearer one.
+    for (const t of state.tasks) {
+      const tiers = new Set(state.attempts.filter((a) => a.task === t.id && a.kind === "race" && a.cascadeTier).map((a) => a.cascadeTier));
+      if (tiers.size > 1) broke(`task ${t.id}: its race attempts ran on different tiers (${[...tiers].join(", ")})`);
+    }
+    // [F101 blind-tests] Blind tests are asked for once per task (again only after a turn that was cut short), and are never the expert's turn.
+    for (const t of state.tasks) {
+      const blind = state.attempts.filter((a) => a.task === t.id && a.kind === "blind");
+      if (blind.filter((a) => a.stop === "done").length > 1) broke(`task ${t.id}: blind tests were written ${blind.filter((a) => a.stop === "done").length} times`);
+      if (blind.some((a) => a.tier === "expert")) broke(`task ${t.id}: the expert was asked for blind tests`);
+    }
+    if (state.status === "finished" && existsSync(state.worktree) && readdirSync(state.worktree).some((f) => /^blind-pass/.test(f))) broke("blind tests that passed were kept in the result");
+    // [F104 quota-shift] Only cheap turns move to the other tool: never the expert's, never a senior's.
+    for (const a of state.attempts) {
+      if (a.backend !== "other") continue;
+      if (a.tier === "expert" || a.cascadeTier === "senior" || a.cascadeTier === "expert" || (a.role !== "worker" && a.role !== "tester")) {
+        broke(`a ${a.cascadeTier ?? a.tier} ${a.role} turn (${a.kind}) was moved to the other tool`);
+        break;
+      }
+    }
+    if (!quotaShift && state.attempts.some((a) => a.backend === "other")) broke("a turn moved to another tool in a run whose preset names none");
     // [F85 blueprint-expert]
     if (state.cascade?.blueprint && !off.includes("blueprint-expert") && state.tasks.some((t) => t.owner === "expert")) broke("the expert owns a part in blueprint mode");
     // A task is not worked on forever.
@@ -674,5 +736,15 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     broke("the run returned nothing");
   }
 
-  return { seed, scenario, status: state?.status ?? "none", reason: state?.reason, calls: calls.length, resumes, ms: Date.now() - started, violations };
+  const seen = new Set<string>();
+  for (const e of events) {
+    if (e.type === "race.started") seen.add("race");
+    if (e.type === "race.finished") seen.add(e.winner ? "race won" : "race lost");
+    if (e.type === "blind.tests") seen.add(`blind tests ${String(e.outcome)}`);
+    if (e.type === "blind.dropped") seen.add("blind tests dropped");
+    if (e.type === "quota.shifted") seen.add("turn moved");
+    if (e.type === "context.start-here") seen.add("start-here");
+    if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
+  }
+  return { seed, scenario, status: state?.status ?? "none", reason: state?.reason, calls: calls.length, resumes, ms: Date.now() - started, violations, seen: [...seen] };
 }

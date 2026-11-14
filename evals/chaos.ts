@@ -137,6 +137,10 @@ async function main(): Promise<void> {
   for (const r of results) statuses.set(r.status, (statuses.get(r.status) ?? 0) + 1);
   const bad = results.filter((r) => r.violations.length > 0);
   console.log(`${results.length} seeds in ${Math.round((Date.now() - started) / 1000)} s on ${jobs} processes: ${[...statuses].map(([s, n]) => `${n} ${s}`).join(", ")}; ${results.reduce((n, r) => n + r.calls, 0)} agent turns`);
+  // How many runs took each path of F100 to F104: a sweep that never raced says nothing about the race.
+  const paths = new Map<string, number>();
+  for (const r of results) for (const p of r.seen ?? []) paths.set(p, (paths.get(p) ?? 0) + 1);
+  if (paths.size > 0) console.log(`Runs that took each path: ${[...paths].sort((a, b) => b[1] - a[1]).map(([p, n]) => `${p} ${n}`).join(", ")}`);
   if (bad.length === 0) {
     console.log("Every run kept every rule.");
     return;

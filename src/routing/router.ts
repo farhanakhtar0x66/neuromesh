@@ -38,6 +38,20 @@ export interface TierRoute {
   payloadChars?: number;
   /** [F94 subsystem-breadth] The technical domains a new build spans, when it spans enough to need a design. */
   domains?: string[];
+  /** [F103 evidence-override] This machine's record overruled the tier the similarity stage matched. */
+  evidence?: Evidence;
+  /** [F103 evidence-override] Started one tier below the match on purpose, to learn the cheaper tier's rate. */
+  probe?: boolean;
+}
+
+/** [F103 evidence-override] A tier chosen from past outcomes instead of the matched one. */
+export interface Evidence {
+  tier: CascadeTier;
+  direction: "up" | "down";
+  /** The estimate that decided it (the matched tier's when going up, the cheaper tier's when going down), and its tries. */
+  p: number;
+  tries: number;
+  from: CascadeTier;
 }
 
 export interface RouteOptions {
@@ -45,6 +59,10 @@ export interface RouteOptions {
   instructionOnly?: boolean;
   /** [F94 subsystem-breadth] Send a short, unspecified build that spans several subsystems to the expert's plan. */
   breadth?: boolean;
+  /** [F103 evidence-override] Let this machine's record overrule a confident similarity match. */
+  evidence?: boolean;
+  /** [F103 evidence-override] Share of confident senior matches started on the worker instead (0 to 1; 0 is off). */
+  probe?: number;
 }
 
 export interface RouterInput {
@@ -132,6 +150,15 @@ export function clusterScores(text: string): Record<CascadeTier, number> {
 export interface Calibrated {
   /** The cheapest tier whose estimated success is at least the quality bar. */
   pick(cluster: CascadeTier | undefined): { tier: CascadeTier; p: number } | undefined;
+  /** [F103 evidence-override] Another tier than the matched one, when enough past runs say so. */
+  evidence?(cluster: CascadeTier | undefined, tier: CascadeTier): Evidence | undefined;
+}
+
+/** [F103 evidence-override] The same request always probes or never does, so a benchmark repeats. */
+export function probeDraw(text: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 10_000) / 10_000;
 }
 
 // [F89 instruction-scoring] Material pasted into a request: data, logs, quoted messages, code.
@@ -270,7 +297,20 @@ export function routeTier(input: RouterInput, calibrated?: Calibrated, options: 
     // Biased one step down from a grunt-only match on a request with code to write:
     // a short mechanical request is the grunt's, anything new is at least a worker's.
     const tier = best === "grunt" && (input.kind === "greenfield" || input.kind === "feature") ? "worker" : best;
-    return { ...base, tier, stage: "similarity", reasons: [...reasons, `most like ${best} work (${Math.round(confidence * 100)}% of the match)${tier !== best ? `, but it builds something: ${tier}` : ""}`] };
+    const matched = `most like ${best} work (${Math.round(confidence * 100)}% of the match)${tier !== best ? `, but it builds something: ${tier}` : ""}`;
+    // [F103 evidence-override] A confident match is still only a guess about words; enough runs of this kind of work overrule it.
+    const e = options.evidence ? calibrated?.evidence?.(best, tier) : undefined;
+    // Not down to the grunt for something to build: that rule stands whatever the record says.
+    if (e && !(e.tier === "grunt" && (input.kind === "greenfield" || input.kind === "feature"))) {
+      const why = e.direction === "up" ? `the ${e.from} tier passed about ${Math.round(e.p * 100)}% of ${e.tries} such tasks here: ${e.tier}` : `the ${e.tier} tier passed about ${Math.round(e.p * 100)}% of ${e.tries} such tasks here, so it starts there`;
+      return { ...base, tier: e.tier, stage: "calibrated", evidence: e, reasons: [...reasons, `${matched}; ${why}`] };
+    }
+    // [F103 evidence-override] Without a try now and then, the cheaper tier's rate on senior work is never learned.
+    // The cascade is the safety net: a worker that fails or says the task is beyond it climbs back.
+    if (tier === "senior" && (options.probe ?? 0) > 0 && probeDraw(text) < options.probe!) {
+      return { ...base, tier: "worker", stage: "similarity", probe: true, reasons: [...reasons, `${matched}; a probe starts it one tier lower, on the worker, to learn whether that is enough (the cascade climbs if not)`] };
+    }
+    return { ...base, tier, stage: "similarity", reasons: [...reasons, matched] };
   }
 
   // ---- 0C: calibrated, when similarity cannot decide.

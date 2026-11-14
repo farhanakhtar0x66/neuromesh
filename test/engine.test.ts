@@ -66,6 +66,8 @@ function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
 }
 
 const EXPERT = { backend: "fake", model: "fake-expert", tier: "expert" as const };
+// The tests of the escalation path itself: without F102's two side-by-side repair attempts before it (those are in test/phase2.test.ts).
+const NO_RACE = ["repair-race"];
 const TESTER = { backend: "fake", model: "fake-tester", tier: "worker" as const };
 
 function context(script: FakeScript, extra: Partial<EngineContext> = {}) {
@@ -481,7 +483,7 @@ test("with no-rebuild off, a stuck worker is escalated: the expert starts clean 
     return report("SECRET-WORKER-REASONING");
   });
   process.env.NEUROMESH_DISABLE = "no-rebuild";
-  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 3 }) }, ctx).finally(() => delete process.env.NEUROMESH_DISABLE);
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 3, disable: NO_RACE }) }, ctx).finally(() => delete process.env.NEUROMESH_DISABLE);
 
   assert.equal(state.status, "finished", state.reason);
   assert.equal(state.outcome?.checks, "passed");
@@ -508,7 +510,7 @@ test("a stuck worker first gets the expert's advice and fixes the task itself", 
     return report("tried");
   });
   const state = await startRun(
-    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true }) },
+    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, disable: NO_RACE }) },
     ctx,
   );
   assert.equal(state.status, "finished", state.reason);
@@ -567,7 +569,7 @@ test("only a stuck top rung reaches the expert", async () => {
     write(req.cwd, "fixed.txt", /Diagnosis:/.test(req.prompt) ? "ok" : "nope");
     return report("tried");
   });
-  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, workerLadder: LADDER });
+  const p = preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, workerLadder: LADDER, disable: NO_RACE });
   const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: p }, ctx);
   assert.equal(state.status, "finished", state.reason);
   assert.equal(state.outcome?.checks, "passed");
@@ -593,7 +595,7 @@ test("when the advice does not help, the expert takes the task over", async () =
     return report("tried");
   });
   const state = await startRun(
-    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true }) },
+    { cwd: repo, prompt: "make the test pass", preset: preset({ escalation: [EXPERT] }, { repairs: 1, advise: true, disable: NO_RACE }) },
     ctx,
   );
   assert.equal(state.status, "finished", state.reason);

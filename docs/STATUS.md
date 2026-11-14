@@ -327,8 +327,24 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     one run per configuration against a contaminated Opus baseline. Not
     tagged as a release.
 
+37. **A friend's phase-2 review, and F100 to F104 (2026-11-14, on
+    `neuromesh-research`).** Read against the code, two of its four upgrades
+    were partly there already (F12 is the repository map, F81 the calibration
+    loop), and its token argument does not fit the benchmark (the prompts
+    start in empty folders). Built from what held up: per-task line ranges
+    (F100), tests written without seeing the code, bounded to one cheap turn
+    when the test itself is wrong (F101), two side-by-side repairs before a
+    dearer tier (F102), the calibration table overruling a confident match
+    (F103), and cheap turns moving to another plan when the Claude window is
+    low (F104, preset `cascade-hybrid`). All checked on the fake backend and
+    the fault harness only; none run live. See `docs/21-phase-2-review.md`.
+
 ## Next steps
 
+0a. F100 to F104 are on `neuromesh-research` and unmeasured. The four live
+   checks, cheapest first, are at the end of `docs/21-phase-2-review.md`; the
+   one that answers the review's main claim is `scope-test-2` with blind
+   tests on. They stay off `neuromesh-testing` until at least that one is run.
 0. Next: the order of work in `docs/17-benchmark.md` (finish the single-Opus
    baseline, Haiku alone, plan-first, then one-answer workers on the same
    specs). Run it from a short session on Opus 5.5, idle while an eval runs.

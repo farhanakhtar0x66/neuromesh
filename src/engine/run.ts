@@ -18,7 +18,8 @@
 // next model in the role's list takes over; when none is left the run pauses.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
@@ -29,13 +30,15 @@ import { BYTECODE, ensureEnv, envNote, envVars, environmentTrouble, missingModul
 import { observedText } from "./observed.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
-import { buildPacket } from "../context/packet.ts";
+import { TEST_PATH, buildPacket, startHere, trackedFiles } from "../context/packet.ts";
+import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../checks/blind.ts";
+import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
 import { estimateCost } from "../usage/prices.ts";
 import { buildBrief, detectRuntimes, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief, Spec } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
-import { git } from "../workspace/git.ts";
+import { git, tryGit } from "../workspace/git.ts";
 import {
   commitAll,
   createDetachedWorktree,
@@ -57,6 +60,12 @@ import { coolingModels, recordCooldown } from "./cooldown.ts";
 import { attemptFrom, newHistory, observe } from "./progress.ts";
 import {
   ADVICE_SCHEMA,
+  BLIND_SCHEMA,
+  blindFinding,
+  blindPrompt,
+  parseBlind,
+  RACE_HINTS,
+  racePrompt,
   climbPrompt,
   advisedFixPrompt,
   advisePrompt,
@@ -311,12 +320,27 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       maxEscalations: c.maxEscalations ?? 2,
       shadowRate: c.shadowRate ?? DEFAULT_SHADOW_RATE,
       alpha: c.alpha ?? DEFAULT_ALPHA,
+      // [F103 evidence-override]
+      ...(c.probe ? { probe: c.probe } : {}),
     };
     // [F80 tier-router] Tier 0: which tier the request starts on, with no model call.
     if (brief && isOn("tier-router")) {
       try {
         const b = brief;
-        const table = isOn("route-calibration") ? calibrated(loadCalibration(ctx.home), cascade.alpha) : undefined;
+        const learned = isOn("route-calibration") ? calibrated(loadCalibration(ctx.home), cascade.alpha) : undefined;
+        // [F103 evidence-override] Its lookup is its own feature: if it fails, Tier 0 goes on with the match alone.
+        const table = learned && {
+          ...learned,
+          evidence: (cluster: CascadeTier | undefined, tier: CascadeTier) => {
+            try {
+              return inFeature("evidence-override", () => learned.evidence?.(cluster, tier));
+            } catch (error) {
+              featureErrors.push(failure(error, "evidence-override"));
+              disable("evidence-override");
+              return undefined;
+            }
+          },
+        };
         cascade.route = inFeature("tier-router", () =>
           routeTier(
             {
@@ -327,7 +351,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
             },
             table,
             // [F89 instruction-scoring]
-            { instructionOnly: isOn("instruction-scoring"), breadth: isOn("subsystem-breadth") },
+            // [F103 evidence-override] The table may overrule a confident match; a preset may also ask for probes.
+            { instructionOnly: isOn("instruction-scoring"), breadth: isOn("subsystem-breadth"), evidence: isOn("evidence-override"), probe: isOn("evidence-override") ? c.probe : undefined },
           ),
         );
         b.staffing.reasons.push(`Tier 0: ${cascade.route.tier} (${cascade.route.reasons.join("; ")})`);
@@ -382,6 +407,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     seniorRung: senior ? grunt.length + workerRungs.length : undefined,
     workerRung: grunt.length > 0 && upper ? grunt.length : undefined,
     cascade,
+    // [F104 quota-shift] Not with a worker chosen by hand: the person picked that model.
+    quotaShift: Object.keys(override).length === 0 ? preset.quotaShift : undefined,
     direct: preset.direct,
     turnTimeoutMs: ctx.turnTimeoutMs ?? preset.turnTimeoutMinutes * 60_000,
     base: follow?.base ?? repo.head,
@@ -415,6 +442,11 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   });
   for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
   if (cascade?.route) log.emit("route.tier", { feature: cascade.route.domains ? "F94" : "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons, ...(cascade.route.domains ? { domains: cascade.route.domains } : {}) });
+  // [F103 evidence-override]
+  if (cascade?.route?.evidence || cascade?.route?.probe) {
+    const r = cascade.route;
+    log.emit("route.evidence", { feature: "F103", tier: r.tier, cluster: r.cluster, ...(r.evidence ? { direction: r.evidence.direction, from: r.evidence.from, p: r.evidence.p, tries: r.evidence.tries } : { probe: true }) });
+  }
   // [F93 senior-first-expert]
   if (cascade?.route?.tier === "expert" && cascade.route.stage !== "rules" && isOn("senior-first-expert")) {
     log.emit("note", { feature: "F93", message: "Tier 0 chose the expert for a request that is not large: the senior builds it, and the expert advises if it escalates." });
@@ -904,10 +936,23 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
   }
   let last: AgentResult | undefined;
   let lastConfig: RoleConfig | undefined;
-  const candidates = (): RoleConfig[] =>
-    req.chain ? req.chain.filter((c) => !state.exhausted.includes(modelKey(c))) : roleChain(state, req.role);
+  const candidates = (): RoleConfig[] => {
+    const own = req.chain ? req.chain.filter((c) => !state.exhausted.includes(modelKey(c))) : roleChain(state, req.role);
+    // [F104 quota-shift] The plan is running low: this cheap turn goes to another plan's model first.
+    const moved = quotaShiftFor(run, req, own);
+    return moved ? [...moved.to, ...own] : own;
+  };
   while (true) {
     const config = candidates()[0];
+    // [F104 quota-shift] Said once per run, when the first turn moves.
+    if (config && state.quotaShift && !state.quotaShifted && state.quotaShift.to.some((c) => modelKey(c) === modelKey(config))) {
+      const moved = quotaShiftFor(run, req, req.chain ?? roleChain(state, req.role));
+      if (moved) {
+        state.quotaShifted = true;
+        saveState(state);
+        log.emit("quota.shifted", { feature: "F104", backend: state.quotaShift.backend, window: state.quotaShift.window, used: moved.used, above: state.quotaShift.above, to: modelKey(config), role: req.role });
+      }
+    }
     if (!config) {
       // A role the preset never gave a model is not a quota limit: the caller goes on without it.
       const configured = (req.chain ?? state.roles[req.role] ?? (req.role === "escalation" ? state.roles.orchestrator : undefined) ?? []).length > 0;
@@ -1054,6 +1099,11 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     result = { stop: "error", finalText: "", usage: {}, durationMs: Date.now() - Date.parse(startedAt), exitCode: null, detail: `the ${backend.id} adapter failed: ${error instanceof Error ? error.message : String(error)}` };
   }
 
+  // [F104 quota-shift] The tool's latest reading of its subscription windows, kept for this run's next turn and the next run.
+  if (result.quotaUsed && isOn("quota-shift")) {
+    const used = result.quotaUsed;
+    optional(run, "quota-shift", undefined, () => recordQuota(run.ctx.home, config.backend, used, result.quotaResets));
+  }
   if (cut && !run.signal.aborted) result = { ...result, stop: "error", detail: BUDGET_CUT };
   // [F83 early-exit]
   if (req.exited && !cut && !run.signal.aborted) result = { ...result, stop: "error", detail: `${EARLY_EXIT}: ${req.exited.reason}` };
@@ -1879,6 +1929,303 @@ function healTask(run: RunCtx, task: TaskState): void {
   log.emit("worktree.healed", { feature: "F73", task: task.id, restored: healed.restored, fixed: healed.fixed });
 }
 
+/** The run's one task is the request itself (no plan divided it). */
+function wholeRequest(state: RunState, task: TaskState): boolean {
+  return state.tasks.length === 1 && task.brief === state.prompt;
+}
+
+/**
+ * [F104 quota-shift] The models this cheap turn goes to first, when the
+ * subscription it would spend is at or past the preset's threshold. Senior and
+ * expert turns stay where they are: they are what the plan is being kept for.
+ * An unknown reading moves nothing.
+ */
+function quotaShiftFor(run: RunCtx, req: TurnRequest, own: RoleConfig[]): { to: RoleConfig[]; used: number } | undefined {
+  const { state, ctx } = run;
+  const shift = state.quotaShift;
+  if (!shift || !isOn("quota-shift")) return undefined;
+  if (req.role !== "worker" && req.role !== "tester") return undefined;
+  // A turn that only makes sense inside its own session (the stuck developer's diagnosis) cannot move.
+  if (req.resume?.sessionId && !req.freshPrompt) return undefined;
+  const first = own[0];
+  if (!first || first.backend !== shift.backend || tierOf(req.role, first) === "expert") return undefined;
+  if (req.role === "worker" && state.workerLadder && state.seniorRung !== undefined) {
+    const at = state.workerLadder.findIndex((c, n) => n >= (req.rungBase ?? 0) && modelKey(c) === modelKey(first));
+    if (tierAtRung(state, at >= 0 ? at : req.rungBase) === "senior") return undefined;
+  }
+  const now = optional(run, "quota-shift", undefined, () => shiftNow(shift, loadQuota(ctx.home)[shift.backend]));
+  if (!now) return undefined;
+  const to = shift.to.filter((c) => ctx.backends[c.backend] !== undefined && !state.exhausted.includes(modelKey(c)) && (!req.direct || ctx.backends[c.backend]?.direct === true));
+  return to.length > 0 ? { to, used: now.used } : undefined;
+}
+
+/** [F102 repair-race] The models of the task's own tier, from its rung up: a racer never runs on a dearer tier. */
+function raceChain(state: RunState, task: TaskState): RoleConfig[] {
+  const ladder = state.workerLadder;
+  const own = ladder ? ladder.slice(task.rung ?? 0, nextTierRung(state, task.rung) ?? ladder.length) : (state.roles.worker ?? []);
+  return own.filter((c) => !state.exhausted.includes(modelKey(c)));
+}
+
+/**
+ * [F102 repair-race] Whether a task that is out of repairs gets two fresh
+ * attempts side by side before it costs more. Only where the project's checks
+ * can say which attempt is right, once per task, and only at the point where
+ * the next step is a dearer tier or the expert.
+ */
+function raceApplies(state: RunState, task: TaskState): boolean {
+  if (!isOn("repair-race") || task.raced || task.escalated || task.advised || task.owner === "expert") return false;
+  if (state.checks.length === 0 || gruntGate(state, task)) return false;
+  if (!canClimb(state, task) && !canEscalate(state)) return false;
+  if (canClimb(state, task) && tierAtRung(state, (task.rung ?? 0) + 1) === tierAtRung(state, task.rung)) return false;
+  return raceChain(state, task).length > 0;
+}
+
+/** A throwaway copy is removed whatever was done to it. */
+function dropCopy(repo: string, dir: string): void {
+  removeDetachedWorktree(repo, dir);
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true });
+    tryGit(repo, "worktree", "prune");
+  }
+}
+
+/**
+ * [F102 repair-race] Two fresh developers of the task's own tier repair the
+ * stuck work side by side, each in its own copy and each told to go about it
+ * differently. The project's checks pick the winner; with one, its change
+ * becomes the task's and the escalation does not happen. With none, the task
+ * goes on to where it was headed, and nothing of the copies is kept.
+ *
+ * A stopped race (a limit, Ctrl-C, a crash) is run again from the start on
+ * resume: nothing of it is the task's until a winner is chosen.
+ */
+async function raceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const why = task.escalationReason ?? "out of repair rounds";
+  const onward = (): Stop | undefined => {
+    task.raced = true;
+    saveState(state);
+    if (canClimb(state, task) || canEscalate(state)) {
+      onStuck(run, task, why);
+      return undefined;
+    }
+    return failTask(run, task, `checks still fail (${why})`);
+  };
+  if (!isOn("repair-race")) return onward();
+  const lanes = RACE_HINTS.map((hint, i) => ({ id: "ab"[i]!, hint, dir: join(state.dir, "tasks", task.id, `race-${"ab"[i]!}`), prepared: [] as string[], ok: false, size: 0, failures: "" }));
+  try {
+    return await inFeature("repair-race", async (): Promise<Stop | undefined> => {
+    const chain = raceChain(state, task);
+    const candidate = commitAll(task.worktree, `neuromesh candidate (before the race): ${task.title}`, task.prepared);
+    const env = isOn("work-env") ? envNote(task.worktree) : "";
+    for (const lane of lanes) {
+      createDetachedWorktree(state.repo, lane.dir, candidate);
+      lane.prepared = prepareWorktree(state.repo, lane.dir);
+      await prepareEnv(run, lane.dir, lane.prepared, task.id);
+    }
+    log.emit("race.started", { feature: "F102", task: task.id, lanes: lanes.length, model: chain[0] ? modelKey(chain[0]) : undefined, reason: why });
+    const turns = await Promise.all(
+      lanes.map((lane) =>
+        turn(run, { key: `${task.id}-race-${lane.id}`, role: "worker", kind: "race", task: task.id, round: task.round, cwd: lane.dir, prompt: racePrompt(state, task, lane.hint) + env, access: "write", schema: REPORT_SCHEMA, chain, rungBase: task.rung }),
+      ),
+    );
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+    const stopped = turns.find(({ result }) => result.stop === "cancelled" || result.stop === "quota" || signedOut(result));
+    if (stopped) return stopFor(stopped.result, "worker");
+    // The checks, one copy at a time: two test suites at once would slow and disturb each other.
+    for (const [i, lane] of lanes.entries()) {
+      if (turns[i]!.result.stop !== "done") {
+        lane.failures = `the developer stopped: ${turns[i]!.result.stop}`;
+        continue;
+      }
+      try {
+        await prepareEnv(run, lane.dir, lane.prepared, task.id);
+        const results = (await check(run, lane.dir, `${task.id}-race-${lane.id}`)).filter((r) => r.status !== "unavailable");
+        if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+        const diff = snapshot(lane.dir, task.base!, lane.prepared).patch;
+        // [F95 stub-gate] A stand-in for an implementation does not win a race either.
+        const stubs = isOn("stub-gate") ? findStubs(diff) : [];
+        const failing = results.filter((r) => r.status === "failed" || r.status === "timeout" || r.status === "cancelled");
+        const regressions = failing.filter((r) => state.baseline?.find((b) => b.name === r.name)?.status !== "failed");
+        lane.ok = results.length > 0 && stubs.length === 0 && regressions.length === 0 && (!isLastOpen(state, task) || failing.length === 0);
+        lane.size = diff.length;
+        lane.failures = stubs.length > 0 ? describeStubs(stubs) : failureSummary(results, state.baseline);
+      } catch (error) {
+        // The copy was left unusable (deleted, a lock, a broken checkout): that attempt is lost, the other may still win.
+        lane.failures = `its copy could not be checked: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
+      }
+    }
+    // The smaller change wins when both pass: it is the one more likely to have touched only what was wrong.
+    for (const lane of lanes.filter((l) => l.ok).sort((a, b) => a.size - b.size)) {
+      try {
+        const sha = commitAll(lane.dir, `neuromesh race ${lane.id}: ${task.title}`, lane.prepared);
+        git(task.worktree, "merge", "-q", "--ff-only", sha);
+      } catch {
+        continue;
+      }
+      task.raced = true;
+      task.sessionId = undefined;
+      task.sessionModel = undefined;
+      task.progress = newHistory();
+      // The task's own checks decide as for any other change (the stub gate, the other tasks' work, the review).
+      task.step = "checks";
+      saveState(state);
+      log.emit("race.finished", { feature: "F102", task: task.id, winner: lane.id, passed: lanes.filter((l) => l.ok).length, lanes: lanes.length });
+      return undefined;
+    }
+    log.emit("race.finished", { feature: "F102", task: task.id, passed: 0, lanes: lanes.length });
+    task.history.push({ diff: diffOf(task), failures: `Two fresh attempts at the repair, made side by side, also failed.\n${lanes.map((l) => `Attempt ${l.id}: ${l.failures.slice(0, 1_500)}`).join("\n")}` });
+    return onward();
+    });
+  } catch (error) {
+    // The race itself broke (a copy could not be made): the task goes on as it would have without it.
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+    featureFailed(run, error, "repair-race");
+    return onward();
+  } finally {
+    for (const lane of lanes) dropCopy(state.repo, lane.dir);
+  }
+}
+
+/** [F101 blind-tests] The blind test files now in the task's folder. */
+function blindFiles(task: TaskState): string[] {
+  return task.blind?.files ?? [];
+}
+
+/** [F101 blind-tests] The cheapest developers that are not grunts or seniors: who writes the blind tests. */
+function blindChain(state: RunState): RoleConfig[] {
+  const ladder = state.workerLadder;
+  const own = ladder ? ladder.slice(state.workerRung ?? 0, state.seniorRung ?? ladder.length) : (state.roles.worker ?? []);
+  return own.filter((c) => !state.exhausted.includes(modelKey(c)));
+}
+
+/**
+ * [F101 blind-tests] Whether work that has just passed the project's checks is
+ * also probed by tests written without seeing it: once per task, for work on
+ * state, parsing, limits or an algorithm, where there is a check command to run
+ * the tests and code (not only tests) was changed. Not for the expert's own
+ * work: its fix turn would be an expert turn.
+ */
+function blindApplies(run: RunCtx, task: TaskState, changed: string[]): boolean {
+  const { state } = run;
+  if (!isOn("blind-tests") || task.blindDone || state.checks.length === 0) return false;
+  if (task.escalated || task.owner === "expert" || gruntGate(state, task)) return false;
+  if (!(task.latest ?? []).some((r) => r.status === "passed") || !changed.some((f) => !TEST_PATH.test(f))) return false;
+  if (blindChain(state).length === 0) return false;
+  return wantsBlindTests(wholeRequest(state, task) ? (state.request ?? state.prompt) : `${task.title} ${task.brief}`);
+}
+
+/**
+ * [F101 blind-tests] A cheap developer writes tests from the task and the
+ * signatures of what was built, in a folder that holds nothing of the code.
+ * The engine runs them on a copy of the work:
+ *   all pass       nothing changes, and the tests are not kept;
+ *   cannot load    the test guessed a name that is not there: dropped;
+ *   some fail      the tests go into the task's folder and the developer gets
+ *                  one turn to judge each (fix the code, or correct the test).
+ * After that one turn the checks decide; blind tests that still fail are taken
+ * out again (the checks step), so a wrong test costs one cheap turn at most.
+ */
+async function blindStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const next = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
+    task.blindDone = true;
+    task.step = wantsTester(state, task) ? "test" : "merge";
+    saveState(state);
+    log.emit("blind.tests", { feature: "F101", task: task.id, outcome, ...extra });
+    return undefined;
+  };
+  // Blind tests an earlier, cut-short pass through this step put into the folder: out, before anything is committed or checked.
+  if (task.blind) {
+    for (const f of task.blind.files) rmSync(join(task.worktree, f), { force: true });
+    task.blind = undefined;
+    saveState(state);
+  }
+  if (!isOn("blind-tests")) return next("skipped");
+  try {
+    return await inFeature("blind-tests", () => blindBody(run, task, next));
+  } catch (error) {
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+    featureFailed(run, error, "blind-tests");
+    // Whatever it had put into the folder goes out again: the work passed its checks without it.
+    for (const f of blindFiles(task)) rmSync(join(task.worktree, f), { force: true });
+    task.blind = undefined;
+    return next("skipped");
+  }
+}
+
+async function blindBody(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined): Promise<Stop | undefined> {
+  const { state, ctx, log } = run;
+  const chain = blindChain(state);
+  const signatures = signaturesOf(task.worktree, (task.files ?? []).map((f) => f.path));
+  if (signatures.files.length === 0 || chain.length === 0) return next("skipped");
+  // An empty folder of its own, away from the project and from the run's folders (the task's code is in one of
+  // those): a writer that has tools finds nothing of the code beside it, and is not told where it is.
+  const scratch = mkdtempSync(join(tmpdir(), "neuromesh-blind-"));
+  let result: AgentResult;
+  try {
+    const existing = trackedFiles(task.worktree).filter((f) => TEST_PATH.test(f)).slice(0, 12);
+    ({ result } = await turn(run, {
+      key: `${task.id}-blind`,
+      role: "tester",
+      kind: "blind",
+      task: task.id,
+      round: task.round,
+      cwd: scratch,
+      prompt: blindPrompt(state, task, signatures.text, existing),
+      access: "read-only",
+      schema: BLIND_SCHEMA,
+      direct: ctx.backends[chain[0]!.backend]?.direct === true ? true : undefined,
+      chain,
+      timeoutMs: 10 * 60_000,
+    }));
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+  if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "tester");
+  const answer = result.stop === "done" ? parseBlind(result) : undefined;
+  const tests = (answer?.tests ?? []).filter((t) => blindPathOk(task.worktree, t.path));
+  if (tests.length === 0) return next("none", { stop: result.stop });
+
+  const candidate = commitAll(task.worktree, `neuromesh candidate: ${task.title}`, task.prepared);
+  const copy = join(state.dir, "tasks", task.id, "tester");
+  let written: string[] = [];
+  let results: CheckResult[] = [];
+  try {
+    createDetachedWorktree(state.repo, copy, candidate);
+    const prepared = prepareWorktree(state.repo, copy);
+    await prepareEnv(run, copy, prepared, task.id);
+    written = writeDirect(copy, tests, prepared).written;
+    if (written.length > 0) results = await check(run, copy, `${task.id}-blind`);
+  } finally {
+    dropCopy(state.repo, copy);
+  }
+  if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+  if (written.length === 0) return next("none");
+  // Only a check that passed on the work as it was can be failing because of the new tests.
+  const failing = results.filter((r) => (r.status === "failed" || r.status === "timeout") && task.latest?.find((b) => b.name === r.name)?.status === "passed");
+  if (failing.length === 0) return next("passed", { files: written });
+  const output = failing.map((r) => r.tail).join("\n");
+  if (brokenTest(output)) return next("broken", { files: written, tail: output.slice(-600) });
+  if (task.round >= repairLimit(state, task)) {
+    log.emit("note", { feature: "F101", message: `Task ${task.id}: blind tests fail (${written.join(", ")}), and no repair round is left to judge them; recorded, not gating.` });
+    return next("recorded", { files: written, tail: output.slice(-600) });
+  }
+  // Into the task's own folder, for the developer's one turn with them. Recorded first: if the engine stops between
+  // the writing and the turn, the next pass through this step knows what to take out.
+  task.blind = { files: written };
+  saveState(state);
+  const put = writeDirect(task.worktree, tests, task.prepared).written;
+  const finding = blindFinding(put, failing[0]!.command, output);
+  task.blind = { files: put };
+  task.blindDone = true;
+  task.verdict = { verdict: "fail", summary: `Blind tests fail: ${answer?.summary ?? ""}`.trim(), findings: [finding] };
+  task.history.push({ diff: diffOf(task), failures: "", findings: [finding] });
+  log.emit("blind.tests", { feature: "F101", task: task.id, outcome: "failed", files: put, checks: failing.map((r) => r.name), tail: output.slice(-600) });
+  nextRound(run, task, "review-fix");
+  return undefined;
+}
+
 async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
   const { state, log } = run;
   while (task.status === "active") {
@@ -1891,6 +2238,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // [F54 work-env] Before the first turn, so the worker can run what it writes.
       await prepareEnv(run, task.worktree, task.prepared, task.id);
       task.step = "agent";
+      // [F100 start-here] Where this task most likely begins, from its own words; nothing when nothing matches by name.
+      if (isOn("start-here") && task.startHere === undefined) {
+        const lead = optional(run, "start-here", undefined, () => startHere(task.worktree, wholeRequest(state, task) ? (state.request ?? state.prompt) : `${task.title}\n${task.brief}`));
+        if (lead) {
+          task.startHere = lead.text;
+          log.emit("context.start-here", { feature: "F100", task: task.id, files: lead.files, chars: lead.text.length });
+        }
+      }
       // [F69 budget-handoff]
       if (task.owner === "expert" && isOn("budget-handoff")) {
         // A plan may give the expert a part in a preset that has no expert at all.
@@ -2087,6 +2442,21 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // [F75 sync-before-checks] Another task merged while these checks ran: a failure may be
       // only its missing work, so the checks run again on the program as it is now.
       if (!ok && testedAt !== undefined && isOn("sync-before-checks") && headCommit(state.worktree) !== testedAt) continue;
+      // [F101 blind-tests] The developer had its one turn with the blind tests and the checks still fail with them in
+      // the folder. The work passed the project's own checks before they came, and a blind test may be the one that is
+      // wrong, so they are taken out and recorded; they never cost more than that one turn.
+      if (!ok && task.blind && !task.blind.dropped) {
+        const left = task.blind.files.filter((f) => existsSync(join(task.worktree, f)));
+        task.blind.dropped = true;
+        if (left.length > 0) {
+          for (const f of left) rmSync(join(task.worktree, f), { force: true });
+          saveState(state);
+          log.emit("blind.dropped", { feature: "F101", task: task.id, files: left, failing: failing.map((r) => ({ name: r.name, tail: r.tail.slice(-600) })) });
+          log.emit("note", { feature: "F101", message: `Task ${task.id}: the blind tests still fail after the developer's turn with them (${left.join(", ")}); they are removed and recorded, and do not gate the task.` });
+          continue;
+        }
+        saveState(state);
+      }
       // [F56 env-blocked] An environment problem is not the worker's failure and never goes to the expert.
       if (!ok && isOn("env-blocked")) {
         const problem = environmentProblem(task, results, installFailed);
@@ -2106,7 +2476,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       const decision = observe(task.progress, attemptFrom(failing, diff), ok);
       if (ok) {
-        task.step = wantsTester(state, task) ? "test" : "merge";
+        // [F101 blind-tests] Work on state, parsing, limits or an algorithm is first probed by tests written without seeing it.
+        task.step = blindApplies(run, task, files.map((f) => f.path)) ? "blind" : wantsTester(state, task) ? "test" : "merge";
         saveState(state);
         continue;
       }
@@ -2125,6 +2496,13 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       if (decision === "oscillated" || decision === "no-progress" || task.round >= repairLimit(state, task)) {
         const why = decision === "oscillated" ? "the worker repeated an earlier failed state" : decision === "no-progress" ? "two attempts without progress" : "out of repair rounds";
+        // [F102 repair-race] Before a dearer tier or the expert: two fresh attempts side by side.
+        if (raceApplies(state, task)) {
+          task.escalationReason = why;
+          task.step = "race";
+          saveState(state);
+          continue;
+        }
         if (canClimb(state, task) || canEscalate(state)) {
           onStuck(run, task, why);
           continue;
@@ -2132,6 +2510,20 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         return failTask(run, task, `checks still fail (${why})`);
       }
       nextRound(run, task, "repair");
+      continue;
+    }
+
+    // [F102 repair-race]
+    if (task.step === "race") {
+      const stop = await raceStep(run, task);
+      if (stop) return stop;
+      continue;
+    }
+
+    // [F101 blind-tests]
+    if (task.step === "blind") {
+      const stop = await blindStep(run, task);
+      if (stop) return stop;
       continue;
     }
 
