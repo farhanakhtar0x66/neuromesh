@@ -573,6 +573,18 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         }
       }
     }
+    // A first turn that stopped before changing anything (quota or a revoked login: here they always
+    // come before the agent writes; an interrupt may come after) is
+    // tried again as a first turn: a "continue" turn has no confidence preamble and no one-answer mode.
+    // Seen in a real run (2026-11-14): a resume after a revoked login skipped the F96 scope question.
+    for (const [i, a] of state.attempts.entries()) {
+      if (a.role !== "worker" || a.kind !== "initial" || !a.task || !["quota", "auth"].includes(a.stop)) continue;
+      const next = state.attempts.slice(i + 1).find((b) => b.task === a.task && b.role === "worker");
+      if (next?.kind === "continue") {
+        broke(`task ${a.task}: a first turn stopped (${a.stop}) before changing anything, and the next was a "continue" turn`);
+        break;
+      }
+    }
     // [F82 grunt-tier] [F83 early-exit] The grunt's gate is the checks, never its own word.
     if (gruntAsked) broke("a grunt turn was asked for a confidence preamble");
     // [F80-F86] A task's tier on the ladder only goes up.

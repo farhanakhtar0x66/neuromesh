@@ -9,7 +9,7 @@ import { after, test } from "node:test";
 import { createFakeBackend } from "../src/backends/fake.ts";
 import type { FakeScript } from "../src/backends/fake.ts";
 import type { AgentRequest } from "../src/backends/types.ts";
-import { startRun } from "../src/engine/run.ts";
+import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
 import type { Preset } from "../src/presets/presets.ts";
@@ -486,4 +486,23 @@ test("a short request spanning several subsystems is planned by the expert from 
   assert.ok((route?.domains as string[]).length >= 3);
   assert.ok(fake.calls.some((c) => c.model === "fake-expert" && "tasks" in props(c)), "the expert planned it");
   assert.equal(fake.calls.filter((c) => c.model === "fake-expert" && isBuild(c)).length, 0);
+});
+
+test("a first turn stopped by a revoked login is asked again as a first turn after the resume, preamble and all (F97)", async () => {
+  let signedIn = false;
+  const { ctx, fake } = context((req) => {
+    if (!isBuild(req)) return report("n/a");
+    if (!signedIn) return { stop: "auth", detail: "Failed to authenticate: OAuth token revoked. 401" };
+    preamble(req, 0.9, false);
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  const paused = await startRun({ cwd: repo(), prompt: "Add a --verbose flag to the CLI and unit tests for it.", preset: preset() }, ctx);
+  assert.equal(paused.status, "paused", paused.reason);
+  signedIn = true;
+  const state = await resumeRun(paused, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const builds = state.attempts.filter((a) => a.task === "main" && a.role === "worker");
+  assert.deepEqual(builds.map((a) => a.kind), ["initial", "initial"]);
+  assert.match(fake.calls.filter(isBuild).at(-1)!.prompt, /very first message/, "the resumed turn has its preamble");
 });

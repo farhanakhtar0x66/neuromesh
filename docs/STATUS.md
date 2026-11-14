@@ -299,6 +299,11 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     before. Not run live (owner's choice). The one live question is whether
     Sonnet uses `scope: true`; one run of the agent prompt with
     `--disable subsystem-breadth` would show it.
+33. **A resumed first turn keeps its preamble (F97, 2026-11-14).** The first
+    live F96 check was paused by a revoked Claude login; on resume Sonnet's turn
+    became a "continue" turn with no preamble, so it built the 5-module agent
+    alone ($0.14, tests passed, rated 4) without being asked about scope. Added
+    to the fault harness (4 of 300 seeds broke it), then fixed.
 
 ## Next steps
 

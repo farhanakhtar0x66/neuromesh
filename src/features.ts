@@ -893,6 +893,15 @@ export const FEATURES: Feature[] = [
     what: "Only with the cascade, and only for the run's one unplanned task (a planned part's design is already in its brief). The worker's or senior's preamble may say scope: true, meaning the work needs 4 or more new source files or modules, interfaces or formats the request does not specify. The turn stops at once and the expert divides the task (F68's split, blueprint-only with F85), instead of a stronger builder taking it whole or the expert only advising. The safety net for a request Tier 0 misjudged (F94). If the split is not usable, the developer starts the task fresh.",
     optional: true,
   },
+  {
+    id: "F97",
+    key: "retry-first-turn",
+    name: "A first turn that stopped before changing anything is tried again as a first turn",
+    added: "2026-11-14",
+    files: ["src/engine/run.ts (leftChanges, the turn-stopped step, resumeRun)"],
+    what: "When a task's first turn stops on quota, a revoked login or an interrupt, or the engine dies during it, the next turn used to be a 'continue' turn in case files had changed. A continue turn gets no confidence preamble (F83, F96) and no one-answer mode (F77, F90). Now it is a continue turn only if the task's folder holds changes; otherwise the first turn is asked again. Seen in a real run: resumed after a revoked Claude login, Sonnet's turn on the agent request had no preamble, so the F96 scope question was never asked. Off, as before.",
+    optional: false,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

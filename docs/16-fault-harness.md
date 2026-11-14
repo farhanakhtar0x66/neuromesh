@@ -60,6 +60,9 @@ Each seed draws:
   task fails, and not one extra turn is spent (no repair, no review fix, no
   climb, no advice, no expert).
 - The same after a kill and a resume: good agents still finish the work.
+- A first turn that stopped on quota or a revoked login before changing
+  anything is asked again as a first turn, not continued (F97; added after a
+  real run, 2026-11-14, where a resume skipped the confidence preamble).
 
 ## What it found (first 320 seeds: 39 broke a rule)
 

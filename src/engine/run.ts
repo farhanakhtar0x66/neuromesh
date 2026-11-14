@@ -453,7 +453,7 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
     void _pid;
     state.attempts.push({ ...rest, stop: "cancelled", durationMs: Date.now() - Date.parse(f.startedAt), usage: {}, detail: "the engine stopped during this turn" });
     const task = state.tasks.find((t) => t.id === key);
-    if (task && task.step === "agent") task.next = "continue";
+    if (task && task.step === "agent" && (task.next !== "initial" || leftChanges(task))) task.next = "continue";
   }
   state.inFlight = {};
 
@@ -2018,8 +2018,9 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         continue;
       }
       if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {
-        // The turn may have changed files before it stopped; the next one checks first.
-        if (task.next === "initial" && !task.escalated) task.next = "continue";
+        // The turn may have changed files before it stopped; the next one checks first. One that changed
+        // nothing is tried again as a first turn, with its preamble and one-answer mode. [F97 retry-first-turn]
+        if (task.next === "initial" && !task.escalated && leftChanges(task)) task.next = "continue";
         saveState(state);
         return stopFor(result, role);
       }
@@ -2471,6 +2472,12 @@ function failTask(run: RunCtx, task: TaskState, reason: string, options: { keepW
   saveState(state);
   log.emit("task.failed", { task: task.id, reason });
   return options.stop ? { status: "failed", reason, failure: options.failure ?? "agent" } : undefined;
+}
+
+/** Whether the task's folder holds work since it started (a stopped turn left something to continue from). */
+function leftChanges(task: TaskState): boolean {
+  // [F97 retry-first-turn] Off, every stopped first turn is continued, as before.
+  return !isOn("retry-first-turn") || diffOf(task) !== "";
 }
 
 function diffOf(task: TaskState): string {

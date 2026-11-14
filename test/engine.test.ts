@@ -156,7 +156,7 @@ test("the stagnation breaker stops a worker repeating itself; with no expert the
   assert.equal(applyRun(state, { force: true }).files, 1);
 });
 
-test("a subscription limit pauses the run; resume continues with a fresh session", async () => {
+test("a subscription limit pauses the run; resume asks the untouched first turn again (F97)", async () => {
   const repo = fixableRepo();
   const first = context(() => ({ stop: "quota", detail: "You've hit your usage limit." }));
   const paused = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, first.ctx);
@@ -172,6 +172,29 @@ test("a subscription limit pauses the run; resume continues with a fresh session
   const resumed = await resumeRun(loadState(paused.dir), { ...first.ctx, backends: { fake: second } });
   assert.equal(resumed.status, "finished");
   assert.equal(resumed.outcome?.checks, "passed");
+  assert.equal(second.calls[0]!.resumeSessionId, undefined);
+  assert.doesNotMatch(second.calls[0]!.prompt, /interrupted part way/, "nothing was changed, so nothing is continued");
+  assert.deepEqual(resumed.attempts.map((a) => [a.kind, a.stop]), [
+    ["initial", "quota"],
+    ["initial", "done"],
+  ]);
+});
+
+test("a subscription limit after the turn changed files: resume continues it with a fresh session", async () => {
+  const repo = fixableRepo();
+  const first = context((req) => {
+    write(req.cwd, "fixed.txt", "half");
+    return { stop: "quota", detail: "You've hit your usage limit." };
+  });
+  const paused = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, first.ctx);
+  assert.equal(paused.status, "paused");
+  clearCooldowns(first.ctx.home);
+  const second = createFakeBackend((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done after the pause");
+  });
+  const resumed = await resumeRun(loadState(paused.dir), { ...first.ctx, backends: { fake: second } });
+  assert.equal(resumed.status, "finished");
   assert.equal(second.calls[0]!.resumeSessionId, undefined);
   assert.match(second.calls[0]!.prompt, /interrupted part way/);
   assert.deepEqual(resumed.attempts.map((a) => [a.kind, a.stop]), [
@@ -201,7 +224,8 @@ test("cancelling interrupts the run, and it can be resumed", async () => {
   });
   const resumed = await resumeRun(loadState(stopped.dir), { ...first.ctx, signal: undefined, backends: { fake: second } });
   assert.equal(resumed.status, "finished");
-  assert.match(second.calls[0]!.prompt, /interrupted part way/);
+  // [F97 retry-first-turn] The cancelled turn changed nothing: it is asked again from the start.
+  assert.doesNotMatch(second.calls[0]!.prompt, /interrupted part way/);
 });
 
 test("a run whose engine died mid-turn is resumed and the lost turn is recorded", async () => {
