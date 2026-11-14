@@ -245,3 +245,22 @@ From a second review by the owner's friend: request length is a poor measure of 
 - **F95** (checks): unambiguous stand-ins in added non-test code fail the task like a failing check.
 
 Rejected: a separate Haiku call to estimate scope on every unclear prompt. F96 asks the developer the same question inside the preamble it already writes.
+
+### Live checks after F94 to F96 (2026-11-14)
+
+Single runs on real subscriptions, outside the suite; one each, so they show behaviour, not averages.
+
+| Run | What happened | Cost (estimate) |
+| --- | --- | --- |
+| The friend's agent request, F94 off, first try | Paused by a revoked Claude login. Resumed, Sonnet's turn ran as a "continue" turn with no preamble, so the F96 question was never asked: it built 9 files and 7 tests alone. This was an engine defect (F97, below). | $0.14 |
+| The same request after F97 | Sonnet answered `scope: true` (329 output tokens) and stopped; Opus split it into 4 parts and built none; Haiku built all 4 (confidence 0.6 to 0.9). 19 files, 117 tests passing. Per-part Sonnet reviews were $0.22 of the cost and found no blocker. | $0.53 |
+| Follow-up 1 in that repository: fold evicted turns into Notes | Tier 0 sent it to Haiku, no expert, no reviewer (`no-checks`, tests present). Done in one turn, tests passing, but the Notes it adds were unbounded. | $0.012 |
+| Follow-up 2: bound Notes (20 entries, 2,000 characters, 240-character rollup) | Haiku, one turn, 132 tests. A separate 500-turn check with 3,000-character notes kept every cap (worst 1,851 on disk, 1,945 in the prompt). | $0.032 |
+
+Changes from these runs:
+
+- **F97** `retry-first-turn`: a first turn that stopped before changing anything is asked again as a first turn. Added to the fault harness first (4 of 300 seeds broke it).
+- **F98** `cascade-one-review`: a build the cascade's expert planned or split is reviewed once, when whole. With `test: "no-checks"` and passing tests, that review does not run; on the $0.53 run that would have been about $0.31.
+- **F99** `prose-guard`: the second follow-up showed F89 taking a sentence after "In src/context.js:" with numbers as pasted data. The friend's example "In src/ringbuf.rs: fix the memory ordering race ..." went to the worker instead of the expert; it now goes to the expert. Routes of the 15 prompts unchanged (`routes.ts`).
+
+The follow-up 1 result is a case for a reviewer: the tests checked the behaviour asked for, not that it stays bounded, so `no-checks` let an unbounded design through. One case; to be watched in the usage log.

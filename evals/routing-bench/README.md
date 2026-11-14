@@ -49,6 +49,13 @@ node evals/routing-bench/run.ts --config cascade --name rb-cascade-1
 node evals/routing-bench/score.ts rb-cascade-1 rb-frontier-1
 ```
 
+Where Tier 0 sends each prompt, with no model call (run it before and after a
+router change):
+
+```bash
+node evals/routing-bench/routes.ts
+```
+
 `--fake` makes no model calls: every turn writes the reference answer. The live
 runs spend the Claude subscription. Each prompt also costs two one-word Haiku
 calls, which read the quota before and after it.
