@@ -1,0 +1,78 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-4",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 38243,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 37275,
+      "usage": {
+        "input": 12,
+        "output": 7828,
+        "reasoning": 2387,
+        "cacheRead": 79884,
+        "cacheWrite": 14371,
+        "split": {
+          "files": 0,
+          "commands": 3262,
+          "earlier": 27297,
+          "calls": 6,
+          "estimated": true,
+          "startup": 56873,
+          "prompt": 6836
+        }
+      },
+      "tokens": 102095,
+      "costUsd": 0.00758824,
+      "quotaUsed": {
+        "five_hour": 0.46,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 102095,
+  "discardedTokens": 0,
+  "costUsd": 0.00758824,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.46,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.46,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-124649-2392",
+  "finishedAt": "2026-11-15T07:17:30.620Z"
+}

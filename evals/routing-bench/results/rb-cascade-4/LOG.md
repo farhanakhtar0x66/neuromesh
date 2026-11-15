@@ -39,3 +39,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 07:13:06 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
 - 2026-11-15 07:13:09 UTC: 4.3 route.tier worker
 - 2026-11-15 07:16:45 UTC: 4.3 t43-spot-checkpoint: applied, quality 10.0/10 (9/9), path worker, 770,489 tokens, est. $0.0423 (API list prices), 3.6 min; quota before five_hour 46%, seven_day 10%, after five_hour 46%, seven_day 10%
+- 2026-11-15 07:16:47 UTC: 5.1 t51-regex-bomb: reading quota, then running
+- 2026-11-15 07:16:49 UTC: 5.1 route.tier worker
+- 2026-11-15 07:17:30 UTC: 5.1 t51-regex-bomb: applied, quality 10.0/10 (13/13), path worker, 102,095 tokens, est. $0.0076 (API list prices), 0.6 min; quota before five_hour 46%, seven_day 10%, after five_hour 46%, seven_day 10%
