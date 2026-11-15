@@ -1,0 +1,79 @@
+{
+  "id": "1.1",
+  "slug": "t11-pdf-table-json",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (100 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.json exists\nPASS parses as JSON\nPASS a list of exactly 3 objects\nPASS keys are exactly name, role, salary_inr\nPASS salary_inr values are integers\nPASS salaries are 1850000, 1100000, 360000\nPASS names are Rahul Sharma, Priya Patel, Aman Verma\nSCORE 7/7",
+  "wallMs": 10817,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 9643,
+      "usage": {
+        "input": 2,
+        "output": 1712,
+        "reasoning": 1081,
+        "cacheRead": 0,
+        "cacheWrite": 4166,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3443,
+          "prompt": 726
+        }
+      },
+      "tokens": 5880,
+      "costUsd": 0.0016894000000000002,
+      "quotaUsed": {
+        "five_hour": 0.35,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 5880,
+  "discardedTokens": 0,
+  "costUsd": 0.0016894000000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.35,
+      "seven_day": 0.09
+    },
+    "after": {
+      "five_hour": 0.35,
+      "seven_day": 0.09
+    }
+  },
+  "runId": "20261115-120159-4471",
+  "finishedAt": "2026-11-15T06:32:13.050Z"
+}
