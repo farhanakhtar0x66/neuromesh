@@ -1,0 +1,73 @@
+{
+  "id": "H1.2",
+  "slug": "h12-syslog-tsv",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.tsv exists\nPASS six lines, three tab-separated columns each\nPASS header is TIMESTAMP_UTC, FACILITY_PRI, MESSAGE\nPASS all five timestamps normalised to UTC Z\nPASS sorted oldest first (facility 34, 86, 165, 14, 131)\nPASS messages are the trimmed message text\nPASS no prose or code fences around the table\nSCORE 7/7",
+  "wallMs": 21406,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 20582,
+      "usage": {
+        "input": 14,
+        "output": 4179,
+        "reasoning": 1548,
+        "cacheRead": 79937,
+        "cacheWrite": 9657,
+        "split": {
+          "files": 0,
+          "commands": 2759,
+          "earlier": 15541,
+          "calls": 7,
+          "estimated": true,
+          "startup": 66600,
+          "prompt": 4709
+        }
+      },
+      "tokens": 93787,
+      "costUsd": 0.00482167,
+      "quotaUsed": {
+        "five_hour": 0.96,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 93787,
+  "discardedTokens": 0,
+  "costUsd": 0.00482167,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-144627-4bd4",
+  "finishedAt": "2026-11-15T09:16:51.302Z"
+}
