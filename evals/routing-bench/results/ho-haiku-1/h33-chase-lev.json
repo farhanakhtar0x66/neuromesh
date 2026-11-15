@@ -1,0 +1,104 @@
+{
+  "id": "H3.3",
+  "slug": "h33-chase-lev",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS Cargo.toml and src/lib.rs exist\nPASS no external dependencies\nPASS uses std::sync::atomic, UnsafeCell and MaybeUninit\nPASS cargo build --release passes\nPASS FIFO steal, LIFO pop and full-capacity Err(item)\nPASS owner push+pop against 6 stealers over 250,000 items: none lost, none duplicated\nPASS 1,000 Arc items are each dropped exactly once\nSCORE 7/7",
+  "wallMs": 236518,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 101390,
+      "usage": {
+        "input": 16,
+        "output": 21103,
+        "reasoning": 11928,
+        "cacheRead": 166296,
+        "cacheWrite": 26561,
+        "split": {
+          "files": 0,
+          "commands": 4261,
+          "earlier": 106148,
+          "calls": 8,
+          "estimated": true,
+          "startup": 76394,
+          "prompt": 6070
+        }
+      },
+      "tokens": 213976,
+      "costUsd": 0.01752826,
+      "quotaUsed": {
+        "five_hour": 0.98,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 133157,
+      "usage": {
+        "input": 4,
+        "output": 34478,
+        "reasoning": 23633,
+        "cacheRead": 5377,
+        "cacheWrite": 33207,
+        "split": {
+          "files": 0,
+          "commands": 33,
+          "earlier": 29059,
+          "calls": 2,
+          "estimated": true,
+          "startup": 7172,
+          "prompt": 2325
+        }
+      },
+      "tokens": 73066,
+      "costUsd": 0.02393457,
+      "quotaUsed": {
+        "five_hour": 0.98,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 287042,
+  "discardedTokens": 0,
+  "costUsd": 0.04146283,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.98,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.98,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-150548-edc7",
+  "finishedAt": "2026-11-15T09:39:51.838Z"
+}
