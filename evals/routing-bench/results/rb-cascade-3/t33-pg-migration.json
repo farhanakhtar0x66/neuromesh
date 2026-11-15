@@ -1,0 +1,109 @@
+{
+  "id": "3.3",
+  "slug": "t33-pg-migration",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS adds the new columns\nPASS new columns nullable (no NOT NULL on add)\nPASS dual-write: trigger or application\nPASS batched backfill\nPASS read switchover phase\nPASS drops the old column last (contract)\nPASS expand-contract named or phased\nPASS keeps the old service version working\nSCORE 9/9",
+  "wallMs": 154178,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 62502,
+      "usage": {
+        "input": 10,
+        "output": 9131,
+        "reasoning": 746,
+        "cacheRead": 54509,
+        "cacheWrite": 13286,
+        "split": {
+          "files": 0,
+          "commands": 532,
+          "earlier": 18154,
+          "calls": 5,
+          "estimated": true,
+          "startup": 43295,
+          "prompt": 5825
+        }
+      },
+      "tokens": 76936,
+      "costUsd": 0.1499249,
+      "quotaUsed": {
+        "five_hour": 0.37,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 90482,
+      "usage": {
+        "input": 6,
+        "output": 24133,
+        "reasoning": 11122,
+        "cacheRead": 24491,
+        "cacheWrite": 23469,
+        "split": {
+          "files": 0,
+          "commands": 148,
+          "earlier": 35302,
+          "calls": 3,
+          "estimated": true,
+          "startup": 9449,
+          "prompt": 3068
+        }
+      },
+      "tokens": 72099,
+      "costUsd": 0.01700581,
+      "quotaUsed": {
+        "five_hour": 0.37,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 149035,
+  "discardedTokens": 0,
+  "costUsd": 0.16693071,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.36,
+      "seven_day": 0.09
+    },
+    "after": {
+      "five_hour": 0.37,
+      "seven_day": 0.09
+    }
+  },
+  "runId": "20261115-121312-5f9a",
+  "finishedAt": "2026-11-15T06:45:49.588Z"
+}
