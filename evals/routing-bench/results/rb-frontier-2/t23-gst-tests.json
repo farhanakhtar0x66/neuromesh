@@ -1,0 +1,73 @@
+{
+  "id": "2.3",
+  "slug": "t23-gst-tests",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 15,
+    "total": 15
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nPASS the tests run and at least 90% pass against a correct implementation\nPASS the tests catch a broken version: treats every sale as intrastate\nPASS the tests catch a broken version: charges igst on intrastate sales too\nPASS the tests catch a broken version: total ignores the tax\nPASS the tests catch a broken version: total counts the tax twice\nPASS the tests catch a broken version: cgst takes the whole tax instead of half\nPASS the tests catch a broken version: sgst differs from cgst\nPASS the tests catch a broken version: default rate is not 18%\nPASS the tests catch a broken version: ignores the rate argument\nPASS the tests catch a broken version: rounds to whole rupees instead of paise\nPASS the tests catch a broken version: rejects an amount of zero\nPASS the tests catch a broken version: handles negative amounts the opposite way\nSCORE 15/15",
+  "wallMs": 69025,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 67647,
+      "usage": {
+        "input": 14,
+        "output": 6377,
+        "reasoning": 828,
+        "cacheRead": 83415,
+        "cacheWrite": 10399,
+        "split": {
+          "files": 0,
+          "commands": 1878,
+          "earlier": 26745,
+          "calls": 7,
+          "estimated": true,
+          "startup": 60463,
+          "prompt": 4743
+        }
+      },
+      "tokens": 100205,
+      "costUsd": 0.227471,
+      "quotaUsed": {
+        "five_hour": 0.17,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 100205,
+  "discardedTokens": 0,
+  "costUsd": 0.227471,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.16,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.17,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-114105-8881",
+  "finishedAt": "2026-11-15T06:12:17.555Z"
+}
