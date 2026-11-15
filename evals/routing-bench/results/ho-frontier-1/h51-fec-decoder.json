@@ -1,0 +1,73 @@
+{
+  "id": "H5.1",
+  "slug": "h51-fec-decoder",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "worker|senior",
+  "expectedPath": "T0>T2 or T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS src/fec_decoder.py imports with encode and decode\nPASS encode returns 9 shards of 64 bytes\nPASS the first six shards are the data itself (systematic)\nPASS the parity shards are not copies of data\nPASS all 84 three-shard erasures recover the six data shards exactly\nPASS zero, one and two erasures also recover\nPASS a fresh random block with parity shards standing in for data recovers\nSCORE 7/7",
+  "wallMs": 37827,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 36680,
+      "usage": {
+        "input": 6,
+        "output": 3882,
+        "reasoning": 127,
+        "cacheRead": 24721,
+        "cacheWrite": 7708,
+        "split": {
+          "files": 0,
+          "commands": 316,
+          "earlier": 3709,
+          "calls": 3,
+          "estimated": true,
+          "startup": 26175,
+          "prompt": 2235
+        }
+      },
+      "tokens": 36317,
+      "costUsd": 0.14427220000000002,
+      "quotaUsed": {
+        "five_hour": 0.84,
+        "seven_day": 0.13
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 36317,
+  "discardedTokens": 0,
+  "costUsd": 0.14427220000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.83,
+      "seven_day": 0.13
+    },
+    "after": {
+      "five_hour": 0.84,
+      "seven_day": 0.13
+    }
+  },
+  "runId": "20261115-140934-8275",
+  "finishedAt": "2026-11-15T08:40:15.291Z"
+}
