@@ -1,0 +1,79 @@
+{
+  "id": "H1.2",
+  "slug": "h12-syslog-tsv",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (365 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.tsv exists\nPASS six lines, three tab-separated columns each\nPASS header is TIMESTAMP_UTC, FACILITY_PRI, MESSAGE\nPASS all five timestamps normalised to UTC Z\nPASS sorted oldest first (facility 34, 86, 165, 14, 131)\nPASS messages are the trimmed message text\nPASS no prose or code fences around the table\nSCORE 7/7",
+  "wallMs": 10436,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 9608,
+      "usage": {
+        "input": 2,
+        "output": 1834,
+        "reasoning": 1201,
+        "cacheRead": 661,
+        "cacheWrite": 3648,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3553,
+          "prompt": 758
+        }
+      },
+      "tokens": 6145,
+      "costUsd": 0.00165341,
+      "quotaUsed": {
+        "five_hour": 0.3,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 6145,
+  "discardedTokens": 0,
+  "costUsd": 0.00165341,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.3,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.3,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-001953-4e0b",
+  "finishedAt": "2026-11-15T18:50:06.475Z"
+}
