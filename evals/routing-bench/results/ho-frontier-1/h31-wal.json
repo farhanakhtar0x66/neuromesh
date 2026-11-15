@@ -1,0 +1,104 @@
+{
+  "id": "H3.1",
+  "slug": "h31-wal",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 1,
+    "total": 6
+  },
+  "quality": 1.6666666666666667,
+  "hiddenOutput": "raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\nPASS wal module imports\nFAIL replay: committed only, in commit order; aborted and open transactions ignored\nFAIL a torn frame at the end is cut off exactly and the state is returned\nFAIL a flipped bit in an uncommitted tail frame is cut off, not raised\nFAIL a flipped bit before a later valid commit raises ValueError and keeps the file\nFAIL a new WAL on the cut file appends a fresh transaction cleanly\nSCORE 1/6",
+  "wallMs": 208793,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 58918,
+      "usage": {
+        "input": 10,
+        "output": 5864,
+        "reasoning": 1013,
+        "cacheRead": 54011,
+        "cacheWrite": 9798,
+        "split": {
+          "files": 0,
+          "commands": 795,
+          "earlier": 14669,
+          "calls": 5,
+          "estimated": true,
+          "startup": 43846,
+          "prompt": 4509
+        }
+      },
+      "tokens": 69683,
+      "costUsd": 0.2065062,
+      "quotaUsed": {
+        "five_hour": 0.56,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 148145,
+      "usage": {
+        "input": 2,
+        "output": 16429,
+        "reasoning": 6138,
+        "cacheRead": 631,
+        "cacheWrite": 3895,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3380,
+          "prompt": 1148
+        }
+      },
+      "tokens": 20957,
+      "costUsd": 0.35987420000000003,
+      "quotaUsed": {
+        "five_hour": 0.56,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 90640,
+  "discardedTokens": 0,
+  "costUsd": 0.5663804,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.55,
+      "seven_day": 0.11
+    },
+    "after": {
+      "five_hour": 0.58,
+      "seven_day": 0.11
+    }
+  },
+  "runId": "20261115-134140-fedb",
+  "finishedAt": "2026-11-15T08:15:12.532Z"
+}

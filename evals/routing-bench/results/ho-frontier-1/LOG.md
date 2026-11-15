@@ -15,3 +15,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-15 08:10:42 UTC: H2.2 h22-csv-stream: applied, quality 10.0/10 (8/8), path frontier, 64,844 tokens, est. $0.4103 (API list prices), 2.5 min; quota before five_hour 52%, seven_day 11%, after five_hour 54%, seven_day 11%
 - 2026-11-15 08:10:44 UTC: H2.3 h23-semver-resolver: reading quota, then running
 - 2026-11-15 08:11:35 UTC: H2.3 h23-semver-resolver: applied, quality 10.0/10 (6/6), path frontier, 49,939 tokens, est. $0.1542 (API list prices), 0.8 min; quota before five_hour 54%, seven_day 11%, after five_hour 55%, seven_day 11%
+- 2026-11-15 08:11:38 UTC: H3.1 h31-wal: reading quota, then running
+- 2026-11-15 08:15:12 UTC: H3.1 h31-wal: applied, quality 1.7/10 (1/6), path frontier, 90,640 tokens, est. $0.5664 (API list prices), 3.5 min; quota before five_hour 55%, seven_day 11%, after five_hour 58%, seven_day 11%
