@@ -1,0 +1,73 @@
+{
+  "id": "4.2",
+  "slug": "t42-edge-dag",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 9
+  },
+  "quality": 8.88888888888889,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nFAIL optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 8/9",
+  "wallMs": 143128,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 142110,
+      "usage": {
+        "input": 6,
+        "output": 29168,
+        "reasoning": 19056,
+        "cacheRead": 26013,
+        "cacheWrite": 33153,
+        "split": {
+          "files": 0,
+          "commands": 477,
+          "earlier": 28696,
+          "calls": 3,
+          "estimated": true,
+          "startup": 28088,
+          "prompt": 1913
+        }
+      },
+      "tokens": 88340,
+      "costUsd": 0.02147533,
+      "quotaUsed": {
+        "five_hour": 0.48,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 88340,
+  "discardedTokens": 0,
+  "costUsd": 0.02147533,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.48,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.48,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-130346-64ab",
+  "finishedAt": "2026-11-15T07:36:12.302Z"
+}
