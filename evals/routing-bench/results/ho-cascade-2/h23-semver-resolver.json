@@ -1,0 +1,79 @@
+{
+  "id": "H2.3",
+  "slug": "h23-semver-resolver",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "worker|senior",
+  "expectedPath": "T0>T2 or T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (113 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS resolver module imports\nPASS caret rules for ^1.2.3, ^0.2.3, ^0.0.3 and numeric (not text) version order\nPASS a diamond conflict backtracks A from 2.0.0 to 1.5.0 and picks C 1.8.0\nPASS backtracking drops packages only the abandoned version needed\nPASS cyclic dependencies terminate\nPASS an unsatisfiable graph returns None\nSCORE 6/6",
+  "wallMs": 45989,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 44869,
+      "usage": {
+        "input": 12,
+        "output": 10926,
+        "reasoning": 2297,
+        "cacheRead": 92046,
+        "cacheWrite": 18037,
+        "split": {
+          "files": 0,
+          "commands": 3587,
+          "earlier": 40256,
+          "calls": 6,
+          "estimated": true,
+          "startup": 57924,
+          "prompt": 8328
+        }
+      },
+      "tokens": 121021,
+      "costUsd": 0.00999206,
+      "quotaUsed": {
+        "five_hour": 0.31,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 121021,
+  "discardedTokens": 0,
+  "costUsd": 0.00999206,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.31,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.31,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-002622-58c6",
+  "finishedAt": "2026-11-15T18:57:10.937Z"
+}
