@@ -13,3 +13,5 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 09:22:20 UTC: H2.1 h21-sliding-limiter: applied, quality 10.0/10 (6/6), path haiku, 134,873 tokens, est. $0.0370 (API list prices), 4.6 min; quota before five_hour 96%, seven_day 14%, after five_hour 97%, seven_day 14%
 - 2026-11-15 09:22:22 UTC: H2.2 h22-csv-stream: reading quota, then running
 - 2026-11-15 09:25:55 UTC: H2.2 h22-csv-stream: applied, quality 10.0/10 (8/8), path haiku, 332,003 tokens, est. $0.0391 (API list prices), 3.5 min; quota before five_hour 97%, seven_day 14%, after five_hour 97%, seven_day 14%
+- 2026-11-15 09:25:58 UTC: H2.3 h23-semver-resolver: reading quota, then running
+- 2026-11-15 09:27:21 UTC: H2.3 h23-semver-resolver: failed, quality 0.0/10, path haiku, 207,306 tokens, est. $0.0146 (API list prices), 1.3 min; quota before five_hour 97%, seven_day 14%, after five_hour 97%, seven_day 14%

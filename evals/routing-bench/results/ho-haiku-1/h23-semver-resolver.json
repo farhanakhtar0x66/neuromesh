@@ -1,0 +1,71 @@
+{
+  "id": "H2.3",
+  "slug": "h23-semver-resolver",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "worker|senior",
+  "expectedPath": "T0>T2 or T0>T3",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "failed",
+  "reason": "worker error: error_max_structured_output_retries",
+  "failure": "agent",
+  "quality": 0,
+  "hiddenOutput": "",
+  "wallMs": 78037,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "error",
+      "durationMs": 77231,
+      "usage": {
+        "input": 18,
+        "output": 16892,
+        "reasoning": 9092,
+        "cacheRead": 168091,
+        "cacheWrite": 22305,
+        "split": {
+          "files": 0,
+          "commands": 3485,
+          "earlier": 111671,
+          "calls": 10,
+          "estimated": true,
+          "startup": 95200,
+          "prompt": 8470
+        }
+      },
+      "tokens": 207306,
+      "costUsd": 0.014589709999999999,
+      "quotaUsed": {
+        "five_hour": 0.97,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 207306,
+  "discardedTokens": 0,
+  "costUsd": 0.014589709999999999,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.97,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.97,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-145600-e43c",
+  "finishedAt": "2026-11-15T09:27:21.452Z"
+}
