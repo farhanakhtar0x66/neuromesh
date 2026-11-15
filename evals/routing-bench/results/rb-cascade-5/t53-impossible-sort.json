@@ -1,0 +1,143 @@
+{
+  "id": "5.3",
+  "slug": "t53-impossible-sort",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-5",
+  "expectedTier": "cascade 2>3",
+  "expectedPath": "T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker",
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 5,
+    "total": 5
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS names the Omega(N log N) comparison-sort lower bound\nPASS says the request is impossible as stated\nPASS does not claim an O(N) comparison sort\nPASS offers a valid alternative (radix/IEEE-754 or O(N log N) in place)\nSCORE 5/5",
+  "wallMs": 47940,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "earlyExit": true,
+      "stop": "error",
+      "durationMs": 5449,
+      "usage": {
+        "input": 2,
+        "cacheRead": 5365,
+        "cacheWrite": 5384,
+        "output": 670,
+        "estimated": true,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 9530,
+          "prompt": 1222
+        }
+      },
+      "tokens": 11421,
+      "costUsd": 0.0014656499999999998,
+      "quotaUsed": {
+        "five_hour": 0.29,
+        "seven_day": 0.21
+      },
+      "discarded": true
+    },
+    {
+      "role": "worker",
+      "kind": "climb",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 19757,
+      "usage": {
+        "input": 6,
+        "output": 2443,
+        "reasoning": 173,
+        "cacheRead": 25998,
+        "cacheWrite": 6998,
+        "split": {
+          "files": 0,
+          "commands": 261,
+          "earlier": 2378,
+          "calls": 3,
+          "estimated": true,
+          "startup": 26280,
+          "prompt": 4083
+        }
+      },
+      "tokens": 35445,
+      "costUsd": 0.0550338,
+      "quotaUsed": {
+        "five_hour": 0.3,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 20923,
+      "usage": {
+        "input": 2,
+        "output": 4620,
+        "reasoning": 2459,
+        "cacheRead": 631,
+        "cacheWrite": 3499,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3158,
+          "prompt": 974
+        }
+      },
+      "tokens": 8752,
+      "costUsd": 0.00301631,
+      "quotaUsed": {
+        "five_hour": 0.3,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 55618,
+  "discardedTokens": 11421,
+  "costUsd": 0.05951576,
+  "discardedCostUsd": 0.0014656499999999998,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.29,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.3,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-001736-9a43",
+  "finishedAt": "2026-11-15T18:48:26.805Z"
+}
