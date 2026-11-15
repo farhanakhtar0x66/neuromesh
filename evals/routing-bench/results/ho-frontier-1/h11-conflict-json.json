@@ -1,0 +1,73 @@
+{
+  "id": "H1.1",
+  "slug": "h11-conflict-json",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.json exists\nPASS parses as a JSON object\nPASS exactly the keys TIMEOUT_MS, RETRY_CAP, MAX_WORKERS, PORT\nPASS every value is an integer\nPASS conflicts keep the incoming side (TIMEOUT_MS 5000, PORT 9090)\nPASS duplicate keys keep the last value (MAX_WORKERS 16)\nPASS RETRY_CAP is 3\nPASS no conflict marker text in the file\nSCORE 8/8",
+  "wallMs": 14557,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 13642,
+      "usage": {
+        "input": 6,
+        "output": 927,
+        "reasoning": 164,
+        "cacheRead": 19075,
+        "cacheWrite": 10253,
+        "split": {
+          "files": 0,
+          "commands": 320,
+          "earlier": 1033,
+          "calls": 3,
+          "estimated": true,
+          "startup": 26072,
+          "prompt": 1909
+        }
+      },
+      "tokens": 30261,
+      "costUsd": 0.104403,
+      "quotaUsed": {
+        "five_hour": 0.49,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 30261,
+  "discardedTokens": 0,
+  "costUsd": 0.104403,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-133231-0eaa",
+  "finishedAt": "2026-11-15T08:02:48.597Z"
+}
