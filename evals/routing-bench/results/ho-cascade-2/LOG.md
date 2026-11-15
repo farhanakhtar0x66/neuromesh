@@ -43,3 +43,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 19:14:14 UTC: H4.3 task.early-exit senior: A NaN-boxed VM with compiler, closures and GC is well over 300 lines, so it should be divided.
 - 2026-11-15 19:14:52 UTC: H4.3 task.advised: the senior developer judged the task beyond it: A NaN-boxed VM with compiler, closures and GC is well over 300 lines, so
 - 2026-11-15 19:19:57 UTC: H4.3 h43-rust-vm: applied, quality 10.0/10 (6/6), path senior, 415,998 tokens, est. $0.8804 (API list prices), 5.7 min; quota before five_hour 34%, seven_day 21%, after five_hour 41%, seven_day 22%
+- 2026-11-15 19:19:59 UTC: H5.1 h51-fec-decoder: reading quota, then running
+- 2026-11-15 19:20:02 UTC: H5.1 route.tier worker
+- 2026-11-15 19:20:57 UTC: H5.1 h51-fec-decoder: applied, quality 10.0/10 (7/7), path worker, 87,194 tokens, est. $0.0113 (API list prices), 0.9 min; quota before five_hour 41%, seven_day 22%, after five_hour 41%, seven_day 22%
