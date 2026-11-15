@@ -42,3 +42,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 06:56:20 UTC: 5.1 t51-regex-bomb: reading quota, then running
 - 2026-11-15 06:56:22 UTC: 5.1 route.tier worker
 - 2026-11-15 06:57:21 UTC: 5.1 t51-regex-bomb: applied, quality 10.0/10 (13/13), path worker, 170,892 tokens, est. $0.0117 (API list prices), 0.9 min; quota before five_hour 40%, seven_day 10%, after five_hour 41%, seven_day 10%
+- 2026-11-15 06:57:23 UTC: 5.2 t52-jargon-log-csv: reading quota, then running
+- 2026-11-15 06:57:26 UTC: 5.2 route.tier grunt
+- 2026-11-15 06:57:40 UTC: 5.2 t52-jargon-log-csv: applied, quality 10.0/10 (10/10), path grunt, 6,058 tokens, est. $0.0016 (API list prices), 0.2 min; quota before five_hour 41%, seven_day 10%, after five_hour 41%, seven_day 10%
