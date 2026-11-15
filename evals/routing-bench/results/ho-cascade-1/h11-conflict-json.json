@@ -1,0 +1,79 @@
+{
+  "id": "H1.1",
+  "slug": "h11-conflict-json",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (187 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.json exists\nPASS parses as a JSON object\nPASS exactly the keys TIMEOUT_MS, RETRY_CAP, MAX_WORKERS, PORT\nPASS every value is an integer\nPASS conflicts keep the incoming side (TIMEOUT_MS 5000, PORT 9090)\nPASS duplicate keys keep the last value (MAX_WORKERS 16)\nPASS RETRY_CAP is 3\nPASS no conflict marker text in the file\nSCORE 8/8",
+  "wallMs": 38367,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 37239,
+      "usage": {
+        "input": 2,
+        "output": 9824,
+        "reasoning": 4597,
+        "cacheRead": 0,
+        "cacheWrite": 4204,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3484,
+          "prompt": 722
+        }
+      },
+      "tokens": 14030,
+      "costUsd": 0.005753,
+      "quotaUsed": {
+        "five_hour": 0.87,
+        "seven_day": 0.13
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 14030,
+  "discardedTokens": 0,
+  "costUsd": 0.005753,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.87,
+      "seven_day": 0.13
+    },
+    "after": {
+      "five_hour": 0.87,
+      "seven_day": 0.13
+    }
+  },
+  "runId": "20261115-141339-fc5c",
+  "finishedAt": "2026-11-15T08:44:20.020Z"
+}
