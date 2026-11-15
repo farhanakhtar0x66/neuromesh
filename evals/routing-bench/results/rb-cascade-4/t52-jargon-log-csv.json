@@ -1,0 +1,79 @@
+{
+  "id": "5.2",
+  "slug": "t52-jargon-log-csv",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-4",
+  "expectedTier": "grunt",
+  "expectedPath": "T0(tail intent)>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (581 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.csv exists\nPASS header is timestamp,pid\nPASS two columns on every row\nPASS row 14209.881045,412\nPASS row 14209.881102,1984\nPASS row 14209.881290,1984\nPASS row 14210.004112,882\nPASS row 14210.119402,519\nPASS no wrong rows\nPASS no duplicate rows\nSCORE 10/10",
+  "wallMs": 10828,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 9704,
+      "usage": {
+        "input": 2,
+        "output": 1770,
+        "reasoning": 1250,
+        "cacheRead": 2125,
+        "cacheWrite": 2259,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3572,
+          "prompt": 815
+        }
+      },
+      "tokens": 6156,
+      "costUsd": 0.00135825,
+      "quotaUsed": {
+        "five_hour": 0.46,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 6156,
+  "discardedTokens": 0,
+  "costUsd": 0.00135825,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.46,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.46,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-124735-7a1b",
+  "finishedAt": "2026-11-15T07:17:48.554Z"
+}
