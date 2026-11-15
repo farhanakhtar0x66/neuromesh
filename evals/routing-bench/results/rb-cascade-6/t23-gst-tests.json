@@ -1,0 +1,78 @@
+{
+  "id": "2.3",
+  "slug": "t23-gst-tests",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-6",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 15,
+    "total": 15
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nPASS the tests run and at least 90% pass against a correct implementation\nPASS the tests catch a broken version: treats every sale as intrastate\nPASS the tests catch a broken version: charges igst on intrastate sales too\nPASS the tests catch a broken version: total ignores the tax\nPASS the tests catch a broken version: total counts the tax twice\nPASS the tests catch a broken version: cgst takes the whole tax instead of half\nPASS the tests catch a broken version: sgst differs from cgst\nPASS the tests catch a broken version: default rate is not 18%\nPASS the tests catch a broken version: ignores the rate argument\nPASS the tests catch a broken version: rounds to whole rupees instead of paise\nPASS the tests catch a broken version: rejects an amount of zero\nPASS the tests catch a broken version: handles negative amounts the opposite way\nSCORE 15/15",
+  "wallMs": 30860,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 29695,
+      "usage": {
+        "input": 2,
+        "output": 6907,
+        "reasoning": 3753,
+        "cacheRead": 661,
+        "cacheWrite": 3453,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3418,
+          "prompt": 698
+        }
+      },
+      "tokens": 11023,
+      "costUsd": 0.00415091,
+      "quotaUsed": {
+        "five_hour": 0.68,
+        "seven_day": 0.25
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 11023,
+  "discardedTokens": 0,
+  "costUsd": 0.00415091,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.68,
+      "seven_day": 0.25
+    },
+    "after": {
+      "five_hour": 0.68,
+      "seven_day": 0.25
+    }
+  },
+  "runId": "20261116-023758-1b98",
+  "finishedAt": "2026-11-15T21:08:33.368Z"
+}
