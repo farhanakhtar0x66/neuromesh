@@ -1,0 +1,79 @@
+{
+  "id": "H5.1",
+  "slug": "h51-fec-decoder",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "worker|senior",
+  "expectedPath": "T0>T2 or T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (101 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS src/fec_decoder.py imports with encode and decode\nPASS encode returns 9 shards of 64 bytes\nPASS the first six shards are the data itself (systematic)\nPASS the parity shards are not copies of data\nPASS all 84 three-shard erasures recover the six data shards exactly\nPASS zero, one and two erasures also recover\nPASS a fresh random block with parity shards standing in for data recovers\nSCORE 7/7",
+  "wallMs": 41688,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 40302,
+      "usage": {
+        "input": 10,
+        "output": 9815,
+        "reasoning": 2141,
+        "cacheRead": 69359,
+        "cacheWrite": 16340,
+        "split": {
+          "files": 0,
+          "commands": 2354,
+          "earlier": 28875,
+          "calls": 5,
+          "estimated": true,
+          "startup": 48050,
+          "prompt": 6430
+        }
+      },
+      "tokens": 95524,
+      "costUsd": 0.00887009,
+      "quotaUsed": {
+        "five_hour": 0.96,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 95524,
+  "discardedTokens": 0,
+  "costUsd": 0.00887009,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-144149-8e60",
+  "finishedAt": "2026-11-15T09:12:34.251Z"
+}

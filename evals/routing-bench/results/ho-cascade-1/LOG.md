@@ -39,3 +39,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 09:07:21 UTC: H4.3 h43-rust-vm: reading quota, then running
 - 2026-11-15 09:07:23 UTC: H4.3 route.tier expert
 - 2026-11-15 09:11:42 UTC: H4.3 h43-rust-vm: applied, quality 10.0/10 (6/6), path senior, 325,588 tokens, est. $0.6063 (API list prices), 4.2 min; quota before five_hour 91%, seven_day 14%, after five_hour 96%, seven_day 14%
+- 2026-11-15 09:11:45 UTC: H5.1 h51-fec-decoder: reading quota, then running
+- 2026-11-15 09:11:49 UTC: H5.1 route.tier worker
+- 2026-11-15 09:12:34 UTC: H5.1 h51-fec-decoder: applied, quality 10.0/10 (7/7), path worker, 95,524 tokens, est. $0.0089 (API list prices), 0.7 min; quota before five_hour 96%, seven_day 14%, after five_hour 96%, seven_day 14%
