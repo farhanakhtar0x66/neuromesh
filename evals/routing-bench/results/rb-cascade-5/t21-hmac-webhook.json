@@ -1,0 +1,78 @@
+{
+  "id": "2.1",
+  "slug": "t21-hmac-webhook",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-5",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 11,
+    "total": 11
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS app.py exists\nPASS app.py imports and builds an app\nPASS POST /webhooks/payment route exists\nPASS a correctly signed webhook gets 200\nPASS a signature made over the raw body (odd whitespace) gets 200\nPASS a wrong signature gets 400\nPASS a signature made with another secret gets 400\nPASS a missing X-Signature header gets 400\nPASS a body changed after signing gets 400\nPASS an empty signature gets 400\nPASS compares with hmac.compare_digest\nSCORE 11/11",
+  "wallMs": 52135,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 51337,
+      "usage": {
+        "input": 26,
+        "output": 9991,
+        "reasoning": 1917,
+        "cacheRead": 188038,
+        "cacheWrite": 24141,
+        "split": {
+          "files": 0,
+          "commands": 8811,
+          "earlier": 63813,
+          "calls": 13,
+          "estimated": true,
+          "startup": 123809,
+          "prompt": 15772
+        }
+      },
+      "tokens": 222196,
+      "costUsd": 0.01170668,
+      "quotaUsed": {
+        "five_hour": 0.24,
+        "seven_day": 0.2
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 222196,
+  "discardedTokens": 0,
+  "costUsd": 0.01170668,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.24,
+      "seven_day": 0.2
+    },
+    "after": {
+      "five_hour": 0.24,
+      "seven_day": 0.2
+    }
+  },
+  "runId": "20261115-234824-fb96",
+  "finishedAt": "2026-11-15T18:19:19.546Z"
+}
