@@ -1,0 +1,73 @@
+{
+  "id": "2.2",
+  "slug": "t22-standup-table",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS a markdown table with a header separator\nPASS a row for Siddharth\nPASS a row for Neha\nPASS a row for Rohan\nPASS Siddharth's blocker: DB credentials from infra\nPASS Rohan's blocker: iOS build on Xcode 16\nPASS Neha is not flagged as blocked\nPASS a column or marker for blockers\nSCORE 9/9",
+  "wallMs": 20500,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 19595,
+      "usage": {
+        "input": 8,
+        "output": 1200,
+        "reasoning": 0,
+        "cacheRead": 34349,
+        "cacheWrite": 4934,
+        "split": {
+          "files": 282,
+          "commands": 124,
+          "earlier": 1973,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34444,
+          "prompt": 2468
+        }
+      },
+      "tokens": 40491,
+      "costUsd": 0.0703738,
+      "quotaUsed": {
+        "five_hour": 0.16,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 40491,
+  "discardedTokens": 0,
+  "costUsd": 0.0703738,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.16,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.16,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-114037-95f0",
+  "finishedAt": "2026-11-15T06:11:00.644Z"
+}
