@@ -1,0 +1,78 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-6",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 14477,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 14031,
+      "usage": {
+        "input": 2,
+        "output": 2649,
+        "reasoning": 1737,
+        "cacheRead": 661,
+        "cacheWrite": 3583,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3487,
+          "prompt": 759
+        }
+      },
+      "tokens": 6895,
+      "costUsd": 0.00204791,
+      "quotaUsed": {
+        "five_hour": 0.72,
+        "seven_day": 0.25
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 6895,
+  "discardedTokens": 0,
+  "costUsd": 0.00204791,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.72,
+      "seven_day": 0.25
+    },
+    "after": {
+      "five_hour": 0.72,
+      "seven_day": 0.25
+    }
+  },
+  "runId": "20261116-025102-1f8f",
+  "finishedAt": "2026-11-15T21:21:19.147Z"
+}
