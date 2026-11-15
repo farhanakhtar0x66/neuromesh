@@ -1,0 +1,73 @@
+{
+  "id": "1.1",
+  "slug": "t11-pdf-table-json",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.json exists\nPASS parses as JSON\nPASS a list of exactly 3 objects\nPASS keys are exactly name, role, salary_inr\nPASS salary_inr values are integers\nPASS salaries are 1850000, 1100000, 360000\nPASS names are Rahul Sharma, Priya Patel, Aman Verma\nSCORE 7/7",
+  "wallMs": 12710,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 12258,
+      "usage": {
+        "input": 6,
+        "output": 705,
+        "reasoning": 29,
+        "cacheRead": 18802,
+        "cacheWrite": 10082,
+        "split": {
+          "files": 0,
+          "commands": 391,
+          "earlier": 827,
+          "calls": 3,
+          "estimated": true,
+          "startup": 25883,
+          "prompt": 1789
+        }
+      },
+      "tokens": 29595,
+      "costUsd": 0.0985404,
+      "quotaUsed": {
+        "five_hour": 0.15,
+        "seven_day": 0.07
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 29595,
+  "discardedTokens": 0,
+  "costUsd": 0.0985404,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.14,
+      "seven_day": 0.07
+    },
+    "after": {
+      "five_hour": 0.15,
+      "seven_day": 0.07
+    }
+  },
+  "runId": "20261115-113847-644b",
+  "finishedAt": "2026-11-15T06:09:02.324Z"
+}
