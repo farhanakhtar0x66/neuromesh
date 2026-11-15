@@ -45,3 +45,8 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 07:17:32 UTC: 5.2 t52-jargon-log-csv: reading quota, then running
 - 2026-11-15 07:17:35 UTC: 5.2 route.tier grunt
 - 2026-11-15 07:17:48 UTC: 5.2 t52-jargon-log-csv: applied, quality 10.0/10 (10/10), path grunt, 6,156 tokens, est. $0.0014 (API list prices), 0.2 min; quota before five_hour 46%, seven_day 10%, after five_hour 46%, seven_day 10%
+- 2026-11-15 07:17:50 UTC: 5.3 t53-impossible-sort: reading quota, then running
+- 2026-11-15 07:17:53 UTC: 5.3 route.tier worker
+- 2026-11-15 07:18:00 UTC: 5.3 task.early-exit worker: A comparison-based sort cannot be O(N) worst-case for arbitrary floats (the Ω(N log N) lower bound), so the stated requi
+- 2026-11-15 07:18:00 UTC: 5.3 task.climbed to claude/claude-sonnet-5-5: early exit: A comparison-based sort cannot be O(N) worst-case for arbitrary floats (the Ω(N log N) lower bound), so the 
+- 2026-11-15 07:18:46 UTC: 5.3 t53-impossible-sort: applied, quality 10.0/10 (5/5), path worker>senior, 56,230 tokens, est. $0.0635 (API list prices), 0.8 min; quota before five_hour 46%, seven_day 10%, after five_hour 47%, seven_day 10%
