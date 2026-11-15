@@ -1,0 +1,104 @@
+{
+  "id": "4.1",
+  "slug": "t41-arm64-ringbuf",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 10
+  },
+  "quality": 9,
+  "hiddenOutput": "PASS explains x86 TSO / strong store ordering\nPASS explains ARM64 weak ordering / reordering\nPASS Release on the producer's tail store\nPASS Acquire on the consumer's tail load\nFAIL SeqCst not needed\nPASS src/lib.rs exists\nPASS uses Ordering::Release in code\nPASS uses Ordering::Acquire in code\nPASS UnsafeCell<MaybeUninit<T>> slots\nPASS cargo build passes\nSCORE 9/10",
+  "wallMs": 207610,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 136792,
+      "usage": {
+        "input": 14,
+        "output": 13084,
+        "reasoning": 2992,
+        "cacheRead": 97854,
+        "cacheWrite": 17048,
+        "split": {
+          "files": 0,
+          "commands": 1657,
+          "earlier": 47998,
+          "calls": 7,
+          "estimated": true,
+          "startup": 60529,
+          "prompt": 4732
+        }
+      },
+      "tokens": 128000,
+      "costUsd": 0.4176908,
+      "quotaUsed": {
+        "five_hour": 0.25,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 69046,
+      "usage": {
+        "input": 2,
+        "output": 7934,
+        "reasoning": 1931,
+        "cacheRead": 631,
+        "cacheWrite": 3921,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3443,
+          "prompt": 1111
+        }
+      },
+      "tokens": 12488,
+      "costUsd": 0.19018220000000002,
+      "quotaUsed": {
+        "five_hour": 0.25,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 140488,
+  "discardedTokens": 0,
+  "costUsd": 0.607873,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.23,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.26,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-114833-9715",
+  "finishedAt": "2026-11-15T06:22:04.667Z"
+}
