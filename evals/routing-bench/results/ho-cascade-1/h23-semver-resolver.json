@@ -1,0 +1,79 @@
+{
+  "id": "H2.3",
+  "slug": "h23-semver-resolver",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "worker|senior",
+  "expectedPath": "T0>T2 or T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (113 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS resolver module imports\nPASS caret rules for ^1.2.3, ^0.2.3, ^0.0.3 and numeric (not text) version order\nPASS a diamond conflict backtracks A from 2.0.0 to 1.5.0 and picks C 1.8.0\nPASS backtracking drops packages only the abandoned version needed\nPASS cyclic dependencies terminate\nPASS an unsatisfiable graph returns None\nSCORE 6/6",
+  "wallMs": 54876,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 53623,
+      "usage": {
+        "input": 10,
+        "output": 13678,
+        "reasoning": 3351,
+        "cacheRead": 74492,
+        "cacheWrite": 20901,
+        "split": {
+          "files": 0,
+          "commands": 2959,
+          "earlier": 37255,
+          "calls": 5,
+          "estimated": true,
+          "startup": 48250,
+          "prompt": 6940
+        }
+      },
+      "tokens": 109081,
+      "costUsd": 0.011765119999999999,
+      "quotaUsed": {
+        "five_hour": 0.88,
+        "seven_day": 0.13
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 109081,
+  "discardedTokens": 0,
+  "costUsd": 0.011765119999999999,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.88,
+      "seven_day": 0.13
+    },
+    "after": {
+      "five_hour": 0.88,
+      "seven_day": 0.13
+    }
+  },
+  "runId": "20261115-142031-e00b",
+  "finishedAt": "2026-11-15T08:51:29.172Z"
+}
