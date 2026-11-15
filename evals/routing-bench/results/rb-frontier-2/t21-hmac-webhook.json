@@ -1,0 +1,73 @@
+{
+  "id": "2.1",
+  "slug": "t21-hmac-webhook",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 11,
+    "total": 11
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS app.py exists\nPASS app.py imports and builds an app\nPASS POST /webhooks/payment route exists\nPASS a correctly signed webhook gets 200\nPASS a signature made over the raw body (odd whitespace) gets 200\nPASS a wrong signature gets 400\nPASS a signature made with another secret gets 400\nPASS a missing X-Signature header gets 400\nPASS a body changed after signing gets 400\nPASS an empty signature gets 400\nPASS compares with hmac.compare_digest\nSCORE 11/11",
+  "wallMs": 40097,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 38857,
+      "usage": {
+        "input": 12,
+        "output": 3040,
+        "reasoning": 155,
+        "cacheRead": 58907,
+        "cacheWrite": 7351,
+        "split": {
+          "files": 0,
+          "commands": 1833,
+          "earlier": 8590,
+          "calls": 6,
+          "estimated": true,
+          "startup": 51815,
+          "prompt": 4034
+        }
+      },
+      "tokens": 69310,
+      "costUsd": 0.13143739999999998,
+      "quotaUsed": {
+        "five_hour": 0.16,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 69310,
+  "discardedTokens": 0,
+  "costUsd": 0.13143739999999998,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.15,
+      "seven_day": 0.07
+    },
+    "after": {
+      "five_hour": 0.16,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-113949-fee9",
+  "finishedAt": "2026-11-15T06:10:32.982Z"
+}
