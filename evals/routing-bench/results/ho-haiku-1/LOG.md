@@ -37,3 +37,4 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 10:43:15 UTC: H5.2 h52-decoy-table: applied, quality 10.0/10 (7/7), path haiku, 33,057 tokens, est. $0.0020 (API list prices), 0.1 min; quota before five_hour 2%, seven_day 15%, after five_hour 2%, seven_day 15%
 - 2026-11-15 10:43:18 UTC: H5.3 h53-rwlock: reading quota, then running
 - 2026-11-15 10:47:58 UTC: H5.3 h53-rwlock: applied, quality 10.0/10 (6/6), path haiku, 310,080 tokens, est. $0.0469 (API list prices), 4.5 min; quota before five_hour 2%, seven_day 15%, after five_hour 2%, seven_day 15%
+- 2026-11-15 10:48:00 UTC: finished
