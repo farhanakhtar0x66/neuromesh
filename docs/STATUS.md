@@ -402,6 +402,25 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     plpgsql triggers, `SKIP LOCKED`, `CONCURRENTLY`), and none is installed
     here; it stays on its rubric until one is.
 
+43. **D6, M5, M2 and L1 built (2026-11-15; F105 to F108).** No model calls.
+    F105 `choices-shown` (D6): a developer's report has `choices` and `open`
+    fields, kept whole and shown in full in the CLI summary and the TUI.
+    F106 `input-split` (M5): a Claude turn's input in five parts (start-up,
+    Neuromesh's prompt, files read, command output, the model's earlier
+    output), estimated from the kept log; in the turn's usage, the TUI meter
+    and `bench --split`, which also reads older runs' logs. On the saved
+    Opus+Haiku build evals, start-up plus prompt is 57 to 74 percent of the
+    input; files read are under 1 percent. F107 `paired-bootstrap` (M2):
+    `bench --compare a1,a2,a3 b1,b2,b3 --margin d`. The saved evals all pass
+    every task, so it reports a ceiling, not a margin: the old suite cannot
+    tell the configurations apart. F108 `run-record` (L1): one append-only
+    record at `~/.neuromesh/record/record.jsonl`, written live and backfilled
+    (95 runs, 308 results, 6 ratings from the saved runs), asked with
+    `node src/record/cli.ts`. Each is one commit; the engine changes passed
+    `npm test`, chaos 1000 seeds and kill 400 seeds. None is measured on a
+    live run yet: F106's split in particular is worth checking on the next
+    real Claude run, against `--split` on its log.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

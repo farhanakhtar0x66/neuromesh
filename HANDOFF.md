@@ -82,10 +82,10 @@ measures. The next steps, concretely:
   how stable the result is and how much of it is the cascade rather than
   Haiku. Ask the owner before starting: it spends the plan.
 - [ ] **2. Checkers that run the code** (the checklist at the top of doc
-  22). No model calls; rescore the saved answers with `rescore.ts`.
+  22). Done for 2.1, 2.3, 3.1, 3.2 on 2026-11-15; 3.3 waits for a Postgres. No model calls; rescore the saved answers with `rescore.ts`.
 - [ ] **3. A held-out set of 15 prompts** the router has never been tuned
   on. Record Tier 0's routes on them before changing anything.
-- [ ] **4. Show the developer's "choices made" in full** (D6). No tokens.
+- [x] **4. Show the developer's "choices made" in full** (D6). Done 2026-11-15 (F105).
 - [ ] **5. Start-up tokens** (C1): extend the no-tools path from the grunt
   to worker turns that have a spec or a named file; measure tokens per
   prompt on the routing suite.
@@ -98,6 +98,11 @@ measures. The next steps, concretely:
 The beta release is track B in doc 22. Nothing on the beta's page may say
 more than the checklist has ticked.
 
+Built on 2026-11-15, no model calls (STATUS 43): M5 (F106, the five-part input
+split, `bench --split`), M2 (F107, `bench --compare`), L1 (F108, the record,
+`node src/record/cli.ts`). Every benchmark run from now on lands in the record
+by itself; run `backfill` after a bench to pick up its result lines.
+
 ## How to work here
 
 - The rules are in `CLAUDE.md`. The ones people break:
@@ -109,7 +114,7 @@ more than the checklist has ticked.
     finds what nothing else does. A step that makes a copy removes a
     leftover one on entry; cleanup on the way out does not survive a kill.
   - **Every new behaviour is a feature** in `src/features.ts` with an id, a
-    switch, and its events tagged. Next free id: F105.
+    switch, and its events tagged. Next free id: F109.
   - **A number from one run is a hint.** Write "one run" beside it.
   - **Never tune on what you judge by.** The 15 routing prompts are a
     regression set; the held-out set stays untouched.
