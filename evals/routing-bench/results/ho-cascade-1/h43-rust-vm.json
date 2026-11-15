@@ -1,0 +1,79 @@
+{
+  "id": "H4.3",
+  "slug": "h43-rust-vm",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "expert",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (1093 characters of pasted material left out)",
+    "most like expert work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap under 4 KB\nSCORE 6/6",
+  "wallMs": 253019,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 251809,
+      "usage": {
+        "input": 16,
+        "output": 39799,
+        "reasoning": 13799,
+        "cacheRead": 239703,
+        "cacheWrite": 46070,
+        "split": {
+          "files": 0,
+          "commands": 3356,
+          "earlier": 199409,
+          "calls": 8,
+          "estimated": true,
+          "startup": 71344,
+          "prompt": 11680
+        }
+      },
+      "tokens": 325588,
+      "costUsd": 0.6062723000000001,
+      "quotaUsed": {
+        "five_hour": 0.95,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 325588,
+  "discardedTokens": 0,
+  "costUsd": 0.6062723000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.91,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-143723-48a2",
+  "finishedAt": "2026-11-15T09:11:42.671Z"
+}
