@@ -1,0 +1,79 @@
+{
+  "id": "1.1",
+  "slug": "t11-pdf-table-json",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-6",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (100 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.json exists\nPASS parses as JSON\nPASS a list of exactly 3 objects\nPASS keys are exactly name, role, salary_inr\nPASS salary_inr values are integers\nPASS salaries are 1850000, 1100000, 360000\nPASS names are Rahul Sharma, Priya Patel, Aman Verma\nSCORE 7/7",
+  "wallMs": 38485,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 37297,
+      "usage": {
+        "input": 2,
+        "output": 9598,
+        "reasoning": 4679,
+        "cacheRead": 0,
+        "cacheWrite": 4168,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3445,
+          "prompt": 726
+        }
+      },
+      "tokens": 13768,
+      "costUsd": 0.0056328,
+      "quotaUsed": {
+        "five_hour": 0.67,
+        "seven_day": 0.25
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 13768,
+  "discardedTokens": 0,
+  "costUsd": 0.0056328,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.67,
+      "seven_day": 0.25
+    },
+    "after": {
+      "five_hour": 0.68,
+      "seven_day": 0.25
+    }
+  },
+  "runId": "20261116-023347-6d24",
+  "finishedAt": "2026-11-15T21:04:28.850Z"
+}
