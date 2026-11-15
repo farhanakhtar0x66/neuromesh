@@ -1,0 +1,73 @@
+{
+  "id": "H5.2",
+  "slug": "h52-decoy-table",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS schedule.md exists\nPASS header is Component | Owner | Target_Date\nPASS a separator row and exactly three data rows\nPASS sorted by date: 2026-11-18, 2026-11-21, 2026-11-25\nPASS owners follow the dates: Aarav, Meera, Kabir\nPASS components are oauth, sqlite and websocket work\nPASS no code block and no design prose\nSCORE 7/7",
+  "wallMs": 14183,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 13290,
+      "usage": {
+        "input": 6,
+        "output": 694,
+        "reasoning": 0,
+        "cacheRead": 24175,
+        "cacheWrite": 4640,
+        "split": {
+          "files": 0,
+          "commands": 304,
+          "earlier": 689,
+          "calls": 3,
+          "estimated": true,
+          "startup": 25900,
+          "prompt": 1928
+        }
+      },
+      "tokens": 29515,
+      "costUsd": 0.055859,
+      "quotaUsed": {
+        "five_hour": 0.84,
+        "seven_day": 0.13
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 29515,
+  "discardedTokens": 0,
+  "costUsd": 0.055859,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.84,
+      "seven_day": 0.13
+    },
+    "after": {
+      "five_hour": 0.84,
+      "seven_day": 0.13
+    }
+  },
+  "runId": "20261115-141019-157f",
+  "finishedAt": "2026-11-15T08:40:36.466Z"
+}
