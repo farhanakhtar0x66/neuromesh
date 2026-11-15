@@ -4,19 +4,22 @@
 //
 //   node evals/bench.ts bench-solo-opus-1 bench-opus-haiku-1 ...
 //   node evals/bench.ts --turns bench-opus-haiku-1      every turn of every task
+//   node evals/bench.ts --split bench-solo-opus-1 ...  where the input tokens went, in five parts
 //   node evals/bench.ts --fit bench-solo-opus-1 ...     quota points per token, fitted over the tasks
 //
 // Costs are estimates at API list prices (src/usage/prices.ts). Quota is what
 // `neuromesh eval --quota` read before and after each task, in points of the
 // 5-hour window (whole points only, so small tasks often read 0).
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { costOf, loadReport } from "../src/eval/eval.ts";
 import type { EvalReport, TaskResult } from "../src/eval/eval.ts";
 import { defaultHome, loadState } from "../src/engine/store.ts";
 import type { RunState } from "../src/engine/types.ts";
 import { estimateCost } from "../src/usage/prices.ts";
+import { addSplit, splitFromLog, splitParts } from "../src/usage/split.ts";
+import type { InputSplit } from "../src/usage/split.ts";
 
 const home = defaultHome();
 const args = process.argv.slice(2);
@@ -70,6 +73,51 @@ const k = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : Stri
 const pad = (s: string, n: number): string => s.padEnd(n);
 const lpad = (s: string, n: number): string => s.padStart(n);
 
+/** [F106 input-split] A turn's split: from its record, or from its kept log for runs made before the split was recorded. */
+function splitOf(a: { usage: { split?: InputSplit }; logPath?: string; backend: string }): InputSplit | undefined {
+  if (a.usage.split) return a.usage.split;
+  if (a.backend !== "claude" || !a.logPath || !existsSync(a.logPath)) return undefined;
+  return splitFromLog(readFileSync(a.logPath, "utf8"));
+}
+
+function splitLine(s: InputSplit | undefined): string {
+  if (!s) return "";
+  const parts = splitParts(s).map(([name, n]) => `${name} ${k(n)}`);
+  return `  [${parts.join(", ")}]`;
+}
+
+function cells(s: InputSplit): string {
+  const total = (s.startup ?? 0) + (s.prompt ?? 0) + (s.startupAndPrompt ?? 0) + s.files + s.commands + s.earlier + (s.resumed ?? 0);
+  const share = (n: number | undefined): string => (n === undefined ? lpad("?", 9) : lpad(`${k(n)} ${Math.round((100 * n) / Math.max(1, total))}%`, 9));
+  const together = s.startupAndPrompt !== undefined && s.startup === undefined;
+  const front = together ? `${share(s.startupAndPrompt)}${lpad("(with start-up)", 16)}` : `${share(s.startup)}${share(s.prompt)}`;
+  return `${lpad(String(s.calls), 6)} ${front} ${share(s.files)} ${share(s.commands)} ${share(s.earlier + (s.resumed ?? 0))} ${lpad(k(total), 8)}`;
+}
+
+/** Where the input tokens went, per task, in thousands and as a share of what the turns' calls read. */
+function splitTable(report: EvalReport): string {
+  const lines = [
+    `${report.name}: where the input went (estimated from the turns' logs; where the prompt's size was not recorded, start-up and prompt are one number)`,
+    `  ${pad("task", 18)} ${lpad("calls", 6)} ${lpad("start-up", 9)} ${lpad("prompt", 9)} ${lpad("files", 9)} ${lpad("commands", 9)} ${lpad("earlier", 9)} ${lpad("input", 8)}`,
+  ];
+  let all: InputSplit | undefined;
+  for (const r of Object.values(report.results)) {
+    const state = runOf(r);
+    let s: InputSplit | undefined;
+    let missing = 0;
+    for (const a of state?.attempts ?? []) {
+      const one = splitOf(a);
+      if (one) s = addSplit(s, one);
+      else if (a.backend === "claude") missing += 1;
+    }
+    all = addSplit(all, s);
+    lines.push(`  ${pad(r.task, 18)} ${s ? cells(s) : `${lpad("?", 6)}  no kept log`}${missing > 0 ? `  (${missing} turns without a log)` : ""}`);
+  }
+  if (all) lines.push(`  ${pad("TOTAL", 18)} ${cells(all)}`);
+  return lines.join("\n");
+}
+
+
 function table(report: EvalReport): string {
   const rows = Object.values(report.results).map(rowOf);
   const lines = [`${report.name}  (preset ${report.preset})`, `  ${pad("task", 18)} ${pad("hidden", 7)} ${pad("score", 6)} ${lpad("min", 5)} ${lpad("est $", 7)} ${lpad("expert$", 8)} ${lpad("exp out", 8)} ${lpad("wrk out", 8)} ${lpad("cache rd", 9)} ${lpad("turns", 5)} ${lpad("5h pts", 6)}`];
@@ -92,7 +140,7 @@ function turns(report: EvalReport): string {
     lines.push(`  ${r.task}  (${r.hidden}${r.score ? ` ${r.score.passed}/${r.score.total}` : ""}, ${(r.wallMs / 60_000).toFixed(1)} min)`);
     for (const a of state?.attempts ?? []) {
       const cost = estimateCost(a.model, a.usage);
-      lines.push(`    ${pad(a.task ?? "-", 8)} ${pad(a.kind, 11)} ${pad((a.model ?? "").replace("claude-", ""), 12)} ${pad(a.stop, 9)} ${lpad(`${Math.round(a.durationMs / 1000)}s`, 5)}  out ${lpad(k(a.usage.output ?? 0), 6)}  cache rd ${lpad(k(a.usage.cacheRead ?? 0), 7)}  cache wr ${lpad(k(a.usage.cacheWrite ?? 0), 6)}  ${cost === undefined ? "?" : `$${cost.toFixed(3)}`}`);
+      lines.push(`    ${pad(a.task ?? "-", 8)} ${pad(a.kind, 11)} ${pad((a.model ?? "").replace("claude-", ""), 12)} ${pad(a.stop, 9)} ${lpad(`${Math.round(a.durationMs / 1000)}s`, 5)}  out ${lpad(k(a.usage.output ?? 0), 6)}  cache rd ${lpad(k(a.usage.cacheRead ?? 0), 7)}  cache wr ${lpad(k(a.usage.cacheWrite ?? 0), 6)}  ${cost === undefined ? "?" : `$${cost.toFixed(3)}`}${splitLine(splitOf(a))}`);
     }
   }
   return lines.join("\n");
@@ -127,5 +175,6 @@ const reports = names.map((n) => {
   return r;
 });
 if (flag("fit")) console.log(fit(reports));
+else if (flag("split")) console.log(reports.map(splitTable).join("\n\n"));
 else if (flag("turns")) console.log(reports.map(turns).join("\n\n"));
 else console.log(reports.map(table).join("\n\n"));

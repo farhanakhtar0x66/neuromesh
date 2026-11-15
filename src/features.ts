@@ -974,6 +974,15 @@ export const FEATURES: Feature[] = [
     what: "A developer's report has two more fields, choices (each decision it made alone because nobody could be asked) and open (what it left out or could not settle). They are kept whole in the task's report and shown in full under the task, instead of being cut to 200 characters inside the notes (the first live run of F101 showed the worker had written \"no size cap; the request did not ask for one\" and the owner never saw it). No extra turn, no extra check. Off, the report is as before. Plan item D6. Not yet measured live.",
     optional: true,
   },
+  {
+    id: "F106",
+    key: "input-split",
+    name: "Where a turn's input tokens went, in five parts",
+    added: "2026-11-15",
+    files: ["src/usage/split.ts", "src/engine/run.ts (inputSplitOf, once)", "src/tui/view.ts (context meter)", "evals/bench.ts (--split)"],
+    what: "For Claude turns, the turn's kept log is read after the turn and every model call's prompt (which the tool reports exactly) is shared out between the tool's own start-up (system prompt and tool definitions), Neuromesh's prompt, files read (Read, Grep, Glob results), command output (everything else a tool returned) and the model's own earlier output in the turn; the shares come from character counts, so they are estimates and say so. The split is kept in the turn's usage and summed with it, shown in the TUI context meter and in `node evals/bench.ts --split`, which can also read it from the kept logs of runs made before this existed (then start-up and prompt stay together). A resumed session's first call is shown as its own part. No turn, no token. Plan item M5. Not yet checked against a live run.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

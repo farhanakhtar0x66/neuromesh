@@ -9,6 +9,7 @@ import type { Question } from "../engine/run.ts";
 import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { estimateCost } from "../usage/prices.ts";
+import type { InputSplit } from "../usage/split.ts";
 import { tidyStep } from "./blocks.ts";
 import type { Access, Verbosity } from "./store.ts";
 import type { Tone } from "./theme.ts";
@@ -65,7 +66,7 @@ export interface AgentView {
   /** [F41 tui-context] What the current or last turn was made of. */
   promptChars?: number;
   contextChars?: number;
-  lastUsage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number };
+  lastUsage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; split?: InputSplit };
 }
 
 /** [F43 quota-windows] A model's subscription windows, as its tool last reported them. */
@@ -359,7 +360,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
     }
     case "agent.finished": {
       const a = m.agents.get(agentKey(e));
-      const usage = (e.usage ?? {}) as Record<string, number | undefined>;
+      const usage = (e.usage ?? {}) as Record<string, number | undefined> & { split?: InputSplit };
       const tokens = totalTokens(usage);
       const cost = typeof e.cost === "number" ? e.cost : estimateCost(String(e.model ?? ""), usage as Record<string, number>);
       if (e.role === "briefer" || e.role === "orchestrator") m.planned = true;
@@ -371,7 +372,7 @@ export function applyEvent(m: Model, e: NeuromeshEvent): void {
         a.failed = e.stop !== "done";
         a.doneAt = Date.now();
         a.last = undefined;
-        a.lastUsage = { input: usage.input, output: usage.output, cacheRead: usage.cacheRead, cacheWrite: usage.cacheWrite };
+        a.lastUsage = { input: usage.input, output: usage.output, cacheRead: usage.cacheRead, cacheWrite: usage.cacheWrite, split: usage.split };
         if (String(e.model ?? "")) a.model = String(e.model);
         m.contextAt = Date.now();
       }

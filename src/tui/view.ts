@@ -22,6 +22,7 @@ import { renderMarkdown, wrapInline } from "./markdown.ts";
 import type { MdRow, Span } from "./markdown.ts";
 import type { Composer } from "./composer.ts";
 import { diffRows, gutterWidth } from "./diff.ts";
+import { splitParts } from "../usage/split.ts";
 import { nowOf, pipeline, prettyModel, shortEffort } from "./model.ts";
 import type { AgentView, Choice, Model, SessionView } from "./model.ts";
 import { graphemes, truncate, width, wrap } from "./text.ts";
@@ -1179,7 +1180,7 @@ function infoPane(m: Model, cv: Canvas, r: Rect): void {
 
   if (isOn("tui-context")) {
     const label = m.compactAsked ? "compact ✓" : "compact";
-    card(8, { title: "context.md" }, (a) => {
+    card(isOn("input-split") ? 10 : 8, { title: "context.md" }, (a) => {
       // The compact button sits in the top edge.
       const bw = width(label) + 2;
       button(cv, x + w - 3 - bw, a.y - 1, label, "ctx:compact", m, { tone: m.compactAsked ? "jade" : "cyan" });
@@ -1342,12 +1343,17 @@ function contextCard(m: Model, cv: Canvas, a: Rect): void {
   const promptTok = (chosen?.promptChars ?? 0) / 4;
   const ctxTok = (chosen?.contextChars ?? 0) / 4;
   const inputAll = u ? (u.input ?? 0) + (u.cacheRead ?? 0) + (u.cacheWrite ?? 0) : 0;
-  const parts: [string, number, Tone][] = [
-    ["context.md", ctxTok, "jade"],
-    ["instructions", Math.max(0, promptTok - ctxTok), "blue"],
-    ["reading, tools", Math.max(0, inputAll - promptTok), "mauve"],
-    ["output", u?.output ?? 0, "amber"],
-  ];
+  // [F106 input-split] With the turn's split: the five parts of its input, then its output.
+  const split = u?.split && isOn("input-split") ? u.split : undefined;
+  const tones: Record<string, Tone> = { "start-up": "subtle", "start-up + prompt": "subtle", "resumed session": "subtle", prompt: "blue", "files read": "mauve", "command output": "cyan", "earlier turns": "jade" };
+  const parts: [string, number, Tone][] = split
+    ? [...splitParts(split).map(([name, tokens]): [string, number, Tone] => [name, tokens, tones[name] ?? "muted"]), ["output", u?.output ?? 0, "amber"]]
+    : [
+        ["context.md", ctxTok, "jade"],
+        ["instructions", Math.max(0, promptTok - ctxTok), "blue"],
+        ["reading, tools", Math.max(0, inputAll - promptTok), "mauve"],
+        ["output", u?.output ?? 0, "amber"],
+      ];
   const total = parts.reduce((n, p) => n + p[1], 0);
   const counts = parts.map((p) => (total > 0 && p[1] > 0 ? Math.max(1, Math.round((p[1] / total) * cells)) : 0));
   while (counts.reduce((n, c) => n + c, 0) > cells) counts[counts.indexOf(Math.max(...counts))]! -= 1;
@@ -1368,7 +1374,7 @@ function contextCard(m: Model, cv: Canvas, a: Rect): void {
   const caption = chosen
     ? `${chosen.role}${chosen.task && chosen.task !== "main" ? ` ${chosen.task}` : ""}${chosen.working ? " (now)" : ""} · ${total > 0 ? `${kTokens(total)} tokens` : "–"}`
     : "no agent has worked yet";
-  cv.text(a.x, a.y + rowsN + 4, caption, pen("subtle"), a.w);
+  cv.text(a.x, a.y + rowsN + Math.max(4, parts.length), caption, pen("subtle"), a.w);
 }
 
 // ---------------------------------------------------------------------------

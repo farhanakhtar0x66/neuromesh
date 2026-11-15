@@ -34,6 +34,8 @@ import { TEST_PATH, buildPacket, startHere, trackedFiles } from "../context/pack
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../checks/blind.ts";
 import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
 import { estimateCost } from "../usage/prices.ts";
+import { splitFromLog } from "../usage/split.ts";
+import type { InputSplit } from "../usage/split.ts";
 import { buildBrief, detectRuntimes, renderBrief, repoFacts } from "../intake/brief.ts";
 import type { Brief, Spec } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
@@ -1020,6 +1022,16 @@ function emptyResult(stop: AgentResult["stop"], detail: string): AgentResult {
   return { stop, finalText: "", usage: {}, durationMs: 0, exitCode: null, detail };
 }
 
+/** [F106 input-split] The start-up a fresh session of each kind was seen to cost per call, for the first call of a resumed one. */
+const STARTUP_SEEN = new Map<string, number>();
+
+function inputSplitOf(logPath: string, promptChars: number, resumed: boolean, kind: string): InputSplit | undefined {
+  if (!existsSync(logPath)) return undefined;
+  const split = splitFromLog(readFileSync(logPath, "utf8"), { promptChars, resumed, startupHint: STARTUP_SEEN.get(kind) });
+  if (split && !resumed && split.startup !== undefined && split.calls > 0) STARTUP_SEEN.set(kind, split.startup / split.calls);
+  return split;
+}
+
 async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: AgentBackend, prompt: string, resumeSessionId: string | undefined): Promise<AgentResult> {
   const { state, log } = run;
   const startedAt = new Date().toISOString();
@@ -1108,7 +1120,7 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
   // [F83 early-exit]
   if (req.exited && !cut && !run.signal.aborted) result = { ...result, stop: "error", detail: `${EARLY_EXIT}: ${req.exited.reason}` };
   delete state.inFlight[req.key];
-  const usage =
+  const usageBase =
     // [F09 codex-session-totals]
     backend.sessionTotals && isOn("codex-session-totals") && resumeSessionId !== undefined && result.sessionId === resumeSessionId
       ? usageSince(
@@ -1116,6 +1128,9 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
           state.attempts.filter((a) => a.sessionId === resumeSessionId && a.backend === backend.id).map((a) => a.usage),
         )
       : keptUsage(result.usage, streamed);
+  // [F106 input-split] Where this turn's input went, from the turn's kept log.
+  const split = backend.id === "claude" && isOn("input-split") ? optional(run, "input-split", undefined, () => inputSplitOf(logPath, prompt.length, resumeSessionId !== undefined, `${config.model}|${req.access}|${req.direct ?? false}`)) : undefined;
+  const usage: Usage = split ? { ...usageBase, split } : usageBase;
   const record: AttemptRecord = {
     role: req.role,
     tier,

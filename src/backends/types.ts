@@ -4,6 +4,9 @@
 // treats it as a black box: a prompt goes in, and a final answer, usage numbers
 // and whatever it changed on disk come out.
 
+import type { InputSplit } from "../usage/split.ts";
+import { addSplit } from "../usage/split.ts";
+
 export type Access = "read-only" | "write";
 
 /** Why an agent run ended. Only "done" means the agent finished its turn. */
@@ -39,6 +42,8 @@ export interface Usage {
    * final report: input and cache counts are exact, output is estimated.
    */
   estimated?: boolean;
+  /** [F106 input-split] Where the turn's input tokens went, in five parts (estimated from the stream). */
+  split?: InputSplit;
 }
 
 /** [F66 tier-pricing] Prompt size above which a call is priced at a model's long-context rates. */
@@ -150,6 +155,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
   const sum = (x?: number, y?: number): number | undefined =>
     x === undefined && y === undefined ? undefined : (x ?? 0) + (y ?? 0);
   const long = a.long || b.long ? addUsage(a.long ?? {}, b.long ?? {}) : undefined;
+  const split = addSplit(a.split, b.split);
   return {
     input: sum(a.input, b.input),
     output: sum(a.output, b.output),
@@ -157,6 +163,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
     cacheRead: sum(a.cacheRead, b.cacheRead),
     cacheWrite: sum(a.cacheWrite, b.cacheWrite),
     ...(long ? { long } : {}),
+    ...(split ? { split } : {}),
   };
 }
 
