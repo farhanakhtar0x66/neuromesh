@@ -1,0 +1,73 @@
+{
+  "id": "1.1",
+  "slug": "t11-pdf-table-json",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS output.json exists\nPASS parses as JSON\nPASS a list of exactly 3 objects\nPASS keys are exactly name, role, salary_inr\nPASS salary_inr values are integers\nPASS salaries are 1850000, 1100000, 360000\nPASS names are Rahul Sharma, Priya Patel, Aman Verma\nSCORE 7/7",
+  "wallMs": 8651,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 7749,
+      "usage": {
+        "input": 6,
+        "output": 1101,
+        "reasoning": 249,
+        "cacheRead": 26207,
+        "cacheWrite": 6078,
+        "split": {
+          "files": 0,
+          "commands": 578,
+          "earlier": 1786,
+          "calls": 3,
+          "estimated": true,
+          "startup": 28139,
+          "prompt": 1789
+        }
+      },
+      "tokens": 33392,
+      "costUsd": 0.00202877,
+      "quotaUsed": {
+        "five_hour": 0.47,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 33392,
+  "discardedTokens": 0,
+  "costUsd": 0.00202877,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.47,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.47,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-124854-9c8d",
+  "finishedAt": "2026-11-15T07:19:05.714Z"
+}
