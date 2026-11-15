@@ -1,0 +1,109 @@
+{
+  "id": "2.3",
+  "slug": "t23-gst-tests",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 3,
+    "total": 15
+  },
+  "quality": 2,
+  "hiddenOutput": "note: test_odd_paisa_intrastate_keeps_components_summing_to_tax: AssertionError: ; test_non_numeric_amount_raises_type_error: ValueError: amount must be a number; test_bool_amount_raises_type_error: ValueEr\nPASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nFAIL the tests run and at least 90% pass against a correct implementation\nFAIL the tests catch a broken version: treats every sale as intrastate\nFAIL the tests catch a broken version: charges igst on intrastate sales too\nFAIL the tests catch a broken version: total ignores the tax\nFAIL the tests catch a broken version: total counts the tax twice\nFAIL the tests catch a broken version: cgst takes the whole tax instead of half\nFAIL the tests catch a broken version: sgst differs from cgst\nFAIL the tests catch a broken version: default rate is not 18%\nFAIL the tests catch a broken version: ignores the rate argument\nFAIL the tests catch a broken version: rounds to whole rupees instead of paise\nFAIL the tests catch a broken version: rejects an amount of zero\nFAIL the tests catch a broken version: handles negative amounts the opposite way\nSCORE 3/15",
+  "wallMs": 102390,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 45639,
+      "usage": {
+        "input": 20,
+        "output": 9225,
+        "reasoning": 2742,
+        "cacheRead": 143090,
+        "cacheWrite": 15490,
+        "split": {
+          "files": 0,
+          "commands": 4871,
+          "earlier": 46290,
+          "calls": 10,
+          "estimated": true,
+          "startup": 95233,
+          "prompt": 12208
+        }
+      },
+      "tokens": 167825,
+      "costUsd": 0.0091434,
+      "quotaUsed": {
+        "five_hour": 0.35,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 54138,
+      "usage": {
+        "input": 4,
+        "output": 13739,
+        "reasoning": 7063,
+        "cacheRead": 4154,
+        "cacheWrite": 14623,
+        "split": {
+          "files": 0,
+          "commands": 33,
+          "earlier": 10436,
+          "calls": 2,
+          "estimated": true,
+          "startup": 6331,
+          "prompt": 1982
+        }
+      },
+      "tokens": 32520,
+      "costUsd": 0.00983604,
+      "quotaUsed": {
+        "five_hour": 0.35,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 200345,
+  "discardedTokens": 0,
+  "costUsd": 0.01897944,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.35,
+      "seven_day": 0.09
+    },
+    "after": {
+      "five_hour": 0.35,
+      "seven_day": 0.09
+    }
+  },
+  "runId": "20261115-120520-5427",
+  "finishedAt": "2026-11-15T06:37:06.949Z"
+}
