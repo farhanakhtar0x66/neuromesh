@@ -112,7 +112,10 @@ measures. The next steps, concretely:
 - [x] **4. Show the developer's "choices made" in full** (D6). Done 2026-11-15 (F105).
 - [ ] **5. Start-up tokens** (C1): extend the no-tools path from the grunt
   to worker turns that have a spec or a named file; measure tokens per
-  prompt on the routing suite.
+  prompt on the routing suite. Built as F109 (STATUS 47); it never fired on
+  its first live run (a wiring bug, STATUS 49, fixed). The next live run of
+  the routing suite and held-out set is its first real measurement: look for
+  `task.direct` events with `feature: F109`, then `bench --split`.
 - [ ] **6. Read the owner's usage log weekly.** The owner is building real
   projects with the cascade; each run is rated there. A low rating or a
   failed feature is the next thing to fix, ahead of the plan.

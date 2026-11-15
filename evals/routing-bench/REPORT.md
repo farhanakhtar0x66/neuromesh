@@ -430,3 +430,40 @@ start-up plus prompt is 26 to 71% of the input. On the cascade runs it is
 47 to 55%. That is the second lever: on long worker turns (4.3, 3.1) the
 history is 63 to 73% of the input. The split is estimated from character
 counts and says so.
+
+
+## F109 on its first live run (2026-11-16): it never fired
+
+`rb-cascade-5` and `ho-cascade-2`, one run each with F109 (`direct-worker`) on and the
+router unchanged. No model calls were made in the audit. Scores after the corrected
+checkers: original 15, 146.8 (4.1, 4.2 and 4.3 are rubric items, 9.0, 8.9, 8.9); held-out 15,
+150.0. Both are within the earlier cascade runs' range.
+
+**F109 did not run.** None of the seven prompts it was meant to take has a `task.direct` event;
+each ran as a tool session with a confidence preamble. The cause is a wiring bug, not a
+no-tools turn failing: the one-line check was given the engine's prompt, which has the
+brief's working standards appended (182 words for 2.1's 44), and refused it on length and on
+the word "install". Fixed to read the user's own request; a regression test fails on the old line.
+
+What the runs do say, with F109 not in play: input tokens per task move by 20 to 80 percent between
+runs of the same prompt, so a difference of that size between two runs is not a result.
+
+| Task | calls, input in rb-cascade-3 / ho-cascade-1 | calls, input in rb-cascade-5 / ho-cascade-2 |
+| --- | --- | --- |
+| 2.1 | 10, 169k | 13, 212k |
+| 2.2 | 5, 114k | 10, 249k |
+| 2.3 | 12, 177k | 9, 134k |
+| 3.1 | 13, 399k | 7, 122k |
+| 5.1 | 8, 158k | 4, 77k |
+| H1.3 | 9, 136k | 14, 242k |
+| H5.1 | 5, 86k | 4, 74k |
+| The seven | 62 calls, 1,241k | 61 calls, 1,110k |
+| Whole run | 105 calls, 2,392k / 102 calls, 2,343k | 84 calls, 1,370k / 133 calls, 2,953k |
+
+H1.3's extra calls were a Claude Code failure on a tool turn (`error_max_structured_output_retries`),
+after which the climb ran the same Haiku again. Another checker defect turned up: 3.1's checker gave a
+positional fetcher as a new function on every render, which a hook that lists the fetcher in its effect's
+dependencies re-ran on each render. rb-cascade-5's 3.1 went from 9/14 to 14/14.
+
+The kill rule (resolution down by more than the interval, or tokens per prompt not down) needs a run in
+which F109 fires. The default stays on; the next live run settles it.

@@ -524,6 +524,38 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     test. Not yet run on a real repository; the task folders are in the
     shape `evals/tasks` already uses, so `neuromesh eval` can read them.
 
+49. **F109 on its first live run: it never fired, a wiring bug (2026-11-16).**
+    No model calls. The owner ran `rb-cascade-5` and `ho-cascade-2` with F109
+    on. On the seven prompts it was meant to take (2.1, 2.2, 2.3, 3.1, 5.1,
+    H1.3, H5.1) there is no `task.direct` event in any run's log and every
+    task ran as before: a tool session, a confidence preamble, 4 to 14 calls.
+    Cause: `directWorker` handed `selfContained()` the engine's `state.prompt`,
+    which is the request with the brief's "Working standards" block appended
+    (a near-empty workspace counts as greenfield). That text is 182 words for
+    2.1's 44-word request and contains "install", so the check refused it on
+    length and on the observation cue. The user's own words are in
+    `state.request`; the check now reads those. The unit tests missed it
+    because their projects were not empty, so the brief added no standards;
+    a new test uses a near-empty project and fails on the old line. The tokens
+    in the two runs say nothing about F109's merit: the same prompts, a
+    tool session both times. On the five original prompts the input was 795k
+    (rb-cascade-5) against 1,018k (rb-cascade-3); on H1.3 and H5.1 it was 315k
+    (ho-cascade-2) against 222k (ho-cascade-1); the 7 prompts together 1,110k
+    against 1,241k, which is run-to-run spread (each task moved by 20 to 80
+    percent either way). The run totals, 1,370k and 2,953k, are the whole
+    suite, F109 or not. H1.3's rise (136k to 242k) is a Claude Code failure
+    on a tool turn, `error_max_structured_output_retries`, after which the
+    climb ran the same Haiku again (the same error as ho-haiku-1's H2.3),
+    not a no-tools turn. So the kill rule is not yet applicable: it needs a run
+    in which F109 fires, and the default stays on, as the exception in the
+    owner's instruction allows (F109 was never invoked). Also found: the 3.1
+    checker passed the positional fetcher as a new function on every render,
+    which a hook that lists the fetcher among its effect's dependencies, as
+    its own comment tells callers to avoid, re-runs on each render; one
+    function now serves the whole run. rb-cascade-5's 3.1 was 9/14 and is 14/14;
+    its other misses (4.1, 4.2, 4.3) are rubric items. ho-cascade-2 scores
+    150.0 and rb-cascade-5 146.8, as the cascade runs before them.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

@@ -18,11 +18,11 @@
   "finalTier": "worker",
   "status": "applied",
   "score": {
-    "passed": 9,
+    "passed": 14,
     "total": 14
   },
-  "quality": 6.428571428571429,
-  "hiddenOutput": "note: fetchResults must be a function\nPASS useSearch.js exists\nPASS the hook loads and runs as a component\nFAIL the newest query's results are shown\nFAIL a stale slow response does not overwrite newer results\nPASS the request is given an AbortSignal\nPASS the earlier request is aborted when the query changes\nFAIL an aborted request is not shown as an error\nPASS unmounting aborts the request in flight\nPASS unmounting cancels a pending debounce timer\nPASS no timer is left running after unmount\nPASS no state is set after unmount\nFAIL a burst of keystrokes sends one request (debounce)\nFAIL re-rendering with the same query sends no new request\nPASS hundreds of rapid changes then unmount leave nothing running or in flight\nSCORE 9/14",
+  "quality": 10,
+  "hiddenOutput": "note: fetchResults must be a function\nPASS useSearch.js exists\nPASS the hook loads and runs as a component\nPASS the newest query's results are shown\nPASS a stale slow response does not overwrite newer results\nPASS the request is given an AbortSignal\nPASS the earlier request is aborted when the query changes\nPASS an aborted request is not shown as an error\nPASS unmounting aborts the request in flight\nPASS unmounting cancels a pending debounce timer\nPASS no timer is left running after unmount\nPASS no state is set after unmount\nPASS a burst of keystrokes sends one request (debounce)\nPASS re-rendering with the same query sends no new request\nPASS hundreds of rapid changes then unmount leave nothing running or in flight\nSCORE 14/14",
   "wallMs": 123141,
   "turns": [
     {
@@ -105,5 +105,9 @@
     }
   },
   "runId": "20261115-235218-0589",
-  "finishedAt": "2026-11-15T18:24:25.819Z"
+  "finishedAt": "2026-11-15T18:24:25.819Z",
+  "scoreAtRun": {
+    "passed": 9,
+    "total": 14
+  }
 }

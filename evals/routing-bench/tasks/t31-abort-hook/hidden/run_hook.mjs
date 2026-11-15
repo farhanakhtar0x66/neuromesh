@@ -78,16 +78,19 @@ try {
 
 const shows = (host, q) => JSON.stringify(host.result) ?.includes(marker(q)) ?? false;
 const text = (host) => { try { return JSON.stringify(host.result) ?? ""; } catch { return ""; } };
+const stableFetcher = (x, sig) => adapterB(x, sig);
 // the plainest call first: hooks that use the global fetch need nothing more
 const callers = [
   (q) => useSearch(q),
   (q) => useSearch(q, options()),
   (q) => useSearch({ query: q, ...options() }),
-  // the fetcher as a positional argument, with or without a delay or an options object
-  (q) => useSearch(q, (x, sig) => adapterB(x, sig)),
-  (q) => useSearch(q, (x, sig) => adapterB(x, sig), { delay: 300, debounce: 300 }),
-  (q) => useSearch(q, (x, sig) => adapterB(x, sig), 300),
-  (q) => useSearch(q, 300, (x, sig) => adapterB(x, sig)),
+  // the fetcher as a positional argument, with or without a delay or an options object. It is one function for
+  // the whole run: a hook that has the fetcher among its effect's dependencies (the usual React advice, and
+  // what such hooks document) must not see a new function on every render.
+  (q) => useSearch(q, stableFetcher),
+  (q) => useSearch(q, stableFetcher, { delay: 300, debounce: 300, delayMs: 300 }),
+  (q) => useSearch(q, stableFetcher, 300),
+  (q) => useSearch(q, 300, stableFetcher),
 ];
 
 function fresh(which) {

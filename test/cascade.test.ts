@@ -642,3 +642,21 @@ test("a worker's part of a planned program that has a spec is built with no tool
   assert.ok(direct.length >= 1, "at least one part was built with no tools");
   assert.ok(direct.every((e) => e.feature === "F109" && e.rule === "part"));
 });
+
+test("F109 judges the user's request, not the brief's working standards appended to the prompt (the wiring bug of the first live run)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (req.direct) return { structured: { files: [{ path: "duration.py", content: "def parse(s):\n    return 0\n" }], summary: "wrote it", notes: "", run: "" } };
+    return report("n/a");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  // A near-empty project is a greenfield one, so the brief adds its standards to the prompt, as in the benchmark.
+  const dir = makeRepo({ "README.md": "# demo\n" });
+  const state = await startRun({ cwd: dir, prompt: "write a python function that parses a duration like 1h30m into seconds. Write it to duration.py", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.ok(state.prompt.split(/\s+/).length > 100, "the prompt the engine holds is long: it has the standards in it");
+  assert.ok(state.request && state.request.split(/\s+/).length < 40, "the request is the user's words");
+  assert.equal(events.find((e) => e.type === "route.tier")?.tier, "worker");
+  const direct = events.find((e) => e.type === "task.direct");
+  assert.equal(direct?.feature, "F109", "it fired");
+  assert.ok(fake.calls.some((c) => c.direct === true), "a no-tools call was made");
+});

@@ -1847,7 +1847,8 @@ function directWorker(run: RunCtx, task: TaskState): "request" | "part" | undefi
   if (tierAtRung(state, task.rung) !== "worker" || task.owner !== "worker") return undefined;
   if (wholeRequest(state, task)) {
     if (!state.cascade.route || task.routed !== true || (task.directTurns ?? 0) >= 1 || task.next !== "initial") return undefined;
-    const verdict = selfContained(state.prompt, projectFiles(task.worktree, task.prepared));
+    // The user's own words: state.prompt also carries the brief's working standards, which are not part of what was asked.
+    const verdict = selfContained(state.request ?? state.prompt, projectFiles(task.worktree, task.prepared));
     return verdict.ok ? "request" : undefined;
   }
   if (state.brief?.spec && (task.directTurns ?? 0) < DIRECT_TURNS && ["initial", "repair", "review-fix"].includes(task.next)) return "part";
