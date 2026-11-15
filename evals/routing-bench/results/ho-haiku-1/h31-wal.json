@@ -1,0 +1,104 @@
+{
+  "id": "H3.1",
+  "slug": "h31-wal",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 1,
+    "total": 6
+  },
+  "quality": 1.6666666666666667,
+  "hiddenOutput": "raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\nPASS wal module imports\nFAIL replay: committed only, in commit order; aborted and open transactions ignored\nFAIL a torn frame at the end is cut off exactly and the state is returned\nFAIL a flipped bit in an uncommitted tail frame is cut off, not raised\nFAIL a flipped bit before a later valid commit raises ValueError and keeps the file\nFAIL a new WAL on the cut file appends a fresh transaction cleanly\nSCORE 1/6",
+  "wallMs": 206581,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 88523,
+      "usage": {
+        "input": 8,
+        "output": 20224,
+        "reasoning": 13159,
+        "cacheRead": 54827,
+        "cacheWrite": 25007,
+        "split": {
+          "files": 0,
+          "commands": 1059,
+          "earlier": 37071,
+          "calls": 4,
+          "estimated": true,
+          "startup": 38105,
+          "prompt": 3607
+        }
+      },
+      "tokens": 100066,
+      "costUsd": 0.01566247,
+      "quotaUsed": {
+        "five_hour": 0.97,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 116304,
+      "usage": {
+        "input": 2,
+        "output": 28162,
+        "reasoning": 21464,
+        "cacheRead": 631,
+        "cacheWrite": 3993,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3444,
+          "prompt": 1183
+        }
+      },
+      "tokens": 32788,
+      "costUsd": 0.014886110000000001,
+      "quotaUsed": {
+        "five_hour": 0.97,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 132854,
+  "discardedTokens": 0,
+  "costUsd": 0.030548580000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.97,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.98,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-145726-e1d6",
+  "finishedAt": "2026-11-15T09:30:56.098Z"
+}
