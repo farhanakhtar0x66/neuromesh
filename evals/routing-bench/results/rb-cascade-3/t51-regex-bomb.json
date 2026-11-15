@@ -1,0 +1,78 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 55654,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 54660,
+      "usage": {
+        "input": 16,
+        "output": 12444,
+        "reasoning": 3714,
+        "cacheRead": 138056,
+        "cacheWrite": 20376,
+        "split": {
+          "files": 0,
+          "commands": 7191,
+          "earlier": 66313,
+          "calls": 8,
+          "estimated": true,
+          "startup": 75830,
+          "prompt": 9114
+        }
+      },
+      "tokens": 170892,
+      "costUsd": 0.01167936,
+      "quotaUsed": {
+        "five_hour": 0.41,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 170892,
+  "discardedTokens": 0,
+  "costUsd": 0.01167936,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.4,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.41,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-122622-988b",
+  "finishedAt": "2026-11-15T06:57:21.158Z"
+}
