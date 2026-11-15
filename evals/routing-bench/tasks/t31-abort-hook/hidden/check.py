@@ -6,7 +6,8 @@ bug from the prompt: type 'react' slowly, change to 're' fast, and let the old
 slow answer for 'react' arrive last. Then the leak cases: unmounting
 mid-request, unmounting with the debounce timer pending, a burst of keystrokes,
 hundreds of rapid changes. The hook is called as useSearch(query, options),
-useSearch({query, ...options}) or useSearch(query); the API is reached through
+useSearch({query, ...options}), useSearch(query) or with the fetcher as a
+positional argument (useSearch(query, fetcher[, delay | options])); the API is reached through
 the global fetch or through any of the usual injected-function option names,
 each handed an AbortSignal.
 """

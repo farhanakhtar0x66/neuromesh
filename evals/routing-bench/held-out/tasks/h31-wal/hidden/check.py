@@ -50,7 +50,6 @@ def build(path, extra=False):
         t5 = w.begin()
         w.put(t5, b"k6", b"six")
         w.commit(t5)
-    w._f.flush()
     return {b"k1": b"v4", b"k5": b"five"}, (t1, t2, t3, t4)
 
 BASE = {b"k1": b"v4", b"k5": b"five"}

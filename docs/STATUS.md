@@ -452,6 +452,29 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     backend: both sets and Haiku-alone ran, scored, compared and backfilled;
     the fake runs were then deleted. Live commands: HANDOFF step 1.
 
+46. **Phase 1 step 0 and the held-out baseline, live; then an audit
+    (2026-11-15).** The owner ran `rb-frontier-2`, `rb-cascade-3`,
+    `rb-cascade-4`, `rb-haiku-1`, `ho-frontier-1`, `ho-cascade-1` and
+    `ho-haiku-1`. The first scores had answers that looked right failing; each
+    was traced to the saved answer, with no model calls, and every time the
+    checker had assumed something the prompt does not say (a private attribute
+    of my reference, a rounding variant, a positional fetcher, the shape of a
+    list, an empty string, what a count means, a heap size, a division, two
+    timing assumptions in the Raft test). Eight defects, listed in the report,
+    all fixed by widening what counts as correct; all runs rescored. Also:
+    `bench --compare` counts a failed task as 0.0 instead of dropping it and
+    takes routing-bench run names; `bench --split` reads routing-bench runs;
+    H5.2 passes with no senior or expert turn or spend and the table right
+    (6 of 7 or more), whatever the path is called; H5.3 passes if the gate
+    stops Tier 2 or Tier 2 scores full marks; the record backfill adds a
+    rescored result as a new line (the old one stays) and `results` shows the
+    newest. Result: cascade 150.0, 147.9, 146.7 against Opus 150.0, 147.9;
+    Haiku alone 142.0; held-out 150.0, 150.0, 140.0. The suite does not separate
+    the cascade from Haiku alone, and the cascade fails the H5.2 trap, as Tier
+    0's route predicted. Table and detail: `evals/routing-bench/REPORT.md`.
+    The lesson: a checker validated only against its own reference is not
+    validated; the live answers found what `validate.sh` could not.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

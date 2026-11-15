@@ -55,8 +55,24 @@ params = list(inspect.signature(fn).parameters)
 swap = bool(re.search(r"batch|inventor|stock|warehouse", params[0], re.I) and re.search(r"order", params[1], re.I))
 
 
+# The prompt does not say how the batches are held: a flat list, or {warehouse: [batches]}.
+# Both are tried, the one that worked last first.
+SHAPES = [lambda bs: bs, lambda bs: {x["warehouse"]: [x] for x in bs}]
+shape = 0
+
+
 def call(orders, batches):
-    return fn(batches, orders) if swap else fn(orders, batches)
+    global shape
+    last = None
+    for k in [shape] + [i for i in range(len(SHAPES)) if i != shape]:
+        try:
+            held = SHAPES[k](batches)
+            result = fn(held, orders) if swap else fn(orders, held)
+            shape = k
+            return result
+        except Exception as e:
+            last = e
+    raise last
 
 
 def make_case(rng, n_orders, n_batches, qty_hi=30, short=False):

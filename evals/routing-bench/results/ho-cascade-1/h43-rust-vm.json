@@ -23,7 +23,7 @@
     "total": 6
   },
   "quality": 10,
-  "hiddenOutput": "PASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap under 4 KB\nSCORE 6/6",
+  "hiddenOutput": "PASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap does not grow with garbage\nSCORE 6/6",
   "wallMs": 253019,
   "turns": [
     {

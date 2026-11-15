@@ -2,7 +2,7 @@
 
 allocate.py is called on generated orders and warehouse batches and compared
 with a plain FIFO-by-expiry allocation (hidden/run_alloc.py explains how it
-stays tolerant about the data and return formats, which the prompt leaves
+stays tolerant about the data (batches as a list or as {warehouse: [batches]}) and return formats, which the prompt leaves
 open), then timed on 30,000 orders against 30,000 batches, which a 4-level
 nested loop cannot do. The prompt's two structural demands (heapq or bisect;
 no loop nested more than two deep) are still checked from the source.

@@ -110,6 +110,33 @@ What this does not show: how any model does on these prompts. The held-out set
 has not been run live. (`run.ts --set held-out` and `score.ts`'s H5.2 rule were
 added afterwards, STATUS 45.)
 
+## After the live runs (2026-11-15, STATUS 46)
+
+Phase 1 step 0 and the held-out baseline were then run live by the owner
+(seven runs). The audit that followed, with no model calls, found eight
+defects in my own checkers (answers that were right scored low, because the
+checker assumed something the prompt does not say); they are listed with their
+effect in `evals/routing-bench/REPORT.md`, and every run was rescored with the
+corrected checkers. After that:
+
+| | Original 15 | Held-out 15 |
+| --- | --- | --- |
+| Opus alone | 150.0, 147.9 | 150.0 |
+| Cascade | 150.0, 147.9, 146.7 | 150.0 |
+| Haiku alone | 142.0 | 140.0 (one engine failure, 0.0) |
+
+The cascade is not worse than Opus alone on either set, at about a quarter of
+the estimated dollars and a third to a quarter of the five-hour window; the
+held-out set did not break it. The suite cannot separate the cascade from
+Haiku alone (difference +3.5 points, interval -1.4 to +11.3). The cascade
+fails the H5.2 decoy trap, as Tier 0's route predicted. F106 and F108 both
+worked on live turns (`bench --split` on the new runs: start-up plus prompt
+42 to 50% of the cascade's input, the model's own earlier turns 47 to 55%,
+files read about 0).
+
+The second half of this report's "model calls" statement below is about the
+offline phase only.
+
 ## Model calls
 
 None. Every step used local files, the fake backend, the fault harness, the

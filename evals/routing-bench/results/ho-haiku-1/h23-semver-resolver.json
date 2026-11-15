@@ -16,7 +16,7 @@
   "reason": "worker error: error_max_structured_output_retries",
   "failure": "agent",
   "quality": 0,
-  "hiddenOutput": "",
+  "hiddenOutput": "import failed: No module named 'resolver'\nFAIL resolver module imports\nFAIL caret rules for ^1.2.3, ^0.2.3, ^0.0.3 and numeric (not text) version order\nFAIL a diamond conflict backtracks A from 2.0.0 to 1.5.0 and picks C 1.8.0\nFAIL backtracking drops packages only the abandoned version needed\nFAIL cyclic dependencies terminate\nFAIL an unsatisfiable graph returns None\nSCORE 0/6",
   "wallMs": 78037,
   "turns": [
     {
@@ -67,5 +67,9 @@
     }
   },
   "runId": "20261115-145600-e43c",
-  "finishedAt": "2026-11-15T09:27:21.452Z"
+  "finishedAt": "2026-11-15T09:27:21.452Z",
+  "score": {
+    "passed": 0,
+    "total": 6
+  }
 }

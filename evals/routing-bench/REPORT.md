@@ -264,3 +264,169 @@ Changes from these runs:
 - **F99** `prose-guard`: the second follow-up showed F89 taking a sentence after "In src/context.js:" with numbers as pasted data. The friend's example "In src/ringbuf.rs: fix the memory ordering race ..." went to the worker instead of the expert; it now goes to the expert. Routes of the 15 prompts unchanged (`routes.ts`).
 
 The follow-up 1 result is a case for a reviewer: the tests checked the behaviour asked for, not that it stays bounded, so `no-checks` let an unbounded design through. One case; to be watched in the usage log.
+
+
+## Phase 1 step 0 and the held-out baseline (2026-11-15, live; scores corrected the same day)
+
+Seven live runs, all run once each on `neuromesh-research` (cascade preset
+`cascade-claude`, frontier `solo-opus`, Haiku alone `solo-haiku`): the original 15
+again (`rb-frontier-2`, `rb-cascade-3`, `rb-cascade-4`, `rb-haiku-1`) and the
+held-out 15, run for the first time with the router unchanged (`ho-frontier-1`,
+`ho-cascade-1`, `ho-haiku-1`). Dollars are estimates at API list prices.
+Quota is the Claude windows' own whole-point readings, summed over prompts, and
+includes whatever else the plan was doing. One run per cell: each number below
+is a hint.
+
+### Scores were corrected after the runs (all runs rescored with the same checkers)
+
+The first scores showed answers that looked right failing. Each was traced
+to the saved answer. Every one was a defect in my checkers, not in the answers:
+an assumption the prompt does not state. Each fix only widens what counts as
+a correct answer; every run in every configuration was rescored with the same
+corrected checker, and the broken-answer cases still fail (`validate.sh`; the
+Raft checker still fails the two broken simulators).
+
+| Prompt | What the checker assumed that the prompt does not say | Effect |
+| --- | --- | --- |
+| H3.1 WAL | its own helper called a private attribute of the reference class (`_f`), so every answer raised | all three runs 1/6 -> 6/6 |
+| 2.3 GST tests | rounding of an odd paisa: only "each half from the exact tax" or "second half as the remainder" counted, not "round the tax to paise, then halve"; and a test expecting TypeError for bad input failed an implementation raising ValueError | cascade-3 and -4: 3/15 -> 15/15 |
+| 3.1 abort hook | the hook's fetcher could be a global, an option or `useSearch(q, options)`, but not a positional argument `useSearch(q, fetcher, {delay})` | cascade-3 and -4: 6/14 -> 14/14 |
+| 3.2 heap refactor | batches were passed as a flat list; an answer taking `{warehouse: [batches]}` raised | frontier-2: 4/12 -> 12/12 |
+| H1.3 type guard | an empty `tx_id` had to be rejected; the SQL (`VARCHAR(36) NOT NULL`) allows it | all three: 25/26 -> 25/25 |
+| H4.1 backup | a repeat backup had to report 0 `uniqueChunks`; the prompt does not say whether that counts new or distinct chunks | cascade: 9/10 -> 10/10 |
+| H4.3 VM | `10 / 4` had to be 2.5 (an integer VM may give 2); `i32::MAX + 1` had to promote; the heap had to stay under 4096 bytes (how bytes are counted is not stated; now: the heap must not grow with garbage) | frontier and Haiku: 5/6 -> 6/6 |
+| H4.2 Raft | read `leader()` the tick after a heal, which can return the old leader that has not yet heard the higher term; and proposed before cutting the node off, which fails when proposals replicate at once | Haiku: 4/5 -> 5/5 |
+
+Four checks failed for a reason that is the answer's: the 5.2 jargon-log
+conversion on Haiku alone (4/10: wrong rows), 4.1 and 4.2 rubric items
+(8.9 to 9.0), and Haiku's H2.3 (an engine failure: `error_max_structured_output_retries`,
+no files; counted as 0.0, as the paired comparison now does).
+
+
+### Original 15: totals per run
+
+| Run | Config | Quality (of 150) | Prompts at 10 | Est. API cost | Wall | Quota (5h / weekly) | Discarded tokens |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| rb-frontier-1 | frontier | 150.0 | 15/15 | $3.32 | 16 min | 13% / 2% | 0 |
+| rb-cascade-1 | cascade | 150.0 | 15/15 | $1.16 | 14 min | 10% / 1% | 22,130 |
+| rb-cascade-2 | cascade | 150.0 | 15/15 | $0.84 | 12 min | 3% / 0% | 11,923 |
+| rb-frontier-2 | frontier | 147.9 | 13/15 | $3.87 | 21 min | 21% / 2% | 0 |
+| rb-cascade-3 | cascade | 147.9 | 13/15 | $0.82 | 25 min | 6% / 1% | 11,742 |
+| rb-cascade-4 | cascade | 146.7 | 13/15 | $0.76 | 18 min | 6% / 0% | 11,623 |
+| rb-haiku-1 | haiku | 142.0 | 12/15 | $0.21 | 21 min | 2% / 0% | 0 |
+
+### Original 15: quality per prompt (after the corrected checkers)
+
+| ID | rb-frontier-1 | rb-cascade-1 | rb-cascade-2 | rb-frontier-2 | rb-cascade-3 | rb-cascade-4 | rb-haiku-1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1.1 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 1.2 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 1.3 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 2.1 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 9.1 |
+| 2.2 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 2.3 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 3.1 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 3.2 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 3.3 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 8.9 | 10.0 |
+| 4.1 | 10.0 | 10.0 | 10.0 | 9.0 | 9.0 | 10.0 | 10.0 |
+| 4.2 | 10.0 | 10.0 | 10.0 | 8.9 | 8.9 | 7.8 | 8.9 |
+| 4.3 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 5.1 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+| 5.2 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 4.0 |
+| 5.3 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 | 10.0 |
+
+`*` = the run failed; counted as 0.0.
+
+### Held-out 15: totals per run
+
+| Run | Config | Quality (of 150) | Prompts at 10 | Est. API cost | Wall | Quota (5h / weekly) | Discarded tokens |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| ho-frontier-1 | frontier | 150.0 | 15/15 | $6.90 | 39 min | 38% / 3% | 0 |
+| ho-cascade-1 | cascade | 150.0 | 15/15 | $1.22 | 30 min | 9% / 1% | 0 |
+| ho-haiku-1 | haiku | 140.0 | 14/15 | $0.76 | 50 min | 5% / 0% | 0 |
+
+### Held-out 15: quality per prompt (after the corrected checkers)
+
+| ID | ho-frontier-1 | ho-cascade-1 | ho-haiku-1 |
+| --- | --- | --- | --- |
+| H1.1 | 10.0 | 10.0 | 10.0 |
+| H1.2 | 10.0 | 10.0 | 10.0 |
+| H1.3 | 10.0 | 10.0 | 10.0 |
+| H2.1 | 10.0 | 10.0 | 10.0 |
+| H2.2 | 10.0 | 10.0 | 10.0 |
+| H2.3 | 10.0 | 10.0 | 0.0* |
+| H3.1 | 10.0 | 10.0 | 10.0 |
+| H3.2 | 10.0 | 10.0 | 10.0 |
+| H3.3 | 10.0 | 10.0 | 10.0 |
+| H4.1 | 10.0 | 10.0 | 10.0 |
+| H4.2 | 10.0 | 10.0 | 10.0 |
+| H4.3 | 10.0 | 10.0 | 10.0 |
+| H5.1 | 10.0 | 10.0 | 10.0 |
+| H5.2 | 10.0 | 10.0 | 10.0 |
+| H5.3 | 10.0 | 10.0 | 10.0 |
+
+`*` = the run failed; counted as 0.0.
+
+
+### Against Opus alone, and against Haiku alone
+
+`bench --compare`, tasks paired, 10,000 resamples, 90% interval; "shown" means
+the low end of the interval is above minus the margin (10 points).
+
+| A | B | Mean difference | 90% interval | Not worse by more than 10 points |
+| --- | --- | --- | --- | --- |
+| cascade-2,3,4 (3 runs) | frontier-1,2 (2 runs) | -0.5 | -1.2 to +0.1 | shown |
+| cascade-3,4 | haiku-1 | +3.5 | -1.4 to +11.3 | shown |
+| haiku-1 | frontier-2 | -3.9 | -11.9 to +1.3 | not shown |
+| held-out: cascade-1 | frontier-1 | +0.0 | +0.0 to +0.0 | shown (a ceiling: both pass everything) |
+| held-out: haiku-1 | frontier-1 | -6.7 | -20.0 to +0.0 | not shown |
+
+What this says, and does not:
+
+- **The cascade matches Opus alone on both sets, for far less.** Original 15:
+  cascade 150.0, 147.9 and 146.7 (of 150) against Opus 150.0 and 147.9, at
+  $0.76 to $0.84 against $3.32 to $3.87 estimated, and 6% against 13 to 21% of
+  the five-hour window. Held-out: 150.0 against 150.0, $1.22 against $6.90, 9%
+  against 38%. The held-out set did not break it, with the router never tuned on it.
+- **The suite does not separate them.** Nearly every prompt passes in both; the
+  intervals hold zero and the held-out comparison is a ceiling. It shows the
+  cascade is not worse; it cannot show it is better, and it cannot say how
+  much of this is the cascade and how much is Haiku.
+- **Haiku alone is close.** 142.0 on the original 15 and 140.0 on the held-out
+  15 (one engine failure, 0.0), at $0.21 and $0.76. The cascade is ahead by 3.5
+  points on the original 15, within the interval. Phase 1's gate asks for tasks
+  the cheapest tier alone fails a third of; these are not those tasks.
+- **Traps.** On the original 15 all three held in cascade-3 and -4. On the held-out
+  15 the cascade passes H5.1 and H5.3 and **fails H5.2**: Tier 0 starts the decoy
+  on the senior (one senior turn, $0.0325). The router's miss, predicted by
+  `HELD_OUT_ROUTES.md`, now measured. Haiku alone passes all three (it has no
+  senior to spend on).
+- **Tier 0 on the held-out set: 8 of 15 on an expected tier, 11 of 15 on the
+  tuned set**, the same as recorded before any run.
+- **Where the held-out misses cost money.** The over-routed H2.2, H3.3 and H4.2
+  started on the senior or expert and passed; the under-routed H3.1, H3.2 and H4.1
+  started on the worker and passed without climbing. No prompt needed a climb.
+  The misses were free here because the cheap tiers solved them.
+
+### Where the input tokens went (F106, on the live turns)
+
+`bench --split <run>` now reads routing-bench runs. The prompt's size was
+recorded on these turns, so start-up and the prompt are separate. Share of the
+input the calls read, TOTAL row (thousands of tokens):
+
+| Run | Calls | Start-up | Prompt | Files | Commands | Earlier turns | Input |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| rb-cascade-3 | 105 | 882k (37%) | 125k (5%) | 0 | 69k (3%) | 1316k (55%) | 2392k |
+| rb-cascade-4 | 93 | 790k (44%) | 111k (6%) | 0 | 53k (3%) | 857k (47%) | 1810k |
+| rb-haiku-1 | 100 | 889k (49%) | 68k (4%) | 0 | 38k (2%) | 811k (45%) | 1805k |
+| rb-frontier-2 | 73 | 603k (66%) | 49k (5%) | 0.3k | 17k (2%) | 252k (27%) | 921k |
+| ho-cascade-1 | 102 | 900k (38%) | 143k (6%) | 0 | 66k (3%) | 1236k (53%) | 2343k |
+| ho-haiku-1 | 131 | 1174k (24%) | 110k (2%) | 0.2k | 78k (2%) | 3550k (72%) | 4913k |
+| ho-frontier-1 | 83 | 684k (46%) | 69k (5%) | 0 | 20k (1%) | 727k (48%) | 1501k |
+
+The earlier finding stands in part: **files read are about 0**, and
+start-up plus prompt is 26 to 71% of the input. On the cascade runs it is
+42 to 50%, and the model's own earlier turns, re-read on every call, are
+47 to 55%. That is the second lever: on long worker turns (4.3, 3.1) the
+history is 63 to 73% of the input. The split is estimated from character
+counts and says so.

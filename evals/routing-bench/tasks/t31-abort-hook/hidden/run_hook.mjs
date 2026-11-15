@@ -83,6 +83,11 @@ const callers = [
   (q) => useSearch(q),
   (q) => useSearch(q, options()),
   (q) => useSearch({ query: q, ...options() }),
+  // the fetcher as a positional argument, with or without a delay or an options object
+  (q) => useSearch(q, (x, sig) => adapterB(x, sig)),
+  (q) => useSearch(q, (x, sig) => adapterB(x, sig), { delay: 300, debounce: 300 }),
+  (q) => useSearch(q, (x, sig) => adapterB(x, sig), 300),
+  (q) => useSearch(q, 300, (x, sig) => adapterB(x, sig)),
 ];
 
 function fresh(which) {

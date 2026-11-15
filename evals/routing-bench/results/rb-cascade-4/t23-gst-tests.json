@@ -18,11 +18,11 @@
   "finalTier": "worker",
   "status": "applied",
   "score": {
-    "passed": 3,
+    "passed": 15,
     "total": 15
   },
-  "quality": 2,
-  "hiddenOutput": "note: test_non_numeric_amount_is_rejected: ValueError: amount must be a number; test_non_numeric_amount_is_rejected: ValueError: amount must be a number; test_non_numeric_amount_is_rejected: ValueError: amo\nPASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nFAIL the tests run and at least 90% pass against a correct implementation\nFAIL the tests catch a broken version: treats every sale as intrastate\nFAIL the tests catch a broken version: charges igst on intrastate sales too\nFAIL the tests catch a broken version: total ignores the tax\nFAIL the tests catch a broken version: total counts the tax twice\nFAIL the tests catch a broken version: cgst takes the whole tax instead of half\nFAIL the tests catch a broken version: sgst differs from cgst\nFAIL the tests catch a broken version: default rate is not 18%\nFAIL the tests catch a broken version: ignores the rate argument\nFAIL the tests catch a broken version: rounds to whole rupees instead of paise\nFAIL the tests catch a broken version: rejects an amount of zero\nFAIL the tests catch a broken version: handles negative amounts the opposite way\nSCORE 3/15",
+  "quality": 10,
+  "hiddenOutput": "PASS test_gst.py exists\nPASS compiles cleanly\nPASS at least 5 tests\nPASS the tests run and at least 90% pass against a correct implementation\nPASS the tests catch a broken version: treats every sale as intrastate\nPASS the tests catch a broken version: charges igst on intrastate sales too\nPASS the tests catch a broken version: total ignores the tax\nPASS the tests catch a broken version: total counts the tax twice\nPASS the tests catch a broken version: cgst takes the whole tax instead of half\nPASS the tests catch a broken version: sgst differs from cgst\nPASS the tests catch a broken version: default rate is not 18%\nPASS the tests catch a broken version: ignores the rate argument\nPASS the tests catch a broken version: rounds to whole rupees instead of paise\nPASS the tests catch a broken version: rejects an amount of zero\nPASS the tests catch a broken version: handles negative amounts the opposite way\nSCORE 15/15",
   "wallMs": 101515,
   "turns": [
     {
@@ -105,5 +105,9 @@
     }
   },
   "runId": "20261115-123209-f2f6",
-  "finishedAt": "2026-11-15T07:03:53.753Z"
+  "finishedAt": "2026-11-15T07:03:53.753Z",
+  "scoreAtRun": {
+    "passed": 3,
+    "total": 15
+  }
 }

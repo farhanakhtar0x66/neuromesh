@@ -20,7 +20,6 @@ const cases = [
   ["invalid: a string", "row", false],
   ["invalid: an array", [], false],
   ["invalid: empty object", {}, false],
-  ["invalid: tx_id empty", { ...good, tx_id: "" }, false],
   ["invalid: tx_id of 37 characters", { ...good, tx_id: "a".repeat(37) }, false],
   ["invalid: tx_id missing", (({ tx_id, ...r }) => r)(good), false],
   ["invalid: amount_paise 0", { ...good, amount_paise: 0 }, false],

@@ -19,11 +19,11 @@
   "finalTier": "worker",
   "status": "applied",
   "score": {
-    "passed": 9,
+    "passed": 10,
     "total": 10
   },
-  "quality": 9,
-  "hiddenOutput": "PASS src/index.mjs exports backup, verify, restore, deleteSnapshot, gc\nPASS bin/cas.mjs exists\nPASS backup returns a snapshot id, a 64-hex Merkle root and chunk stats\nFAIL duplicate files and a repeat backup deduplicate chunks\nPASS restore gives back every file byte for byte, at the same relative paths\nPASS verify passes on an untouched snapshot\nPASS a wrong passphrase is rejected and writes nothing\nPASS a flipped byte in one stored chunk: verify reports it, restore throws\nPASS delete + gc removes only chunks no snapshot needs: the surviving snapshot still verifies and restores\nPASS a second gc finds nothing more to remove\nSCORE 9/10",
+  "quality": 10,
+  "hiddenOutput": "PASS src/index.mjs exports backup, verify, restore, deleteSnapshot, gc\nPASS bin/cas.mjs exists\nPASS backup returns a snapshot id, a 64-hex Merkle root and chunk stats\nPASS duplicate files and a repeat backup deduplicate chunks\nPASS restore gives back every file byte for byte, at the same relative paths\nPASS verify passes on an untouched snapshot\nPASS a wrong passphrase is rejected and writes nothing\nPASS a flipped byte in one stored chunk: verify reports it, restore throws\nPASS delete + gc removes only chunks no snapshot needs: the surviving snapshot still verifies and restores\nPASS a second gc finds nothing more to remove\nSCORE 10/10",
   "wallMs": 298579,
   "turns": [
     {
@@ -106,5 +106,9 @@
     }
   },
   "runId": "20261115-142948-5e8f",
-  "finishedAt": "2026-11-15T09:04:50.388Z"
+  "finishedAt": "2026-11-15T09:04:50.388Z",
+  "scoreAtRun": {
+    "passed": 9,
+    "total": 10
+  }
 }

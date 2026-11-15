@@ -78,8 +78,12 @@ Kept here so it is not lost; each line names where in the plan it is done.
   passes all 30 references and fails all 30 empty folders. Tier 0 starts 8 of
   the 15 on an expected tier, against 11 of 15 on the tuned set
   (`HELD_OUT_ROUTES.md`); no router change was made.*
-- [ ] **More than one run.** Two more clean cascade runs and Haiku alone on
-  the same 15. Phase 1, step 0.
+- [x] **More than one run.** Two more clean cascade runs and Haiku alone on
+  the same 15. Phase 1, step 0. *Done 2026-11-15 (STATUS 46): `rb-cascade-3`,
+  `rb-cascade-4`, `rb-haiku-1`, `rb-frontier-2`, and the held-out 15 once on
+  each configuration. Cascade 150.0, 147.9, 146.7 against Opus 150.0, 147.9 (of
+  150), at about a quarter of the cost; Haiku alone 142.0. The suite does not
+  separate them (`evals/routing-bench/REPORT.md`).*
 - [ ] **Work inside existing repositories.** The owner is testing this by
   building real projects with the cascade; the usage log and its ratings are
   the evidence. The benchmark form of it is M1.

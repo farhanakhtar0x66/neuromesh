@@ -5,7 +5,7 @@
 //   turns [--model m] [--tier t] [--run id] [--since iso]
 //   decisions [--name n] [--feature F82] [--run id]    each with what happened to its task and run
 //   runs                                               one line per run: preset, status, turns, estimated cost
-//   results [--name rb-cascade-2]                      benchmark and eval results
+//   results [--name rb-cascade-2] [--all]              benchmark and eval results (newest line per result; --all shows rescored history)
 //   index                                              rebuild ~/.neuromesh/record/index.json
 //
 // --home overrides ~/.neuromesh (or NEUROMESH_HOME). No model calls.
@@ -66,7 +66,10 @@ switch (command) {
     break;
   }
   case "results": {
-    for (const l of select<ResultLine>(readRecord(home), { kind: "result" }).filter((r) => opt("name") === undefined || r.name === opt("name"))) {
+    // The newest line per result wins (a rescore adds a line and keeps the old one); --all shows every line.
+    const all = select<ResultLine>(readRecord(home), { kind: "result" }).filter((r) => opt("name") === undefined || r.name === opt("name"));
+    const latest = new Map(all.map((r) => [`${r.source}|${r.name}|${r.task}`, r]));
+    for (const l of args.includes("--all") ? all : [...latest.values()]) {
       console.log(`${l.source.padEnd(13)} ${l.name.padEnd(24)} ${l.task.padEnd(18)} ${l.passed !== undefined ? `${l.passed}/${l.total}` : (l.hidden ?? "-")}${l.quality !== undefined ? ` q ${l.quality.toFixed(1)}` : ""}${l.costEstimateUsd !== undefined ? ` ≈$${l.costEstimateUsd.toFixed(3)}` : ""}`);
     }
     break;

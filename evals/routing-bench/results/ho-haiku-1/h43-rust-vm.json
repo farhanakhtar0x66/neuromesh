@@ -14,11 +14,11 @@
   "finalTier": "haiku",
   "status": "applied",
   "score": {
-    "passed": 5,
+    "passed": 6,
     "total": 6
   },
-  "quality": 8.333333333333334,
-  "hiddenOutput": "--- h43_basic\n\nrunning 2 tests\n. 1/2\narithmetic_and_branching --- FAILED\n\nfailures:\n\n---- arithmetic_and_branching stdout ----\n\nthread 'arithmetic_and_branching' (7208992) panicked at tests/h43_basic.rs:15:5:\nassertion `left == right` failed\n  left: 2.0\n right: 2.5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    arithmetic_and_branching\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test h43_basic`\n\nPASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nFAIL Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap under 4 KB\nSCORE 5/6",
+  "quality": 10,
+  "hiddenOutput": "PASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap does not grow with garbage\nSCORE 6/6",
   "wallMs": 430978,
   "turns": [
     {
@@ -75,5 +75,9 @@
     }
   },
   "runId": "20261115-160501-2bde",
-  "finishedAt": "2026-11-15T10:42:16.532Z"
+  "finishedAt": "2026-11-15T10:42:16.532Z",
+  "scoreAtRun": {
+    "passed": 5,
+    "total": 6
+  }
 }

@@ -19,11 +19,11 @@
   "finalTier": "worker",
   "status": "applied",
   "score": {
-    "passed": 1,
+    "passed": 6,
     "total": 6
   },
-  "quality": 1.6666666666666667,
-  "hiddenOutput": "raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\n  raised AttributeError 'WAL' object has no attribute '_f'\nPASS wal module imports\nFAIL replay: committed only, in commit order; aborted and open transactions ignored\nFAIL a torn frame at the end is cut off exactly and the state is returned\nFAIL a flipped bit in an uncommitted tail frame is cut off, not raised\nFAIL a flipped bit before a later valid commit raises ValueError and keeps the file\nFAIL a new WAL on the cut file appends a fresh transaction cleanly\nSCORE 1/6",
+  "quality": 10,
+  "hiddenOutput": "PASS wal module imports\nPASS replay: committed only, in commit order; aborted and open transactions ignored\nPASS a torn frame at the end is cut off exactly and the state is returned\nPASS a flipped bit in an uncommitted tail frame is cut off, not raised\nPASS a flipped bit before a later valid commit raises ValueError and keeps the file\nPASS a new WAL on the cut file appends a fresh transaction cleanly\nSCORE 6/6",
   "wallMs": 127119,
   "turns": [
     {
@@ -106,5 +106,9 @@
     }
   },
   "runId": "20261115-142134-8568",
-  "finishedAt": "2026-11-15T08:53:44.107Z"
+  "finishedAt": "2026-11-15T08:53:44.107Z",
+  "scoreAtRun": {
+    "passed": 1,
+    "total": 6
+  }
 }

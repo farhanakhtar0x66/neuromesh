@@ -14,11 +14,11 @@
   "finalTier": "haiku",
   "status": "applied",
   "score": {
-    "passed": 4,
+    "passed": 5,
     "total": 5
   },
-  "quality": 8,
-  "hiddenOutput": "PASS raft_cluster module imports\nPASS election converges within 50 ticks and entries replicate to all five\nPASS a minority leader cannot commit; the majority elects a higher term, commits, and heal reconciles\nPASS a stale-log candidate with a higher term cannot take over and lose committed entries\nFAIL Figure 8: an old-term entry on a majority stays uncommitted until a current-term entry commits\nSCORE 4/5",
+  "quality": 10,
+  "hiddenOutput": "PASS raft_cluster module imports\nPASS election converges within 50 ticks and entries replicate to all five\nPASS a minority leader cannot commit; the majority elects a higher term, commits, and heal reconciles\nPASS a stale-log candidate with a higher term cannot take over and lose committed entries\nPASS Figure 8: an old-term entry on a majority stays uncommitted until a current-term entry commits\nSCORE 5/5",
   "wallMs": 382285,
   "turns": [
     {
@@ -100,5 +100,9 @@
     }
   },
   "runId": "20261115-151842-50fb",
-  "finishedAt": "2026-11-15T09:55:07.916Z"
+  "finishedAt": "2026-11-15T09:55:07.916Z",
+  "scoreAtRun": {
+    "passed": 4,
+    "total": 5
+  }
 }

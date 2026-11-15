@@ -165,3 +165,18 @@ test("F108: benchmark results are tagged with their prompt set, original or held
   const sets = Object.fromEntries(select(readRecord(home), { kind: "result" }).map((l) => [(l as { task: string }).task, (l as { set?: string }).set]));
   assert.deepEqual(sets, { "1.1": "original", "H1.1": "held-out", "H2.1": "held-out" });
 });
+
+test("F108: a rescored benchmark result is added as a new line, once, and the old line stays", () => {
+  const home = dir();
+  const results = join(home, "bench", "rb-r");
+  mkdirSync(results, { recursive: true });
+  const file = join(results, "t23.json");
+  writeFileSync(file, JSON.stringify({ id: "2.3", slug: "t23", name: "rb-r", config: "cascade", score: { passed: 3, total: 15 }, quality: 2, finishedAt: "2026-11-15T10:00:00.000Z" }));
+  assert.equal(backfill({ roots: [], benchResults: [join(home, "bench")], home }).resultsAdded, 1);
+  writeFileSync(file, JSON.stringify({ id: "2.3", slug: "t23", name: "rb-r", config: "cascade", score: { passed: 15, total: 15 }, scoreAtRun: { passed: 3, total: 15 }, quality: 10, finishedAt: "2026-11-15T10:00:00.000Z" }));
+  assert.equal(backfill({ roots: [], benchResults: [join(home, "bench")], home }).resultsAdded, 1, "the new score is a new line");
+  assert.equal(backfill({ roots: [], benchResults: [join(home, "bench")], home }).resultsAdded, 0, "and only once");
+  const lines = select(readRecord(home), { kind: "result" }) as { passed: number; scoreAtRun?: { passed: number } }[];
+  assert.deepEqual(lines.map((l) => l.passed), [3, 15]);
+  assert.equal(lines[1]!.scoreAtRun?.passed, 3);
+});

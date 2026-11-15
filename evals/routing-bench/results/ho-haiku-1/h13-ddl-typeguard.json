@@ -15,10 +15,10 @@
   "status": "applied",
   "score": {
     "passed": 25,
-    "total": 26
+    "total": 25
   },
-  "quality": 9.615384615384615,
-  "hiddenOutput": "PASS ledger.ts exports isValidLedgerRow\nPASS valid: standard row\nPASS valid: note null\nPASS valid: note undefined\nPASS valid: note field missing\nPASS valid: note of 120 characters\nPASS valid: amount_paise 1\nPASS valid: tx_id of 36 characters\nPASS invalid: null\nPASS invalid: a string\nPASS invalid: an array\nPASS invalid: empty object\nFAIL invalid: tx_id empty\nPASS invalid: tx_id of 37 characters\nPASS invalid: tx_id missing\nPASS invalid: amount_paise 0\nPASS invalid: amount_paise -50\nPASS invalid: amount_paise 12.34\nPASS invalid: amount_paise NaN\nPASS invalid: amount_paise a numeric string\nPASS invalid: currency GBP\nPASS invalid: currency lower case\nPASS invalid: settled the string 'true'\nPASS invalid: settled missing\nPASS invalid: note of 121 characters\nPASS invalid: note a number\nSCORE 25/26",
+  "quality": 10,
+  "hiddenOutput": "PASS ledger.ts exports isValidLedgerRow\nPASS valid: standard row\nPASS valid: note null\nPASS valid: note undefined\nPASS valid: note field missing\nPASS valid: note of 120 characters\nPASS valid: amount_paise 1\nPASS valid: tx_id of 36 characters\nPASS invalid: null\nPASS invalid: a string\nPASS invalid: an array\nPASS invalid: empty object\nPASS invalid: tx_id of 37 characters\nPASS invalid: tx_id missing\nPASS invalid: amount_paise 0\nPASS invalid: amount_paise -50\nPASS invalid: amount_paise 12.34\nPASS invalid: amount_paise NaN\nPASS invalid: amount_paise a numeric string\nPASS invalid: currency GBP\nPASS invalid: currency lower case\nPASS invalid: settled the string 'true'\nPASS invalid: settled missing\nPASS invalid: note of 121 characters\nPASS invalid: note a number\nSCORE 25/25",
   "wallMs": 35629,
   "turns": [
     {
@@ -69,5 +69,9 @@
     }
   },
   "runId": "20261115-144656-e79e",
-  "finishedAt": "2026-11-15T09:17:34.446Z"
+  "finishedAt": "2026-11-15T09:17:34.446Z",
+  "scoreAtRun": {
+    "passed": 25,
+    "total": 26
+  }
 }

@@ -14,6 +14,7 @@
 // 5-hour window (whole points only, so small tasks often read 0).
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { costOf, loadReport } from "../src/eval/eval.ts";
@@ -36,8 +37,8 @@ const option = (name: string): string | undefined => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 
-function runOf(result: TaskResult): RunState | undefined {
-  const projects = join(home, "projects");
+function runOf(result: TaskResult & { homeDir?: string }): RunState | undefined {
+  const projects = join(result.homeDir ?? home, "projects");
   if (!existsSync(projects)) return undefined;
   const dir = readdirSync(projects).map((p) => join(projects, p, "runs", result.runId)).find((d) => existsSync(join(d, "run.json")));
   return dir ? loadState(dir) : undefined;
@@ -179,14 +180,30 @@ function fit(reports: EvalReport[]): string {
   return `Fit over ${rows.length} tasks, ${total} points: expert ${a.toFixed(3)} points per 1k output (${(1 / a).toFixed(1)}k per point), worker ${b.toFixed(3)} per 1k (${(1 / b).toFixed(1)}k per point)`;
 }
 
+/** A routing-bench run seen as an eval report, so --split and --turns can read its turns: each prompt kept its own Neuromesh home (~/.neuromesh-bench/<name>/<slug>). */
+function routingReport(name: string): EvalReport | undefined {
+  const dir = join(dirname(fileURLToPath(import.meta.url)), "routing-bench", "results", name);
+  if (!existsSync(dir)) return undefined;
+  const results: Record<string, unknown> = {};
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const r = JSON.parse(readFileSync(join(dir, file), "utf8")) as { id?: string; slug?: string; runId?: string };
+    if (r.id && r.slug && r.runId) results[r.id] = { task: r.id, runId: r.runId, homeDir: join(homedir(), ".neuromesh-bench", name, r.slug) };
+  }
+  return { name, results } as unknown as EvalReport;
+}
+
 /** A routing-bench run (evals/routing-bench/results/<name>): each prompt's share of hidden items passed, keyed by its id (1.1 to 5.3, or H1.1 to H5.3 for the held-out set). */
 function routingRun(name: string): Record<string, number> | undefined {
   const dir = join(dirname(fileURLToPath(import.meta.url)), "routing-bench", "results", name);
   if (!existsSync(dir)) return undefined;
   const out: Record<string, number> = {};
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-    const r = JSON.parse(readFileSync(join(dir, file), "utf8")) as { id?: string; score?: { passed: number; total: number } };
-    if (r.id && r.score && r.score.total > 0) out[r.id] = r.score.passed / r.score.total;
+    const r = JSON.parse(readFileSync(join(dir, file), "utf8")) as { id?: string; status?: string; score?: { passed: number; total: number } };
+    if (!r.id) continue;
+    // A task that failed counts as 0, not as missing: dropping it would flatter the configuration that failed.
+    // A task still paused (the plan's window ran out) or running has no result yet and is left out.
+    if (r.status === "failed") out[r.id] = 0;
+    else if (r.score && r.score.total > 0) out[r.id] = r.score.passed / r.score.total;
   }
   return out;
 }
@@ -214,7 +231,7 @@ function compare(): string {
 }
 
 const reports = flag("compare") ? [] : names.map((n) => {
-  const r = loadReport(home, n);
+  const r = loadReport(home, n) ?? (flag("split") ? routingReport(n) : undefined);
   if (!r) throw new Error(`No eval results named "${n}"`);
   return r;
 });

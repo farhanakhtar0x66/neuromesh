@@ -75,7 +75,7 @@ to do if the gate is missed. **Follow its order.** Do not start a later phase
 because it is more interesting; each one spends what the one before it
 measures. The next steps, concretely:
 
-- [ ] **1. Finish the routing report's open items** (phase 1, step 0). A
+- [x] **1. Finish the routing report's open items** (phase 1, step 0). Done 2026-11-15 (STATUS 46); the commands below were run. Read `evals/routing-bench/REPORT.md`, last section. A
   second and third clean cascade run (`node evals/routing-bench/run.ts
   --config cascade --name rb-cascade-3 --wait-reset`), and Haiku alone on the
   same 15 prompts (a `solo-haiku` configuration for the runner). This says

@@ -113,6 +113,8 @@ export interface ResultLine extends Base {
   set?: string;
   passed?: number;
   total?: number;
+  /** Set when the result was rescored with a corrected checker: the score at run time. The line is a new one; the old line stays. */
+  scoreAtRun?: { passed: number; total: number };
   /** 0 to 10, from the hidden check. */
   quality?: number;
   hidden?: string;

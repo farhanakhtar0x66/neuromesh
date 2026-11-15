@@ -94,6 +94,7 @@ function benchResults(dir: string): ResultLine[] {
           config: typeof r.config === "string" ? r.config : undefined,
           set: typeof r.set === "string" ? r.set : String(r.id ?? "").startsWith("H") ? "held-out" : "original",
           passed: r.score?.passed,
+          scoreAtRun: (r as { scoreAtRun?: { passed: number; total: number } }).scoreAtRun,
           total: r.score?.total,
           quality: typeof r.quality === "number" ? r.quality : undefined,
           costEstimateUsd: typeof r.costUsd === "number" ? r.costUsd : undefined,
@@ -177,7 +178,7 @@ export function backfill(options: BackfillOptions): BackfillResult {
   const result: BackfillResult = { runsFound: 0, runsAdded: 0, runsSkipped: 0, runsBroken: 0, resultsAdded: 0, ratingsAdded: 0, linesAdded: 0 };
   const have = recordedRuns(options.home);
   const existing = readRecord(options.home);
-  const haveResult = new Set(existing.filter((l): l is ResultLine => l.kind === "result").map((l) => `${l.source}|${l.name}|${l.task}`));
+  const haveResult = new Set(existing.filter((l): l is ResultLine => l.kind === "result").map((l) => `${l.source}|${l.name}|${l.task}|${l.passed ?? l.hidden}/${l.total ?? ""}`));
   const haveRating = new Set(existing.filter((l): l is RatingLine => l.kind === "rating").map((l) => `${l.run}|${l.at}`));
   const add = (lines: RecordLine[]): void => {
     result.linesAdded += lines.length;
@@ -205,7 +206,8 @@ export function backfill(options: BackfillOptions): BackfillResult {
     }
   }
   const results = [...(options.benchResults ?? []).flatMap(benchResults), ...evalResults(options.home)].filter((r) => {
-    const key = `${r.source}|${r.name}|${r.task}`;
+    // A rescored result has a new score, so it is a new line (the record is append-only); the old one stays.
+    const key = `${r.source}|${r.name}|${r.task}|${r.passed ?? r.hidden}/${r.total ?? ""}`;
     if (haveResult.has(key)) return false;
     haveResult.add(key);
     return true;

@@ -132,21 +132,19 @@ def t_figure8():
             break
     if x is None:
         return False
-    e2 = c.propose("e2", x)  # appended, not yet sent anywhere
+    c.heal()
+    c.isolate(x)  # cut x off first, so e2 stays on x alone whether proposals replicate at once or on the next tick
+    e2 = c.propose("e2", x)
     if not (e2 and e2[0]):
         return False
-    c.heal()
-    c.isolate(x)  # x is cut off holding e2 alone
     others = [i for i in rest if i != x]
-    lead = None
-    for _ in range(200):
-        c.step(1)
-        if c.leader() is not None and c.leader() != x:
-            lead = c.leader()
-            break
+    # Let the old leader hear the higher term and an election settle: reading leader() sooner can return
+    # the old leader, which still believes it leads for a few ticks.
+    c.step(120)
+    lead = c.leader()
     if lead not in (a, b):
         return False  # only a node holding e1 may win: the others' logs are not up to date
-    c.step(40)  # the new leader copies e1 to a majority; it has appended nothing of its own
+    # the leader has copied e1 to a majority by now; it has appended nothing of its own
     copies = sum(1 for i in (a, b, *others) if ("e1" in cmds(c.full_log(i))))
     if copies < 3:
         return False

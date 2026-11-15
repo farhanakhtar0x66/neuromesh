@@ -2,8 +2,9 @@
 
 The prompt does not say what a negative amount does, whether bad input is
 rejected, whether "total" is the tax or the amount plus tax, or how the two
-halves of an odd-paise tax are rounded, so a spec-compatible implementation
-comes in twelve flavours (see VARIANTS). A test file is accepted if it passes
+halves of an odd-paise tax are rounded (each half from the exact tax; the second
+half as the remainder; or the tax rounded to paise first and then halved), so a
+spec-compatible implementation comes in eighteen flavours (see VARIANTS). A test file is accepted if it passes
 on at least one of them, and the broken copies (mutants) of that flavour must
 each make it fail.
 """
@@ -15,7 +16,7 @@ VARIANTS = tuple(
     f"{neg}/{tot}/{split}"
     for neg in ("raise", "passthrough", "strict")
     for tot in ("payable", "tax")
-    for split in ("halves", "remainder")
+    for split in ("halves", "remainder", "taxfirst")
 )
 MUTANTS = {
     "ignores_interstate": "treats every sale as intrastate",
@@ -74,7 +75,12 @@ def make(variant="raise/payable/halves", mutant=None):
             igst, cgst, sgst = _q(tax, places), Decimal(0), Decimal(0)
         else:
             cgst = _q(tax / 2, places)
-            sgst = _q(tax / 2, places) if split == "halves" else _q(tax, places) - cgst
+            if split == "taxfirst":
+                rounded = _q(tax, places)
+                cgst = _q(rounded / 2, places)
+                sgst = rounded - cgst
+            else:
+                sgst = _q(tax / 2, places) if split == "halves" else _q(tax, places) - cgst
             igst = _q(tax, places) if mutant == "igst_on_intrastate" else Decimal(0)
             if mutant == "cgst_full_rate":
                 cgst = _q(tax, places)

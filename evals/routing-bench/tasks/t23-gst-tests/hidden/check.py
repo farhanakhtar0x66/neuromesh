@@ -5,7 +5,8 @@ supplies the function (hidden/gst_impl.py, in three spec-compatible flavours,
 because the prompt leaves negatives, input validation and rounding open),
 runs the tests with a stand-in for pytest (hidden/shim/pytest.py), and then
 runs them against broken copies of the function: each must make the tests fail.
-Error-message wording is not graded (`match=` is ignored).
+Error-message wording is not graded (`match=` is ignored), and a test that
+expects TypeError or ValueError accepts either.
 """
 import ast, json, os, re, shutil, subprocess, sys, tempfile
 

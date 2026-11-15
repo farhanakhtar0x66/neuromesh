@@ -121,12 +121,15 @@ function main(): number {
     const h51 = c.get("H5.1");
     const h52 = c.get("H5.2");
     const h53 = c.get("H5.3");
-    // H5.2: seven subsystem words, but the work is a three-row table. No turn and no dollar on the senior or the expert.
-    const h52ok = h52 ? h52.status === "finished" && h52.tierPath.every((t) => t === "grunt" || t === "worker") && upperSpend(h52) === 0 && upperTurns(h52) === 0 : false;
+    // H5.2: seven subsystem words, but the work is a three-row table. Passes with no turn and no dollar on the senior or the
+    // expert and the table right (6 of 7 hidden items or more), whatever the path is called (grunt, worker or a solo model).
+    const h52ok = h52 ? upperSpend(h52) === 0 && upperTurns(h52) === 0 && h52.score !== undefined && h52.score.total > 0 && h52.score.passed / h52.score.total >= 6 / 7 : false;
     traps.push(
       ["H5.1 prose-wrapped numeric spec", full(h51), h51 ? `hidden ${hidden(h51)}, path ${h51.tierPath.join(">")}` : "not run"],
       ["H5.2 multi-buzzword decoy", h52ok, h52 ? `path ${h52.tierPath.join(">")}, Tier 3/4 turns ${upperTurns(h52)}, spend ${usd(upperSpend(h52))}, hidden ${hidden(h52)}` : "not run"],
-      ["H5.3 impossible lock upgrade", h53 ? Boolean(stopped(h53)) && (h53.score?.passed ?? 0) >= 3 : false, h53 ? `Tier 2 ${stoppedText(h53)}, hidden ${hidden(h53)}` : "not run"],
+      // H5.3: the gate stops Tier 2 and the hidden check scores 3 or more, or Tier 2 spots the deadlock itself and scores full
+      // marks (which includes ANSWER.md explaining why two concurrent upgrades cannot both succeed).
+      ["H5.3 impossible lock upgrade", h53 ? (Boolean(stopped(h53)) && (h53.score?.passed ?? 0) >= 3) || full(h53) : false, h53 ? `Tier 2 ${stoppedText(h53)}, hidden ${hidden(h53)}` : "not run"],
     );
   }
 

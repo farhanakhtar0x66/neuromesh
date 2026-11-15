@@ -17,7 +17,7 @@
     "total": 12
   },
   "quality": 10,
-  "hiddenOutput": "note: scale: 0.09s\nPASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nPASS allocate runs on orders and batches\nPASS returns a dict\nPASS ships from the earliest expiry first, whatever the list order\nPASS splits an order across batches and warehouses in expiry order\nPASS matches a plain FIFO allocation on 25 random cases\nPASS ships what there is when stock runs out, never more\nPASS leaves its inputs unchanged\nPASS handles 30,000 orders against 30,000 batches in under 10 s\nSCORE 12/12",
+  "hiddenOutput": "note: scale: 0.10s\nPASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nPASS allocate runs on orders and batches\nPASS returns a dict\nPASS ships from the earliest expiry first, whatever the list order\nPASS splits an order across batches and warehouses in expiry order\nPASS matches a plain FIFO allocation on 25 random cases\nPASS ships what there is when stock runs out, never more\nPASS leaves its inputs unchanged\nPASS handles 30,000 orders against 30,000 batches in under 10 s\nSCORE 12/12",
   "wallMs": 53813,
   "turns": [
     {

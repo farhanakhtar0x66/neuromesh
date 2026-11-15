@@ -16,7 +16,9 @@ class _Raises:
     def __exit__(self, et, ev, tb):
         if et is None:
             raise AssertionError(f"DID NOT RAISE {self.exc}")
-        if issubclass(et, self.exc):
+        wanted = self.exc if isinstance(self.exc, tuple) else (self.exc,)
+        # The prompt does not say which error bad input raises: TypeError and ValueError both count for either.
+        if issubclass(et, self.exc) or (any(w in (TypeError, ValueError) for w in wanted) and issubclass(et, (TypeError, ValueError))):
             self.value = ev
             return True
         return False
