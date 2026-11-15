@@ -1,0 +1,111 @@
+{
+  "id": "H1.3",
+  "slug": "h13-ddl-typeguard",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (288 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 25,
+    "total": 25
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ledger.ts exports isValidLedgerRow\nPASS valid: standard row\nPASS valid: note null\nPASS valid: note undefined\nPASS valid: note field missing\nPASS valid: note of 120 characters\nPASS valid: amount_paise 1\nPASS valid: tx_id of 36 characters\nPASS invalid: null\nPASS invalid: a string\nPASS invalid: an array\nPASS invalid: empty object\nPASS invalid: tx_id of 37 characters\nPASS invalid: tx_id missing\nPASS invalid: amount_paise 0\nPASS invalid: amount_paise -50\nPASS invalid: amount_paise 12.34\nPASS invalid: amount_paise NaN\nPASS invalid: amount_paise a numeric string\nPASS invalid: currency GBP\nPASS invalid: currency lower case\nPASS invalid: settled the string 'true'\nPASS invalid: settled missing\nPASS invalid: note of 121 characters\nPASS invalid: note a number\nSCORE 25/25",
+  "wallMs": 72379,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "error",
+      "durationMs": 50980,
+      "usage": {
+        "input": 16,
+        "output": 10556,
+        "reasoning": 2762,
+        "cacheRead": 124372,
+        "cacheWrite": 17088,
+        "split": {
+          "files": 0,
+          "commands": 5203,
+          "earlier": 61357,
+          "calls": 9,
+          "estimated": true,
+          "startup": 86677,
+          "prompt": 11612
+        }
+      },
+      "tokens": 152032,
+      "costUsd": 0.00994092,
+      "quotaUsed": {
+        "five_hour": 0.3,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "climb",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 20127,
+      "usage": {
+        "input": 10,
+        "output": 3395,
+        "reasoning": 1635,
+        "cacheRead": 65562,
+        "cacheWrite": 11072,
+        "split": {
+          "files": 0,
+          "commands": 8180,
+          "earlier": 13089,
+          "calls": 5,
+          "estimated": true,
+          "startup": 48424,
+          "prompt": 6951
+        }
+      },
+      "tokens": 80039,
+      "costUsd": 0.00456852,
+      "quotaUsed": {
+        "five_hour": 0.3,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 232071,
+  "discardedTokens": 0,
+  "costUsd": 0.014509440000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.3,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.3,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-002011-2d0a",
+  "finishedAt": "2026-11-15T18:51:26.350Z"
+}
