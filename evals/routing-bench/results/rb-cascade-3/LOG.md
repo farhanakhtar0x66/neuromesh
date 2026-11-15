@@ -36,3 +36,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 06:47:59 UTC: 4.2 t42-edge-dag: reading quota, then running
 - 2026-11-15 06:48:01 UTC: 4.2 route.tier senior
 - 2026-11-15 06:50:49 UTC: 4.2 t42-edge-dag: applied, quality 8.9/10 (8/9), path senior, 150,328 tokens, est. $0.1910 (API list prices), 2.7 min; quota before five_hour 39%, seven_day 9%, after five_hour 40%, seven_day 10%
+- 2026-11-15 06:50:51 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
+- 2026-11-15 06:50:53 UTC: 4.3 route.tier worker
+- 2026-11-15 06:56:18 UTC: 4.3 t43-spot-checkpoint: applied, quality 10.0/10 (9/9), path worker, 1,033,764 tokens, est. $0.0566 (API list prices), 5.4 min; quota before five_hour 40%, seven_day 10%, after five_hour 40%, seven_day 10%
