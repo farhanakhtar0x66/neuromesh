@@ -13,3 +13,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 18:50:11 UTC: H1.3 route.tier worker
 - 2026-11-15 18:51:02 UTC: H1.3 task.climbed to claude/claude-haiku-5-5: the worker error
 - 2026-11-15 18:51:26 UTC: H1.3 h13-ddl-typeguard: applied, quality 10.0/10 (25/25), path worker, 232,071 tokens, est. $0.0145 (API list prices), 1.2 min; quota before five_hour 30%, seven_day 21%, after five_hour 30%, seven_day 21%
+- 2026-11-15 18:51:28 UTC: H2.1 h21-sliding-limiter: reading quota, then running
+- 2026-11-15 18:51:30 UTC: H2.1 route.tier worker
+- 2026-11-15 18:54:27 UTC: H2.1 h21-sliding-limiter: applied, quality 10.0/10 (6/6), path worker, 351,642 tokens, est. $0.0284 (API list prices), 2.9 min; quota before five_hour 30%, seven_day 21%, after five_hour 30%, seven_day 21%
