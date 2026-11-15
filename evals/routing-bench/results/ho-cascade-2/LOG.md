@@ -25,3 +25,7 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 18:57:13 UTC: H3.1 h31-wal: reading quota, then running
 - 2026-11-15 18:57:15 UTC: H3.1 route.tier worker
 - 2026-11-15 18:59:53 UTC: H3.1 h31-wal: applied, quality 10.0/10 (6/6), path worker, 194,751 tokens, est. $0.0246 (API list prices), 2.6 min; quota before five_hour 31%, seven_day 21%, after five_hour 31%, seven_day 21%
+- 2026-11-15 18:59:56 UTC: H3.2 h32-build-dag: reading quota, then running
+- 2026-11-15 18:59:58 UTC: H3.2 route.tier worker
+- 2026-11-15 19:01:03 UTC: H3.2 task.climbed to claude/claude-haiku-5-5: the worker error
+- 2026-11-15 19:04:00 UTC: H3.2 h32-build-dag: applied, quality 10.0/10 (7/7), path worker, 612,949 tokens, est. $0.0421 (API list prices), 4.0 min; quota before five_hour 31%, seven_day 21%, after five_hour 32%, seven_day 21%

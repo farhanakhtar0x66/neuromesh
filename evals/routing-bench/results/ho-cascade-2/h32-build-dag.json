@@ -1,0 +1,142 @@
+{
+  "id": "H3.2",
+  "slug": "h32-build-dag",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (1397 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS dag_scheduler.ts exports BuildGraph\nPASS implicit dependencies are registered; markDirty is topological with id tie-breaks\nPASS a self-loop is rejected with a cycle and the graph stays as it was\nPASS a 4-hop cycle A->B->C->D->A is rejected and nothing changes\nPASS updating a node's dependencies works; a cycle-inducing update is rejected\nPASS criticalPath weighs durations: 100+100 beats four nodes of 20, with exact waves\nPASS several targets: only their subgraph counts\nSCORE 7/7",
+  "wallMs": 239408,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "error",
+      "durationMs": 64325,
+      "usage": {
+        "input": 20,
+        "output": 14234,
+        "reasoning": 4101,
+        "cacheRead": 183903,
+        "cacheWrite": 20565,
+        "split": {
+          "files": 0,
+          "commands": 5440,
+          "earlier": 102954,
+          "calls": 11,
+          "estimated": true,
+          "startup": 106535,
+          "prompt": 16687
+        }
+      },
+      "tokens": 218722,
+      "costUsd": 0.013071029999999999,
+      "quotaUsed": {
+        "five_hour": 0.31,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "climb",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 81178,
+      "usage": {
+        "input": 26,
+        "output": 15575,
+        "reasoning": 7537,
+        "cacheRead": 322502,
+        "cacheWrite": 28265,
+        "split": {
+          "files": 37551,
+          "commands": 16278,
+          "earlier": 149258,
+          "calls": 13,
+          "estimated": true,
+          "startup": 126685,
+          "prompt": 21021
+        }
+      },
+      "tokens": 366368,
+      "costUsd": 0.016668119999999998,
+      "quotaUsed": {
+        "five_hour": 0.32,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 92098,
+      "usage": {
+        "input": 2,
+        "output": 23001,
+        "reasoning": 15735,
+        "cacheRead": 631,
+        "cacheWrite": 4225,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3410,
+          "prompt": 1448
+        }
+      },
+      "tokens": 27859,
+      "costUsd": 0.01235201,
+      "quotaUsed": {
+        "five_hour": 0.32,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 612949,
+  "discardedTokens": 0,
+  "costUsd": 0.04209116,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.31,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.32,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-002958-18d8",
+  "finishedAt": "2026-11-15T19:04:00.766Z"
+}
