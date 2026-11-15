@@ -1,0 +1,73 @@
+{
+  "id": "H4.3",
+  "slug": "h43-rust-vm",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 5,
+    "total": 6
+  },
+  "quality": 8.333333333333334,
+  "hiddenOutput": "--- h43_gc\n\nrunning 2 tests\n. 1/2\ncollects_and_stays_small --- FAILED\n\nfailures:\n\n---- collects_and_stays_small stdout ----\n\nthread 'collects_and_stays_small' (6918581) panicked at tests/h43_gc.rs:25:5:\nheap is 4652 bytes\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    collects_and_stays_small\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test h43_gc`\n\nPASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nFAIL GC under a 1 KB threshold: 10+ collections, live closure intact, heap under 4 KB\nSCORE 5/6",
+  "wallMs": 441758,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 440796,
+      "usage": {
+        "input": 20,
+        "output": 50809,
+        "reasoning": 20116,
+        "cacheRead": 397819,
+        "cacheWrite": 56746,
+        "split": {
+          "files": 0,
+          "commands": 5301,
+          "earlier": 352734,
+          "calls": 10,
+          "estimated": true,
+          "startup": 88208,
+          "prompt": 8343
+        }
+      },
+      "tokens": 505394,
+      "costUsd": 1.5497918,
+      "quotaUsed": {
+        "five_hour": 0.83,
+        "seven_day": 0.13
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 505394,
+  "discardedTokens": 0,
+  "costUsd": 1.5497918,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.75,
+      "seven_day": 0.12
+    },
+    "after": {
+      "five_hour": 0.83,
+      "seven_day": 0.13
+    }
+  },
+  "runId": "20261115-140203-0821",
+  "finishedAt": "2026-11-15T08:39:30.426Z"
+}
