@@ -12,59 +12,68 @@
     "haiku"
   ],
   "finalTier": "haiku",
-  "status": "paused",
-  "reason": "subscription limits reached for every worker model: success You've hit your 5-hour limit · resets 4pm (Asia/Calcutta) 429 (see \"neuromesh cooldowns\" for when they reset)",
-  "quality": 0,
-  "hiddenOutput": "",
-  "wallMs": 405309,
+  "status": "applied",
+  "score": {
+    "passed": 5,
+    "total": 6
+  },
+  "quality": 8.333333333333334,
+  "hiddenOutput": "--- h43_basic\n\nrunning 2 tests\n. 1/2\narithmetic_and_branching --- FAILED\n\nfailures:\n\n---- arithmetic_and_branching stdout ----\n\nthread 'arithmetic_and_branching' (7208992) panicked at tests/h43_basic.rs:15:5:\nassertion `left == right` failed\n  left: 2.0\n right: 2.5\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    arithmetic_and_branching\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--test h43_basic`\n\nPASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nFAIL Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap under 4 KB\nSCORE 5/6",
+  "wallMs": 430978,
   "turns": [
     {
       "role": "worker",
       "kind": "initial",
       "model": "claude-haiku-5-5",
       "tier": "worker",
-      "stop": "quota",
-      "durationMs": 405074,
+      "stop": "done",
+      "durationMs": 430500,
       "usage": {
-        "input": 4,
-        "output": 104493,
-        "reasoning": 99682,
-        "cacheRead": 15774,
-        "cacheWrite": 5957,
+        "input": 42,
+        "output": 106244,
+        "reasoning": 69882,
+        "cacheRead": 1843060,
+        "cacheWrite": 111239,
+        "long": {
+          "input": 30,
+          "cacheRead": 1643417,
+          "cacheWrite": 25646,
+          "output": 75889
+        },
         "split": {
           "files": 0,
-          "commands": 299,
-          "earlier": 615,
-          "calls": 3,
+          "commands": 29352,
+          "earlier": 1706379,
+          "calls": 21,
           "estimated": true,
-          "startup": 19154,
-          "prompt": 2503
+          "startup": 201091,
+          "prompt": 17519
         }
       },
-      "tokens": 126228,
-      "costUsd": 0.05359604,
+      "tokens": 2060585,
+      "costUsd": 0.33184808,
       "quotaUsed": {
-        "five_hour": 1,
-        "seven_day": 0.14
+        "five_hour": 0.01,
+        "seven_day": 0.15
       },
       "discarded": false
     }
   ],
-  "tokens": 126228,
+  "tokens": 2060585,
   "discardedTokens": 0,
-  "costUsd": 0.05359604,
+  "costUsd": 0.33184808,
   "discardedCostUsd": 0,
   "unpricedTurns": 0,
   "quota": {
     "before": {
-      "five_hour": 0.99,
-      "seven_day": 0.14
+      "five_hour": 0,
+      "seven_day": 0.15
     },
     "after": {
-      "five_hour": 1,
-      "seven_day": 0.14
+      "five_hour": 0.02,
+      "seven_day": 0.15
     }
   },
-  "runId": "20261115-152512-6bcc",
-  "finishedAt": "2026-11-15T10:01:59.520Z"
+  "runId": "20261115-160501-2bde",
+  "finishedAt": "2026-11-15T10:42:16.532Z"
 }
