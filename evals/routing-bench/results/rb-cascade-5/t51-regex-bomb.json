@@ -1,0 +1,78 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-5",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 63809,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 62899,
+      "usage": {
+        "input": 8,
+        "output": 14734,
+        "reasoning": 7201,
+        "cacheRead": 54945,
+        "cacheWrite": 22142,
+        "split": {
+          "files": 0,
+          "commands": 2802,
+          "earlier": 31789,
+          "calls": 4,
+          "estimated": true,
+          "startup": 37947,
+          "prompt": 4557
+        }
+      },
+      "tokens": 91829,
+      "costUsd": 0.012345650000000001,
+      "quotaUsed": {
+        "five_hour": 0.29,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 91829,
+  "discardedTokens": 0,
+  "costUsd": 0.012345650000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.29,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.29,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-001606-b0f7",
+  "finishedAt": "2026-11-15T18:47:13.428Z"
+}
