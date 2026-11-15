@@ -31,3 +31,5 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 10:34:58 UTC: started: 15 prompt(s) (held-out) on preset solo-haiku
 - 2026-11-15 10:34:58 UTC: H4.3 h43-rust-vm: reading quota, then running
 - 2026-11-15 10:42:16 UTC: H4.3 h43-rust-vm: applied, quality 8.3/10 (5/6), path haiku, 2,060,585 tokens, est. $0.3318 (API list prices), 7.2 min; quota before five_hour 0%, seven_day 15%, after five_hour 2%, seven_day 15%
+- 2026-11-15 10:42:18 UTC: H5.1 h51-fec-decoder: reading quota, then running
+- 2026-11-15 10:43:00 UTC: H5.1 h51-fec-decoder: applied, quality 10.0/10 (7/7), path haiku, 104,667 tokens, est. $0.0080 (API list prices), 0.6 min; quota before five_hour 2%, seven_day 15%, after five_hour 2%, seven_day 15%
