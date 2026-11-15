@@ -551,3 +551,94 @@ for (const off of [false, true]) {
     }
   });
 }
+
+const SMALL = "Add a --verbose flag to the CLI in check.js, as a small change.";
+
+test("a small self-contained request on a worker rung is answered once with no tools (F109)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (req.direct) return { structured: { files: [{ path: "fixed.txt", content: "ok\n" }], summary: "wrote it", notes: "", run: "" } };
+    return report("n/a");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  const state = await startRun({ cwd: repo(), prompt: SMALL, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(events.find((e) => e.type === "route.tier")?.tier, "worker");
+  assert.equal(fake.calls.length, 1, "one call");
+  assert.equal(fake.calls[0]!.direct, true, "with no tools");
+  assert.equal(fake.calls[0]!.model, "worker");
+  const direct = events.find((e) => e.type === "task.direct");
+  assert.equal(direct?.feature, "F109");
+  assert.equal(direct?.rule, "request");
+});
+
+test("F109 keeps tools for a request that asks to explain, to run something, or for a complexity bound, and when it is switched off", async () => {
+  const script: FakeScript = (req) => {
+    if (req.direct) return { structured: { files: [{ path: "fixed.txt", content: "ok\n" }], summary: "wrote it", notes: "", run: "" } };
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  };
+  for (const prompt of [
+    "Add a --verbose flag to the CLI in check.js and explain why it helps.",
+    "Add a --verbose flag to the CLI in check.js, then run it to check the output.",
+    "Add a --verbose flag to the CLI in check.js that works in O(1) memory.",
+  ]) {
+    const { ctx, fake } = context(script);
+    (fake as { direct?: boolean }).direct = true;
+    const state = await startRun({ cwd: repo(), prompt, preset: preset() }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.ok(fake.calls.every((c) => !c.direct), `${prompt}: kept its tools`);
+  }
+  process.env.NEUROMESH_DISABLE = "direct-worker";
+  try {
+    const { ctx, fake } = context(script);
+    (fake as { direct?: boolean }).direct = true;
+    const state = await startRun({ cwd: repo(), prompt: SMALL, preset: preset() }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.ok(fake.calls.every((c) => !c.direct), "--disable direct-worker: as before");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("when the checks fail after the one-answer worker, a worker with tools repairs it (F109, F77)", async () => {
+  const { ctx, fake } = context((req) => {
+    if (req.direct) return { structured: { files: [{ path: "fixed.txt", content: "not ok\n" }], summary: "wrote it", notes: "", run: "" } };
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", "ok");
+    return report("done");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  const state = await startRun({ cwd: repo(), prompt: SMALL, preset: preset({ repairs: 2 }) }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.deepEqual(fake.calls.filter((c) => isBuild(c) || c.direct).map((c) => Boolean(c.direct)), [true, false], "one no-tools answer, then the tool worker");
+});
+
+test("a worker's part of a planned program that has a spec is built with no tools (F109, as F77)", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (isScout(req)) return { structured: { facts: [] } };
+    if (isSpec(req))
+      return {
+        structured: {
+          name: "trio", summary: "s", features: ["f"], behaviour: [], out_of_scope: [], design: ["Invariant: b.txt is written after a.txt"], acceptance: [],
+          tasks: [
+            { id: "t1", title: "part a", brief: "Write a.txt", owned: ["a.txt"], depends_on: [], owner: "worker" },
+            { id: "t2", title: "part b", brief: "Write b.txt and fixed.txt", owned: ["b.txt", "fixed.txt"], depends_on: ["t1"], owner: "worker" },
+          ],
+        },
+      };
+    if (req.direct) {
+      const files = /Your task: part a/.test(req.prompt) ? [{ path: "a.txt", content: "a\n" }] : [{ path: "b.txt", content: "b\n" }, { path: "fixed.txt", content: "ok\n" }];
+      return { structured: { files, summary: "wrote", notes: "", run: "" } };
+    }
+    return report("n/a");
+  });
+  (fake as { direct?: boolean }).direct = true;
+  const state = await startRun({ cwd: repo(true), prompt: "build a command-line tool that writes three files", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  const direct = events.filter((e) => e.type === "task.direct");
+  assert.ok(direct.length >= 1, "at least one part was built with no tools");
+  assert.ok(direct.every((e) => e.feature === "F109" && e.rule === "part"));
+});

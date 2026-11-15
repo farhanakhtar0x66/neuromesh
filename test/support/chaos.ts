@@ -626,7 +626,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     const rank = { grunt: 0, worker: 1, senior: 2 } as Record<string, number>;
     const lastTier = new Map<string, number>();
     for (const a of state.attempts) {
-      if (!a.task || !a.cascadeTier || a.cascadeTier === "expert") continue;
+      // A turn that stopped on a usage limit did no work: it is the model chain moving on to the next model
+      // (a senior model after the worker's), not the task being sent up. The task stays on its own rung.
+      if (!a.task || !a.cascadeTier || a.cascadeTier === "expert" || a.stop === "quota") continue;
       const r = rank[a.cascadeTier]!;
       if (r < (lastTier.get(a.task) ?? -1)) {
         broke(`task ${a.task} went down the ladder to ${a.cascadeTier}`);

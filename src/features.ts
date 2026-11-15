@@ -1001,6 +1001,15 @@ export const FEATURES: Feature[] = [
     what: "Every engine event that is a model turn or a decision (started on a tier, climbed, raced, asked for a review, split...) is also appended, as one JSON line with the inputs the event carried, to ~/.neuromesh/record/record.jsonl; a run's end adds a run line and a line per task from run.json, which is what happened after. The same lines are made from run folders already on disk by `node src/record/cli.ts backfill` (also benchmark results, evals and the owner's ratings), and asked with summary, turns, decisions, runs and results. No request text, code, diffs or paths; an unknown number is left out, never 0; a cost is an estimate. A failure in the record switches it off for that run and is tagged with the feature; the run is never touched. Plan item L1; the base of replay (M6), regret (D3) and the controller. Not yet read by anything.",
     optional: true,
   },
+  {
+    id: "F109",
+    key: "direct-worker",
+    name: "A cascade worker answers a small self-contained request, or a planned part with a spec, in one call with no tools",
+    added: "2026-11-15",
+    files: ["src/routing/selfcontained.ts (selfContained)", "src/engine/run.ts (directWorker, directApplies, directTurn)"],
+    what: "Only with the cascade, for a task on a worker rung that has not been escalated or advised. (1) The task is the whole request and it is small and self-contained (at most 100 words, at most 2 named files, a small project, nothing to run, install or look at, no explanation, derivation or complexity bound asked for): one no-tools call with the request and the project's files, as F90 does for the grunt; Neuromesh writes the files and runs the checks, and a failure goes to a worker with tools. (2) The task is a part the expert planned and it has a spec: as F77 does, a build and one repair with no tools, then tools. An unusable answer gives the worker its tools. Tier 0 is not involved (router.ts and brief.ts are untouched): this only decides how a worker turn already on a worker rung is run. From F106 on the live benchmark runs: a tool turn read 95 to 1,033 thousand tokens, 42 to 50 percent of the cascade's input start-up and prompt and 47 to 55 percent earlier turns, against about 4 thousand for one no-tools call. A no-tools turn has no confidence preamble, so the early-exit gate (F83, F91) does not see it: a request that may be impossible is kept on tools by the rule's judgement and complexity-bound cues. Plan item C1; not measured live yet (kill rule: if resolution on the routing prompts or the held-out set falls by more than the interval, or tokens do not fall, it goes off by default).",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

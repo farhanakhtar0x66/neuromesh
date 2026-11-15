@@ -116,6 +116,7 @@ import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, sa
 import { describeStubs, findStubs } from "../checks/stubs.ts";
 import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
 import type { Preamble } from "../routing/preamble.ts";
+import { selfContained } from "../routing/selfcontained.ts";
 import { routeTier } from "../routing/router.ts";
 import type { CascadeTier } from "../routing/router.ts";
 import { DEFAULT_SHADOW_RATE, maybeEnqueue } from "../routing/shadow.ts";
@@ -1810,6 +1811,11 @@ function directApplies(run: RunCtx, task: TaskState): boolean {
     const first = workerChain(state, task)[0];
     return first !== undefined && ctx.backends[first.backend]?.direct === true;
   }
+  // [F109 direct-worker] A cascade worker's small self-contained request, or its part of a planned program that has a spec.
+  if (directWorker(run, task) !== undefined) {
+    const first = workerChain(state, task)[0];
+    return first !== undefined && ctx.backends[first.backend]?.direct === true;
+  }
   if (!isOn("direct-build") || !state.direct || !state.brief?.spec) return false;
   if (task.owner !== "worker" || task.escalated || task.advised || task.directOff || task.envProblem) return false;
   if ((task.directTurns ?? 0) >= DIRECT_TURNS || !["initial", "repair", "review-fix"].includes(task.next)) return false;
@@ -1825,6 +1831,27 @@ function directApplies(run: RunCtx, task: TaskState): boolean {
  */
 function directGrunt(state: RunState, task: TaskState): boolean {
   return isOn("direct-grunt") && state.cascade?.route?.transform === true && task.routed === true && !task.escalated && !task.advised && !task.directOff && (task.directTurns ?? 0) < 1 && task.next === "initial" && tierAtRung(state, task.rung) === "grunt";
+}
+
+/**
+ * [F109 direct-worker] The cascade's worker turns that need nothing the tools would
+ * fetch. "request": the task is the whole request and a one-line check says it is a
+ * small, self-contained piece of work (selfContained): one no-tools answer (the build
+ * only; failing checks hand it to a worker with tools). "part": the expert's plan gave
+ * the task a spec: as F77 does, a build and one repair with no tools. Never above the
+ * worker tier, never after an escalation or advice, never when the answer was unusable.
+ */
+function directWorker(run: RunCtx, task: TaskState): "request" | "part" | undefined {
+  const { state } = run;
+  if (!isOn("direct-worker") || !state.cascade || task.escalated || task.advised || task.directOff || task.envProblem) return undefined;
+  if (tierAtRung(state, task.rung) !== "worker" || task.owner !== "worker") return undefined;
+  if (wholeRequest(state, task)) {
+    if (!state.cascade.route || task.routed !== true || (task.directTurns ?? 0) >= 1 || task.next !== "initial") return undefined;
+    const verdict = selfContained(state.prompt, projectFiles(task.worktree, task.prepared));
+    return verdict.ok ? "request" : undefined;
+  }
+  if (state.brief?.spec && (task.directTurns ?? 0) < DIRECT_TURNS && ["initial", "repair", "review-fix"].includes(task.next)) return "part";
+  return undefined;
 }
 
 /** [F77 direct-build] The project's text files, smallest first up to a size limit, for a worker that cannot read. */
@@ -1871,6 +1898,9 @@ export function writeDirect(dir: string, files: { path: string; content: string 
 async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
   const { state, log } = run;
   const mode = task.next;
+  // [F109 direct-worker] Which rule let this turn be a one-answer turn, for the events.
+  const kind = directGrunt(state, task) ? undefined : directWorker(run, task);
+  const feature = kind ? "F109" : "F77";
   const { result } = await turn(run, {
     key: task.id,
     role: "worker",
@@ -1878,7 +1908,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
     task: task.id,
     round: task.round,
     cwd: task.worktree,
-    prompt: directGrunt(state, task) ? directAnswerPrompt(state, projectFiles(task.worktree, task.prepared)) : directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
+    prompt: directGrunt(state, task) || kind === "request" ? directAnswerPrompt(state, projectFiles(task.worktree, task.prepared)) : directPrompt(state, task, projectFiles(task.worktree, task.prepared)),
     access: "read-only",
     schema: directSchema(),
     direct: true,
@@ -1895,7 +1925,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
   if (!answer || !outcome || outcome.written.length === 0) {
     task.directOff = true;
     saveState(state);
-    log.emit("note", { feature: "F77", message: `Task ${task.id}: the one-answer turn gave nothing usable (${result.stop}${result.detail ? `: ${result.detail.slice(0, 120)}` : ""}); the worker gets its tools.` });
+    log.emit("note", { feature, message: `Task ${task.id}: the one-answer turn gave nothing usable (${result.stop}${result.detail ? `: ${result.detail.slice(0, 120)}` : ""}); the worker gets its tools.` });
     return undefined;
   }
   task.report = answer.report;
@@ -1903,7 +1933,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
   task.sessionModel = undefined;
   task.step = "checks";
   saveState(state);
-  log.emit("task.direct", { feature: "F77", task: task.id, mode, files: outcome.written, refused: outcome.refused });
+  log.emit("task.direct", { feature, task: task.id, mode, files: outcome.written, refused: outcome.refused, ...(kind ? { rule: kind } : {}) });
   if (isOn("task-report")) log.emit("task.report", { feature: "F44", task: task.id, role: "worker", status: answer.report.status, summary: answer.report.summary.slice(0, 8_000), notes: answer.report.notes?.slice(0, 4_000), choices: answer.report.choices?.slice(0, 8_000), open: answer.report.open?.slice(0, 8_000) });
   return undefined;
 }

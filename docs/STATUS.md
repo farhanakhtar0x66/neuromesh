@@ -475,6 +475,36 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     The lesson: a checker validated only against its own reference is not
     validated; the live answers found what `validate.sh` could not.
 
+47. **F109 `direct-worker` (plan item C1, 2026-11-15).** No model calls.
+    F106 showed what a tool turn costs on the live cascade runs: start-up
+    plus prompt 42 to 50 percent of the input and the model's own earlier
+    turns 47 to 55 percent, 95 to 1,033 thousand tokens a worker turn, against
+    about 4 thousand for one no-tools call (the grunt on formatting prompts).
+    F90 gave the grunt that path; F77 gave it to planned parts only in presets
+    that set `direct`. Now, in the cascade, a task on a worker rung that has
+    not been escalated or advised is answered in one no-tools call when (1) it
+    is the whole request and `src/routing/selfcontained.ts` says it is small
+    and self-contained (at most 100 words and 2 named files, a small project,
+    nothing to run, install or look at, no explanation, derivation or
+    complexity bound asked for): the build only, and failing checks go to a
+    worker with tools; or (2) it is a part the expert planned and it has a
+    spec: F77's build and one repair. An unusable answer gives the worker its
+    tools. `router.ts` and `brief.ts` are untouched (Rule 7): this decides how
+    a turn already on a worker rung is run, not where it starts. Offline, on
+    the 30 routing prompts, the worker-tier ones it takes are 2.1, 2.2, 2.3, 3.1
+    and 5.1, and H1.3 and H5.1; 4.3 and 5.3 stay on tools (a derivation, a
+    complexity bound), and so do the held-out prompts of 100 words or more. Known trade: a no-tools turn has no
+    preamble, so the early-exit gate does not see it; the judgement and
+    complexity-bound cues keep a request that may be impossible on tools.
+    `--disable direct-worker` as before. Fault harness: seed 38 broke "a task's
+    tier only goes up" through a chain fallback that stopped on quota (a
+    senior model tried, no work done, then a race at the worker tier after
+    the resume); that rule now ignores quota-stopped attempts. Kill rule, to
+    check on the next live run (`bench --split` for tokens, the traps for the
+    gate): if resolution on the routing prompts falls by more than the
+    interval, or tokens per prompt do not fall, it goes off by default. The
+    held-out set is not tuned on: it measures this.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
