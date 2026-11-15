@@ -1,0 +1,73 @@
+{
+  "id": "3.3",
+  "slug": "t33-pg-migration",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS adds the new columns\nPASS new columns nullable (no NOT NULL on add)\nPASS dual-write: trigger or application\nPASS batched backfill\nPASS read switchover phase\nPASS drops the old column last (contract)\nPASS expand-contract named or phased\nPASS keeps the old service version working\nSCORE 9/9",
+  "wallMs": 175836,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 174946,
+      "usage": {
+        "input": 12,
+        "output": 39513,
+        "reasoning": 28382,
+        "cacheRead": 144376,
+        "cacheWrite": 43925,
+        "split": {
+          "files": 0,
+          "commands": 1409,
+          "earlier": 127090,
+          "calls": 6,
+          "estimated": true,
+          "startup": 56084,
+          "prompt": 3731
+        }
+      },
+      "tokens": 227826,
+      "costUsd": 0.02998646,
+      "quotaUsed": {
+        "five_hour": 0.48,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 227826,
+  "discardedTokens": 0,
+  "costUsd": 0.02998646,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.48,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.48,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-125620-3822",
+  "finishedAt": "2026-11-15T07:29:20.629Z"
+}
