@@ -4,6 +4,7 @@
 //
 //   node evals/bench.ts bench-solo-opus-1 bench-opus-haiku-1 ...
 //   node evals/bench.ts --turns bench-opus-haiku-1      every turn of every task
+//   node evals/bench.ts --compare a1,a2,a3 b1,b2,b3 [--margin 10]   paired task bootstrap: is A not worse than B by more than d points?
 //   node evals/bench.ts --split bench-solo-opus-1 ...  where the input tokens went, in five parts
 //   node evals/bench.ts --fit bench-solo-opus-1 ...     quota points per token, fitted over the tasks
 //
@@ -18,13 +19,20 @@ import type { EvalReport, TaskResult } from "../src/eval/eval.ts";
 import { defaultHome, loadState } from "../src/engine/store.ts";
 import type { RunState } from "../src/engine/types.ts";
 import { estimateCost } from "../src/usage/prices.ts";
+import { describeComparison, pair, pairedBootstrap, taskScores } from "../src/eval/stats.ts";
+import { isOn } from "../src/features.ts";
 import { addSplit, splitFromLog, splitParts } from "../src/usage/split.ts";
 import type { InputSplit } from "../src/usage/split.ts";
 
 const home = defaultHome();
 const args = process.argv.slice(2);
 const flag = (name: string): boolean => args.includes(`--${name}`);
-const names = args.filter((a) => !a.startsWith("--"));
+const VALUE_FLAGS = ["margin", "resamples", "seed"];
+const names = args.filter((a, i) => !a.startsWith("--") && !VALUE_FLAGS.includes((args[i - 1] ?? "").slice(2)));
+const option = (name: string): string | undefined => {
+  const i = args.indexOf(`--${name}`);
+  return i >= 0 ? args[i + 1] : undefined;
+};
 
 function runOf(result: TaskResult): RunState | undefined {
   const projects = join(home, "projects");
@@ -169,12 +177,33 @@ function fit(reports: EvalReport[]): string {
   return `Fit over ${rows.length} tasks, ${total} points: expert ${a.toFixed(3)} points per 1k output (${(1 / a).toFixed(1)}k per point), worker ${b.toFixed(3)} per 1k (${(1 / b).toFixed(1)}k per point)`;
 }
 
-const reports = names.map((n) => {
+/** [F107 paired-bootstrap] Two configurations, each given as the names of its runs (comma-separated), compared task by task. */
+function compare(): string {
+  const [left, right] = names;
+  if (!left || !right) throw new Error("--compare takes two groups of eval names: a1,a2,a3 b1,b2,b3");
+  const load = (group: string): { runs: Record<string, number>[]; label: string } => ({
+    label: group,
+    runs: group.split(",").map((n) => {
+      const r = loadReport(home, n);
+      if (!r) throw new Error(`No eval results named "${n}"`);
+      return Object.fromEntries(Object.values(r.results).map((t) => [t.task, t.hidden === "pass" ? 1 : 0]));
+    }),
+  });
+  const a = load(left);
+  const b = load(right);
+  const p = pair(taskScores(a.runs), taskScores(b.runs));
+  const interval = pairedBootstrap(p.a, p.b, { resamples: Number(option("resamples") ?? 10_000), seed: Number(option("seed") ?? 1) });
+  const margin = Number(option("margin") ?? 10) / 100;
+  return describeComparison(a.label, b.label, interval, margin, { a: a.runs.length, b: b.runs.length }).join("\n");
+}
+
+const reports = flag("compare") ? [] : names.map((n) => {
   const r = loadReport(home, n);
   if (!r) throw new Error(`No eval results named "${n}"`);
   return r;
 });
-if (flag("fit")) console.log(fit(reports));
+if (flag("compare") && isOn("paired-bootstrap")) console.log(compare());
+else if (flag("fit")) console.log(fit(reports));
 else if (flag("split")) console.log(reports.map(splitTable).join("\n\n"));
 else if (flag("turns")) console.log(reports.map(turns).join("\n\n"));
 else console.log(reports.map(table).join("\n\n"));

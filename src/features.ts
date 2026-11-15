@@ -983,6 +983,15 @@ export const FEATURES: Feature[] = [
     what: "For Claude turns, the turn's kept log is read after the turn and every model call's prompt (which the tool reports exactly) is shared out between the tool's own start-up (system prompt and tool definitions), Neuromesh's prompt, files read (Read, Grep, Glob results), command output (everything else a tool returned) and the model's own earlier output in the turn; the shares come from character counts, so they are estimates and say so. The split is kept in the turn's usage and summed with it, shown in the TUI context meter and in `node evals/bench.ts --split`, which can also read it from the kept logs of runs made before this existed (then start-up and prompt stay together). A resumed session's first call is shown as its own part. No turn, no token. Plan item M5. Not yet checked against a live run.",
     optional: true,
   },
+  {
+    id: "F107",
+    key: "paired-bootstrap",
+    name: "Two configurations compared task by task, with an interval",
+    added: "2026-11-15",
+    files: ["src/eval/stats.ts", "evals/bench.ts (--compare)"],
+    what: "`node evals/bench.ts --compare a1,a2,a3 b1,b2,b3 [--margin 10]` takes each configuration's runs, scores each task as the share of its runs that passed, pairs the tasks both ran, and resamples the tasks 10,000 times (seeded, no dependency) for a 90% interval of the mean difference. It prints \"not worse than B by more than d: shown / not shown\" (shown when the interval's low end is above -d), whether A is better or worse or cannot be told apart, and the margin the data can show at best; an interval with no width is called a ceiling, not a margin. Plan item M2. No model call; checked on synthetic data (test/stats.test.ts) and saved evals.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
