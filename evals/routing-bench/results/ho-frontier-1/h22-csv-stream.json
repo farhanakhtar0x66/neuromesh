@@ -1,0 +1,104 @@
+{
+  "id": "H2.2",
+  "slug": "h22-csv-stream",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS csv_stream.mjs exports parseCsvStream\nPASS standard rows; a trailing CRLF or LF adds no row\nPASS a trailing empty field and an interior blank line are kept\nPASS quoted commas, newlines, CRLF and doubled quotes parse\nPASS 1-character chunks split CRLF and \"\" and give the same rows\nPASS Uint8Array chunks split inside ₹ and 🎉 still decode\nPASS an unclosed quote at EOF throws SyntaxError\nPASS an unescaped quote mid-field or text after a closing quote throws SyntaxError\nSCORE 8/8",
+  "wallMs": 148749,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 50329,
+      "usage": {
+        "input": 8,
+        "output": 4995,
+        "reasoning": 1320,
+        "cacheRead": 37079,
+        "cacheWrite": 8207,
+        "split": {
+          "files": 0,
+          "commands": 489,
+          "earlier": 7169,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34816,
+          "prompt": 2820
+        }
+      },
+      "tokens": 50289,
+      "costUsd": 0.17300379999999999,
+      "quotaUsed": {
+        "five_hour": 0.53,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 97041,
+      "usage": {
+        "input": 2,
+        "output": 10484,
+        "reasoning": 3997,
+        "cacheRead": 631,
+        "cacheWrite": 3438,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3195,
+          "prompt": 876
+        }
+      },
+      "tokens": 14555,
+      "costUsd": 0.2373182,
+      "quotaUsed": {
+        "five_hour": 0.53,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 64844,
+  "discardedTokens": 0,
+  "costUsd": 0.41032199999999996,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.52,
+      "seven_day": 0.11
+    },
+    "after": {
+      "five_hour": 0.54,
+      "seven_day": 0.11
+    }
+  },
+  "runId": "20261115-133810-45c3",
+  "finishedAt": "2026-11-15T08:10:42.388Z"
+}
