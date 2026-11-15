@@ -1,0 +1,139 @@
+{
+  "id": "H4.3",
+  "slug": "h43-rust-vm",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "expert",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (1093 characters of pasted material left out)",
+    "most like expert work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS the five source files exist and are not empty\nPASS no external dependencies\nPASS cargo build --release passes\nPASS Value is 8 bytes; arithmetic, strings, arrays, if/else, while, recursion and errors\nPASS closures: shared mutable upvalues survive the outer function returning\nPASS GC under a 1 KB threshold: 10+ collections, live closure intact, heap does not grow with garbage\nSCORE 6/6",
+  "wallMs": 342711,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "earlyExit": true,
+      "stop": "error",
+      "durationMs": 5191,
+      "usage": {
+        "input": 2,
+        "cacheRead": 5365,
+        "cacheWrite": 5006,
+        "output": 398,
+        "estimated": true,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 8913,
+          "prompt": 1460
+        }
+      },
+      "tokens": 10771,
+      "costUsd": 0.0245445,
+      "discarded": true
+    },
+    {
+      "role": "escalation",
+      "kind": "advice",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 37516,
+      "usage": {
+        "input": 4,
+        "output": 2903,
+        "reasoning": 125,
+        "cacheRead": 6862,
+        "cacheWrite": 7621,
+        "split": {
+          "files": 135,
+          "commands": 0,
+          "earlier": 624,
+          "calls": 2,
+          "estimated": true,
+          "startup": 11656,
+          "prompt": 2072
+        }
+      },
+      "tokens": 17390,
+      "costUsd": 0.12041639999999999,
+      "quotaUsed": {
+        "five_hour": 0.35,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "advised-fix",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 298743,
+      "usage": {
+        "input": 16,
+        "output": 48804,
+        "reasoning": 19800,
+        "cacheRead": 284291,
+        "cacheWrite": 54726,
+        "split": {
+          "files": 0,
+          "commands": 2316,
+          "earlier": 236805,
+          "calls": 8,
+          "estimated": true,
+          "startup": 77996,
+          "prompt": 21916
+        }
+      },
+      "tokens": 387837,
+      "costUsd": 0.7354050999999999,
+      "quotaUsed": {
+        "five_hour": 0.4,
+        "seven_day": 0.22
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 415998,
+  "discardedTokens": 10771,
+  "costUsd": 0.880366,
+  "discardedCostUsd": 0.0245445,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.34,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.41,
+      "seven_day": 0.22
+    }
+  },
+  "runId": "20261116-004409-f697",
+  "finishedAt": "2026-11-15T19:19:57.303Z"
+}
