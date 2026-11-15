@@ -25,3 +25,5 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 07:33:41 UTC: 4.1 t41-arm64-ringbuf: applied, quality 10.0/10 (10/10), path haiku, 440,913 tokens, est. $0.0366 (API list prices), 4.2 min; quota before five_hour 48%, seven_day 10%, after five_hour 48%, seven_day 10%
 - 2026-11-15 07:33:43 UTC: 4.2 t42-edge-dag: reading quota, then running
 - 2026-11-15 07:36:12 UTC: 4.2 t42-edge-dag: applied, quality 8.9/10 (8/9), path haiku, 88,340 tokens, est. $0.0215 (API list prices), 2.4 min; quota before five_hour 48%, seven_day 10%, after five_hour 48%, seven_day 10%
+- 2026-11-15 07:36:14 UTC: 4.3 t43-spot-checkpoint: reading quota, then running
+- 2026-11-15 07:40:05 UTC: 4.3 t43-spot-checkpoint: applied, quality 10.0/10 (9/9), path haiku, 381,823 tokens, est. $0.0393 (API list prices), 3.8 min; quota before five_hour 48%, seven_day 10%, after five_hour 49%, seven_day 10%
