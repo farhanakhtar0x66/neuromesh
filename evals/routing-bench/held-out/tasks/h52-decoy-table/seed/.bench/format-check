@@ -1,0 +1,8 @@
+# The deterministic gate for this request: the output files exist, not that they are correct.
+import os, sys
+need = ['schedule.md']
+missing = [p for p in need if not (os.path.isfile(p) and os.path.getsize(p) > 0)]
+if missing:
+    print('format check failed: missing ' + ', '.join(missing))
+    sys.exit(1)
+print('format ok')

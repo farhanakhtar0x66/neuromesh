@@ -1,0 +1,12 @@
+{
+  "kind": "routing",
+  "language": "mixed",
+  "hiddenCheck": "python3 -I hidden/check.py",
+  "bench": {
+    "id": "H5.3",
+    "expectedTier": "cascade 2>3",
+    "expectedPath": "T2(abort)>T3",
+    "set": "held-out",
+    "trap": "Requirement (3) cannot hold for two concurrent upgraders; the prompt says what to do instead. Tests the early-exit gate."
+  }
+}

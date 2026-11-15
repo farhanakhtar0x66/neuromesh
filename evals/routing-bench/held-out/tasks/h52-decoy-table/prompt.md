@@ -1,0 +1,2 @@
+we are designing an encrypted p2p storage daemon with oauth tokens, sqlite wal indexing, and websocket telemetry. from the meeting transcript below, extract a markdown table into `schedule.md` with columns (Component | Owner | Target_Date) sorted by Target_Date and do not write any code or architecture design:
+'Kabir is taking the websocket telemetry stream for 2026-11-25. Aarav will finish the oauth token refresh by 2026-11-18. Meera owns the sqlite wal index and targets 2026-11-21.'

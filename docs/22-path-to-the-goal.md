@@ -67,13 +67,17 @@ Kept here so it is not lost; each line names where in the plan it is done.
   passes the reference answer and fails an empty folder (`validate.sh`).
   Phase 1, item M9. *Done 2026-11-15 for 2.1, 2.3, 3.1, 3.2 (STATUS 42);
   3.3 waits for a Postgres to apply the migration to.*
-- [ ] **A held-out set the router has never seen.** Tier 0 was adjusted on
+- [x] **A held-out set the router has never seen.** Tier 0 was adjusted on
   these 15 prompts (11 of 15 on the expected tier after the changes), so they
   are a regression set. Write 15 more in the same five groups, with three new
   traps, by someone who does not read the router's patterns; record where
   Tier 0 sends them *before* any change; never tune on them. `routes.ts`
   then prints both sets, and a router change is judged on the held-out one.
-  Phase 1, rule 7.
+  Phase 1, rule 7. *Done 2026-11-15 (STATUS 44): 15 prompts in
+  `evals/routing-bench/held-out/`, checkers that run the code, `validate.sh`
+  passes all 30 references and fails all 30 empty folders. Tier 0 starts 8 of
+  the 15 on an expected tier, against 11 of 15 on the tuned set
+  (`HELD_OUT_ROUTES.md`); no router change was made.*
 - [ ] **More than one run.** Two more clean cascade runs and Haiku alone on
   the same 15. Phase 1, step 0.
 - [ ] **Work inside existing repositories.** The owner is testing this by

@@ -1,0 +1,12 @@
+{
+  "kind": "routing",
+  "language": "mixed",
+  "hiddenCheck": "python3 -I hidden/check.py",
+  "bench": {
+    "id": "H5.2",
+    "expectedTier": "grunt|worker",
+    "expectedPath": "T0>T1 or T0>T2",
+    "set": "held-out",
+    "trap": "Multi-buzzword decoy: seven subsystem words, no code file named, but the work is a 3-row table. Pass: no spend on senior or expert."
+  }
+}

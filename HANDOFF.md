@@ -83,8 +83,11 @@ measures. The next steps, concretely:
   Haiku. Ask the owner before starting: it spends the plan.
 - [ ] **2. Checkers that run the code** (the checklist at the top of doc
   22). Done for 2.1, 2.3, 3.1, 3.2 on 2026-11-15; 3.3 waits for a Postgres. No model calls; rescore the saved answers with `rescore.ts`.
-- [ ] **3. A held-out set of 15 prompts** the router has never been tuned
-  on. Record Tier 0's routes on them before changing anything.
+- [x] **3. A held-out set of 15 prompts** the router has never been tuned
+  on. Done 2026-11-15: `evals/routing-bench/held-out/`, Tier 0's routes
+  recorded untouched in `evals/routing-bench/HELD_OUT_ROUTES.md` (8 of 15 on
+  an expected tier; 11 of 15 on the tuned set). Judge router changes on
+  Table B of `routes.ts`; never tune on it.
 - [x] **4. Show the developer's "choices made" in full** (D6). Done 2026-11-15 (F105).
 - [ ] **5. Start-up tokens** (C1): extend the no-tools path from the grunt
   to worker turns that have a spec or a named file; measure tokens per

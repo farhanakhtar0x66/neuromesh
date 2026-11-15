@@ -421,6 +421,23 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     live run yet: F106's split in particular is worth checking on the next
     real Claude run, against `--split` on its log.
 
+44. **The held-out 15 (2026-11-15; plan item 3).** No model calls, no
+    router change. `evals/routing-bench/held-out/` holds H1.1 to H5.3, written
+    outside this repository in the same five groups as the original 15 plus
+    three new traps (a prose-wrapped numeric spec, a multi-buzzword decoy, an
+    impossible lock upgrade). Each has a checker that runs the code (Python,
+    Node, `cargo test --release`) and a reference answer; `validate.sh` now
+    covers both sets: all 30 references pass in full and all 30 empty folders
+    fail. The Raft checker was also run on two broken simulators and fails
+    both. `routes.ts` prints Table A (tuned on) and Table B (held-out), each
+    with its own count. Tier 0 starts 11 of 15 on an expected tier on A and 8
+    of 15 on B, recorded untouched in `evals/routing-bench/HELD_OUT_ROUTES.md`;
+    the trap H5.2 is missed (a three-row table starts on the senior). One
+    measurement of the router, with expected tiers written before it ran.
+    `run.ts` and `score.ts` do not run the held-out set yet (H5.2's rule, no
+    spend on senior or expert, is only in its `task.json`). Summary:
+    `docs/23-offline-phase1-report.md`.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
