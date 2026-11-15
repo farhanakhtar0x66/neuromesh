@@ -1,0 +1,70 @@
+{
+  "id": "H4.3",
+  "slug": "h43-rust-vm",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "paused",
+  "reason": "subscription limits reached for every worker model: success You've hit your 5-hour limit · resets 4pm (Asia/Calcutta) 429 (see \"neuromesh cooldowns\" for when they reset)",
+  "quality": 0,
+  "hiddenOutput": "",
+  "wallMs": 405309,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "quota",
+      "durationMs": 405074,
+      "usage": {
+        "input": 4,
+        "output": 104493,
+        "reasoning": 99682,
+        "cacheRead": 15774,
+        "cacheWrite": 5957,
+        "split": {
+          "files": 0,
+          "commands": 299,
+          "earlier": 615,
+          "calls": 3,
+          "estimated": true,
+          "startup": 19154,
+          "prompt": 2503
+        }
+      },
+      "tokens": 126228,
+      "costUsd": 0.05359604,
+      "quotaUsed": {
+        "five_hour": 1,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 126228,
+  "discardedTokens": 0,
+  "costUsd": 0.05359604,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.99,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 1,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-152512-6bcc",
+  "finishedAt": "2026-11-15T10:01:59.520Z"
+}

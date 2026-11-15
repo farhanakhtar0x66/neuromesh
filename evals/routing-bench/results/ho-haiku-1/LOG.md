@@ -25,3 +25,5 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 09:48:37 UTC: H4.1 h41-cas-backup: applied, quality 10.0/10 (10/10), path haiku, 913,287 tokens, est. $0.0979 (API list prices), 8.6 min; quota before five_hour 98%, seven_day 14%, after five_hour 99%, seven_day 14%
 - 2026-11-15 09:48:40 UTC: H4.2 h42-raft: reading quota, then running
 - 2026-11-15 09:55:07 UTC: H4.2 h42-raft: applied, quality 8.0/10 (4/5), path haiku, 699,127 tokens, est. $0.0555 (API list prices), 6.4 min; quota before five_hour 99%, seven_day 14%, after five_hour 99%, seven_day 14%
+- 2026-11-15 09:55:09 UTC: H4.3 h43-rust-vm: reading quota, then running
+- 2026-11-15 10:01:59 UTC: H4.3 h43-rust-vm: paused, quality 0.0/10, path haiku, 126,228 tokens, est. $0.0536 (API list prices), 6.8 min; quota before five_hour 99%, seven_day 14%, after five_hour 100%, seven_day 14%
