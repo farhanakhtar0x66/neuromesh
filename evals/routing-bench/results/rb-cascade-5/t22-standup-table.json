@@ -1,0 +1,79 @@
+{
+  "id": "2.2",
+  "slug": "t22-standup-table",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-5",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (252 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS a markdown table with a header separator\nPASS a row for Siddharth\nPASS a row for Neha\nPASS a row for Rohan\nPASS Siddharth's blocker: DB credentials from infra\nPASS Rohan's blocker: iOS build on Xcode 16\nPASS Neha is not flagged as blocked\nPASS a column or marker for blockers\nSCORE 9/9",
+  "wallMs": 74970,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 74528,
+      "usage": {
+        "input": 22,
+        "output": 17847,
+        "reasoning": 6630,
+        "cacheRead": 222450,
+        "cacheWrite": 26675,
+        "split": {
+          "files": 0,
+          "commands": 12059,
+          "earlier": 130569,
+          "calls": 10,
+          "estimated": true,
+          "startup": 94918,
+          "prompt": 11603
+        }
+      },
+      "tokens": 266994,
+      "costUsd": 0.016485200000000002,
+      "quotaUsed": {
+        "five_hour": 0.24,
+        "seven_day": 0.2
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 266994,
+  "discardedTokens": 0,
+  "costUsd": 0.016485200000000002,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.24,
+      "seven_day": 0.2
+    },
+    "after": {
+      "five_hour": 0.24,
+      "seven_day": 0.2
+    }
+  },
+  "runId": "20261115-234924-8748",
+  "finishedAt": "2026-11-15T18:20:41.372Z"
+}
