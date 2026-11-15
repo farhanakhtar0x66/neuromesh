@@ -1,0 +1,73 @@
+{
+  "id": "5.2",
+  "slug": "t52-jargon-log-csv",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0(tail intent)>T1",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 4,
+    "total": 10
+  },
+  "quality": 4,
+  "hiddenOutput": "PASS output.csv exists\nPASS header is timestamp,pid\nPASS two columns on every row\nFAIL row 14209.881045,412\nFAIL row 14209.881102,1984\nFAIL row 14209.881290,1984\nFAIL row 14210.004112,882\nFAIL row 14210.119402,519\nFAIL no wrong rows\nPASS no duplicate rows\nSCORE 4/10",
+  "wallMs": 11173,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 10295,
+      "usage": {
+        "input": 6,
+        "output": 1874,
+        "reasoning": 982,
+        "cacheRead": 27305,
+        "cacheWrite": 6845,
+        "split": {
+          "files": 0,
+          "commands": 421,
+          "earlier": 2985,
+          "calls": 3,
+          "estimated": true,
+          "startup": 28581,
+          "prompt": 2169
+        }
+      },
+      "tokens": 36030,
+      "costUsd": 0.00257965,
+      "quotaUsed": {
+        "five_hour": 0.49,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 36030,
+  "discardedTokens": 0,
+  "costUsd": 0.00257965,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-131042-20e6",
+  "finishedAt": "2026-11-15T07:40:56.045Z"
+}
