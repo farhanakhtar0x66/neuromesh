@@ -23,3 +23,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-15 08:22:13 UTC: H3.3 h33-chase-lev: applied, quality 10.0/10 (7/7), path frontier, 98,771 tokens, est. $0.6120 (API list prices), 3.6 min; quota before five_hour 62%, seven_day 11%, after five_hour 65%, seven_day 12%
 - 2026-11-15 08:22:15 UTC: H4.1 h41-cas-backup: reading quota, then running
 - 2026-11-15 08:29:10 UTC: H4.1 h41-cas-backup: applied, quality 10.0/10 (10/10), path frontier, 442,895 tokens, est. $1.2978 (API list prices), 6.8 min; quota before five_hour 65%, seven_day 12%, after five_hour 72%, seven_day 12%
+- 2026-11-15 08:29:12 UTC: H4.2 h42-raft: reading quota, then running
+- 2026-11-15 08:31:58 UTC: H4.2 h42-raft: applied, quality 10.0/10 (5/5), path frontier, 75,316 tokens, est. $0.4832 (API list prices), 2.7 min; quota before five_hour 72%, seven_day 12%, after five_hour 75%, seven_day 12%
