@@ -1,0 +1,73 @@
+{
+  "id": "H1.2",
+  "slug": "h12-syslog-tsv",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.tsv exists\nPASS six lines, three tab-separated columns each\nPASS header is TIMESTAMP_UTC, FACILITY_PRI, MESSAGE\nPASS all five timestamps normalised to UTC Z\nPASS sorted oldest first (facility 34, 86, 165, 14, 131)\nPASS messages are the trimmed message text\nPASS no prose or code fences around the table\nSCORE 7/7",
+  "wallMs": 14699,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 13769,
+      "usage": {
+        "input": 6,
+        "output": 1007,
+        "reasoning": 169,
+        "cacheRead": 24657,
+        "cacheWrite": 4949,
+        "split": {
+          "files": 0,
+          "commands": 309,
+          "earlier": 1007,
+          "calls": 3,
+          "estimated": true,
+          "startup": 26278,
+          "prompt": 2018
+        }
+      },
+      "tokens": 30619,
+      "costUsd": 0.0646874,
+      "quotaUsed": {
+        "five_hour": 0.5,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 30619,
+  "discardedTokens": 0,
+  "costUsd": 0.0646874,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.5,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-133253-56b9",
+  "finishedAt": "2026-11-15T08:03:10.507Z"
+}
