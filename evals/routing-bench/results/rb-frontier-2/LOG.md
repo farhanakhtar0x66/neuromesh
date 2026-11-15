@@ -19,3 +19,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-15 06:14:13 UTC: 3.1 t31-abort-hook: applied, quality 10.0/10 (14/14), path frontier, 57,646 tokens, est. $0.3117 (API list prices), 1.8 min; quota before five_hour 17%, seven_day 8%, after five_hour 19%, seven_day 8%
 - 2026-11-15 06:14:15 UTC: 3.2 t32-heap-refactor: reading quota, then running
 - 2026-11-15 06:15:42 UTC: 3.2 t32-heap-refactor: applied, quality 3.3/10 (4/12), path frontier, 69,908 tokens, est. $0.2538 (API list prices), 1.4 min; quota before five_hour 19%, seven_day 8%, after five_hour 20%, seven_day 8%
+- 2026-11-15 06:15:44 UTC: 3.3 t33-pg-migration: reading quota, then running
+- 2026-11-15 06:18:29 UTC: 3.3 t33-pg-migration: applied, quality 10.0/10 (9/9), path frontier, 102,547 tokens, est. $0.4855 (API list prices), 2.7 min; quota before five_hour 20%, seven_day 8%, after five_hour 23%, seven_day 8%
