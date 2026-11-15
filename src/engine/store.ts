@@ -13,6 +13,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { isOn } from "../features.ts";
+import { recordLinesFor } from "../record/record.ts";
+import { appendRecord } from "../record/record.ts";
 import type { RunState } from "./types.ts";
 
 export function defaultHome(): string {
@@ -99,11 +102,15 @@ export class EventLog {
   private readonly path: string;
   private readonly run: string;
   private readonly sink?: (event: NeuromeshEvent) => void;
+  /** [F108 run-record] Where the record is kept; no record when absent. */
+  private readonly recordHome?: string;
+  private recordBroken = false;
 
-  constructor(path: string, run: string, sink?: (event: NeuromeshEvent) => void) {
+  constructor(path: string, run: string, sink?: (event: NeuromeshEvent) => void, recordHome?: string) {
     this.path = path;
     this.run = run;
     this.sink = sink;
+    this.recordHome = recordHome;
     mkdirSync(dirname(path), { recursive: true });
     // An engine that was killed may have left its last line half written: the
     // next event starts on a line of its own, so only that one line is lost.
@@ -118,6 +125,26 @@ export class EventLog {
   emit(type: string, data: Record<string, unknown> = {}): void {
     const event: NeuromeshEvent = { t: new Date().toISOString(), run: this.run, type, ...data };
     appendFileSync(this.path, JSON.stringify(event) + "\n");
+    this.record(event);
     this.sink?.(event);
+  }
+
+  /**
+   * [F108 run-record] The same event, as lines of the one record. A failure here
+   * never touches the run: the record is switched off for the rest of the run
+   * and the event says so, tagged with the feature.
+   */
+  private record(event: NeuromeshEvent): void {
+    if (!this.recordHome || this.recordBroken || !isOn("run-record")) return;
+    try {
+      if (process.env.NEUROMESH_FAULT?.split(",").includes("run-record")) throw new Error("injected fault (NEUROMESH_FAULT)");
+      appendRecord(this.recordHome, recordLinesFor(event, this.path));
+    } catch (error) {
+      this.recordBroken = true;
+      const message = error instanceof Error ? error.message : String(error);
+      const failed: NeuromeshEvent = { t: new Date().toISOString(), run: this.run, type: "feature.failed", feature: "F108", key: "run-record", message, hint: "This came from F108 run-record (src/record/record.ts). To run without it: --disable run-record, or NEUROMESH_DISABLE=run-record." };
+      appendFileSync(this.path, JSON.stringify(failed) + "\n");
+      this.sink?.(failed);
+    }
   }
 }

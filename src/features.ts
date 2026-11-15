@@ -992,6 +992,15 @@ export const FEATURES: Feature[] = [
     what: "`node evals/bench.ts --compare a1,a2,a3 b1,b2,b3 [--margin 10]` takes each configuration's runs, scores each task as the share of its runs that passed, pairs the tasks both ran, and resamples the tasks 10,000 times (seeded, no dependency) for a 90% interval of the mean difference. It prints \"not worse than B by more than d: shown / not shown\" (shown when the interval's low end is above -d), whether A is better or worse or cannot be told apart, and the margin the data can show at best; an interval with no width is called a ceiling, not a margin. Plan item M2. No model call; checked on synthetic data (test/stats.test.ts) and saved evals.",
     optional: true,
   },
+  {
+    id: "F108",
+    key: "run-record",
+    name: "One append-only record of every turn and decision",
+    added: "2026-11-15",
+    files: ["src/record/record.ts", "src/record/backfill.ts", "src/record/cli.ts", "src/engine/store.ts (EventLog)"],
+    what: "Every engine event that is a model turn or a decision (started on a tier, climbed, raced, asked for a review, split...) is also appended, as one JSON line with the inputs the event carried, to ~/.neuromesh/record/record.jsonl; a run's end adds a run line and a line per task from run.json, which is what happened after. The same lines are made from run folders already on disk by `node src/record/cli.ts backfill` (also benchmark results, evals and the owner's ratings), and asked with summary, turns, decisions, runs and results. No request text, code, diffs or paths; an unknown number is left out, never 0; a cost is an estimate. A failure in the record switches it off for that run and is tagged with the feature; the run is never touched. Plan item L1; the base of replay (M6), regret (D3) and the controller. Not yet read by anything.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

@@ -432,7 +432,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   };
   saveState(state);
 
-  const log = new EventLog(paths.events, id, ctx.onEvent);
+  const log = new EventLog(paths.events, id, ctx.onEvent, ctx.home);
   log.emit("run.started", {
     repo: repo.root,
     preset: state.preset,
@@ -472,7 +472,7 @@ export async function resumeRun(state: RunState, ctx: EngineContext): Promise<Ru
   if (state.status === "running" && state.pid !== undefined && state.pid !== process.pid && engineAlive(state.pid)) {
     throw new Error(`Run ${state.id} is still running in process ${state.pid}.`);
   }
-  const log = new EventLog(runPaths(state.dir).events, state.id, ctx.onEvent);
+  const log = new EventLog(runPaths(state.dir).events, state.id, ctx.onEvent, ctx.home);
   // A resumed run keeps the features it started with, less any that failed.
   resetFeatures();
   if (state.features) onlyThese(state.features.filter((k) => !(state.featureErrors ?? []).some((e) => e.key === k)));
@@ -1169,6 +1169,10 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     cost: isOn("live-cost") ? (estimateCost(record.model, usage) ?? (backend.id === "opencode" ? result.costUsdEquivalent : undefined)) : undefined,
     tier,
     detail: result.detail,
+    // [F108 run-record] For the record, which has no run.json to ask per turn.
+    cascadeTier: record.cascadeTier,
+    peakPrompt: record.peakPrompt,
+    earlyExit: record.earlyExit,
     quotaUsed: result.quotaUsed,
     // [F43 quota-windows]
     quotaResets: isOn("quota-windows") ? result.quotaResets : undefined,
