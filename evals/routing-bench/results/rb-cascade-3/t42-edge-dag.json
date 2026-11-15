@@ -1,0 +1,109 @@
+{
+  "id": "4.2",
+  "slug": "t42-edge-dag",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "senior",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (60% senior); past runs give senior a 85% chance"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 9
+  },
+  "quality": 8.88888888888889,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nPASS optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nFAIL wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 8/9",
+  "wallMs": 164863,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 75739,
+      "usage": {
+        "input": 12,
+        "output": 10684,
+        "reasoning": 1342,
+        "cacheRead": 75789,
+        "cacheWrite": 15317,
+        "split": {
+          "files": 0,
+          "commands": 1392,
+          "earlier": 30609,
+          "calls": 6,
+          "estimated": true,
+          "startup": 52034,
+          "prompt": 7085
+        }
+      },
+      "tokens": 101802,
+      "costUsd": 0.1757109,
+      "quotaUsed": {
+        "five_hour": 0.4,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 87837,
+      "usage": {
+        "input": 4,
+        "output": 21859,
+        "reasoning": 13635,
+        "cacheRead": 5043,
+        "cacheWrite": 21620,
+        "split": {
+          "files": 0,
+          "commands": 57,
+          "earlier": 17782,
+          "calls": 2,
+          "estimated": true,
+          "startup": 6494,
+          "prompt": 2334
+        }
+      },
+      "tokens": 48526,
+      "costUsd": 0.01530433,
+      "quotaUsed": {
+        "five_hour": 0.4,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 150328,
+  "discardedTokens": 0,
+  "costUsd": 0.19101523,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.39,
+      "seven_day": 0.09
+    },
+    "after": {
+      "five_hour": 0.4,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-121801-01f3",
+  "finishedAt": "2026-11-15T06:50:49.191Z"
+}
