@@ -1,0 +1,73 @@
+{
+  "id": "2.1",
+  "slug": "t21-hmac-webhook",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 11
+  },
+  "quality": 9.090909090909092,
+  "hiddenOutput": "PASS app.py exists\nPASS app.py imports and builds an app\nPASS POST /webhooks/payment route exists\nPASS a correctly signed webhook gets 200\nPASS a signature made over the raw body (odd whitespace) gets 200\nPASS a wrong signature gets 400\nPASS a signature made with another secret gets 400\nFAIL a missing X-Signature header gets 400\nPASS a body changed after signing gets 400\nPASS an empty signature gets 400\nPASS compares with hmac.compare_digest\nSCORE 10/11",
+  "wallMs": 37939,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 36396,
+      "usage": {
+        "input": 18,
+        "output": 6497,
+        "reasoning": 2646,
+        "cacheRead": 108743,
+        "cacheWrite": 11914,
+        "split": {
+          "files": 0,
+          "commands": 4200,
+          "earlier": 25926,
+          "calls": 9,
+          "estimated": true,
+          "startup": 84499,
+          "prompt": 6050
+        }
+      },
+      "tokens": 127172,
+      "costUsd": 0.006720530000000001,
+      "quotaUsed": {
+        "five_hour": 0.47,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 127172,
+  "discardedTokens": 0,
+  "costUsd": 0.006720530000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.47,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.47,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-124946-b96f",
+  "finishedAt": "2026-11-15T07:20:26.756Z"
+}
