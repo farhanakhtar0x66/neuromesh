@@ -153,3 +153,15 @@ test("F108: the backfill reads run folders, benchmark results and ratings, and d
   assert.equal(select(lines, { kind: "result" })[0]!.src, "backfill:routing-bench");
   assert.ok(dirname(recordPath(home)).endsWith("record"));
 });
+
+test("F108: benchmark results are tagged with their prompt set, original or held-out", () => {
+  const home = dir();
+  const results = join(home, "bench", "ho-x");
+  mkdirSync(results, { recursive: true });
+  writeFileSync(join(results, "a.json"), JSON.stringify({ id: "1.1", slug: "t11", name: "ho-x", config: "cascade", score: { passed: 7, total: 7 }, quality: 10, finishedAt: "2026-11-15T10:00:00.000Z" }));
+  writeFileSync(join(results, "b.json"), JSON.stringify({ id: "H1.1", slug: "h11", name: "ho-x", config: "cascade", score: { passed: 8, total: 8 }, quality: 10, finishedAt: "2026-11-15T10:01:00.000Z" }));
+  writeFileSync(join(results, "c.json"), JSON.stringify({ id: "H2.1", set: "held-out", slug: "h21", name: "ho-x", config: "haiku", score: { passed: 3, total: 6 }, quality: 5, finishedAt: "2026-11-15T10:02:00.000Z" }));
+  backfill({ roots: [], benchResults: [join(home, "bench")], home });
+  const sets = Object.fromEntries(select(readRecord(home), { kind: "result" }).map((l) => [(l as { task: string }).task, (l as { set?: string }).set]));
+  assert.deepEqual(sets, { "1.1": "original", "H1.1": "held-out", "H2.1": "held-out" });
+});

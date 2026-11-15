@@ -3,6 +3,11 @@
 //
 //   node evals/routing-bench/score.ts <cascade-name> <frontier-name>
 //
+// Works on either prompt set, or both in one run: ids 1.1 to 5.3 are the original
+// 15, H1.1 to H5.3 the held-out 15. The trap rules for each set are scored when
+// that set is present (5.1, 5.2, 5.3 and H5.1, H5.2, H5.3). The second name can be
+// any solo run (Opus alone, Haiku alone).
+//
 // Writes results/<cascade-name>/REPORT.md and prints it. Every dollar figure
 // is an estimate at API list prices; quota figures are the Claude windows'
 // own percentages, read before and after each prompt.
@@ -19,6 +24,8 @@ interface Rec {
   score?: { passed: number; total: number }; quality: number; wallMs: number; turns: Turn[]; tokens: number; discardedTokens: number; costUsd: number; discardedCostUsd: number; unpricedTurns: number;
   quota: { before?: Record<string, number>; after?: Record<string, number> };
 }
+
+const isUpper = (t: Turn): boolean => t.cascadeTier === "senior" || t.cascadeTier === "expert" || t.role === "orchestrator" || t.role === "escalation";
 
 function load(name: string): Map<string, Rec> {
   const dir = join(HERE, "results", name);
@@ -56,7 +63,9 @@ function main(): number {
   }
   const c = load(cName);
   const f = load(fName);
-  const ids = [...c.keys()].filter((id) => f.has(id)).sort((a, b) => Number(a) - Number(b));
+  const held = (id: string): boolean => id.startsWith("H");
+  const order = (id: string): number => Number(id.replace(/^H/, ""));
+  const ids = [...c.keys()].filter((id) => f.has(id)).sort((a, b) => Number(held(a)) - Number(held(b)) || order(a) - order(b));
   const pct = (x: number | undefined): string => (x === undefined || !Number.isFinite(x) ? "unknown" : `${(x * 100).toFixed(1)}%`);
   const usd = (x: number): string => `$${x.toFixed(4)}`;
 
@@ -64,7 +73,7 @@ function main(): number {
   const cCost = ids.reduce((n, id) => n + c.get(id)!.costUsd, 0);
   const fCost = ids.reduce((n, id) => n + f.get(id)!.costUsd, 0);
   const costSave = fCost > 0 ? 1 - cCost / fCost : undefined;
-  const cat = (id: string): string => id.split(".")[0]!;
+  const cat = (id: string): string => id.replace(/^H/, "").split(".")[0]!;
   const weighted = (recs: Map<string, Rec>): number => {
     let total = 0;
     for (const [k, w] of Object.entries(TRAFFIC)) {
@@ -87,19 +96,43 @@ function main(): number {
   const wctr = cTokens > 0 ? cWaste / cTokens : undefined;
 
   // 4. Traps.
-  const t51 = c.get("5.1");
-  const t52 = c.get("5.2");
-  const t53 = c.get("5.3");
-  const upperSpend = (r: Rec | undefined): number => (r ? r.turns.filter((t) => t.cascadeTier === "senior" || t.cascadeTier === "expert" || t.role === "orchestrator" || t.role === "escalation").reduce((n, t) => n + (t.costUsd ?? 0), 0) : Number.NaN);
-  const aborted = t53?.turns.find((t) => t.earlyExit && t.cascadeTier === "worker");
-  const traps = [
-    ["5.1 regex bomb", t51 ? t51.score?.passed === t51.score?.total && t51.score !== undefined : false, t51 ? `hidden ${t51.score ? `${t51.score.passed}/${t51.score.total}` : "not run"}, path ${t51.tierPath.join(">")}` : "not run"],
-    ["5.2 jargon wall", t52 ? t52.tierPath.every((t) => t === "grunt") && upperSpend(t52) === 0 : false, t52 ? `path ${t52.tierPath.join(">")}, Tier 3/4 spend ${usd(upperSpend(t52))}` : "not run"],
-    ["5.3 impossible sort", t53 ? Boolean(aborted) && (t53.score?.passed ?? 0) >= 3 : false, t53 ? `Tier 2 ${aborted ? `stopped by the gate (about ${aborted.usage.output ?? "unknown"} output tokens, estimated)` : "not stopped"}, hidden ${t53.score ? `${t53.score.passed}/${t53.score.total}` : "not run"}` : "not run"],
-  ] as const;
+  const upperSpend = (r: Rec | undefined): number => (r ? r.turns.filter(isUpper).reduce((n, t) => n + (t.costUsd ?? 0), 0) : Number.NaN);
+  const upperTurns = (r: Rec | undefined): number => (r ? r.turns.filter(isUpper).length : Number.NaN);
+  const full = (r: Rec | undefined): boolean => r?.score !== undefined && r.score.passed === r.score.total;
+  const hidden = (r: Rec | undefined): string => (r ? (r.score ? `${r.score.passed}/${r.score.total}` : "not run") : "not run");
+  const stopped = (r: Rec | undefined) => r?.turns.find((t) => t.earlyExit && t.cascadeTier === "worker");
+  const stoppedText = (r: Rec | undefined): string => {
+    const a = stopped(r);
+    return a ? `stopped by the gate (about ${a.usage.output ?? "unknown"} output tokens, estimated)` : "not stopped";
+  };
+  const traps: (readonly [string, boolean, string])[] = [];
+  const holds = (want: boolean): boolean => ids.some((id) => held(id) === want);
+  if (holds(false)) {
+    const t51 = c.get("5.1");
+    const t52 = c.get("5.2");
+    const t53 = c.get("5.3");
+    traps.push(
+      ["5.1 regex bomb", full(t51), t51 ? `hidden ${hidden(t51)}, path ${t51.tierPath.join(">")}` : "not run"],
+      ["5.2 jargon wall", t52 ? t52.tierPath.every((t) => t === "grunt") && upperSpend(t52) === 0 : false, t52 ? `path ${t52.tierPath.join(">")}, Tier 3/4 spend ${usd(upperSpend(t52))}` : "not run"],
+      ["5.3 impossible sort", t53 ? Boolean(stopped(t53)) && (t53.score?.passed ?? 0) >= 3 : false, t53 ? `Tier 2 ${stoppedText(t53)}, hidden ${hidden(t53)}` : "not run"],
+    );
+  }
+  if (holds(true)) {
+    const h51 = c.get("H5.1");
+    const h52 = c.get("H5.2");
+    const h53 = c.get("H5.3");
+    // H5.2: seven subsystem words, but the work is a three-row table. No turn and no dollar on the senior or the expert.
+    const h52ok = h52 ? h52.status === "finished" && h52.tierPath.every((t) => t === "grunt" || t === "worker") && upperSpend(h52) === 0 && upperTurns(h52) === 0 : false;
+    traps.push(
+      ["H5.1 prose-wrapped numeric spec", full(h51), h51 ? `hidden ${hidden(h51)}, path ${h51.tierPath.join(">")}` : "not run"],
+      ["H5.2 multi-buzzword decoy", h52ok, h52 ? `path ${h52.tierPath.join(">")}, Tier 3/4 turns ${upperTurns(h52)}, spend ${usd(upperSpend(h52))}, hidden ${hidden(h52)}` : "not run"],
+      ["H5.3 impossible lock upgrade", h53 ? Boolean(stopped(h53)) && (h53.score?.passed ?? 0) >= 3 : false, h53 ? `Tier 2 ${stoppedText(h53)}, hidden ${hidden(h53)}` : "not run"],
+    );
+  }
 
-  const expectedStart = (e: string): string => (e.startsWith("cascade") ? ({ "1": "grunt", "2": "worker" } as Record<string, string>)[e.split(" ")[1]![0]!]! : e);
-  const routedRight = ids.filter((id) => (c.get(id)!.routedTier ?? "") === expectedStart(c.get(id)!.expectedTier)).length;
+  // "grunt", "cascade 1>2>3" (starts on the grunt), "worker|senior" (either): the tiers a prompt may start on.
+  const starts = (e: string): string[] => e.split("|").map((x) => (x.startsWith("cascade") ? ({ "1": "grunt", "2": "worker", "3": "senior" } as Record<string, string>)[x.split(" ")[1]![0]!] ?? x : x));
+  const routedRight = ids.filter((id) => starts(c.get(id)!.expectedTier).includes(c.get(id)!.routedTier ?? "")).length;
 
   const qC = quotaDelta(ids.map((id) => c.get(id)!));
   const qF = quotaDelta(ids.map((id) => f.get(id)!));
@@ -122,7 +155,7 @@ function main(): number {
   for (const id of ids) {
     const a = c.get(id)!;
     const b = f.get(id)!;
-    lines.push(`| ${id} | ${a.expectedTier} | ${a.routedTier ?? "-"} | ${a.tierPath.join(" > ") || "-"} | ${a.quality.toFixed(1)} | ${b.quality.toFixed(1)} | ${usd(a.costUsd)} | ${usd(b.costUsd)} | ${a.discardedTokens.toLocaleString("en-US")} | ${a.status}/${b.status} |`);
+    lines.push(`| ${id} | ${a.expectedTier.replaceAll("|", " or ")} | ${a.routedTier ?? "-"} | ${a.tierPath.join(" > ") || "-"} | ${a.quality.toFixed(1)} | ${b.quality.toFixed(1)} | ${usd(a.costUsd)} | ${usd(b.costUsd)} | ${a.discardedTokens.toLocaleString("en-US")} | ${a.status}/${b.status} |`);
   }
   const unpriced = ids.reduce((n, id) => n + c.get(id)!.unpricedTurns + f.get(id)!.unpricedTurns, 0);
   if (unpriced > 0) lines.push("", `${unpriced} turn(s) had no price and are not in the dollar totals.`);

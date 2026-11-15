@@ -106,10 +106,9 @@ starts on the senior. The expected tiers were written before this was run, and
 neither `router.ts` nor `brief.ts` was touched. The full table and notes are
 in `evals/routing-bench/HELD_OUT_ROUTES.md`.
 
-What this does not show: how any model does on these prompts. `run.ts` reads
-only `tasks/`, so the held-out set has not been run live, and H5.2's rule (no
-spend on senior or expert) is recorded in its `task.json` but not yet applied
-by `score.ts`.
+What this does not show: how any model does on these prompts. The held-out set
+has not been run live. (`run.ts --set held-out` and `score.ts`'s H5.2 rule were
+added afterwards, STATUS 45.)
 
 ## Model calls
 
@@ -121,7 +120,7 @@ the owner's plan was spent.
 
 1. A second and third clean cascade run, and Haiku alone, when the owner says
    the plan can be spent (HANDOFF step 1).
-2. Teach `run.ts` and `score.ts` the held-out set and H5.2's rule, so it can be
-   run once, live, with the router held fixed.
+2. Done (STATUS 45): `run.ts --set` and `score.ts` know the held-out set and
+   H5.2's rule; run it once, live, with the router held fixed.
 3. 3.3's checker, when a Postgres is available.
 4. Check F106's split and F108's live writes against the next real Claude run.

@@ -3,6 +3,9 @@
 //
 //   node evals/routing-bench/run.ts --config cascade  --name rb-cascade-1
 //   node evals/routing-bench/run.ts --config frontier --name rb-frontier-1
+//   node evals/routing-bench/run.ts --config haiku    --name rb-haiku-1      (Haiku alone: the cheap floor)
+//   node evals/routing-bench/run.ts --config cascade  --set held-out --name ho-cascade-1
+//   (--set original|held-out|all: which prompts; original is the default and held-out is never tuned on)
 //   (--tasks t11-pdf-table-json,t52-jargon-log-csv to run some; --no-push to commit without pushing)
 //
 // Every prompt starts with nothing from an earlier one: its own Neuromesh home
@@ -29,7 +32,14 @@ import { estimateCost } from "../../src/usage/prices.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
-const PRESETS = { cascade: "cascade-claude", frontier: "solo-opus" } as const;
+const PRESETS = { cascade: "cascade-claude", frontier: "solo-opus", haiku: "solo-haiku" } as const;
+
+/** The two prompt sets: where each one's tasks and reference answers live. */
+const SETS = {
+  original: { tasks: join(HERE, "tasks"), reference: join(HERE, "reference") },
+  "held-out": { tasks: join(HERE, "held-out", "tasks"), reference: join(HERE, "held-out", "reference") },
+} as const;
+const referenceDirs: Record<string, string> = {};
 
 /**
  * --fake: a self-test with no model calls. Every "claude" turn writes the
@@ -43,7 +53,7 @@ const backends: Record<string, AgentBackend> = FAKE
       claude: createFakeBackend((req) => {
         const props = (req.outputSchema?.properties ?? {}) as Record<string, unknown>;
         if ("status" in props && req.access === "write") {
-          const ref = join(HERE, "reference", currentSlug);
+          const ref = join(referenceDirs[currentSlug] ?? SETS.original.reference, currentSlug);
           if (existsSync(ref)) cpSync(ref, req.cwd, { recursive: true });
           return { structured: { status: "done", summary: "wrote the answer", notes: "", run: "" }, usage: { input: 1000, output: 500 } };
         }
@@ -81,6 +91,8 @@ export interface PromptRecord {
   id: string;
   slug: string;
   config: keyof typeof PRESETS;
+  /** Which prompt set: the original 15, or the held-out 15. */
+  set: keyof typeof SETS;
   preset: string;
   name: string;
   expectedTier: string;
@@ -205,15 +217,28 @@ async function main(): Promise<number> {
   const config = arg("config") as keyof typeof PRESETS | undefined;
   const name = arg("name");
   if (!config || !(config in PRESETS) || !name) {
-    process.stderr.write("usage: node evals/routing-bench/run.ts --config cascade|frontier --name <name> [--tasks a,b] [--no-push]\n");
+    process.stderr.write("usage: node evals/routing-bench/run.ts --config cascade|frontier|haiku --name <name> [--set original|held-out|all] [--tasks a,b] [--no-push]\n");
     return 2;
   }
   const push = !process.argv.includes("--no-push") && !FAKE;
   const commits = !FAKE && !process.argv.includes("--no-commit");
   const preset = loadPreset(PRESETS[config]);
   const only = arg("tasks")?.split(",").filter(Boolean);
-  const tasksDir = join(HERE, "tasks");
-  const slugs = readdirSync(tasksDir).filter((s) => existsSync(join(tasksDir, s, "task.json")) && (!only || only.includes(s))).sort();
+  const setArg = arg("set") ?? "original";
+  if (!["original", "held-out", "all"].includes(setArg)) {
+    process.stderr.write(`--set takes original, held-out or all, not "${setArg}"\n`);
+    return 2;
+  }
+  const wanted = (setArg === "all" ? ["original", "held-out"] : [setArg]) as (keyof typeof SETS)[];
+  const taskDirs: Record<string, { dir: string; set: keyof typeof SETS }> = {};
+  for (const set of wanted) {
+    for (const s of readdirSync(SETS[set].tasks)) {
+      if (!existsSync(join(SETS[set].tasks, s, "task.json")) || (only && !only.includes(s))) continue;
+      taskDirs[s] = { dir: join(SETS[set].tasks, s), set };
+      referenceDirs[s] = SETS[set].reference;
+    }
+  }
+  const slugs = Object.keys(taskDirs).sort();
   const out = join(HERE, "results", name);
   mkdirSync(out, { recursive: true });
   const log = join(out, "LOG.md");
@@ -225,7 +250,7 @@ async function main(): Promise<number> {
   };
   const benchHome = join(homedir(), ".neuromesh-bench", name);
   if (process.argv.includes("--wait-reset") && !FAKE) await waitForReset(note);
-  note(`started: ${slugs.length} prompt(s) on preset ${preset.name}`);
+  note(`started: ${slugs.length} prompt(s) (${setArg}) on preset ${preset.name}`);
 
   for (const slug of slugs) {
     const recordPath = join(out, `${slug}.json`);
@@ -233,7 +258,7 @@ async function main(): Promise<number> {
       const done = JSON.parse(readFileSync(recordPath, "utf8")) as PromptRecord;
       if (!["paused", "interrupted", "running"].includes(done.status)) continue;
     }
-    const taskDir = join(tasksDir, slug);
+    const taskDir = taskDirs[slug]!.dir;
     const task = JSON.parse(readFileSync(join(taskDir, "task.json"), "utf8")) as { hiddenCheck: string; bench: { id: string; expectedTier: string; expectedPath: string } };
     const prompt = readFileSync(join(taskDir, "prompt.md"), "utf8").trim();
     // Nothing carried over from an earlier prompt or run.
@@ -274,15 +299,16 @@ async function main(): Promise<number> {
       id: task.bench.id,
       slug,
       config,
+      set: taskDirs[slug]!.set,
       preset: preset.name,
       name,
       expectedTier: task.bench.expectedTier,
       expectedPath: task.bench.expectedPath,
-      routedTier: config === "frontier" ? "frontier" : routed?.tier,
+      routedTier: config !== "cascade" ? config : routed?.tier,
       routeStage: routed?.stage,
       routeReasons: routed?.reasons,
-      tierPath: config === "frontier" ? ["frontier"] : tierPath,
-      finalTier: config === "frontier" ? "frontier" : tierPath.at(-1),
+      tierPath: config !== "cascade" ? [config] : tierPath,
+      finalTier: config !== "cascade" ? config : tierPath.at(-1),
       status: state.status,
       reason: state.reason,
       failure: state.failure,

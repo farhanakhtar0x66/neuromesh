@@ -81,6 +81,27 @@ measures. The next steps, concretely:
   same 15 prompts (a `solo-haiku` configuration for the runner). This says
   how stable the result is and how much of it is the cascade rather than
   Haiku. Ask the owner before starting: it spends the plan.
+
+  The runner has `--config haiku` (the `solo-haiku` preset) and `--set
+  original|held-out|all` since 2026-11-15 (STATUS 45). Run one at a time, with
+  the owner's interactive session closed, from the repository root, in this
+  order (each continues where it stopped if run again with the same name):
+
+      node evals/routing-bench/run.ts --config frontier --name rb-frontier-2 --wait-reset
+      node evals/routing-bench/run.ts --config cascade  --name rb-cascade-3  --wait-reset
+      node evals/routing-bench/run.ts --config cascade  --name rb-cascade-4  --wait-reset
+      node evals/routing-bench/run.ts --config haiku    --name rb-haiku-1    --wait-reset
+
+  Then the held-out baseline, the router and the brief unchanged:
+
+      node evals/routing-bench/run.ts --config frontier --set held-out --name ho-frontier-1 --wait-reset
+      node evals/routing-bench/run.ts --config cascade  --set held-out --name ho-cascade-1  --wait-reset
+      node evals/routing-bench/run.ts --config haiku    --set held-out --name ho-haiku-1    --wait-reset
+
+  Score with `node evals/routing-bench/score.ts rb-cascade-3 rb-frontier-2`
+  (and `ho-cascade-1 ho-frontier-1`); compare with `node evals/bench.ts
+  --compare rb-cascade-2,rb-cascade-3,rb-cascade-4 rb-frontier-1,rb-frontier-2
+  --margin 10`; then `node src/record/cli.ts backfill`.
 - [ ] **2. Checkers that run the code** (the checklist at the top of doc
   22). Done for 2.1, 2.3, 3.1, 3.2 on 2026-11-15; 3.3 waits for a Postgres. No model calls; rescore the saved answers with `rescore.ts`.
 - [x] **3. A held-out set of 15 prompts** the router has never been tuned

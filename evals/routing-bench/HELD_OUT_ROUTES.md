@@ -74,8 +74,8 @@ Unchanged from before the held-out set was added.
   Seven misses in all.
 - **Trap H5.2 (the multi-buzzword decoy) is missed.** It starts on the senior
   for a three-row table, the over-routing the trap was written to find. Its pass
-  rule, no spend on senior or expert, is recorded in its `task.json`; the live
-  runner and `score.ts` do not apply it yet.
+  rule, no turn and no spend on senior or expert, is recorded in its
+  `task.json` and applied by `score.ts`.
 - **H5.1 and H5.3 pass.** The prose-wrapped numeric spec stays off the
   inline-transform path, and the impossible-lock request starts on the worker,
   like 5.3.

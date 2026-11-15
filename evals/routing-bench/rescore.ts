@@ -23,7 +23,12 @@ for (const name of process.argv.slice(2)) {
       continue;
     }
     rmSync(join(repo, "hidden"), { recursive: true, force: true });
-    cpSync(join(HERE, "tasks", rec.slug, "hidden"), join(repo, "hidden"), { recursive: true });
+    const hidden = [join(HERE, "tasks", rec.slug, "hidden"), join(HERE, "held-out", "tasks", rec.slug, "hidden")].find((p) => existsSync(p));
+    if (!hidden) {
+      process.stdout.write(`${name} ${rec.id}: no checker found for ${rec.slug}, not rescored\n`);
+      continue;
+    }
+    cpSync(hidden, join(repo, "hidden"), { recursive: true });
     const r = spawnSync("sh", ["-c", "python3 -I hidden/check.py 2>&1"], { cwd: repo, encoding: "utf8", timeout: 15 * 60_000 });
     const out = (r.stdout ?? "").trim();
     const m = [...out.matchAll(/^SCORE (\d+)\/(\d+)\s*$/gm)].at(-1);

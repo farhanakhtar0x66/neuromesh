@@ -109,6 +109,8 @@ export interface ResultLine extends Base {
   name: string;
   task: string;
   config?: string;
+  /** Routing-bench prompt set: "original" (1.1 to 5.3) or "held-out" (H1.1 to H5.3). */
+  set?: string;
   passed?: number;
   total?: number;
   /** 0 to 10, from the hidden check. */

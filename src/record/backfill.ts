@@ -92,6 +92,7 @@ function benchResults(dir: string): ResultLine[] {
           name: String(r.name ?? name),
           task: String(r.id ?? file),
           config: typeof r.config === "string" ? r.config : undefined,
+          set: typeof r.set === "string" ? r.set : String(r.id ?? "").startsWith("H") ? "held-out" : "original",
           passed: r.score?.passed,
           total: r.score?.total,
           quality: typeof r.quality === "number" ? r.quality : undefined,

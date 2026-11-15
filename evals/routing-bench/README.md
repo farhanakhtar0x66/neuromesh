@@ -60,8 +60,9 @@ It prints two tables: the 15 regression prompts the router was tuned on
 (Table A), and the held-out 15, `held-out/tasks/` (H1.1 to H5.3), which it was
 not (Table B). The held-out set is never used to change the router or the
 brief; `HELD_OUT_ROUTES.md` records where Tier 0 sent it the day it was added.
-`run.ts` reads only `tasks/`; the held-out prompts are not run live yet.
-`validate.sh` checks both sets.
+`run.ts --set original|held-out|all` chooses the prompts (`original` is the
+default); `--config haiku` runs Haiku alone. `score.ts` scores the trap rules of
+whichever set is in the run, H5.2's included. `validate.sh` checks both sets.
 
 `--fake` makes no model calls: every turn writes the reference answer. The live
 runs spend the Claude subscription. Each prompt also costs two one-word Haiku

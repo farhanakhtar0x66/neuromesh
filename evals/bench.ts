@@ -5,6 +5,7 @@
 //   node evals/bench.ts bench-solo-opus-1 bench-opus-haiku-1 ...
 //   node evals/bench.ts --turns bench-opus-haiku-1      every turn of every task
 //   node evals/bench.ts --compare a1,a2,a3 b1,b2,b3 [--margin 10]   paired task bootstrap: is A not worse than B by more than d points?
+//     (names are evals, or routing-bench runs such as rb-cascade-3 or ho-cascade-1)
 //   node evals/bench.ts --split bench-solo-opus-1 ...  where the input tokens went, in five parts
 //   node evals/bench.ts --fit bench-solo-opus-1 ...     quota points per token, fitted over the tasks
 //
@@ -13,7 +14,8 @@
 // 5-hour window (whole points only, so small tasks often read 0).
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { costOf, loadReport } from "../src/eval/eval.ts";
 import type { EvalReport, TaskResult } from "../src/eval/eval.ts";
 import { defaultHome, loadState } from "../src/engine/store.ts";
@@ -177,6 +179,18 @@ function fit(reports: EvalReport[]): string {
   return `Fit over ${rows.length} tasks, ${total} points: expert ${a.toFixed(3)} points per 1k output (${(1 / a).toFixed(1)}k per point), worker ${b.toFixed(3)} per 1k (${(1 / b).toFixed(1)}k per point)`;
 }
 
+/** A routing-bench run (evals/routing-bench/results/<name>): each prompt's share of hidden items passed, keyed by its id (1.1 to 5.3, or H1.1 to H5.3 for the held-out set). */
+function routingRun(name: string): Record<string, number> | undefined {
+  const dir = join(dirname(fileURLToPath(import.meta.url)), "routing-bench", "results", name);
+  if (!existsSync(dir)) return undefined;
+  const out: Record<string, number> = {};
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const r = JSON.parse(readFileSync(join(dir, file), "utf8")) as { id?: string; score?: { passed: number; total: number } };
+    if (r.id && r.score && r.score.total > 0) out[r.id] = r.score.passed / r.score.total;
+  }
+  return out;
+}
+
 /** [F107 paired-bootstrap] Two configurations, each given as the names of its runs (comma-separated), compared task by task. */
 function compare(): string {
   const [left, right] = names;
@@ -185,8 +199,10 @@ function compare(): string {
     label: group,
     runs: group.split(",").map((n) => {
       const r = loadReport(home, n);
-      if (!r) throw new Error(`No eval results named "${n}"`);
-      return Object.fromEntries(Object.values(r.results).map((t) => [t.task, t.hidden === "pass" ? 1 : 0]));
+      if (r) return Object.fromEntries(Object.values(r.results).map((t) => [t.task, t.hidden === "pass" ? 1 : 0]));
+      const rb = routingRun(n);
+      if (!rb) throw new Error(`No eval or routing-bench results named "${n}"`);
+      return rb;
     }),
   });
   const a = load(left);

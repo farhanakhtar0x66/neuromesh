@@ -438,6 +438,20 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     spend on senior or expert, is only in its `task.json`). Summary:
     `docs/23-offline-phase1-report.md`.
 
+45. **The runner and scorer know the held-out set (2026-11-15).** No model
+    calls, no router change. `run.ts --set original|held-out|all` (default
+    `original`, so existing commands are unchanged) and `--config haiku` (the
+    `solo-haiku` preset, Haiku alone); each record says which set it is from.
+    `score.ts` sorts and weights both sets' ids and scores the trap rules of
+    whichever set is present: 5.1, 5.2, 5.3 and H5.1, H5.2, H5.3, where H5.2
+    passes only with every turn on the grunt or worker and no turn or dollar
+    on the senior or expert. `rescore.ts` finds held-out checkers. `bench
+    --compare` takes routing-bench run names as well as eval names (score =
+    share of hidden items passed, keyed by prompt id). The record backfill tags
+    each result `original` or `held-out`. Checked end to end on the fake
+    backend: both sets and Haiku-alone ran, scored, compared and backfilled;
+    the fake runs were then deleted. Live commands: HANDOFF step 1.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
