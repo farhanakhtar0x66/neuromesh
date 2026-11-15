@@ -1,0 +1,73 @@
+{
+  "id": "H5.2",
+  "slug": "h52-decoy-table",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS schedule.md exists\nPASS header is Component | Owner | Target_Date\nPASS a separator row and exactly three data rows\nPASS sorted by date: 2026-11-18, 2026-11-21, 2026-11-25\nPASS owners follow the dates: Aarav, Meera, Kabir\nPASS components are oauth, sqlite and websocket work\nPASS no code block and no design prose\nSCORE 7/7",
+  "wallMs": 7852,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 7341,
+      "usage": {
+        "input": 6,
+        "output": 1166,
+        "reasoning": 344,
+        "cacheRead": 26061,
+        "cacheWrite": 5824,
+        "split": {
+          "files": 172,
+          "commands": 62,
+          "earlier": 1579,
+          "calls": 3,
+          "estimated": true,
+          "startup": 28150,
+          "prompt": 1928
+        }
+      },
+      "tokens": 33057,
+      "costUsd": 0.00200901,
+      "quotaUsed": {
+        "five_hour": 0.02,
+        "seven_day": 0.15
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 33057,
+  "discardedTokens": 0,
+  "costUsd": 0.00200901,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.02,
+      "seven_day": 0.15
+    },
+    "after": {
+      "five_hour": 0.02,
+      "seven_day": 0.15
+    }
+  },
+  "runId": "20261115-161305-1d32",
+  "finishedAt": "2026-11-15T10:43:15.819Z"
+}
