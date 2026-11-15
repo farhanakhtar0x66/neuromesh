@@ -1,0 +1,104 @@
+{
+  "id": "3.2",
+  "slug": "t32-heap-refactor",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 4,
+    "total": 12
+  },
+  "quality": 3.3333333333333335,
+  "hiddenOutput": "note: runs: TypeError: '<' not supported between instances of 'dict' and 'dict'\nnote: returns_dict: TypeError: list indices must be integers or slices, not dict\nnote: fifo_order: TypeError: '<' not supported between instances of 'dict' and 'dict'\nPASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nFAIL allocate runs on orders and batches\nFAIL returns a dict\nFAIL ships from the earliest expiry first, whatever the list order\nFAIL splits an order across batches and warehouses in expiry order\nFAIL matches a plain FIFO allocation on 25 random cases\nFAIL ships what there is when stock runs out, never more\nFAIL leaves its inputs unchanged\nFAIL handles 30,000 orders against 30,000 batches in under 10 s\nSCORE 4/12",
+  "wallMs": 81058,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 49799,
+      "usage": {
+        "input": 10,
+        "output": 4697,
+        "reasoning": 548,
+        "cacheRead": 49844,
+        "cacheWrite": 8846,
+        "split": {
+          "files": 0,
+          "commands": 1207,
+          "earlier": 10839,
+          "calls": 5,
+          "estimated": true,
+          "startup": 43164,
+          "prompt": 3491
+        }
+      },
+      "tokens": 63397,
+      "costUsd": 0.17471679999999998,
+      "quotaUsed": {
+        "five_hour": 0.2,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 29660,
+      "usage": {
+        "input": 2,
+        "output": 2659,
+        "reasoning": 1367,
+        "cacheRead": 631,
+        "cacheWrite": 3219,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3083,
+          "prompt": 769
+        }
+      },
+      "tokens": 6511,
+      "costUsd": 0.0790662,
+      "quotaUsed": {
+        "five_hour": 0.2,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 69908,
+  "discardedTokens": 0,
+  "costUsd": 0.253783,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.19,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.2,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-114418-c366",
+  "finishedAt": "2026-11-15T06:15:42.182Z"
+}
