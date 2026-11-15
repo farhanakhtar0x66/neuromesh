@@ -15,3 +15,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 08:45:54 UTC: H2.1 h21-sliding-limiter: reading quota, then running
 - 2026-11-15 08:45:56 UTC: H2.1 route.tier worker
 - 2026-11-15 08:48:59 UTC: H2.1 h21-sliding-limiter: applied, quality 10.0/10 (6/6), path worker, 234,307 tokens, est. $0.0276 (API list prices), 3.0 min; quota before five_hour 87%, seven_day 13%, after five_hour 87%, seven_day 13%
+- 2026-11-15 08:49:01 UTC: H2.2 h22-csv-stream: reading quota, then running
+- 2026-11-15 08:49:03 UTC: H2.2 route.tier senior
+- 2026-11-15 08:50:26 UTC: H2.2 h22-csv-stream: applied, quality 10.0/10 (8/8), path senior, 54,549 tokens, est. $0.0970 (API list prices), 1.3 min; quota before five_hour 87%, seven_day 13%, after five_hour 88%, seven_day 13%
