@@ -1,0 +1,104 @@
+{
+  "id": "3.1",
+  "slug": "t31-abort-hook",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 14,
+    "total": 14
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS useSearch.js exists\nPASS the hook loads and runs as a component\nPASS the newest query's results are shown\nPASS a stale slow response does not overwrite newer results\nPASS the request is given an AbortSignal\nPASS the earlier request is aborted when the query changes\nPASS an aborted request is not shown as an error\nPASS unmounting aborts the request in flight\nPASS unmounting cancels a pending debounce timer\nPASS no timer is left running after unmount\nPASS no state is set after unmount\nPASS a burst of keystrokes sends one request (debounce)\nPASS re-rendering with the same query sends no new request\nPASS hundreds of rapid changes then unmount leave nothing running or in flight\nSCORE 14/14",
+  "wallMs": 108354,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 33879,
+      "usage": {
+        "input": 8,
+        "output": 3005,
+        "reasoning": 151,
+        "cacheRead": 36070,
+        "cacheWrite": 6696,
+        "split": {
+          "files": 0,
+          "commands": 590,
+          "earlier": 5260,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34435,
+          "prompt": 2489
+        }
+      },
+      "tokens": 45779,
+      "costUsd": 0.120914,
+      "quotaUsed": {
+        "five_hour": 0.18,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 73266,
+      "usage": {
+        "input": 2,
+        "output": 7988,
+        "reasoning": 3975,
+        "cacheRead": 0,
+        "cacheWrite": 3877,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3088,
+          "prompt": 791
+        }
+      },
+      "tokens": 11867,
+      "costUsd": 0.190784,
+      "quotaUsed": {
+        "five_hour": 0.18,
+        "seven_day": 0.08
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 57646,
+  "discardedTokens": 0,
+  "costUsd": 0.31169800000000003,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.17,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.19,
+      "seven_day": 0.08
+    }
+  },
+  "runId": "20261115-114222-05c2",
+  "finishedAt": "2026-11-15T06:14:13.542Z"
+}
