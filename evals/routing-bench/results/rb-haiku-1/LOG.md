@@ -21,3 +21,5 @@ Configuration: haiku (preset solo-haiku). Each line is written as it happens.
 - 2026-11-15 07:26:14 UTC: 3.2 t32-heap-refactor: applied, quality 10.0/10 (12/12), path haiku, 153,519 tokens, est. $0.0111 (API list prices), 1.2 min; quota before five_hour 47%, seven_day 10%, after five_hour 48%, seven_day 10%
 - 2026-11-15 07:26:16 UTC: 3.3 t33-pg-migration: reading quota, then running
 - 2026-11-15 07:29:20 UTC: 3.3 t33-pg-migration: applied, quality 10.0/10 (9/9), path haiku, 227,826 tokens, est. $0.0300 (API list prices), 2.9 min; quota before five_hour 48%, seven_day 10%, after five_hour 48%, seven_day 10%
+- 2026-11-15 07:29:22 UTC: 4.1 t41-arm64-ringbuf: reading quota, then running
+- 2026-11-15 07:33:41 UTC: 4.1 t41-arm64-ringbuf: applied, quality 10.0/10 (10/10), path haiku, 440,913 tokens, est. $0.0366 (API list prices), 4.2 min; quota before five_hour 48%, seven_day 10%, after five_hour 48%, seven_day 10%
