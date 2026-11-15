@@ -505,6 +505,25 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     interval, or tokens per prompt do not fall, it goes off by default. The
     held-out set is not tuned on: it measures this.
 
+48. **M1 task harnesses (2026-11-15, plan items M1 and M9 for real tasks).**
+    No model calls. `node evals/make-task.ts --repo <path or url> --commit
+    <hash> --name <name> --runner node|pytest|cargo --test-cmd "<cmd>"`
+    turns a real change into a task folder: `seed/` (the parent commit),
+    `prompt.md` (the commit message, or `--prompt`; read it for leaks),
+    `hidden/` (the tests the change came with, a grader and `spec.json` with
+    the fail-to-pass and pass-to-pass lists), `reference/` (the change's other
+    files and deletions, and a patch). The lists come from running the
+    project's tests on the seed and on the reference. `node
+    evals/validate-task.ts <dir>` checks, with no model: every fail-to-pass
+    test fails on the seed, every pass-to-pass passes; on the reference all
+    pass, in each of 3 runs in fresh copies, and no test changes its result
+    between runs. The grader (`evals/real-task/grade.ts`, copied into each
+    task as `hidden/grade.ts`) reads node --test (TAP), pytest and cargo test.
+    Tested end to end on a small synthetic git repository, including a
+    reference that does not fix it, a seed that already passes, and a flaky
+    test. Not yet run on a real repository; the task folders are in the
+    shape `evals/tasks` already uses, so `neuromesh eval` can read them.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
