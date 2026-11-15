@@ -1,0 +1,109 @@
+{
+  "id": "3.2",
+  "slug": "t32-heap-refactor",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-3",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 12,
+    "total": 12
+  },
+  "quality": 10,
+  "hiddenOutput": "note: scale: 0.12s\nPASS allocate.py exists\nPASS parses\nPASS uses heapq or bisect\nPASS no loops nested deeper than 2\nPASS allocate runs on orders and batches\nPASS returns a dict\nPASS ships from the earliest expiry first, whatever the list order\nPASS splits an order across batches and warehouses in expiry order\nPASS matches a plain FIFO allocation on 25 random cases\nPASS ships what there is when stock runs out, never more\nPASS leaves its inputs unchanged\nPASS handles 30,000 orders against 30,000 batches in under 10 s\nSCORE 12/12",
+  "wallMs": 47330,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 23559,
+      "usage": {
+        "input": 6,
+        "output": 3433,
+        "reasoning": 381,
+        "cacheRead": 20217,
+        "cacheWrite": 13089,
+        "split": {
+          "files": 0,
+          "commands": 249,
+          "earlier": 3243,
+          "calls": 3,
+          "estimated": true,
+          "startup": 26102,
+          "prompt": 3718
+        }
+      },
+      "tokens": 36745,
+      "costUsd": 0.0887197,
+      "quotaUsed": {
+        "five_hour": 0.36,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 22169,
+      "usage": {
+        "input": 2,
+        "output": 4618,
+        "reasoning": 3543,
+        "cacheRead": 631,
+        "cacheWrite": 3522,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3152,
+          "prompt": 1003
+        }
+      },
+      "tokens": 8773,
+      "costUsd": 0.0030199099999999998,
+      "quotaUsed": {
+        "five_hour": 0.36,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 45518,
+  "discardedTokens": 0,
+  "costUsd": 0.09173961,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.36,
+      "seven_day": 0.09
+    },
+    "after": {
+      "five_hour": 0.36,
+      "seven_day": 0.09
+    }
+  },
+  "runId": "20261115-121218-9a2b",
+  "finishedAt": "2026-11-15T06:43:08.556Z"
+}
