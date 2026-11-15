@@ -1,0 +1,110 @@
+{
+  "id": "H3.1",
+  "slug": "h31-wal",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-2",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (1127 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS wal module imports\nPASS replay: committed only, in commit order; aborted and open transactions ignored\nPASS a torn frame at the end is cut off exactly and the state is returned\nPASS a flipped bit in an uncommitted tail frame is cut off, not raised\nPASS a flipped bit before a later valid commit raises ValueError and keeps the file\nPASS a new WAL on the cut file appends a fresh transaction cleanly\nSCORE 6/6",
+  "wallMs": 155598,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 64452,
+      "usage": {
+        "input": 16,
+        "output": 15192,
+        "reasoning": 5228,
+        "cacheRead": 131479,
+        "cacheWrite": 22463,
+        "split": {
+          "files": 0,
+          "commands": 4931,
+          "earlier": 71335,
+          "calls": 7,
+          "estimated": true,
+          "startup": 67594,
+          "prompt": 10099
+        }
+      },
+      "tokens": 169150,
+      "costUsd": 0.01340499,
+      "quotaUsed": {
+        "five_hour": 0.31,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 89158,
+      "usage": {
+        "input": 2,
+        "output": 20667,
+        "reasoning": 14898,
+        "cacheRead": 631,
+        "cacheWrite": 4301,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3501,
+          "prompt": 1433
+        }
+      },
+      "tokens": 25601,
+      "costUsd": 0.011200209999999999,
+      "quotaUsed": {
+        "five_hour": 0.31,
+        "seven_day": 0.21
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 194751,
+  "discardedTokens": 0,
+  "costUsd": 0.0246052,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.31,
+      "seven_day": 0.21
+    },
+    "after": {
+      "five_hour": 0.31,
+      "seven_day": 0.21
+    }
+  },
+  "runId": "20261116-002715-ace5",
+  "finishedAt": "2026-11-15T18:59:53.680Z"
+}
