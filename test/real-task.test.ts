@@ -178,3 +178,31 @@ test("M1: the runners' output is read into one result per test", () => {
   assert.equal(commandFor("pytest", "python3 -m pytest tests/"), "python3 -m pytest -rA -p no:cacheprovider tests/");
   assert.equal(commandFor("cargo", "cargo test"), "cargo test");
 });
+
+test("M1: make-batch builds every task in a manifest from its prompt file, validates it, and fails on a task that is not valid", () => {
+  const batch = join(scratch, "batch");
+  mkdirSync(join(batch, "prompts"), { recursive: true });
+  writeFileSync(join(batch, "prompts", "clamp.md"), "clamp() lets values below the lower bound through.\n");
+  writeFileSync(join(batch, "prompts", "other.md"), "x\n");
+  const entry = (name: string, extra: object = {}) => ({ name, repo: made.dir, commit: made.fix, kind: "bug", language: "javascript", runner: "node", testCommand: "node --test", ...extra });
+  const manifest = join(batch, "batch.json");
+  writeFileSync(manifest, JSON.stringify([entry("clamp")]));
+  const root = join(scratch, "batch-out");
+  const run = (): { code: number; out: string } => {
+    try {
+      return { code: 0, out: execFileSync("node", ["evals/make-batch.ts", manifest, "--out-root", root], { encoding: "utf8", stdio: "pipe", env: { ...process.env, NODE_TEST_CONTEXT: "" } }) };
+    } catch (e) {
+      return { code: (e as { status: number }).status, out: String((e as { stdout: string }).stdout) };
+    }
+  };
+  const first = run();
+  assert.equal(first.code, 0, first.out);
+  assert.match(first.out, /valid\s+clamp\s+bug\s+fail-to-pass\s+1\s+pass-to-pass\s+3/);
+  assert.match(first.out, /every task is valid/);
+  assert.equal(readFileSync(join(root, "clamp", "prompt.md"), "utf8").trim(), "clamp() lets values below the lower bound through.");
+  // A task whose commit has no test cannot be made: the batch reports it and fails.
+  writeFileSync(manifest, JSON.stringify([entry("clamp"), entry("other", { commit: "HEAD~1" })]));
+  const second = run();
+  assert.equal(second.code, 1);
+  assert.match(second.out, /FAILED\s+other/);
+});

@@ -119,6 +119,10 @@ measures. The next steps, concretely:
 - [ ] **6. Read the owner's usage log weekly.** The owner is building real
   projects with the cascade; each run is rated there. A low rating or a
   failed feature is the next thing to fix, ahead of the plan.
+- [ ] **6b. M1, first batch built** (2026-11-16, STATUS 50): ten valid real tasks in
+  `evals/real-tasks/` (rebuild with `evals/make-batch.ts`). Next: a second reader
+  for the prompts, Haiku alone once on each to set the difficulty mix, more
+  repositories (Python, Rust, a refactor), and a split by repository.
 - [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
   intervals. Then the phases in order.
 

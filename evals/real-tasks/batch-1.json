@@ -1,0 +1,95 @@
+[
+  {
+    "name": "nm-prose-guard",
+    "repo": "~/Projects/neuromesh",
+    "commit": "caec42b",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/routing.test.ts"
+  },
+  {
+    "name": "nm-screen-countdown",
+    "repo": "~/Projects/neuromesh",
+    "commit": "e3b2394",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/features.test.ts"
+  },
+  {
+    "name": "nm-first-turn-retry",
+    "repo": "~/Projects/neuromesh",
+    "commit": "7727c8e",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"F97|cancelling interrupts|subscription limit\" test/cascade.test.ts test/engine.test.ts"
+  },
+  {
+    "name": "nm-dropped-connection",
+    "repo": "~/Projects/neuromesh",
+    "commit": "eff0b85",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"dropped connection\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-quota-cooldown",
+    "repo": "~/Projects/neuromesh",
+    "commit": "83942dd",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"stays out for later runs|subscription limit pauses\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-tester-minor-findings",
+    "repo": "~/Projects/neuromesh",
+    "commit": "ca2c0af",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"only minor findings\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-stub-scanner",
+    "repo": "~/Projects/neuromesh",
+    "commit": "3d7b17d",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/stubs.test.ts",
+    "tests": [
+      "test/stubs.test.ts"
+    ]
+  },
+  {
+    "name": "ss2-notes-fold",
+    "repo": "~/Projects/scope-test-2",
+    "commit": "ee334f1",
+    "kind": "feature",
+    "language": "javascript",
+    "runner": "node",
+    "testCommand": "node --test test/"
+  },
+  {
+    "name": "ss2-notes-bound",
+    "repo": "~/Projects/scope-test-2",
+    "commit": "42a7973",
+    "kind": "bug",
+    "language": "javascript",
+    "runner": "node",
+    "testCommand": "node --test test/"
+  },
+  {
+    "name": "nm-no-bytecode-in-diff",
+    "repo": "~/Projects/neuromesh",
+    "commit": "8dadadc",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"Python work folder|never enters the diff\" test/python-bot-fixes.test.ts"
+  }
+]

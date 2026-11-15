@@ -556,6 +556,21 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     its other misses (4.1, 4.2, 4.3) are rubric items. ho-cascade-2 scores
     150.0 and rb-cascade-5 146.8, as the cascade runs before them.
 
+50. **M1: the first batch of real tasks, and a batch builder (2026-11-16).** No
+    model calls. `evals/make-batch.ts evals/real-tasks/batch-1.json` builds
+    and validates ten tasks from commits in `~/Projects/neuromesh` (8) and
+    `~/Projects/scope-test-2` (2): five bugs and five features, TypeScript
+    and JavaScript. All ten are valid under `validate-task.ts`: the
+    fail-to-pass tests fail on the seed, everything named passes on the
+    reference in each of 3 fresh runs, no test flips. The recipe is
+    committed (`batch-1.json`, `prompts/`); the folders are made from it and
+    ignored. Not a benchmark yet: Haiku alone has not been run on them (no
+    difficulty mix), there is no refactor, Python or Rust task, eight of the
+    ten share one repository (no split by repository), and the prompts are
+    unreviewed by a second reader. Details and the table:
+    `evals/real-tasks/README.md`. `tsconfig.json` leaves generated task
+    folders and the routing-bench task folders out of the type-check.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
