@@ -30,3 +30,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 08:57:36 UTC: H3.3 h33-chase-lev: reading quota, then running
 - 2026-11-15 08:57:39 UTC: H3.3 route.tier expert
 - 2026-11-15 08:59:43 UTC: H3.3 h33-chase-lev: applied, quality 10.0/10 (7/7), path senior, 83,515 tokens, est. $0.1457 (API list prices), 2.0 min; quota before five_hour 89%, seven_day 14%, after five_hour 90%, seven_day 14%
+- 2026-11-15 08:59:45 UTC: H4.1 h41-cas-backup: reading quota, then running
+- 2026-11-15 08:59:48 UTC: H4.1 route.tier worker
+- 2026-11-15 09:04:50 UTC: H4.1 h41-cas-backup: applied, quality 9.0/10 (9/10), path worker, 410,412 tokens, est. $0.0517 (API list prices), 5.0 min; quota before five_hour 90%, seven_day 14%, after five_hour 90%, seven_day 14%
