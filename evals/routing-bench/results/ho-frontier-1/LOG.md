@@ -31,3 +31,5 @@ Configuration: frontier (preset solo-opus). Each line is written as it happens.
 - 2026-11-15 08:40:15 UTC: H5.1 h51-fec-decoder: applied, quality 10.0/10 (7/7), path frontier, 36,317 tokens, est. $0.1443 (API list prices), 0.6 min; quota before five_hour 83%, seven_day 13%, after five_hour 84%, seven_day 13%
 - 2026-11-15 08:40:17 UTC: H5.2 h52-decoy-table: reading quota, then running
 - 2026-11-15 08:40:36 UTC: H5.2 h52-decoy-table: applied, quality 10.0/10 (7/7), path frontier, 29,515 tokens, est. $0.0559 (API list prices), 0.2 min; quota before five_hour 84%, seven_day 13%, after five_hour 84%, seven_day 13%
+- 2026-11-15 08:40:38 UTC: H5.3 h53-rwlock: reading quota, then running
+- 2026-11-15 08:43:32 UTC: H5.3 h53-rwlock: applied, quality 10.0/10 (6/6), path frontier, 101,153 tokens, est. $0.4737 (API list prices), 2.8 min; quota before five_hour 84%, seven_day 13%, after five_hour 87%, seven_day 13%
