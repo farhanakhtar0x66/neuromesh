@@ -1,0 +1,110 @@
+{
+  "id": "H5.3",
+  "slug": "h53-rwlock",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "cascade 2>3",
+  "expectedPath": "T2(abort)>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (778 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS rwlock.py imports TaskFairRWLock\nPASS three readers hold the lock together; a writer waits for all of them\nPASS a waiting writer blocks new readers but not a re-entrant read\nPASS one upgrade waits for another reader to leave, then becomes the writer\nPASS two concurrent upgraders: one raises 'Concurrent upgrade deadlock', the other finishes after it releases\nPASS ANSWER.md explains the impossibility: both would wait for the other's read lock\nSCORE 6/6",
+  "wallMs": 176491,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 117338,
+      "usage": {
+        "input": 26,
+        "output": 24444,
+        "reasoning": 10620,
+        "cacheRead": 338673,
+        "cacheWrite": 32394,
+        "split": {
+          "files": 0,
+          "commands": 10889,
+          "earlier": 216827,
+          "calls": 13,
+          "estimated": true,
+          "startup": 124924,
+          "prompt": 18454
+        }
+      },
+      "tokens": 395537,
+      "costUsd": 0.02209013,
+      "quotaUsed": {
+        "five_hour": 0.96,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 57120,
+      "usage": {
+        "input": 2,
+        "output": 13647,
+        "reasoning": 9116,
+        "cacheRead": 631,
+        "cacheWrite": 3848,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3267,
+          "prompt": 1215
+        }
+      },
+      "tokens": 18128,
+      "costUsd": 0.00759961,
+      "quotaUsed": {
+        "five_hour": 0.96,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 413665,
+  "discardedTokens": 0,
+  "costUsd": 0.02968974,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.96,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-144303-655a",
+  "finishedAt": "2026-11-15T09:16:03.847Z"
+}
