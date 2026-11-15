@@ -1,0 +1,104 @@
+{
+  "id": "H3.2",
+  "slug": "h32-build-dag",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS dag_scheduler.ts exports BuildGraph\nPASS implicit dependencies are registered; markDirty is topological with id tie-breaks\nPASS a self-loop is rejected with a cycle and the graph stays as it was\nPASS a 4-hop cycle A->B->C->D->A is rejected and nothing changes\nPASS updating a node's dependencies works; a cycle-inducing update is rejected\nPASS criticalPath weighs durations: 100+100 beats four nodes of 20, with exact waves\nPASS several targets: only their subgraph counts\nSCORE 7/7",
+  "wallMs": 188690,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 58418,
+      "usage": {
+        "input": 8,
+        "output": 5637,
+        "reasoning": 1174,
+        "cacheRead": 39272,
+        "cacheWrite": 9606,
+        "split": {
+          "files": 0,
+          "commands": 574,
+          "earlier": 9692,
+          "calls": 4,
+          "estimated": true,
+          "startup": 35055,
+          "prompt": 3565
+        }
+      },
+      "tokens": 54523,
+      "costUsd": 0.1974744,
+      "quotaUsed": {
+        "five_hour": 0.59,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 129023,
+      "usage": {
+        "input": 2,
+        "output": 15346,
+        "reasoning": 4995,
+        "cacheRead": 631,
+        "cacheWrite": 3813,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3300,
+          "prompt": 1146
+        }
+      },
+      "tokens": 19792,
+      "costUsd": 0.33755820000000003,
+      "quotaUsed": {
+        "five_hour": 0.59,
+        "seven_day": 0.11
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 74315,
+  "discardedTokens": 0,
+  "costUsd": 0.5350326000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.58,
+      "seven_day": 0.11
+    },
+    "after": {
+      "five_hour": 0.62,
+      "seven_day": 0.11
+    }
+  },
+  "runId": "20261115-134517-edfa",
+  "finishedAt": "2026-11-15T08:18:28.796Z"
+}
