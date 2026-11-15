@@ -1,0 +1,109 @@
+{
+  "id": "4.3",
+  "slug": "t43-spot-checkpoint",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-6",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(math)>T2(sim)",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 9,
+    "total": 9
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS Young/Daly checkpoint interval\nPASS square-root optimum sqrt(2*delta/lambda)\nPASS uses the eviction rates as failure rates\nPASS checkpoint cost includes I/O and compute time\nPASS instance selection policy\nPASS sim.py exists\nPASS sim.py runs to completion\nPASS sim.py prints results\nSCORE 9/9",
+  "wallMs": 211978,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 164005,
+      "usage": {
+        "input": 34,
+        "output": 36293,
+        "reasoning": 17775,
+        "cacheRead": 577464,
+        "cacheWrite": 51275,
+        "split": {
+          "files": 0,
+          "commands": 22442,
+          "earlier": 421813,
+          "calls": 17,
+          "estimated": true,
+          "startup": 162711,
+          "prompt": 21807
+        }
+      },
+      "tokens": 665066,
+      "costUsd": 0.03417954,
+      "quotaUsed": {
+        "five_hour": 0.72,
+        "seven_day": 0.25
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 45448,
+      "usage": {
+        "input": 2,
+        "output": 10110,
+        "reasoning": 6771,
+        "cacheRead": 631,
+        "cacheWrite": 3822,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3289,
+          "prompt": 1166
+        }
+      },
+      "tokens": 14565,
+      "costUsd": 0.00582591,
+      "quotaUsed": {
+        "five_hour": 0.72,
+        "seven_day": 0.25
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 679631,
+  "discardedTokens": 0,
+  "costUsd": 0.04000545,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.72,
+      "seven_day": 0.25
+    },
+    "after": {
+      "five_hour": 0.72,
+      "seven_day": 0.25
+    }
+  },
+  "runId": "20261116-024721-dddc",
+  "finishedAt": "2026-11-15T21:20:57.037Z"
+}
