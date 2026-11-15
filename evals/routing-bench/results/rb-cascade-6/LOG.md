@@ -33,3 +33,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 21:12:23 UTC: 4.1 t41-arm64-ringbuf: reading quota, then running
 - 2026-11-15 21:12:26 UTC: 4.1 route.tier expert
 - 2026-11-15 21:13:57 UTC: 4.1 t41-arm64-ringbuf: applied, quality 10.0/10 (10/10), path senior, 55,827 tokens, est. $0.0976 (API list prices), 1.5 min; quota before five_hour 69%, seven_day 25%, after five_hour 70%, seven_day 25%
+- 2026-11-15 21:13:59 UTC: 4.2 t42-edge-dag: reading quota, then running
+- 2026-11-15 21:14:02 UTC: 4.2 route.tier senior
+- 2026-11-15 21:17:16 UTC: 4.2 t42-edge-dag: applied, quality 7.8/10 (7/9), path senior, 128,490 tokens, est. $0.2343 (API list prices), 3.2 min; quota before five_hour 70%, seven_day 25%, after five_hour 72%, seven_day 25%
