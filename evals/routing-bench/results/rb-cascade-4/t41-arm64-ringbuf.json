@@ -1,0 +1,109 @@
+{
+  "id": "4.1",
+  "slug": "t41-arm64-ringbuf",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-4",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "expert",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "ambiguous (50% expert); past runs give expert a 85% chance"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS explains x86 TSO / strong store ordering\nPASS explains ARM64 weak ordering / reordering\nPASS Release on the producer's tail store\nPASS Acquire on the consumer's tail load\nPASS SeqCst not needed\nPASS src/lib.rs exists\nPASS uses Ordering::Release in code\nPASS uses Ordering::Acquire in code\nPASS UnsafeCell<MaybeUninit<T>> slots\nPASS cargo build passes\nSCORE 10/10",
+  "wallMs": 132921,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 62357,
+      "usage": {
+        "input": 8,
+        "output": 9835,
+        "reasoning": 833,
+        "cacheRead": 42193,
+        "cacheWrite": 14825,
+        "split": {
+          "files": 0,
+          "commands": 947,
+          "earlier": 15879,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34987,
+          "prompt": 5213
+        }
+      },
+      "tokens": 66861,
+      "costUsd": 0.16188529999999998,
+      "quotaUsed": {
+        "five_hour": 0.44,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 67806,
+      "usage": {
+        "input": 2,
+        "output": 15589,
+        "reasoning": 10982,
+        "cacheRead": 631,
+        "cacheWrite": 4031,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3420,
+          "prompt": 1244
+        }
+      },
+      "tokens": 20253,
+      "costUsd": 0.008607209999999999,
+      "quotaUsed": {
+        "five_hour": 0.44,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 87114,
+  "discardedTokens": 0,
+  "costUsd": 0.17049250999999999,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.43,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.44,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-123813-ac92",
+  "finishedAt": "2026-11-15T07:10:29.445Z"
+}
