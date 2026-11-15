@@ -1,0 +1,104 @@
+{
+  "id": "H4.1",
+  "slug": "h41-cas-backup",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS src/index.mjs exports backup, verify, restore, deleteSnapshot, gc\nPASS bin/cas.mjs exists\nPASS backup returns a snapshot id, a 64-hex Merkle root and chunk stats\nPASS duplicate files and a repeat backup deduplicate chunks\nPASS restore gives back every file byte for byte, at the same relative paths\nPASS verify passes on an untouched snapshot\nPASS a wrong passphrase is rejected and writes nothing\nPASS a flipped byte in one stored chunk: verify reports it, restore throws\nPASS delete + gc removes only chunks no snapshot needs: the surviving snapshot still verifies and restores\nPASS a second gc finds nothing more to remove\nSCORE 10/10",
+  "wallMs": 408290,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 336052,
+      "usage": {
+        "input": 26,
+        "output": 35022,
+        "reasoning": 9299,
+        "cacheRead": 353707,
+        "cacheWrite": 40461,
+        "split": {
+          "files": 0,
+          "commands": 6613,
+          "earlier": 263717,
+          "calls": 13,
+          "estimated": true,
+          "startup": 113935,
+          "prompt": 9929
+        }
+      },
+      "tokens": 429216,
+      "costUsd": 1.0949734,
+      "quotaUsed": {
+        "five_hour": 0.71,
+        "seven_day": 0.12
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 71069,
+      "usage": {
+        "input": 2,
+        "output": 8197,
+        "reasoning": 2126,
+        "cacheRead": 631,
+        "cacheWrite": 4849,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3746,
+          "prompt": 1736
+        }
+      },
+      "tokens": 13679,
+      "costUsd": 0.20286620000000002,
+      "quotaUsed": {
+        "five_hour": 0.71,
+        "seven_day": 0.12
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 442895,
+  "discardedTokens": 0,
+  "costUsd": 1.2978396,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.65,
+      "seven_day": 0.12
+    },
+    "after": {
+      "five_hour": 0.72,
+      "seven_day": 0.12
+    }
+  },
+  "runId": "20261115-135217-7a21",
+  "finishedAt": "2026-11-15T08:29:10.018Z"
+}
