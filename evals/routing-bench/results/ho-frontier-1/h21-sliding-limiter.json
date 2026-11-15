@@ -1,0 +1,104 @@
+{
+  "id": "H2.1",
+  "slug": "h21-sliding-limiter",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS limiter module imports\nPASS burst cap saturates inside the quarter window, with the exact retry\nPASS full-window saturation: exact retry across many random bursts\nPASS multi-cost partial expiry waits for the right entry\nPASS impossible costs return (False, -1) and leave no record\nPASS boundary (t - window_ms is expired) and 20,000 calls stay bounded\nSCORE 6/6",
+  "wallMs": 247289,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 44644,
+      "usage": {
+        "input": 8,
+        "output": 3563,
+        "reasoning": 929,
+        "cacheRead": 38271,
+        "cacheWrite": 7470,
+        "split": {
+          "files": 0,
+          "commands": 493,
+          "earlier": 6528,
+          "calls": 4,
+          "estimated": true,
+          "startup": 35210,
+          "prompt": 3518
+        }
+      },
+      "tokens": 49312,
+      "costUsd": 0.1387062,
+      "quotaUsed": {
+        "five_hour": 0.51,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 200777,
+      "usage": {
+        "input": 2,
+        "output": 8552,
+        "reasoning": 3274,
+        "cacheRead": 0,
+        "cacheWrite": 4287,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3296,
+          "prompt": 993
+        }
+      },
+      "tokens": 12841,
+      "costUsd": 0.205344,
+      "quotaUsed": {
+        "five_hour": 0.51,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 62153,
+  "discardedTokens": 0,
+  "costUsd": 0.3440502,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.5,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.52,
+      "seven_day": 0.11
+    }
+  },
+  "runId": "20261115-133354-58af",
+  "finishedAt": "2026-11-15T08:08:05.695Z"
+}
