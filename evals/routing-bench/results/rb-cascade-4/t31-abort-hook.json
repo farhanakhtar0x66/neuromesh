@@ -1,0 +1,109 @@
+{
+  "id": "3.1",
+  "slug": "t31-abort-hook",
+  "config": "cascade",
+  "set": "original",
+  "preset": "cascade-claude",
+  "name": "rb-cascade-4",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "worker",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "most like worker work (100% of the match)"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 14
+  },
+  "quality": 4.285714285714286,
+  "hiddenOutput": "PASS useSearch.js exists\nPASS the hook loads and runs as a component\nFAIL the newest query's results are shown\nFAIL a stale slow response does not overwrite newer results\nFAIL the request is given an AbortSignal\nFAIL the earlier request is aborted when the query changes\nFAIL an aborted request is not shown as an error\nFAIL unmounting aborts the request in flight\nPASS unmounting cancels a pending debounce timer\nPASS no timer is left running after unmount\nPASS no state is set after unmount\nFAIL a burst of keystrokes sends one request (debounce)\nFAIL re-rendering with the same query sends no new request\nPASS hundreds of rapid changes then unmount leave nothing running or in flight\nSCORE 6/14",
+  "wallMs": 92879,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 52563,
+      "usage": {
+        "input": 10,
+        "output": 12077,
+        "reasoning": 4663,
+        "cacheRead": 71267,
+        "cacheWrite": 18651,
+        "split": {
+          "files": 0,
+          "commands": 2493,
+          "earlier": 34010,
+          "calls": 5,
+          "estimated": true,
+          "startup": 47463,
+          "prompt": 5963
+        }
+      },
+      "tokens": 102005,
+      "costUsd": 0.01048237,
+      "quotaUsed": {
+        "five_hour": 0.42,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 39071,
+      "usage": {
+        "input": 2,
+        "output": 8898,
+        "reasoning": 5738,
+        "cacheRead": 631,
+        "cacheWrite": 3734,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3224,
+          "prompt": 1144
+        }
+      },
+      "tokens": 13265,
+      "costUsd": 0.005202310000000001,
+      "quotaUsed": {
+        "five_hour": 0.42,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 115270,
+  "discardedTokens": 0,
+  "costUsd": 0.01568468,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.42,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.42,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-123358-15c5",
+  "finishedAt": "2026-11-15T07:05:34.257Z"
+}
