@@ -1,0 +1,104 @@
+{
+  "id": "H4.1",
+  "slug": "h41-cas-backup",
+  "config": "haiku",
+  "set": "held-out",
+  "preset": "solo-haiku",
+  "name": "ho-haiku-1",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 10,
+    "total": 10
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS src/index.mjs exports backup, verify, restore, deleteSnapshot, gc\nPASS bin/cas.mjs exists\nPASS backup returns a snapshot id, a 64-hex Merkle root and chunk stats\nPASS duplicate files and a repeat backup deduplicate chunks\nPASS restore gives back every file byte for byte, at the same relative paths\nPASS verify passes on an untouched snapshot\nPASS a wrong passphrase is rejected and writes nothing\nPASS a flipped byte in one stored chunk: verify reports it, restore throws\nPASS delete + gc removes only chunks no snapshot needs: the surviving snapshot still verifies and restores\nPASS a second gc finds nothing more to remove\nSCORE 10/10",
+  "wallMs": 516129,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 261051,
+      "usage": {
+        "input": 26,
+        "output": 62894,
+        "reasoning": 41704,
+        "cacheRead": 646670,
+        "cacheWrite": 69350,
+        "split": {
+          "files": 0,
+          "commands": 9220,
+          "earlier": 583382,
+          "calls": 12,
+          "estimated": true,
+          "startup": 114279,
+          "prompt": 9165
+        }
+      },
+      "tokens": 778940,
+      "costUsd": 0.0517863,
+      "quotaUsed": {
+        "five_hour": 0.99,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 252626,
+      "usage": {
+        "input": 4,
+        "output": 67766,
+        "reasoning": 44907,
+        "cacheRead": 5694,
+        "cacheWrite": 60883,
+        "split": {
+          "files": 0,
+          "commands": 57,
+          "earlier": 56394,
+          "calls": 2,
+          "estimated": true,
+          "startup": 7249,
+          "prompt": 2882
+        }
+      },
+      "tokens": 134347,
+      "costUsd": 0.04611694,
+      "quotaUsed": {
+        "five_hour": 0.99,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 913287,
+  "discardedTokens": 0,
+  "costUsd": 0.09790324,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.98,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.99,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-150956-cb6a",
+  "finishedAt": "2026-11-15T09:48:37.764Z"
+}
