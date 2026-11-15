@@ -30,3 +30,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-15 06:43:10 UTC: 3.3 t33-pg-migration: reading quota, then running
 - 2026-11-15 06:43:12 UTC: 3.3 route.tier senior
 - 2026-11-15 06:45:49 UTC: 3.3 t33-pg-migration: applied, quality 10.0/10 (9/9), path senior, 149,035 tokens, est. $0.1669 (API list prices), 2.6 min; quota before five_hour 36%, seven_day 9%, after five_hour 37%, seven_day 9%
+- 2026-11-15 06:45:51 UTC: 4.1 t41-arm64-ringbuf: reading quota, then running
+- 2026-11-15 06:45:54 UTC: 4.1 route.tier expert
+- 2026-11-15 06:47:56 UTC: 4.1 t41-arm64-ringbuf: applied, quality 9.0/10 (9/10), path senior, 98,477 tokens, est. $0.1541 (API list prices), 2.0 min; quota before five_hour 37%, seven_day 9%, after five_hour 39%, seven_day 9%
