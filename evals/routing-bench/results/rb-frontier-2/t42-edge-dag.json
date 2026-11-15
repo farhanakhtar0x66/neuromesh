@@ -1,0 +1,73 @@
+{
+  "id": "4.2",
+  "slug": "t42-edge-dag",
+  "config": "frontier",
+  "set": "original",
+  "preset": "solo-opus",
+  "name": "rb-frontier-2",
+  "expectedTier": "expert",
+  "expectedPath": "T0>T4(plan)>T3(code)",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 9
+  },
+  "quality": 8.88888888888889,
+  "hiddenOutput": "PASS ANSWER.md exists\nPASS separates idempotent/pure nodes from non-idempotent side effects\nPASS fencing tokens (monotonic)\nPASS leases or quorum before a side effect commits\nFAIL optimistic / CRDT execution for pure nodes\nPASS state machine with transition rules\nPASS wire message structs\nPASS handles partition mid-execution\nPASS no central coordinator\nSCORE 8/9",
+  "wallMs": 178742,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 177827,
+      "usage": {
+        "input": 8,
+        "output": 16034,
+        "reasoning": 5571,
+        "cacheRead": 48742,
+        "cacheWrite": 19345,
+        "split": {
+          "files": 0,
+          "commands": 463,
+          "earlier": 30672,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34410,
+          "prompt": 2550
+        }
+      },
+      "tokens": 84129,
+      "costUsd": 0.4852204,
+      "quotaUsed": {
+        "five_hour": 0.29,
+        "seven_day": 0.09
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 84129,
+  "discardedTokens": 0,
+  "costUsd": 0.4852204,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.26,
+      "seven_day": 0.08
+    },
+    "after": {
+      "five_hour": 0.29,
+      "seven_day": 0.09
+    }
+  },
+  "runId": "20261115-115209-da22",
+  "finishedAt": "2026-11-15T06:25:10.240Z"
+}
