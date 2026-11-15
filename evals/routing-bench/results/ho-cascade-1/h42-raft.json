@@ -1,0 +1,110 @@
+{
+  "id": "H4.2",
+  "slug": "h42-raft",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-1",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3(+T4 advice if stuck)",
+  "routedTier": "expert",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (1318 characters of pasted material left out)",
+    "most like expert work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 5,
+    "total": 5
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS raft_cluster module imports\nPASS election converges within 50 ticks and entries replicate to all five\nPASS a minority leader cannot commit; the majority elects a higher term, commits, and heal reconciles\nPASS a stale-log candidate with a higher term cannot take over and lose committed entries\nPASS Figure 8: an old-term entry on a majority stays uncommitted until a current-term entry commits\nSCORE 5/5",
+  "wallMs": 141533,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 42008,
+      "usage": {
+        "input": 8,
+        "output": 6352,
+        "reasoning": 952,
+        "cacheRead": 42687,
+        "cacheWrite": 11463,
+        "split": {
+          "files": 0,
+          "commands": 759,
+          "earlier": 11803,
+          "calls": 4,
+          "estimated": true,
+          "startup": 35563,
+          "prompt": 6033
+        }
+      },
+      "tokens": 60510,
+      "costUsd": 0.1136567,
+      "quotaUsed": {
+        "five_hour": 0.91,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 97800,
+      "usage": {
+        "input": 4,
+        "output": 23911,
+        "reasoning": 14642,
+        "cacheRead": 5576,
+        "cacheWrite": 23626,
+        "split": {
+          "files": 0,
+          "commands": 33,
+          "earlier": 19279,
+          "calls": 2,
+          "estimated": true,
+          "startup": 6997,
+          "prompt": 2898
+        }
+      },
+      "tokens": 53117,
+      "costUsd": 0.01673686,
+      "quotaUsed": {
+        "five_hour": 0.91,
+        "seven_day": 0.14
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 113627,
+  "discardedTokens": 0,
+  "costUsd": 0.13039356,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.9,
+      "seven_day": 0.14
+    },
+    "after": {
+      "five_hour": 0.91,
+      "seven_day": 0.14
+    }
+  },
+  "runId": "20261115-143454-dc21",
+  "finishedAt": "2026-11-15T09:07:19.063Z"
+}
