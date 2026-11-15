@@ -1,0 +1,73 @@
+{
+  "id": "H1.3",
+  "slug": "h13-ddl-typeguard",
+  "config": "frontier",
+  "set": "held-out",
+  "preset": "solo-opus",
+  "name": "ho-frontier-1",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "frontier",
+  "tierPath": [
+    "frontier"
+  ],
+  "finalTier": "frontier",
+  "status": "applied",
+  "score": {
+    "passed": 25,
+    "total": 26
+  },
+  "quality": 9.615384615384615,
+  "hiddenOutput": "PASS ledger.ts exports isValidLedgerRow\nPASS valid: standard row\nPASS valid: note null\nPASS valid: note undefined\nPASS valid: note field missing\nPASS valid: note of 120 characters\nPASS valid: amount_paise 1\nPASS valid: tx_id of 36 characters\nPASS invalid: null\nPASS invalid: a string\nPASS invalid: an array\nPASS invalid: empty object\nFAIL invalid: tx_id empty\nPASS invalid: tx_id of 37 characters\nPASS invalid: tx_id missing\nPASS invalid: amount_paise 0\nPASS invalid: amount_paise -50\nPASS invalid: amount_paise 12.34\nPASS invalid: amount_paise NaN\nPASS invalid: amount_paise a numeric string\nPASS invalid: currency GBP\nPASS invalid: currency lower case\nPASS invalid: settled the string 'true'\nPASS invalid: settled missing\nPASS invalid: note of 121 characters\nPASS invalid: note a number\nSCORE 25/26",
+  "wallMs": 30756,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-opus-5-5",
+      "tier": "expert",
+      "stop": "done",
+      "durationMs": 29903,
+      "usage": {
+        "input": 8,
+        "output": 2385,
+        "reasoning": 339,
+        "cacheRead": 35831,
+        "cacheWrite": 6132,
+        "split": {
+          "files": 0,
+          "commands": 504,
+          "earlier": 3983,
+          "calls": 4,
+          "estimated": true,
+          "startup": 34827,
+          "prompt": 2657
+        }
+      },
+      "tokens": 44356,
+      "costUsd": 0.1039542,
+      "quotaUsed": {
+        "five_hour": 0.5,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 44356,
+  "discardedTokens": 0,
+  "costUsd": 0.1039542,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.5,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.5,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-133315-b68a",
+  "finishedAt": "2026-11-15T08:03:49.596Z"
+}
