@@ -1,0 +1,73 @@
+{
+  "id": "5.1",
+  "slug": "t51-regex-bomb",
+  "config": "haiku",
+  "set": "original",
+  "preset": "solo-haiku",
+  "name": "rb-haiku-1",
+  "expectedTier": "cascade 1>2>3",
+  "expectedPath": "T1(fail)>T2(abort)>T3",
+  "routedTier": "haiku",
+  "tierPath": [
+    "haiku"
+  ],
+  "finalTier": "haiku",
+  "status": "applied",
+  "score": {
+    "passed": 13,
+    "total": 13
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS regex.txt has one regex\nPASS accepts '[({()})]'\nPASS accepts '(1+2)*[3-{4/5}]'\nPASS accepts 'a+b'\nPASS accepts '{[()]}()'\nPASS accepts 'f(x)[i]{k}'\nPASS accepts ''\nPASS rejects '[(])'\nPASS rejects '('\nPASS rejects '())'\nPASS rejects '{[}]'\nPASS rejects '(1+2]'\nPASS rejects '((a)'\nSCORE 13/13",
+  "wallMs": 24788,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 23868,
+      "usage": {
+        "input": 8,
+        "output": 4516,
+        "reasoning": 2181,
+        "cacheRead": 41880,
+        "cacheWrite": 9498,
+        "split": {
+          "files": 0,
+          "commands": 1091,
+          "earlier": 10511,
+          "calls": 4,
+          "estimated": true,
+          "startup": 37397,
+          "prompt": 2387
+        }
+      },
+      "tokens": 55902,
+      "costUsd": 0.004577200000000001,
+      "quotaUsed": {
+        "five_hour": 0.49,
+        "seven_day": 0.1
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 55902,
+  "discardedTokens": 0,
+  "costUsd": 0.004577200000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    },
+    "after": {
+      "five_hour": 0.49,
+      "seven_day": 0.1
+    }
+  },
+  "runId": "20261115-131009-d104",
+  "finishedAt": "2026-11-15T07:40:37.327Z"
+}
