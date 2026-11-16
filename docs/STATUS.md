@@ -716,9 +716,7 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     failing-before test, the rest are 1,000-line milestones; the blocked repositories are the way to the rest).
     Found on the way: (1) a Rust seed without `.gitignore` for `target/` makes every task conflict at merge (the
     engine's own checks leave an untracked `target/`); fixed in the importer. (2) The ProofBench seeds name the bug
-    in comments, so they are the floor of the mix, not a test of finding bugs. (3) On the seed, the engine tests of
-    `nm-two-step-escalation` and `nm-worker-ladder` do not fail fast: they run to the grader's 10-minute limit, so a
-    live attempt that does not fix them costs up to 10 minutes of grading each. (4) One project check was wrong
+    in comments, so they are the floor of the mix, not a test of finding bugs. (3) On the seed, the engine tests of `nm-expert-budget`, `nm-two-step-escalation` and `nm-worker-ladder` loop instead of failing (they ran to the 10-minute grader limit): their spec now has `timeoutSec: 60`, so a seed or a wrong answer fails in 60 seconds; every other seed fails in 35 seconds or less. (4) One project check was wrong
     after a correct solution (the old test's expectations change with the default of `advise`); that task checks
     `test/pieces.test.ts` instead. Haiku's difficulty is guessed (about 59 percent overall, about 43 without the
     ProofBench ten); the live run `rt2-haiku-1` is what sets it.

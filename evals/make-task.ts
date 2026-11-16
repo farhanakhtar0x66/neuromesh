@@ -40,6 +40,8 @@ export interface MakeOptions {
   noRun?: boolean;
   /** The command Neuromesh runs as the project's own check while it works (a quick test of the code as it was before the change). Without it Neuromesh detects the project's checks, which for a repository seeded without its dependencies can only fail. */
   checks?: string;
+  /** Longest the tests may run, in seconds (the grader kills them after it; default 600). For tests that loop instead of failing on the seed, or on a wrong answer. */
+  timeoutSec?: number;
 }
 
 export interface MadeTask {
@@ -130,7 +132,7 @@ export function makeTask(o: MakeOptions): MadeTask {
     const message = git(clone, ["log", "-1", "--format=%B", sha]).trim();
     writeFileSync(join(stage, "prompt.md"), `${(o.prompt ?? message).trim()}\n`);
 
-    const spec: TaskSpec = { runner: o.runner, testCommand: o.testCommand, ...(o.setup ? { setup: o.setup } : {}), failToPass: [], passToPass: [] };
+    const spec: TaskSpec = { runner: o.runner, testCommand: o.testCommand, ...(o.setup ? { setup: o.setup } : {}), ...(o.timeoutSec ? { timeoutSec: o.timeoutSec } : {}), failToPass: [], passToPass: [] };
     if (!o.noRun) {
       const before = join(work, "before");
       cpSync(join(stage, "seed"), before, { recursive: true });

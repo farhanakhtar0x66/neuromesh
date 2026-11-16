@@ -34,6 +34,8 @@ interface Entry {
   setup?: string;
   tests?: string[];
   checks?: string;
+  /** The tests' time limit in seconds, for tasks whose tests loop on a wrong answer (see make-task.ts). */
+  timeoutSec?: number;
   /** A change that is not a real commit: `patch` (a git diff next to the manifest, tests included) applied on `base` of `repo`. Marked synthetic in the task's task.json. */
   synthetic?: { base: string; patch: string };
 }
@@ -83,7 +85,7 @@ function main(): number {
         try {
           makeTask({
             repo: work ? syntheticRepo(e, home, work) : e.repo.replace(/^~/, homedir()), commit: work ? "HEAD" : e.commit, name: e.name, runner: e.runner, testCommand: e.testCommand, setup: e.setup,
-            kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out, prompt: readFileSync(join(home, "prompts", `${e.name}.md`), "utf8"),
+            kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, timeoutSec: e.timeoutSec, out, prompt: readFileSync(join(home, "prompts", `${e.name}.md`), "utf8"),
           });
           if (e.synthetic) {
             // Say so in the task: it is not a real commit, and is kept apart in the numbers.

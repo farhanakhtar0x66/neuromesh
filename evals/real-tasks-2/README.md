@@ -56,5 +56,5 @@ says `"synthetic": true`. Keep these two apart from the real commits in any coun
   has only the ProofBench and scope-test-2 tasks in it.
 - **Hand-written references** (six ProofBench tasks, two synthetic ones) are mine, not the original authors': they pass
   the hidden tests, nothing more.
-- **Hidden checks can be slow on a failing attempt.** The engine tests of `nm-two-step-escalation` and `nm-worker-ladder` loop on the seed until the grader's 10-minute limit (they fail, but slowly), and the first-run validation of those two takes about 25 minutes. Plan the live run's wall time for it.
+- **Seed timings.** On the seed, 26 tasks fail in 35 seconds or less (the two slowest are `nm-cascade-one-review`, 34 s, and `nm-linger-plan-fail`, 33 s, on a loaded machine). The engine tests of `nm-expert-budget`, `nm-two-step-escalation` and `nm-worker-ladder` loop instead of failing, so their `hidden/spec.json` carries `timeoutSec: 60` (a manifest field, passed through `make-batch.ts` and `make-task.ts`): the grader kills the tests after 60 seconds and the task fails. A correct solution takes 5 to 15 seconds there.
 - **Tests run by name pattern** for the engine tasks (the rest of `engine.test.ts` takes about 2.5 minutes), as in batch 1.

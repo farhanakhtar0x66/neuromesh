@@ -117,7 +117,8 @@
     "language": "typescript",
     "runner": "node",
     "testCommand": "node --test --test-name-pattern=\"the expert budget stops expert help\" test/engine.test.ts",
-    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts",
+    "timeoutSec": 60
   },
   {
     "name": "nm-dollar-budget",
@@ -137,7 +138,8 @@
     "language": "typescript",
     "runner": "node",
     "testCommand": "node --test --test-name-pattern=\"first gets the expert's advice|the advice does not help\" test/engine.test.ts",
-    "checks": "node --test test/pieces.test.ts"
+    "checks": "node --test test/pieces.test.ts",
+    "timeoutSec": 60
   },
   {
     "name": "nm-worker-ladder",
@@ -147,7 +149,8 @@
     "language": "typescript",
     "runner": "node",
     "testCommand": "node --test --test-name-pattern=\"climbs to a stronger rung|only a stuck top rung\" test/engine.test.ts",
-    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts",
+    "timeoutSec": 60
   },
   {
     "name": "nm-worker-first-routing",
