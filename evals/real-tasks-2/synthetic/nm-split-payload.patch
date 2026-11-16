@@ -1,0 +1,232 @@
+diff --git a/src/features.ts b/src/features.ts
+index f3d409e..552e7b8 100644
+--- a/src/features.ts
++++ b/src/features.ts
+@@ -826,7 +826,7 @@ export const FEATURES: Feature[] = [
+     key: "instruction-scoring",
+     name: "Tier 0 scores the instruction, not pasted material, and sends inline transforms to the grunt",
+     added: "2026-11-14",
+-    files: ["src/routing/router.ts (splitPayload, isTransform, stripMeta)", "src/engine/run.ts (startRun)"],
++    files: ["src/routing/payload.ts (splitPayload)", "src/routing/router.ts (isTransform, stripMeta)", "src/engine/run.ts (startRun)"],
+     what: "Only with the cascade. The request is split into its instruction and the material pasted into it (quoted text, fenced code, log and data lines, a block after a line ending in a colon, data after a colon). Only the instruction is scored, so a quoted note that mentions a migration, or a kernel log full of eBPF jargon, no longer looks like senior or expert work. A request whose instruction only changes the form of the pasted text (turn into, rewrite, extract, list, sort...) and asks for no judgement (flag, summarise, debug, fix, make it thread-safe...) goes to the grunt, empty workspace or not; negated verbs (\"dont debug it yet\") do not count. Also keeps the request's line breaks when sentences asking for a model are removed (they used to be flattened). From the first routing benchmark run (2026-11-14): Tier 0 picked the suite's starting tier for 6 of 15 prompts and never the grunt; with this, 11 of 15, and 10 of 10 on prompts outside the suite.",
+     optional: true,
+   },
+@@ -916,7 +916,7 @@ export const FEATURES: Feature[] = [
+     key: "prose-guard",
+     name: "A sentence after \"In <file>:\" is the instruction, not pasted data",
+     added: "2026-11-14",
+-    files: ["src/routing/router.ts (inlineData, splitPayload)"],
++    files: ["src/routing/payload.ts (inlineData, splitPayload)"],
+     what: "F89 took the text after a colon on one line as pasted data when it held six digits or separators, so \"In src/ringbuf.rs: fix the memory ordering race condition when capacity > 1024, consumers == 8, and wrap-around exceeds 65535\" was scored as \"In src/ringbuf.rs\" alone and went to the worker instead of the expert. Now that text is data only if it does not start with an imperative verb and at least a quarter of its characters are digits or the punctuation of lists, tables, JSON and logs. Found on a real follow-up request (373 characters of instruction treated as data). Off, F89's rule as before.",
+     optional: true,
+   },
+diff --git a/src/routing/payload.ts b/src/routing/payload.ts
+new file mode 100644
+index 0000000..12ef3c1
+--- /dev/null
++++ b/src/routing/payload.ts
+@@ -0,0 +1,62 @@
++// [F89 instruction-scoring] Telling a request's instruction from the material pasted into it (quoted text, fenced
++// code, data and log lines). Used by the router (instruction-only scoring) and by the one-answer worker's
++// self-contained check. No model call.
++
++import { isOn } from "../features.ts";
++
++// [F89 instruction-scoring] Material pasted into a request: data, logs, quoted messages, code.
++const DATA_LINE = /^\s*(\[[\d.:\s-]+\]|\d{4}-\d\d-\d\d|[-*]\s+\S+=|\s{2,}\S|[{}\[\]]|\w[\w.-]*:\s*$|```)/;
++// A quotation opens after a space, colon or bracket and closes before punctuation or a space ('react' ... 're' is not one).
++const QUOTED = /(^|[\s:(])(["'“‘`])(?=\S)((?:(?!\2)[\s\S]){40,}?)\2(?=[\s.,;:!?)]|$)/g;
++const FENCED = /```[\s\S]*?```/g;
++
++/**
++ * [F89 instruction-scoring] Split a request into its instruction and the
++ * material pasted into it (quoted text, fenced code, data and log lines, a
++ * block after a line ending in a colon, data after a colon on one line).
++ */
++export function splitPayload(request: string): { instruction: string; payload: string } {
++  const payload: string[] = [];
++  let text = request.replace(FENCED, (m) => (payload.push(m), " "));
++  text = text.replace(QUOTED, (m, lead: string) => (payload.push(m.slice(lead.length)), `${lead} `));
++  const lines = text.split("\n");
++  const kept: string[] = [];
++  let block = false;
++  for (const line of lines) {
++    if (block && line.trim() === "") block = false;
++    if (block || DATA_LINE.test(line)) {
++      payload.push(line);
++      continue;
++    }
++    if (/:\s*$/.test(line) && lines.length > 1) block = true;
++    // One line: "do this to the data: <data with digits and separators>".
++    const inline = line.match(/^(.{10,}?):\s+(.{40,})$/);
++    const open = (x: string): number => (x.match(/\(/g) ?? []).length - (x.match(/\)/g) ?? []).length;
++    if (inline && open(inline[1]!) === 0 && (inline[2]!.match(/[\d,|/;=-]/g) ?? []).length >= 6 && inlineData(inline[2]!)) {
++      kept.push(inline[1]!);
++      payload.push(inline[2]!);
++      continue;
++    }
++    kept.push(line);
++  }
++  return { instruction: kept.join("\n").replace(/\s+/g, " ").trim(), payload: payload.join("\n").trim() };
++}
++
++// [F99 prose-guard] After "In src/x.rs:", an instruction starts with a verb; data does not.
++const IMPERATIVE =
++  /^\s*(please\s+)?(fix|add|cap|limit|bound|update|verify|check|implement|refactor|make|write|rewrite|change|remove|delete|rename|move|use|keep|ensure|handle|support|return|throw|replace|create|build|test|set|send|store|include|compact|fold|split|merge|convert|sort|extract|list|parse|format|turn|explain|debug|find|investigate|optimi[sz]e|document|clean|drop|guard|wrap|expose|log|cache|retry|migrate|port|translate|summari[sz]e)\b/i;
++/** Digits and the punctuation of lists, tables, JSON and logs. */
++const DATA_CHAR = /[\d,|/;=:{}[\]"'<>()_.-]/g;
++
++/**
++ * [F99 prose-guard] Whether the part after "instruction:" on one line is data:
++ * not a sentence that starts with a verb, and mostly digits and punctuation.
++ * Prose with a few numbers in it ("fix the race when capacity > 1024 and
++ * consumers == 8") is the instruction itself, and must be scored.
++ */
++export function inlineData(after: string): boolean {
++  if (!isOn("prose-guard")) return true;
++  if (IMPERATIVE.test(after)) return false;
++  const chars = after.replace(/\s/g, "");
++  return chars.length > 0 && (chars.match(DATA_CHAR) ?? []).length / chars.length >= 0.25;
++}
+diff --git a/src/routing/router.ts b/src/routing/router.ts
+index 2ed0282..e02abca 100644
+--- a/src/routing/router.ts
++++ b/src/routing/router.ts
+@@ -16,6 +16,10 @@
+ // hard, use Opus") are removed: the request is scored, not its self-assessment.
+ 
+ import { isOn } from "../features.ts";
++import { splitPayload } from "./payload.ts";
++
++// [F89 instruction-scoring] The split of a request into instruction and pasted material lives in payload.ts; kept importable from here.
++export { splitPayload };
+ 
+ export type CascadeTier = "grunt" | "worker" | "senior" | "expert";
+ export const CASCADE_TIERS: CascadeTier[] = ["grunt", "worker", "senior", "expert"];
+@@ -161,11 +165,6 @@ export function probeDraw(text: string): number {
+   return ((h >>> 0) % 10_000) / 10_000;
+ }
+ 
+-// [F89 instruction-scoring] Material pasted into a request: data, logs, quoted messages, code.
+-const DATA_LINE = /^\s*(\[[\d.:\s-]+\]|\d{4}-\d\d-\d\d|[-*]\s+\S+=|\s{2,}\S|[{}\[\]]|\w[\w.-]*:\s*$|```)/;
+-// A quotation opens after a space, colon or bracket and closes before punctuation or a space ('react' ... 're' is not one).
+-const QUOTED = /(^|[\s:(])(["'“‘`])(?=\S)((?:(?!\2)[\s\S]){40,}?)\2(?=[\s.,;:!?)]|$)/g;
+-const FENCED = /```[\s\S]*?```/g;
+ /** Verbs that change the form of given text without judging it. */
+ const TRANSFORM = /\b(turn|convert|transform|reformat|format|rewrite|rephrase|reword|translate|extract|pull out|grab|list|collect|strip|clean ?up|dedupe|de-?duplicate|sort|normali[sz]e|tabulate|parse)\b/i;
+ /** Verbs that ask for judgement, analysis or new logic: not the grunt's, whatever the input. */
+@@ -173,57 +172,6 @@ const JUDGEMENT = /\b(flag|summari[sz]e|analy[sz]e|explain|debug|diagnose|why|de
+ /** "dont debug it yet": a negated verb is not an instruction. */
+ const NEGATED = /\b(don'?t|do not|no need to|not yet|never)\s+(\w+\s+){0,2}?\w+/gi;
+ 
+-/**
+- * [F89 instruction-scoring] Split a request into its instruction and the
+- * material pasted into it (quoted text, fenced code, data and log lines, a
+- * block after a line ending in a colon, data after a colon on one line).
+- */
+-export function splitPayload(request: string): { instruction: string; payload: string } {
+-  const payload: string[] = [];
+-  let text = request.replace(FENCED, (m) => (payload.push(m), " "));
+-  text = text.replace(QUOTED, (m, lead: string) => (payload.push(m.slice(lead.length)), `${lead} `));
+-  const lines = text.split("\n");
+-  const kept: string[] = [];
+-  let block = false;
+-  for (const line of lines) {
+-    if (block && line.trim() === "") block = false;
+-    if (block || DATA_LINE.test(line)) {
+-      payload.push(line);
+-      continue;
+-    }
+-    if (/:\s*$/.test(line) && lines.length > 1) block = true;
+-    // One line: "do this to the data: <data with digits and separators>".
+-    const inline = line.match(/^(.{10,}?):\s+(.{40,})$/);
+-    const open = (x: string): number => (x.match(/\(/g) ?? []).length - (x.match(/\)/g) ?? []).length;
+-    if (inline && open(inline[1]!) === 0 && (inline[2]!.match(/[\d,|/;=-]/g) ?? []).length >= 6 && inlineData(inline[2]!)) {
+-      kept.push(inline[1]!);
+-      payload.push(inline[2]!);
+-      continue;
+-    }
+-    kept.push(line);
+-  }
+-  return { instruction: kept.join("\n").replace(/\s+/g, " ").trim(), payload: payload.join("\n").trim() };
+-}
+-
+-// [F99 prose-guard] After "In src/x.rs:", an instruction starts with a verb; data does not.
+-const IMPERATIVE =
+-  /^\s*(please\s+)?(fix|add|cap|limit|bound|update|verify|check|implement|refactor|make|write|rewrite|change|remove|delete|rename|move|use|keep|ensure|handle|support|return|throw|replace|create|build|test|set|send|store|include|compact|fold|split|merge|convert|sort|extract|list|parse|format|turn|explain|debug|find|investigate|optimi[sz]e|document|clean|drop|guard|wrap|expose|log|cache|retry|migrate|port|translate|summari[sz]e)\b/i;
+-/** Digits and the punctuation of lists, tables, JSON and logs. */
+-const DATA_CHAR = /[\d,|/;=:{}[\]"'<>()_.-]/g;
+-
+-/**
+- * [F99 prose-guard] Whether the part after "instruction:" on one line is data:
+- * not a sentence that starts with a verb, and mostly digits and punctuation.
+- * Prose with a few numbers in it ("fix the race when capacity > 1024 and
+- * consumers == 8") is the instruction itself, and must be scored.
+- */
+-function inlineData(after: string): boolean {
+-  if (!isOn("prose-guard")) return true;
+-  if (IMPERATIVE.test(after)) return false;
+-  const chars = after.replace(/\s/g, "");
+-  return chars.length > 0 && (chars.match(DATA_CHAR) ?? []).length / chars.length >= 0.25;
+-}
+-
+ /** [F89 instruction-scoring] A transform of given text that asks for no judgement. */
+ export function isTransform(instruction: string): boolean {
+   const said = instruction.replace(NEGATED, " ");
+diff --git a/test/payload.test.ts b/test/payload.test.ts
+new file mode 100644
+index 0000000..fa4abcd
+--- /dev/null
++++ b/test/payload.test.ts
+@@ -0,0 +1,51 @@
++// The request splitter lives in src/routing/payload.ts (F89 instruction-scoring, F99 prose-guard); router.ts re-exports it.
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import { afterEach, test } from "node:test";
++import { disable, resetFeatures } from "../src/features.ts";
++import { inlineData, splitPayload } from "../src/routing/payload.ts";
++import { splitPayload as viaRouter } from "../src/routing/router.ts";
++
++afterEach(() => resetFeatures());
++
++test("payload.ts holds the splitter and router.ts still exports the same function", () => {
++  assert.equal(viaRouter, splitPayload);
++  assert.doesNotMatch(readFileSync(new URL("../src/routing/payload.ts", import.meta.url), "utf8"), /router\.ts/, "no import back into the router");
++});
++
++test("quoted text goes to the payload, the instruction keeps the rest", () => {
++  const notes = "here are my raw notes, flag any blockers in a markdown table: 'auth migration is 80% done but waiting on db credentials; ios build failing on the xcode update'";
++  const { instruction, payload } = splitPayload(notes);
++  assert.doesNotMatch(instruction, /migration/);
++  assert.match(payload, /migration/);
++});
++
++test("a signature or a short quotation is not payload", () => {
++  assert.equal(splitPayload("write tests for calculate_gst_split(amount: float, is_interstate: bool, rate: float = 0.18) that returns a dict").payload, "");
++  assert.equal(splitPayload("when the user types 'react' slowly and then deletes back to 're' fast, the old response wins").payload, "");
++});
++
++test("fenced code and log lines are payload", () => {
++  const fenced = splitPayload("explain what this does\n```js\nconst a = 1;\n```");
++  assert.match(fenced.payload, /const a = 1;/);
++  assert.equal(fenced.instruction, "explain what this does");
++  const log = splitPayload("[1.0] kernel: BUG: race condition in lock-free ring buffer\n[1.1] bpf: deadlock\n\njust pull out every timestamp into a csv");
++  assert.match(log.payload, /deadlock/);
++  assert.equal(log.instruction, "just pull out every timestamp into a csv");
++});
++
++test("a block after a line ending in a colon is payload", () => {
++  const { instruction, payload } = splitPayload("turn this into json:\nname=ada\nage=36\n\nthen sort the keys");
++  assert.match(payload, /name=ada/);
++  assert.match(instruction, /turn this into json:/);
++  assert.match(instruction, /then sort the keys/);
++});
++
++test("F99: prose after the colon is the instruction, data after it is not", () => {
++  const prose = "In src/x.rs: fix the race when capacity > 1024 and consumers == 8 in the lock-free queue";
++  assert.equal(inlineData("fix the race when capacity > 1024 and consumers == 8"), false);
++  assert.equal(splitPayload(prose).payload, "");
++  assert.equal(inlineData("2024-01-01, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24"), true);
++  disable("prose-guard");
++  assert.equal(inlineData("fix the race when capacity > 1024 and consumers == 8"), true, "switched off, it is as before");
++});

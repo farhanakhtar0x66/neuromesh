@@ -1,0 +1,5 @@
+In the cascade, a build the expert planned or split is reviewed after every part: one review per task. From the first live F96 run: three per-part Sonnet reviews were 42% of the cost and found no blocker, while the part that joined them was not reviewed. Review such a build once, when it is whole.
+
+`reviewsWhole(state)` in `src/engine/run.ts` already says so for a plan that came from a spec (F71, `one-review`). Extend it: when `one-review` is on, the run has more than one task, and the run is a cascade (`state.cascade` is set) whose tasks come from an expert's plan (`state.plan`) or from a split (`task.fromSplit`), the program is reviewed once, after its last part, by the existing whole-build review (its prompt says "this is its only review" and covers the whole program, including the last part). Register the extension as F98, key `cascade-one-review`, optional, marked `// [F98 cascade-one-review]`. With it switched off (`NEUROMESH_DISABLE=cascade-one-review`) every part is reviewed on its own as before: two reviews for two parts.
+
+Graded by new tests in `test/cascade.test.ts` (not in your copy of the repository).

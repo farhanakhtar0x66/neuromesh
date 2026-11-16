@@ -1,0 +1,6 @@
+Add a second intake policy, "worker-first", so a preset can start a worker on everything except clearly large requests and use the expert only when the worker gets stuck. It is the factory floor taken literally, and on small and medium tasks it spends far less expert effort.
+
+- `route(prompt, policy)` in `src/intake/intake.ts` takes an optional second argument of a new exported type `RoutePolicy`: `"rules"` (the default, today's behaviour, unchanged) or `"worker-first"`. With `"worker-first"` the result is `{ mode: "team", reason }` when the request is clearly large: it has 4 or more listed parts (the larger of the number of numbered lines such as `1.` or `2)` and the number of lines that start with `-` or `*`), or 250 or more words, or names 6 or more different files (words ending in .js, .jsx, .ts, .tsx, .py, .rs, .go, .md, .json, .toml, .yml, .yaml, .css or .html); otherwise `{ mode: "solo", reason }`, with a reason that says a worker starts and the expert steps in only if it gets stuck.
+- Presets get a field `routing` (`"rules"` by default, or `"worker-first"`), validated in `src/presets/presets.ts`, and `startRun` passes it to `route`.
+
+Graded by an extended version of the existing intake-routing test in `test/engine.test.ts` (not in your copy of the repository).

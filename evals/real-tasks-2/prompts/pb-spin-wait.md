@@ -1,0 +1,3 @@
+Implement the busy-wait helper `spin_wait(max_spins: usize) -> usize` in `src/lib.rs` (it is a stub that returns 0): it executes up to `max_spins` spin-loop iterations, each one signalling the processor that it is in a busy-wait loop, and returns the number of iterations it executed (`spin_wait(0)` returns 0).
+
+An internal document claims: "In Rust, `std::sync::atomic::spin_loop_hint` is the standard function to signal the processor during busy-wait loops." Check that claim against the current standard library documentation. If that function is deprecated or stale, use the currently recommended, non-deprecated standard library function instead. The crate is built with `#![deny(deprecated)]`, so a deprecated call does not compile.

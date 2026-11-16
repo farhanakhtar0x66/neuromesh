@@ -7,12 +7,16 @@
 // prompts/<name>.md next to the manifest. A task folder that does not exist yet is made; every task is then
 // validated (evals/validate-task.ts). Exit 0 only if every task is valid.
 //
+// An entry with `synthetic: { base, patch }` is a change written by hand (a refactor no commit holds): the patch is applied on `base` of the
+// repository and committed in a temporary clone, and the task is marked synthetic in its task.json.
+//
 // --prompts terse makes the same tasks with a short prompt (prompts-terse/<name>.md, 15 to 45 words, written like a
 // user's bug report: the names the tests call and nothing about how) in a sibling folder, <manifest folder>-terse.
 // Seed, hidden tests and reference are the default task's, copied, so the two variants differ only in the prompt.
 
-import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { spawnSync } from "node:child_process";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { makeTask } from "./make-task.ts";
@@ -30,6 +34,23 @@ interface Entry {
   setup?: string;
   tests?: string[];
   checks?: string;
+  /** A change that is not a real commit: `patch` (a git diff next to the manifest, tests included) applied on `base` of `repo`. Marked synthetic in the task's task.json. */
+  synthetic?: { base: string; patch: string };
+}
+
+/** A temporary repository: `repo` at `base`, then the patch committed on top. Its HEAD is the synthetic change. */
+function syntheticRepo(e: Entry, home: string, work: string): string {
+  const dir = join(work, "synthetic");
+  const run = (args: string[], cwd?: string): void => {
+    const r = spawnSync("git", ["-c", "user.name=synthetic", "-c", "user.email=synthetic@localhost", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`git ${args[0]} failed for the synthetic change of ${e.name}: ${(r.stderr || r.stdout).trim().slice(0, 300)}`);
+  };
+  run(["clone", "-q", "--no-checkout", e.repo.replace(/^~/, homedir()), dir]);
+  run(["checkout", "-q", e.synthetic!.base], dir);
+  run(["apply", "--whitespace=nowarn", join(home, e.synthetic!.patch)], dir);
+  run(["add", "-A"], dir);
+  run(["commit", "-q", "-m", `synthetic: ${e.name}`], dir);
+  return dir;
 }
 
 function main(): number {
@@ -58,10 +79,22 @@ function main(): number {
     try {
       const base = join(defaultRoot, e.name);
       const make = (out: string): void => {
-        makeTask({
-          repo: e.repo.replace(/^~/, homedir()), commit: e.commit, name: e.name, runner: e.runner, testCommand: e.testCommand, setup: e.setup,
-          kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out, prompt: readFileSync(join(home, "prompts", `${e.name}.md`), "utf8"),
-        });
+        const work = e.synthetic ? mkdtempSync(join(tmpdir(), "neuromesh-synthetic-")) : undefined;
+        try {
+          makeTask({
+            repo: work ? syntheticRepo(e, home, work) : e.repo.replace(/^~/, homedir()), commit: work ? "HEAD" : e.commit, name: e.name, runner: e.runner, testCommand: e.testCommand, setup: e.setup,
+            kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out, prompt: readFileSync(join(home, "prompts", `${e.name}.md`), "utf8"),
+          });
+          if (e.synthetic) {
+            // Say so in the task: it is not a real commit, and is kept apart in the numbers.
+            const file = join(out, "task.json");
+            const task = JSON.parse(readFileSync(file, "utf8")) as { source: Record<string, unknown> };
+            task.source = { repo: e.repo, base: e.synthetic.base, patch: e.synthetic.patch, synthetic: true };
+            writeFileSync(file, `${JSON.stringify({ ...task, synthetic: true }, null, 2)}\n`);
+          }
+        } finally {
+          if (work) rmSync(work, { recursive: true, force: true });
+        }
       };
       if (variant === "default") {
         if (!existsSync(dir)) make(dir);

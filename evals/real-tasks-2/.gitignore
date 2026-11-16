@@ -1,0 +1,6 @@
+# The task folders are made from the recipe (batch-2.json, proofbench.json, prompts/, references/, synthetic/)
+# by evals/make-batch.ts and evals/import-fixture.ts.
+/*/
+!/prompts/
+!/references/
+!/synthetic/

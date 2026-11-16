@@ -1,0 +1,1 @@
+The crate does not compile because of its `#![deny(unused_variables)]` policy: `normalize_reading` in `src/lib.rs` has a parameter it never uses. Make the crate build with the policy kept, without changing the function's name, its number or order of parameters, or what it returns.

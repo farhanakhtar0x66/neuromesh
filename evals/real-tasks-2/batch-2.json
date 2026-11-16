@@ -1,0 +1,199 @@
+[
+  {
+    "name": "nm-resume-usage-totals",
+    "repo": "~/Projects/neuromesh",
+    "commit": "7b0d040",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"session totals on resume\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-linger-plan-fail",
+    "repo": "~/Projects/neuromesh",
+    "commit": "507148f",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"keeps running after its final event|planning fails outright\" test/proc.test.ts test/engine.test.ts",
+    "checks": "node --test test/proc.test.ts"
+  },
+  {
+    "name": "nm-direct-request-wiring",
+    "repo": "~/Projects/neuromesh",
+    "commit": "712d8e9",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"F109 judges the user\" test/cascade.test.ts",
+    "checks": "node --test --test-name-pattern=\"a small self-contained request on a worker rung\" test/cascade.test.ts"
+  },
+  {
+    "name": "nm-finding-owner",
+    "repo": "~/Projects/neuromesh",
+    "commit": "cb7035c",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"reviewer's finding in a senior part\" test/three-tier.test.ts",
+    "checks": "node --test --test-name-pattern=\"a spec plan one task over\" test/three-tier.test.ts"
+  },
+  {
+    "name": "nm-cascade-one-review",
+    "repo": "~/Projects/neuromesh",
+    "commit": "2bde99e",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"a task the expert split is reviewed\" test/cascade.test.ts",
+    "checks": "node --test --test-name-pattern=\"a first turn stopped by a revoked login\" test/cascade.test.ts"
+  },
+  {
+    "name": "nm-senior-first-expert",
+    "repo": "~/Projects/neuromesh",
+    "commit": "c1df44d",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"F93\" test/cascade.test.ts",
+    "checks": "node --test --test-name-pattern=\"the blueprint is asked to stay\" test/cascade.test.ts"
+  },
+  {
+    "name": "nm-review-no-reversal",
+    "repo": "~/Projects/neuromesh",
+    "commit": "c101a81",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"when only the reviewer objects after the expert\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-expert-patch",
+    "repo": "~/Projects/neuromesh",
+    "commit": "6bc11a1",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"the expert patches the worker\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-blind-resume",
+    "repo": "~/Projects/neuromesh",
+    "commit": "0ad6c9f",
+    "kind": "bug",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"F101: an engine stopped while the blind tests run\" test/phase2.test.ts",
+    "checks": "node --test --test-name-pattern=\"F103\" test/phase2.test.ts"
+  },
+  {
+    "name": "nm-paired-bootstrap",
+    "repo": "~/Projects/neuromesh",
+    "commit": "feeeec0",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/stats.test.ts",
+    "checks": "node --test test/features.test.ts"
+  },
+  {
+    "name": "nm-choices-shown",
+    "repo": "~/Projects/neuromesh",
+    "commit": "97302e2",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/choices.test.ts",
+    "checks": "node --test test/features.test.ts"
+  },
+  {
+    "name": "nm-expert-budget",
+    "repo": "~/Projects/neuromesh",
+    "commit": "33c5387",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"the expert budget stops expert help\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-dollar-budget",
+    "repo": "~/Projects/neuromesh",
+    "commit": "6eff1df",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"expert budget in dollars\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-two-step-escalation",
+    "repo": "~/Projects/neuromesh",
+    "commit": "95fc233",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"first gets the expert's advice|the advice does not help\" test/engine.test.ts",
+    "checks": "node --test test/pieces.test.ts"
+  },
+  {
+    "name": "nm-worker-ladder",
+    "repo": "~/Projects/neuromesh",
+    "commit": "c6cd3f9",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"climbs to a stronger rung|only a stuck top rung\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-worker-first-routing",
+    "repo": "~/Projects/neuromesh",
+    "commit": "858779b",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"intake sends small requests\" test/engine.test.ts",
+    "checks": "node --test --test-name-pattern=\"a stuck worker is escalated\" test/engine.test.ts"
+  },
+  {
+    "name": "nm-expert-spec-design",
+    "repo": "~/Projects/neuromesh",
+    "commit": "05d9de0",
+    "kind": "feature",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test --test-name-pattern=\"an expert spec writer writes|a thin request gets a product spec\" test/brief.test.ts test/engine.test.ts",
+    "checks": "node --test test/brief.test.ts"
+  },
+  {
+    "name": "nm-split-payload",
+    "repo": "~/Projects/neuromesh",
+    "commit": "42f672b",
+    "kind": "refactor",
+    "language": "typescript",
+    "runner": "node",
+    "testCommand": "node --test test/routing.test.ts test/payload.test.ts",
+    "checks": "node --test test/routing.test.ts",
+    "synthetic": {
+      "base": "42f672b",
+      "patch": "synthetic/nm-split-payload.patch"
+    }
+  },
+  {
+    "name": "ss2-notes-module",
+    "repo": "~/Projects/scope-test-2",
+    "commit": "42a7973",
+    "kind": "refactor",
+    "language": "javascript",
+    "runner": "node",
+    "testCommand": "node --test test/",
+    "synthetic": {
+      "base": "42a7973",
+      "patch": "synthetic/ss2-notes-module.patch"
+    }
+  }
+]

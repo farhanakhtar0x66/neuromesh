@@ -1,0 +1,12 @@
+[
+  { "name": "pb-sliding-window", "fixture": "task-1-fix-failing-func", "kind": "bug" },
+  { "name": "pb-backoff", "fixture": "task-2-missing-feature", "kind": "feature" },
+  { "name": "pb-event-pipeline", "fixture": "task-3-multi-file-regression", "kind": "bug" },
+  { "name": "pb-spin-wait", "fixture": "task-4-version-freshness", "kind": "feature" },
+  { "name": "pb-outlier-filter", "fixture": "task-5-context-filtering", "kind": "feature" },
+  { "name": "pb-checksum-lint", "fixture": "task-6-deterministic-fix", "kind": "bug" },
+  { "name": "pb-stream-pipeline", "fixture": "task-7-adaptive-pipeline", "kind": "bug" },
+  { "name": "pb-normalizer-lint", "fixture": "task-8-deterministic-unused-var", "kind": "bug" },
+  { "name": "pb-event-service", "fixture": "task-9-bidirectional-event-service", "kind": "bug" },
+  { "name": "pb-sensor-fusion", "fixture": "task-10-sensor-fusion-aggregator", "kind": "bug" }
+]

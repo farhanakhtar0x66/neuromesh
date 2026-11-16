@@ -1,0 +1,221 @@
+diff --git a/src/context.js b/src/context.js
+index fc75d6b..8ac353d 100644
+--- a/src/context.js
++++ b/src/context.js
+@@ -1,5 +1,7 @@
+ // Pure CONTEXT.md state module: string <-> State. No I/O.
+ 
++import { foldEvicted, compactNotes } from './notes.js';
++
+ export class ContextError extends Error {
+   constructor(message) {
+     super(message);
+@@ -161,43 +163,6 @@ export function serializeContext(state) {
+   return out.join('\n') + '\n';
+ }
+ 
+-const EXCERPT_CHARS = 160;
+-
+-// One-line note for an evicted user/assistant turn; null when it has no text to keep.
+-function foldTurn(t) {
+-  const flat = t.content.replace(/\s+/g, ' ').trim();
+-  if (flat === '') return null;
+-  const excerpt = flat.length > EXCERPT_CHARS ? flat.slice(0, EXCERPT_CHARS - 1) + '…' : flat;
+-  return `${t.role} @ ${t.at}: ${excerpt}`;
+-}
+-
+-const MAX_NOTES = 20;
+-const MAX_NOTES_CHARS = 2000; // serialized "- note" lines, joined with newlines
+-const ROLLUP_CHARS = 240;
+-const ROLLUP_PREFIX = 'Earlier notes: ';
+-const ROLLUP_BODY_CHARS = ROLLUP_CHARS - ROLLUP_PREFIX.length;
+-
+-const notesChars = (notes) => notes.map((n) => `- ${n}`).join('\n').length;
+-const fitsNotes = (notes) => notes.length <= MAX_NOTES && notesChars(notes) <= MAX_NOTES_CHARS;
+-const capBody = (body) =>
+-  body.length > ROLLUP_BODY_CHARS ? body.slice(0, ROLLUP_BODY_CHARS - 1) + '…' : body;
+-
+-// Keeps Notes within MAX_NOTES entries and MAX_NOTES_CHARS. The oldest entries are folded,
+-// in order, into one rollup line kept first; the rollup counts toward both limits.
+-function compactNotes(notes) {
+-  const hasRollup = notes.length > 0 && notes[0].startsWith(ROLLUP_PREFIX);
+-  let body = hasRollup ? capBody(notes[0].slice(ROLLUP_PREFIX.length)) : null;
+-  const rest = notes.slice(hasRollup ? 1 : 0);
+-  const current = () => (body === null ? rest : [ROLLUP_PREFIX + body, ...rest]);
+-  let result = current();
+-  while (!fitsNotes(result) && rest.length > 0) {
+-    const oldest = rest.shift();
+-    body = capBody(body === null ? oldest : `${body}; ${oldest}`);
+-    result = current();
+-  }
+-  return result;
+-}
+-
+ export function appendTurn(state, turn, maxTurns = 40) {
+   if (!Number.isInteger(maxTurns) || maxTurns < 1) {
+     throw new ContextError(`maxTurns must be a whole number of at least 1, got ${maxTurns}`);
+@@ -228,10 +193,7 @@ export function appendTurn(state, turn, maxTurns = 40) {
+   const history = all.slice(-maxTurns);
+   // Evicted user/assistant turns are folded into Notes so their facts are kept.
+   const evicted = all.slice(0, Math.max(0, all.length - maxTurns));
+-  const folded = evicted
+-    .filter((e) => e.role === 'user' || e.role === 'assistant')
+-    .map(foldTurn)
+-    .filter((n) => n !== null);
++  const folded = foldEvicted(evicted);
+   return {
+     session: { ...state.session, updated: turn.at },
+     notes: compactNotes([...state.notes, ...folded]),
+diff --git a/src/notes.js b/src/notes.js
+new file mode 100644
+index 0000000..5f86056
+--- /dev/null
++++ b/src/notes.js
+@@ -0,0 +1,47 @@
++// Notes: how evicted turns become note lines, and how Notes are kept within bounds.
++// Pure functions over plain strings and turn objects; context.js uses them when it adds turns and notes.
++
++export const EXCERPT_CHARS = 160;
++
++// One-line note for an evicted user/assistant turn; null when it has no text to keep.
++export function foldTurn(t) {
++  const flat = t.content.replace(/\s+/g, ' ').trim();
++  if (flat === '') return null;
++  const excerpt = flat.length > EXCERPT_CHARS ? flat.slice(0, EXCERPT_CHARS - 1) + '…' : flat;
++  return `${t.role} @ ${t.at}: ${excerpt}`;
++}
++
++export const MAX_NOTES = 20;
++export const MAX_NOTES_CHARS = 2000; // serialized "- note" lines, joined with newlines
++export const ROLLUP_CHARS = 240;
++export const ROLLUP_PREFIX = 'Earlier notes: ';
++const ROLLUP_BODY_CHARS = ROLLUP_CHARS - ROLLUP_PREFIX.length;
++
++const notesChars = (notes) => notes.map((n) => `- ${n}`).join('\n').length;
++const fitsNotes = (notes) => notes.length <= MAX_NOTES && notesChars(notes) <= MAX_NOTES_CHARS;
++const capBody = (body) =>
++  body.length > ROLLUP_BODY_CHARS ? body.slice(0, ROLLUP_BODY_CHARS - 1) + '…' : body;
++
++// Keeps Notes within MAX_NOTES entries and MAX_NOTES_CHARS. The oldest entries are folded,
++// in order, into one rollup line kept first; the rollup counts toward both limits.
++export function compactNotes(notes) {
++  const hasRollup = notes.length > 0 && notes[0].startsWith(ROLLUP_PREFIX);
++  let body = hasRollup ? capBody(notes[0].slice(ROLLUP_PREFIX.length)) : null;
++  const rest = notes.slice(hasRollup ? 1 : 0);
++  const current = () => (body === null ? rest : [ROLLUP_PREFIX + body, ...rest]);
++  let result = current();
++  while (!fitsNotes(result) && rest.length > 0) {
++    const oldest = rest.shift();
++    body = capBody(body === null ? oldest : `${body}; ${oldest}`);
++    result = current();
++  }
++  return result;
++}
++
++// Folds the turns pushed out of History into Notes lines: user and assistant turns that have text, oldest first.
++export function foldEvicted(turns) {
++  return turns
++    .filter((t) => t.role === 'user' || t.role === 'assistant')
++    .map(foldTurn)
++    .filter((n) => n !== null);
++}
+diff --git a/test/notes.test.js b/test/notes.test.js
+new file mode 100644
+index 0000000..18e23ef
+--- /dev/null
++++ b/test/notes.test.js
+@@ -0,0 +1,94 @@
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import {
++  EXCERPT_CHARS, MAX_NOTES, MAX_NOTES_CHARS, ROLLUP_CHARS, ROLLUP_PREFIX,
++  foldTurn, foldEvicted, compactNotes,
++} from '../src/notes.js';
++import { appendTurn, addNote, emptyState } from '../src/context.js';
++
++const chars = (notes) => notes.map((n) => `- ${n}`).join('\n').length;
++const turn = (role, content, at = '2026-11-14T13:00:00.000Z') => ({ role, content, at });
++
++test('the limits are exported', () => {
++  assert.equal(MAX_NOTES, 20);
++  assert.equal(MAX_NOTES_CHARS, 2000);
++  assert.equal(ROLLUP_CHARS, 240);
++  assert.equal(ROLLUP_PREFIX, 'Earlier notes: ');
++  assert.equal(EXCERPT_CHARS, 160);
++});
++
++test('foldTurn gives one line with role, time and the text with whitespace collapsed', () => {
++  assert.equal(foldTurn(turn('user', 'what   is\n the  plan?')), 'user @ 2026-11-14T13:00:00.000Z: what is the plan?');
++});
++
++test('foldTurn cuts a long turn to 160 characters ending in an ellipsis, and gives null for no text', () => {
++  const line = foldTurn(turn('assistant', 'x'.repeat(500)));
++  assert.equal(line, `assistant @ 2026-11-14T13:00:00.000Z: ${'x'.repeat(159)}…`);
++  assert.equal(foldTurn(turn('user', ' \n\t ')), null);
++});
++
++test('foldEvicted keeps user and assistant turns with text, in order, and skips the rest', () => {
++  const out = foldEvicted([
++    turn('user', 'one', 'a'),
++    turn('system', 'not kept', 'b'),
++    turn('assistant', '   ', 'c'),
++    turn('assistant', 'two', 'd'),
++  ]);
++  assert.deepEqual(out, ['user @ a: one', 'assistant @ d: two']);
++  assert.deepEqual(foldEvicted([]), []);
++});
++
++test('compactNotes leaves notes within the limits exactly as they are', () => {
++  const notes = Array.from({ length: 20 }, (_, i) => `note ${i}`);
++  assert.deepEqual(compactNotes(notes), notes);
++  assert.deepEqual(compactNotes([]), []);
++});
++
++test('compactNotes folds the oldest entries, in order, into one rollup that stays first', () => {
++  const notes = Array.from({ length: 22 }, (_, i) => `n${i}`);
++  const out = compactNotes(notes);
++  assert.equal(out.length, 20);
++  assert.equal(out[0], 'Earlier notes: n0; n1; n2');
++  assert.deepEqual(out.slice(1), notes.slice(3));
++});
++
++test('compactNotes merges an existing rollup instead of adding a second one', () => {
++  const notes = ['Earlier notes: a; b', ...Array.from({ length: 20 }, (_, i) => `n${i}`)];
++  const out = compactNotes(notes);
++  assert.equal(out.filter((n) => n.startsWith(ROLLUP_PREFIX)).length, 1);
++  assert.equal(out[0], 'Earlier notes: a; b; n0');
++  assert.equal(out.length, 20);
++});
++
++test('compactNotes keeps the serialized size within 2000 characters and the rollup within 240', () => {
++  const notes = Array.from({ length: 12 }, (_, i) => `${i}:${'y'.repeat(300)}`);
++  const out = compactNotes(notes);
++  assert.ok(chars(out) <= MAX_NOTES_CHARS, `${chars(out)} characters`);
++  assert.ok(out[0].startsWith(ROLLUP_PREFIX));
++  assert.ok(out[0].length <= ROLLUP_CHARS && out[0].endsWith('…'));
++});
++
++test('compactNotes turns one oversized note into a rollup of at most 240 characters', () => {
++  const out = compactNotes(['z'.repeat(5000)]);
++  assert.equal(out.length, 1);
++  assert.ok(out[0].startsWith(ROLLUP_PREFIX) === false || out[0].length <= ROLLUP_CHARS);
++  assert.ok(chars(out) <= MAX_NOTES_CHARS);
++});
++
++test('context.js still folds through notes.js: appendTurn and addNote behave as before', () => {
++  let s = emptyState();
++  s = appendTurn(s, turn('user', 'first', 't1'), 1);
++  s = appendTurn(s, turn('assistant', 'second', 't2'), 1);
++  assert.deepEqual(s.notes, ['user @ t1: first']);
++  for (let i = 0; i < 25; i++) s = addNote(s, `note ${i}`);
++  assert.equal(s.notes.length, 20);
++  assert.ok(s.notes[0].startsWith(ROLLUP_PREFIX));
++});
++
++test('the folding code has moved: context.js imports it and no longer defines it', () => {
++  const source = readFileSync(new URL('../src/context.js', import.meta.url), 'utf8');
++  assert.match(source, /from '\.\/notes\.js'/);
++  assert.doesNotMatch(source, /function (foldTurn|compactNotes)\b/);
++  assert.doesNotMatch(readFileSync(new URL('../src/notes.js', import.meta.url), 'utf8'), /from '\.\/context\.js'/);
++});

@@ -704,6 +704,25 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
    are in the composer hint. Not changed, and worth the owner's eye: on a 42-row terminal
    the Apply and rate row of a finished run is below the fold of a long final report.
 
+56. **Batch 2 of real tasks: 29 candidates, built offline (2026-11-16).** No model calls. `evals/real-tasks-2/`
+    (README, MANIFEST). Ten ProofBench Rust fixtures through the new `evals/import-fixture.ts` (seed = workspace
+    without `tests/` and `target/`, plus a `.gitignore` for `target/`; six fixtures ship no `solution/`, so their
+    references are hand-written in `references/`); 17 neuromesh commits (bugs and features, 2 to 17 source files,
+    batch 1's commits skipped), prompts written from the commit with the solution left out; and two synthetic
+    refactors (`nm-split-payload`, `ss2-notes-module`; `make-batch.ts` now builds an entry with `synthetic: {base,
+    patch}` from a patch, and marks it so). All 29 validate (3 runs), and `neuromesh eval --suite evals/real-tasks-2
+    --fake` passes 29/29; `npx tsc --noEmit` and `npm test` (306) are clean. Short of the 45 asked for: the sources
+    are exhausted (scope-test-2 has no commit left, the neuromesh history has about 17 mid-size commits with a
+    failing-before test, the rest are 1,000-line milestones; the blocked repositories are the way to the rest).
+    Found on the way: (1) a Rust seed without `.gitignore` for `target/` makes every task conflict at merge (the
+    engine's own checks leave an untracked `target/`); fixed in the importer. (2) The ProofBench seeds name the bug
+    in comments, so they are the floor of the mix, not a test of finding bugs. (3) On the seed, the engine tests of
+    `nm-two-step-escalation` and `nm-worker-ladder` do not fail fast: they run to the grader's 10-minute limit, so a
+    live attempt that does not fix them costs up to 10 minutes of grading each. (4) One project check was wrong
+    after a correct solution (the old test's expectations change with the default of `advise`); that task checks
+    `test/pieces.test.ts` instead. Haiku's difficulty is guessed (about 59 percent overall, about 43 without the
+    ProofBench ten); the live run `rt2-haiku-1` is what sets it.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

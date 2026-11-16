@@ -1,0 +1,1 @@
+The crate does not compile: `src/lib.rs` carries a strict lint policy (a `#![deny(...)]` attribute) and the code violates it. Make the crate build with the lint policy kept in place, and without changing what `compute_checksum` returns.
