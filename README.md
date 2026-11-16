@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <b>A team of AI coding agents that costs like the cheap model and plans like the expert.</b><br>
-  Cheap models build. Your project's own checks judge. The expensive model steps in only when it pays.
+  <b>Opus-level coding results on a $20 Claude plan.</b><br>
+  Cheap models build. Your project's own checks judge. The expensive model only plans and advises, and only when it pays.
 </p>
 
 <p align="center">
-  <img alt="version 0.2.0, testing" src="https://img.shields.io/badge/version-0.2.0%20testing-2FA86E?style=flat-square">
+  <img alt="version 0.3.0, beta" src="https://img.shields.io/badge/version-0.3.0%20beta-2FA86E?style=flat-square">
   <img alt="license PolyForm Shield 1.0.0" src="https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-8C6BE0?style=flat-square">
   <img alt="Node.js 24 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2024-5A5A5A?style=flat-square">
   <img alt="no runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-5A5A5A?style=flat-square">
@@ -16,95 +16,76 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/tui-run.svg" alt="The Neuromesh TUI showing a real run: Claude Opus 5.5 wrote the spec, GPT-6 Luna built a terminal typing test and a GPT-6 Luna tester asked for changes; the right pane shows the team, context and cost." width="100%">
+  <img src="docs/assets/tui-run.svg" alt="The Neuromesh TUI during a run (an earlier factory team): the agents' boxes in the middle, and the team, context and cost on the right." width="100%">
 </p>
 
 ---
 
 ## Why
 
-A motorcycle assembly line doesn't have its one expert tighten every bolt. Workers
-assemble, inspectors check, and the expert steps in when something goes wrong.
+A frontier model used for every step builds good software and runs out of
+your plan by Wednesday. Most of those steps don't need it.
 
-Most people use AI coding agents the other way round: the most expensive model
-does every tedious step, and its limits run out by Wednesday. **Neuromesh puts
-the expert in charge of a team:**
+Neuromesh runs a **cascade** on the Claude plan you already have:
 
-- **Cheap, fast models do the work.** By default that's GPT-6 Luna, through your
-  own subscriptions.
-- **Every result is checked, not trusted.** Neuromesh runs your project's own
-  tests and, for terminal programs, plays the app in a real terminal and hands
-  the screens to a reviewer.
-- **The expensive model is spent where it pays:** a spec and design for
-  something new, advice when a worker is stuck, and a plan only for large
-  requests.
-- **You approve.** Work happens in its own git worktree, under a write sandbox
-  on macOS. Nothing touches your repository until you've read the report and
-  applied the diff.
+| Tier | Model | Does |
+| --- | --- | --- |
+| 0 | none: Neuromesh's own rules | picks where a request starts, in 0 ms, with no model call |
+| 1 grunt | Haiku 5.5, low | mechanical edits and text transforms, in one call with no tools |
+| 2 worker | Haiku 5.5, medium then high | routine building; says up front when a task is beyond it |
+| 3 senior | Sonnet 5.5 | work that needs judgement, and reviews |
+| 4 expert | Opus 5.5, medium | plans and advises; **builds nothing** |
+
+- **Every result is checked, not trusted.** Your project's tests and type-check
+  run on every change; a stuck task climbs a tier instead of guessing.
+- **Opus is spent where it pays:** a plan for a large request, or advice when
+  Sonnet is stuck, within a per-run limit.
+- **You approve.** Work happens in its own git worktree (sandboxed on macOS).
+  Nothing touches your repository until you've read the report and applied the
+  diff.
 
 ## Results
 
-Measured on subscriptions, with costs estimated at API list prices. The full
-write-ups are in [docs/06-v0.1-results.md](docs/06-v0.1-results.md) and
-[docs/08-build-test.md](docs/08-build-test.md).
+The routing benchmark: 15 prompts in five groups with three traps, plus a
+held-out 15 the router was never tuned on. Each answer is graded by checkers
+that run the code. Costs are **estimates** at API list prices; the window is
+the Claude plan's five-hour limit. Full write-up:
+[evals/routing-bench/REPORT.md](evals/routing-bench/REPORT.md).
 
-<p align="center">
-  <img src="docs/assets/chart-build-test.svg" alt="Building a terminal typing test from one prompt. Scores out of 27: one-line prompt, Neuromesh 24 and Opus 5.5 alone 22; detailed prompt, 27 and 26.5; step list, 27 and 27. Estimated cost: one line $0.58 and $0.76; detailed $0.56 and $1.91; step list $3.49 and $1.44." width="100%">
-</p>
+| | Quality (of 150) | Est. cost | Five-hour window |
+| --- | --- | --- | --- |
+| **Opus 5.5 alone**, 2 runs | 150.0, 147.9 | $3.32, $3.87 | 13%, 21% |
+| **`cascade-claude`**, 4 runs | 150.0, 147.9, 146.7, 147.8 | $0.69 to $0.84 | 3% to 6% |
+| **Haiku 5.5 alone**, 1 run | 142.0 | $0.21 | 2% |
+| *Held-out 15:* Opus alone | 150.0 | $6.90 | 38% |
+| *Held-out 15:* `cascade-claude` | 150.0 | $1.22 | 9% |
 
-<p align="center">
-  <img src="docs/assets/chart-hard-tasks.svg" alt="Four hard tasks, all passed by every configuration. Estimated cost per task: GPT-6.1 Sol alone $0.102, Neuromesh factory-luna $0.012, GPT-6 Luna alone $0.004." width="100%">
-</p>
+Paired over three cascade and two Opus runs, the mean difference is −0.5
+points (90% interval −1.2 to +0.1): **not worse than Opus alone, for about a
+fifth of the cost and a quarter to a third of the window.**
 
-- **75 of 75** suite tasks passed across three full runs of the `factory-luna`
-  team, with **0 engine failures**. The expert used 0–1% of all tokens.
-- A run stopped by a crash or Ctrl-C **resumes** where it stopped and finishes.
-
-> **Read these numbers as early.** The 25-task suite is too easy: GPT-6 Luna
-> alone passes all of it, so it can't yet show a team beating one cheap model.
-> The build test is one run per configuration. That's why the testing build
-> collects real-world reports (see [Testing](#testing-what-you-share)).
-
-## The TUI
-
-Run `neuromesh` in any git repository.
-
-- **Projects and sessions** on the left. Follow-ups continue a session from
-  where the last run left off.
-- **One box per agent** in the middle, labelled with its role and model.
-  Verbosity is none, medium or full; click a box to open it.
-- **The pipeline as buttons:** Plan → Build → Check → Review.
-- **When the run ends**, the agents' report is drawn as markdown and the stream
-  scrolls to its first line.
-- **The team as a live graph** on the right, with each model's usage, what its
-  context was made of, the changes and the cost.
-- **Normal or Turbo.** Normal asks before the lead's plan is carried out and
-  before the expensive expert is called. Turbo goes ahead.
-- **Mouse everywhere and a key for everything**, in its own `neuromesh-dark`
-  theme or transparent over your terminal. It draws only the cells that change
-  (about 0.3 ms a frame) and uses nothing when still.
-
-<p align="center">
-  <img src="docs/assets/tui-team.svg" alt="The Custom team dialog: Expert Opus 5.5 medium, Worker GPT-6 Luna high, Tester GPT-6 Luna medium." width="49%">
-  <img src="docs/assets/tui-connect.svg" alt="The Connections dialog: Codex, Claude Code, Antigravity and opencode, each with its version and sign-in status." width="49%">
-</p>
+> **What this does not show yet.** These prompts are too easy to separate the
+> configurations: Haiku alone is close behind, and on our first ten real tasks
+> from real commits it passed all ten. So the claim today is "matches Opus for
+> far less", not "beats it". The beta's job is the harder suite that can tell
+> (see [Roadmap](#roadmap)). Results from the earlier GPT-6 Luna teams are in
+> [docs/08-build-test.md](docs/08-build-test.md).
 
 ## Install
 
-The testing build, for everyone outside the author's machine (Node.js 24 or
-newer, and git):
+Node.js 24 or newer, git, and [Claude Code](https://claude.com/claude-code)
+signed in to a Claude plan:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/farhanakhtar0x66/neuromesh/neuromesh-testing/install.sh | sh
 ```
 
 The script keeps a copy in `~/.neuromesh/app` and adds a `neuromesh` command;
-run it again to update.
+run it again to update. Codex, Antigravity and opencode work too, for the other
+teams (`/connect` in the app).
 
-Neuromesh uses **your own subscriptions** through the coding tools you already
-have: Codex (ChatGPT), Claude Code, Antigravity (Gemini) and opencode. In the
-app, `/connect` signs in to each through that tool's own login. opencode also
-brings models paid per token through an API key; the key stays with opencode.
+**Testing the beta?** Read [TESTING.md](TESTING.md): what to try, how to rate a
+run and what gets shared.
 
 ## Quick start
 
@@ -119,6 +100,7 @@ Type what you want built. Press Ctrl+P for every command. Prefer the command lin
 neuromesh run "make slugify trim leading and trailing dashes"
 neuromesh diff
 neuromesh apply
+neuromesh rate last 4
 ```
 
 Try the interface without spending any quota:
@@ -129,77 +111,102 @@ neuromesh tui --preset demo
 
 ## Teams
 
-Three favourites cover most work (Ctrl+K):
-
-| Team | Expert | Workers and tester |
+| Team | Who | When |
 | --- | --- | --- |
-| `cascade-claude` (default) | Claude Opus 5.5, medium: plans and advises, builds nothing | Claude Haiku 5.5 as grunt and worker, Claude Sonnet 5.5 as senior and reviewer; one Claude plan |
-| `factory-opus-luna` | Claude Opus 5.5, medium: specs, advice, large plans | GPT-6 Luna, low then high effort |
-| `factory-sol-flash` | GPT-6.1 Sol, high | Gemini 3.8 Flash |
+| `cascade-claude` (default) | Haiku as grunt and worker, Sonnet as senior and reviewer, Opus as planner and adviser | one Claude plan; the measured one |
+| `factory-opus-luna` | Opus 5.5 lead, GPT-6 Luna workers | a Claude plan and a ChatGPT plan |
+| `factory-sol-flash` | GPT-6.1 Sol lead, Gemini 3.8 Flash workers | ChatGPT and Gemini plans |
 
-**Custom team** (`/team`) puts any model your tools offer, or none, in each
-place: expert, worker and tester. Every other preset, including the experiments
-and single-model baselines, is under **Other presets**.
+**Custom team** (`/team`) puts any model your tools offer in each place.
+`neuromesh presets` lists the rest, including single-model baselines.
 
 ## How it works
 
 <p align="center">
-  <img src="docs/assets/how-it-works.svg" alt="A request goes through the brief engine to a worker in its own copy of the repository, then to the checks and a tester; failures go back to the worker; an expert gives a spec or advice when needed; you review and apply." width="100%">
+  <img src="docs/assets/how-it-works.svg" alt="A request goes through the brief engine to a worker in its own copy of the repository, then to the checks and a reviewer; failures go back to the worker; the expert gives a plan or advice when needed; you review and apply." width="100%">
 </p>
 
-- **The brief engine** cleans up the request, attaches documents it names, adds
-  working standards and picks the team, all without a model call.
-- **Workers** start cheap and climb a ladder (low effort, then high) before the
-  expert is asked. The expert gives advice first and takes over only if that
-  fails.
-- **context.md**, a map of the repository built without a model, goes to every
-  agent so it explores less. A tool (`nm`) lets any agent look up symbols and
-  run checks.
-- **Every feature has an id.** Errors name the feature; `--disable <key>`
-  switches it off ([docs/10-features.md](docs/10-features.md)).
+- **Tier 0** scores the request (the instruction, not pasted logs), the files
+  it names and the subsystems it touches, and picks the starting tier with no
+  model call. `neuromesh routing route "<request>"` shows why.
+- **Small, self-contained requests are answered in one call with no tools**;
+  Neuromesh writes the files and runs the checks. This cuts their input tokens
+  by about 94%.
+- **A worker or senior that judges a task beyond it stops early** and the task
+  climbs, instead of burning a long turn first.
+- **Every feature has an id** (F01 to F110). Errors name the feature;
+  `--disable <key>` switches it off ([docs/10-features.md](docs/10-features.md)).
 
-More: [the engine as built](docs/05-engine-as-built.md) ·
-[the TUI](docs/11-tui.md) · [roadmap](docs/09-roadmap.md) ·
-[status](docs/STATUS.md).
+More: [the cascade](docs/19-cascade.md) · [the engine](docs/05-engine-as-built.md) ·
+[the TUI](docs/11-tui.md) · [status](docs/STATUS.md).
+
+## Roadmap
+
+The goal: **cost as little of your plan as possible while resolving at least as
+often as one frontier model alone**, shown with intervals on tasks that can
+tell them apart. The full plan, with each phase's budget and gate, is
+[docs/22-path-to-the-goal.md](docs/22-path-to-the-goal.md).
+
+**Done**
+- [x] The engine: worktrees, checks, resume after a crash or Ctrl-C, a fault
+  harness of 1,400 seeded runs with injected failures on every engine change (v0.1).
+- [x] The TUI and the testers' build (v0.2).
+- [x] The five-tier cascade on one Claude plan, with zero-token routing (F80 to F99).
+- [x] A routing benchmark with code-running checkers, a held-out set, and paired
+  intervals (`bench --compare`).
+- [x] Start-up cost: no-tools answers for small requests (F90, F109).
+- [x] Every turn in one record, with where its tokens went (F106, F108).
+- [x] Reports that survive the model's formatting slips (F110).
+
+**Now: the beta (to 2026-11-30)**
+- [ ] About 40 real tasks from real commits, several repositories and languages,
+  hard enough that Haiku alone fails some.
+- [ ] Opus alone, the cascade and Haiku alone on them, with intervals; the numbers
+  replace the table above.
+- [ ] Testers' runs and ratings on real work ([TESTING.md](TESTING.md)).
+
+**Next, with testers' reports as the evidence**
+- [ ] Keep or drop each unmeasured feature (F100 to F104 first) on a number.
+- [ ] Oracles: a failing test before a bug fix, pinned behaviour before a refactor.
+- [ ] Replay: price a policy change from the record, with no live calls.
+- [ ] A controller that picks each action by expected cost, not hand-set thresholds.
+- [ ] Any model: probe a new model and place it on the ladder with no code change.
+- [ ] Less context per task: a repository index, affected tests first.
+- [ ] Search where an oracle exists: two cheap tries, the tests choose.
+- [ ] A public benchmark of several hundred tasks for a 3-point claim.
 
 ## Testing: what you share
 
-The testing build asks you once, on first start, whether to share run reports
-with the author. They decide which teams become the defaults.
+The testing build asks once, on first start, whether to share run reports.
 
 - **A report holds:** the preset and models, efforts, turns, tokens, time,
   estimated cost, how the run ended, checks, escalations, features that failed,
   what you asked, the agents' final reports, and your 1–5 rating.
 - **It never holds:** your code or diffs, file locations, or who you are; an
   install is a random id.
-- **You can read them:** unsent reports wait in
-  `~/.neuromesh/telemetry/outbox`.
+- **You can read them:** unsent reports wait in `~/.neuromesh/telemetry/outbox`.
 - **Turning it off:** `/settings`, `neuromesh telemetry off`, or
   `NEUROMESH_TELEMETRY=off`.
 
 ## Limits
 
-- **Sandboxed on macOS only.** On macOS, agents can write only in their run's
-  copy of your repository; Codex uses its own sandbox, the others run under
-  the system's. On Linux and Windows only Codex is confined; the others work in
-  a throwaway git worktree, and you review the diff before applying it.
-- **Small benchmarks so far** (see [Results](#results)).
-- **Costs are mostly estimates.** On subscriptions, cost is estimated from API
-  list prices (`src/usage/prices.ts`). Models paid per token through opencode
-  cost real money, shown as opencode reports it.
-- **The TUI is new (v0.2).** Most of its use so far has been on the demo preset.
+- **Beta.** One person's real use and a 30-prompt benchmark so far. F100 to
+  F104 are on by default and mostly unmeasured; `neuromesh features` lists them.
+- **One plan.** Every tier draws on the same Claude plan, and an interactive
+  Claude Code session spends the same windows.
+- **Costs are estimates** from API list prices (`src/usage/prices.ts`). Models
+  paid per token through opencode cost real money, shown as opencode reports it.
+- **Sandboxed on macOS only.** Elsewhere, agents work in a throwaway git
+  worktree and you review the diff before applying it.
 - **Platforms:** developed on macOS; Linux should work; Windows is untested.
 
 ## Contributing
 
 Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md)
-first: it has the working rules and short contributor terms. Run `npm test` and
-`npx tsc --noEmit` before you send anything.
+first. Run `npm test` and `npx tsc --noEmit` before you send anything.
 
-Branches:
-- `main` is what has been measured;
-- `neuromesh-testing` is what testers run;
-- `neuromesh-research` is for experiments.
+Branches: `main` is the release; `neuromesh-testing` is what testers install;
+`neuromesh-research` is for experiments.
 
 ## License
 

@@ -49,8 +49,7 @@ An assistant got this wrong on 2026-11-14 and wrote a plan around Luna.
 
 | Branch | What it holds |
 | --- | --- |
-| `main`, `neuromesh-testing` | the cascade as merged on 2026-11-14 (F80 to F99); default preset still `factory-opus-luna` there |
-| `neuromesh-research` | that, plus F100 to F104, the corrected plan, and `cascade-claude` as the default |
+| `main`, `neuromesh-testing`, `neuromesh-research` | the same commit since 2026-11-16 (the 0.3.0 beta): F01 to F110, `cascade-claude` the default. New experiments go on `neuromesh-research` again; testers install `neuromesh-testing`. |
 
 The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, which is
 checked out on **`neuromesh-research`** (since 2026-11-14, at the owner's
@@ -130,13 +129,22 @@ measures. The next steps, concretely:
   (once on every task), then `cascade-claude` and `solo-opus` the same way
   with `--name rt-cascade-1` and `rt-opus-1`. `--fake` rehearses it for free.
   Then keep a mix of tasks Haiku passes, fails and half-passes (doc 22,
-  phase 1, step 4).
+  phase 1, step 4). *`rt-haiku-1` ran 2026-11-16: Haiku alone passed 10 of 10
+  (287/287 hidden tests, est. $0.46). Batch 1 is too easy to tell presets apart;
+  do not spend Opus on it. Harder tasks first (the beta sprint below).*
 - [x] **6d. Structured-output failures (STATUS 53):** built as F110 (STATUS 54), about 7.8 percent of
   Claude tokens in the kept logs. To check live: `structured.rescued` events, no more
   `error_max_structured_output_retries`, and whether `choices` and `open` are still filled.
-- [ ] **6e. Terse-prompt run** (live, owner): `neuromesh eval --suite evals/real-tasks-terse --preset
-  solo-haiku --name rt-terse-haiku-1 --quota` after `node evals/make-batch.ts
-  evals/real-tasks/batch-1.json --prompts terse`. See the caution in `evals/real-tasks/README.md`.
+- [x] **6e. Terse-prompt run: dropped** (2026-11-16). Seven of the ten terse tasks hinge on a format the
+  short prompt leaves out, so a failure would measure format guessing, not difficulty. Difficulty comes
+  from harder real commits instead. `make-batch --prompts terse` stays; nothing to run.
+- [ ] **6f. The beta sprint (two weeks from 2026-11-16).** The claim, and only it: on about 40 real tasks
+  (several repositories, Haiku alone passing 40 to 70 percent) plus the 30 routing prompts, `cascade-claude`
+  resolves within about 10 points of Opus alone at a fraction of the window and the list price. Week 1:
+  `evals/real-tasks-2/` (ProofBench's Rust fixtures, two synthetic refactors, about 20 larger commits),
+  validated offline, then Haiku alone once to set the mix. Week 2: Opus alone once, the cascade twice, Haiku
+  once, `bench --compare`, the numbers into `README.md`. Phases 3 to 9 of doc 22 are the roadmap for after
+  the beta, with testers' reports as their evidence.
 - [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
   intervals. Then the phases in order.
 

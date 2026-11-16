@@ -1,5 +1,9 @@
 # Roadmap after v0.1
 
+> **Superseded.** This was written for the factory presets (GPT-6 Luna
+> workers). The current roadmap is the one in `README.md`, in full in
+> `docs/22-path-to-the-goal.md`. Kept as history.
+
 Written 2026-11-11, after v0.1.0 (all exit criteria met with `factory-luna`)
 and the first build test (`docs/08-build-test.md`).
 
