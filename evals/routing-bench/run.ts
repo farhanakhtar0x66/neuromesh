@@ -14,8 +14,8 @@
 // Rerunning a name continues it: prompts with a record are skipped.
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { backends as liveBackends } from "../../src/backends/index.ts";
@@ -29,6 +29,7 @@ import { loadPreset } from "../../src/presets/presets.ts";
 import { CASCADE_TIERS } from "../../src/routing/router.ts";
 import type { CascadeTier } from "../../src/routing/router.ts";
 import { estimateCost } from "../../src/usage/prices.ts";
+import { quota as readQuota, waitForReset as waitForResetWith } from "../wait-reset.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
@@ -131,41 +132,6 @@ function tokensOf(u: Usage): number {
   return (u.input ?? 0) + (u.cacheRead ?? 0) + (u.cacheWrite ?? 0) + (u.output ?? 0);
 }
 
-async function quotaReading(): Promise<{ used?: Record<string, number>; resets?: Record<string, number> }> {
-  const dir = mkdtempSync(join(tmpdir(), "routing-bench-quota-"));
-  try {
-    const r = await backends.claude!.run({ cwd: dir, prompt: "Reply with the single word: ok", model: "claude-haiku-5-5", effort: "low", access: "read-only", timeoutMs: 120_000, idleMs: 120_000 });
-    return { used: r.quotaUsed, resets: r.quotaResets };
-  } catch {
-    return {};
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
-async function quota(): Promise<Record<string, number> | undefined> {
-  return (await quotaReading()).used;
-}
-
-/**
- * --wait-reset: start only once the Claude five-hour window has reset, so the
- * run's readings are not mixed with whatever used the window before it.
- */
-async function waitForReset(note: (line: string) => void): Promise<void> {
-  const { used, resets } = await quotaReading();
-  const at = resets?.five_hour;
-  if (at === undefined) {
-    note("--wait-reset: the five-hour window's reset time is unknown; starting now");
-    return;
-  }
-  const ms = at * 1000 - Date.now() + 90_000;
-  if (ms <= 0) return;
-  note(`--wait-reset: five-hour window at ${Math.round((used?.five_hour ?? 0) * 100)}%; waiting until it resets at ${new Date(at * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC (${Math.round(ms / 60_000)} min)`);
-  await new Promise((r) => setTimeout(r, ms));
-  const after = await quota();
-  note(`--wait-reset: five-hour window now at ${after?.five_hour === undefined ? "unknown" : `${Math.round(after.five_hour * 100)}%`}; starting`);
-}
-
 function seed(taskDir: string, into: string): string {
   rmSync(into, { recursive: true, force: true });
   mkdirSync(into, { recursive: true });
@@ -249,7 +215,7 @@ async function main(): Promise<number> {
     process.stderr.write(stamped);
   };
   const benchHome = join(homedir(), ".neuromesh-bench", name);
-  if (process.argv.includes("--wait-reset") && !FAKE) await waitForReset(note);
+  if (process.argv.includes("--wait-reset") && !FAKE) await waitForResetWith(backends.claude!, note);
   note(`started: ${slugs.length} prompt(s) (${setArg}) on preset ${preset.name}`);
 
   for (const slug of slugs) {
@@ -268,7 +234,7 @@ async function main(): Promise<number> {
     const repo = seed(taskDir, join(home, "repo"));
     currentSlug = slug;
     note(`${task.bench.id} ${slug}: reading quota, then running`);
-    const before = FAKE ? undefined : await quota();
+    const before = FAKE ? undefined : await readQuota(backends.claude!);
     const started = Date.now();
     const state = await startRun({ cwd: repo, prompt, preset }, { home, backends, onEvent: (e) => {
       if (["route.tier", "task.early-exit", "task.climbed", "task.escalated", "task.advised", "plan.ready"].includes(e.type)) {
@@ -276,7 +242,7 @@ async function main(): Promise<number> {
       }
     } });
     const wallMs = Date.now() - started;
-    const after = FAKE ? undefined : await quota();
+    const after = FAKE ? undefined : await readQuota(backends.claude!);
 
     let hiddenOutput = "";
     let score: PromptRecord["score"];

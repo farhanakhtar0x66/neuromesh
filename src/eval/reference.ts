@@ -34,7 +34,15 @@ export function applyReferenceTo(reference: string, cwd: string): void {
  * name of the tool the preset uses (claude), with the no-tools answer mode on, as the real adapter has it.
  */
 export function referenceBackend(current: () => { dir: string } | undefined, id = "claude"): FakeBackend {
+  // NEUROMESH_FAKE_QUOTA_AFTER=<n>: after n model turns in this process every turn reports a subscription limit,
+  // as the real tool does when the window runs out. For testing the runners that wait and resume (evals/baselines.ts).
+  const quotaAfter = Number(process.env.NEUROMESH_FAKE_QUOTA_AFTER ?? "");
+  let turns = 0;
   const backend = createFakeBackend((req) => {
+    if (!req.prompt.startsWith("Reply with the single word")) {
+      turns += 1;
+      if (Number.isFinite(quotaAfter) && process.env.NEUROMESH_FAKE_QUOTA_AFTER !== undefined && turns > quotaAfter) return { stop: "quota", detail: "fake usage limit reached" };
+    }
     const props = (req.outputSchema?.properties ?? {}) as Record<string, unknown>;
     const reference = current() ? join(current()!.dir, "reference") : undefined;
     if ("files" in props && reference) return { structured: { files: referenceFiles(reference), summary: "wrote the reference", notes: "", run: "" } };

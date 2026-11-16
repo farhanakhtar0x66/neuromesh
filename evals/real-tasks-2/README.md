@@ -38,6 +38,16 @@ says `"synthetic": true`. Keep these two apart from the real commits in any coun
     neuromesh eval --suite evals/real-tasks-2 --fake                                           # no model calls: every task must pass
     neuromesh eval --suite evals/real-tasks-2 --preset solo-haiku --name rt2-haiku-1 --quota   # LIVE: spends quota, run from an idle session
 
+Week 2's baselines (Haiku alone, the cascade twice, Opus alone, then the paired comparisons) are one script:
+
+    node evals/baselines.ts --fake --fake-pause 2                   # rehearsal: no model calls, its own throw-away home
+    node evals/baselines.ts                                         # LIVE: haiku, cascade1, cascade2 in turn; waits for each window reset
+    node evals/baselines.ts --only opus --allow-opus                # LIVE and the dearest step: never starts without --allow-opus
+    node evals/baselines.ts --report                                # only rewrite RESULTS.md from the saved evals
+
+It re-runs a run that stopped on quota (after the reset) up to 12 times, logs to `~/.neuromesh/evals/baselines.log`, and
+writes `RESULTS.md` here (tables per run, the paired comparisons, the phase 1 gate check).
+
 ## What was audited, and what to know before trusting a number
 
 - **Prompt leak audit.** ProofBench's prompts were written for a benchmark that shows the tests to the agent. Each was
