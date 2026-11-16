@@ -99,12 +99,39 @@ export function overlay(from: string, to: string): string[] {
   return written.sort();
 }
 
+// `set -m` puts the command in its own process group; at the time limit the watcher kills that whole group, and once
+// the command ends anything it left running in the group goes too. spawnSync's own `timeout` signals only its child
+// (the shell): a looping test runner under it was left behind as an orphan and ran for hours (2026-11-17, 87 processes).
+const GROUP_SH = [
+  "set -m",
+  'sh -c "$1" &',
+  "job=$!",
+  '( sleep "$2"; kill -TERM -"$job" 2>/dev/null; sleep 5; kill -KILL -"$job" 2>/dev/null ) &',
+  "watch=$!",
+  'wait "$job"; code=$?',
+  'kill -KILL -"$watch" 2>/dev/null',
+  'kill -KILL -"$job" 2>/dev/null',
+  'exit "$code"',
+].join("\n");
+
+/** `sh -c command` in `dir` with a time limit that ends everything the command started, not only the shell. */
+export function shGroup(dir: string, command: string, timeoutSec: number, env: NodeJS.ProcessEnv): { code: number | null; output: string } {
+  const r = spawnSync("sh", ["-c", GROUP_SH, "grade", command, String(timeoutSec)], {
+    cwd: dir,
+    encoding: "utf8",
+    env,
+    timeout: (timeoutSec + 30) * 1000, // a backstop only: the watcher ends the command first
+    maxBuffer: 128 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return { code: r.status, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+}
+
 function sh(dir: string, command: string, timeoutSec: number): { code: number | null; output: string } {
   // NODE_TEST_CONTEXT is set inside a node --test child; left in, a project's own `node --test` would report to it instead of printing.
   const env: NodeJS.ProcessEnv = { ...process.env, CI: "1", NO_COLOR: "1" };
   delete env.NODE_TEST_CONTEXT;
-  const r = spawnSync("sh", ["-c", command], { cwd: dir, encoding: "utf8", timeout: timeoutSec * 1000, maxBuffer: 128 * 1024 * 1024, env });
-  return { code: r.status, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+  return shGroup(dir, command, timeoutSec, env);
 }
 
 /** Run the project's tests in `dir` (set up first, if the spec says so). */

@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyReference } from "./make-task.ts";
-import { grade } from "./real-task/grade.ts";
+import { grade, shGroup } from "./real-task/grade.ts";
 import type { TaskSpec } from "./real-task/grade.ts";
 
 export interface Check {
@@ -63,8 +63,8 @@ export function validateTask(dir: string, options: { runs?: number } = {}): Vali
       delete env.NODE_TEST_CONTEXT;
       const plain = join(tmp, "seed-plain");
       if (!existsSync(plain)) cpSync(join(task, "seed"), plain, { recursive: true });
-      const r = spawnSync("sh", ["-c", c.command], { cwd: plain, encoding: "utf8", env, timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
-      add(`the project's own check "${c.name}" passes on the seed`, r.status === 0, `${c.command}: ${(r.stdout + r.stderr).split("\n").slice(-6).join(" | ").slice(0, 300)}`);
+      const r = shGroup(plain, c.command, 600, env);
+      add(`the project's own check "${c.name}" passes on the seed`, r.code === 0, `${c.command}: ${r.output.split("\n").slice(-6).join(" | ").slice(0, 300)}`);
     }
 
     // 2. On the reference, several times, each in a fresh copy.

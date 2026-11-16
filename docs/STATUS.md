@@ -787,6 +787,17 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     writer's own command is used if it starts with a known runner and has no shell syntax. (4) A kept test that the
     build cannot satisfy is not dropped (unlike F101): it fails the task like any check.
 
+
+60. **Graders left looping tests running (2026-11-17; eval tooling, not the engine).** After batch 2 was built,
+    87 processes were still running, some of them for up to four and a half hours (load average about 100): `node --test` runners
+    from the seeds of nm-expert-budget, nm-two-step-escalation and nm-worker-ladder, whose tests loop on the seed.
+    `evals/real-task/grade.ts` and `evals/validate-task.ts` used `spawnSync`'s `timeout`, which signals only the shell; the runner under
+    it lived on as an orphan. Now `shGroup` (grade.ts) runs the command in its own process group (`set -m`) and kills the whole group at the
+    limit and when the command ends; `test/grade-timeout.test.ts` shows the old way leaving two loops and the new way none.
+    nm-worker-ladder revalidated in 70 s with no process left. The 49 built copies of `hidden/grade.ts` were replaced in place.
+    The engine's own checks were already safe (`src/backends/proc.ts` kills the group). Found before `rt2-haiku-1` started, so its
+    grading runs on the fixed grader.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
