@@ -1,0 +1,111 @@
+{
+  "id": "H1.1",
+  "slug": "h11-conflict-json",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (187 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.json exists\nPASS parses as a JSON object\nPASS exactly the keys TIMEOUT_MS, RETRY_CAP, MAX_WORKERS, PORT\nPASS every value is an integer\nPASS conflicts keep the incoming side (TIMEOUT_MS 5000, PORT 9090)\nPASS duplicate keys keep the last value (MAX_WORKERS 16)\nPASS RETRY_CAP is 3\nPASS no conflict marker text in the file\nSCORE 8/8",
+  "wallMs": 42905,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 11395,
+      "usage": {
+        "input": 2,
+        "output": 1664,
+        "reasoning": 1130,
+        "cacheRead": 0,
+        "cacheWrite": 4496,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3776,
+          "prompt": 722
+        }
+      },
+      "tokens": 6162,
+      "costUsd": 0.0017314000000000001,
+      "quotaUsed": {
+        "five_hour": 0.06,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    },
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 28825,
+      "usage": {
+        "input": 6,
+        "output": 6027,
+        "reasoning": 862,
+        "cacheRead": 22776,
+        "cacheWrite": 17105,
+        "split": {
+          "files": 0,
+          "commands": 546,
+          "earlier": 6935,
+          "calls": 3,
+          "estimated": true,
+          "startup": 29544,
+          "prompt": 2862
+        }
+      },
+      "tokens": 45914,
+      "costUsd": 0.0066628600000000005,
+      "quotaUsed": {
+        "five_hour": 0.07,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 52076,
+  "discardedTokens": 0,
+  "costUsd": 0.00839426,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.06,
+      "seven_day": 0.4
+    },
+    "after": {
+      "five_hour": 0.07,
+      "seven_day": 0.4
+    }
+  },
+  "runId": "20261117-000824-9159",
+  "finishedAt": "2026-11-16T18:39:13.814Z"
+}
