@@ -1,0 +1,110 @@
+{
+  "id": "H2.2",
+  "slug": "h22-csv-stream",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (551 characters of pasted material left out)",
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 8,
+    "total": 8
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS csv_stream.mjs exports parseCsvStream\nPASS standard rows; a trailing CRLF or LF adds no row\nPASS a trailing empty field and an interior blank line are kept\nPASS quoted commas, newlines, CRLF and doubled quotes parse\nPASS 1-character chunks split CRLF and \"\" and give the same rows\nPASS Uint8Array chunks split inside ₹ and 🎉 still decode\nPASS an unclosed quote at EOF throws SyntaxError\nPASS an unescaped quote mid-field or text after a closing quote throws SyntaxError\nSCORE 8/8",
+  "wallMs": 102137,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 32887,
+      "usage": {
+        "input": 6,
+        "output": 3682,
+        "reasoning": 558,
+        "cacheRead": 21251,
+        "cacheWrite": 14185,
+        "split": {
+          "files": 0,
+          "commands": 352,
+          "earlier": 3693,
+          "calls": 3,
+          "estimated": true,
+          "startup": 27401,
+          "prompt": 3997
+        }
+      },
+      "tokens": 39124,
+      "costUsd": 0.09569710000000001,
+      "quotaUsed": {
+        "five_hour": 0.1,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 66228,
+      "usage": {
+        "input": 2,
+        "output": 14954,
+        "reasoning": 9125,
+        "cacheRead": 625,
+        "cacheWrite": 4027,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3550,
+          "prompt": 1104
+        }
+      },
+      "tokens": 19608,
+      "costUsd": 0.00828885,
+      "quotaUsed": {
+        "five_hour": 0.1,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 58732,
+  "discardedTokens": 0,
+  "costUsd": 0.10398595000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.09,
+      "seven_day": 0.4
+    },
+    "after": {
+      "five_hour": 0.11,
+      "seven_day": 0.4
+    }
+  },
+  "runId": "20261117-001526-e295",
+  "finishedAt": "2026-11-16T18:47:13.692Z"
+}
