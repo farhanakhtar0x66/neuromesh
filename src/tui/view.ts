@@ -657,7 +657,7 @@ function promptBox(m: Model, c: Composer, cv: Canvas, r: Rect, lay: ReturnType<C
   const first = Math.max(0, Math.min(lay.row - visible + 1, lay.lines.length - visible));
   const outcome = m.focus === "outcome" && m.run;
   const placeholder = outcome
-    ? "i or a click to type · a apply · d diff · x discard"
+    ? "i to type · a apply · d diff · x discard · 1-5 rate"
     : running
       ? "Draft the next instruction…"
       : m.log.length === 0

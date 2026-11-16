@@ -31,6 +31,22 @@ export interface DoctorReport {
   quotaUsed?: Record<string, number>;
 }
 
+/** [F112 tool-preflight] What to do when a tool is missing, by backend id; the first line is for the default preset. */
+export function installHint(id: string, displayName = id): string {
+  switch (id) {
+    case "claude":
+      return "Install Claude Code from https://claude.com/claude-code, then run `claude` once to sign in.";
+    case "codex":
+      return "Install the Codex CLI and run `codex` once to sign in. Only presets that use Codex need it.";
+    case "agy":
+      return "Install Antigravity's `agy` command and sign in. Only presets that use it need it.";
+    case "opencode":
+      return "Install opencode and sign in. Only presets that use it need it.";
+    default:
+      return `Install ${displayName} and sign in.`;
+  }
+}
+
 export const CALLS = ["readonly", "readonly-write", "write", "resume", "containment", "cancel", "error"] as const;
 export type CallName = (typeof CALLS)[number];
 
@@ -100,7 +116,7 @@ export async function runDoctor(backend: AgentBackend, options: DoctorOptions): 
 
   report.version = await backend.version();
   if (report.version === undefined) {
-    record("installed", "fail", "the command was not found or did not report a version");
+    record("installed", "fail", `the command was not found or did not report a version. ${installHint(backend.id, backend.displayName)}`);
     return report;
   }
   record("installed", "pass", report.version.split("\n")[0] ?? "");

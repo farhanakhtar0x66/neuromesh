@@ -47,7 +47,14 @@ NEUROMESH_TELEMETRY_ADMIN=<your ADMIN_TOKEN> neuromesh telemetry pull
 ```
 
 This saves every report into `~/.neuromesh/telemetry/inbox/`, one JSON file
-each, ready to be read and compared.
+each, ready to be read and compared. For the weekly read, one command fetches
+the new reports and prints what matters (runs by preset, the rating spread, bad
+runs by kind, failed features, the five lowest-rated runs):
+
+```sh
+neuromesh telemetry summary            # the last 7 days; --since 30d, 2026-11-09 or all
+neuromesh telemetry summary --offline  # only what the inbox already holds
+```
 
 ## Notes
 

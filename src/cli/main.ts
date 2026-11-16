@@ -4,10 +4,12 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
+import { formatTesterSummary, parseSince, readInbox, runViews, summarize } from "../telemetry/summary.ts";
 import { loadSettings, saveSettings } from "../tui/store.ts";
 import { join, resolve } from "node:path";
 import { backends } from "../backends/index.ts";
 import { CALLS, formatReports, isConformant, runDoctor } from "../doctor/doctor.ts";
+import { missingTools, presetBackends } from "./preflight.ts";
 import type { CallName, DoctorReport } from "../doctor/doctor.ts";
 import { applyRun, currentPatch, discardRun } from "../engine/apply.ts";
 import { clearCooldowns, coolingModels } from "../engine/cooldown.ts";
@@ -18,7 +20,7 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
-import { disable, feature, featureTable, hint, isOn } from "../features.ts";
+import { disable, feature, featureTable, hint, inFeature, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
@@ -62,16 +64,17 @@ ${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open 
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
   neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
-  neuromesh telemetry [on|off|pull]
+  neuromesh telemetry [on|off|pull|summary]
                                 share run reports with Neuromesh's author (asked once in the TUI),
-                                stop sharing, or (the author) fetch everyone's reports
+                                stop sharing, or (the author) fetch everyone's reports, or
+                                read them: summary [--since 7d] [--offline]
   neuromesh doctor              check each backend with a few small live calls
 
   [run] is a run id, the end of one, or "last" (the default).
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate", "fake"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate", "fake", "offline"]);
 
 interface Parsed {
   positional: string[];
@@ -158,7 +161,9 @@ async function finish(state: RunState, flags: Map<string, string>): Promise<numb
       if (isOn("telemetry") && telemetryAllowed(loadSettings(home).telemetry)) {
         queue(home, runReport(home, state, entry));
         if (rating) queue(home, ratingReport(home, state.id, rating.score, rating.note));
-        await flush(home);
+        const sent = await flush(home);
+        // [F111 telemetry-summary] Say when a report did not go, and why.
+        if (sent.problem && isOn("telemetry-summary") && !flags.has("json")) process.stdout.write(`Report not sent yet: ${sent.problem}.\n`);
       }
       if (!flags.has("json")) process.stdout.write(`Recorded in ${join(usageDir(home), "USAGE.md")}\n`);
     } catch (error) {
@@ -168,8 +173,16 @@ async function finish(state: RunState, flags: Map<string, string>): Promise<numb
   return exitCodeFor(state);
 }
 
-/** [F52 telemetry] neuromesh telemetry [on|off|pull|status] */
-async function commandTelemetry({ positional }: Parsed): Promise<number> {
+const NO_TOKEN = "No admin token: run telemetry-endpoint/deploy.sh (it keeps one in ~/.neuromesh/telemetry/admin-token), or set NEUROMESH_TELEMETRY_ADMIN.\n";
+
+/** The token deploy.sh made, or NEUROMESH_TELEMETRY_ADMIN. */
+function adminToken(home: string): string | undefined {
+  const file = join(home, "telemetry", "admin-token");
+  return process.env.NEUROMESH_TELEMETRY_ADMIN ?? (existsSync(file) ? readFileSync(file, "utf8").trim() : undefined);
+}
+
+/** [F52 telemetry] neuromesh telemetry [on|off|pull|summary|status] */
+async function commandTelemetry({ positional, flags }: Parsed): Promise<number> {
   const home = defaultHome();
   const what = positional[0] ?? "status";
   const settings = loadSettings(home);
@@ -180,23 +193,58 @@ async function commandTelemetry({ positional }: Parsed): Promise<number> {
     return 0;
   }
   if (what === "pull") {
-    // The token deploy.sh made, or NEUROMESH_TELEMETRY_ADMIN.
-    const tokenFile = join(home, "telemetry", "admin-token");
-    const token = process.env.NEUROMESH_TELEMETRY_ADMIN ?? (existsSync(tokenFile) ? readFileSync(tokenFile, "utf8").trim() : undefined);
+    const token = adminToken(home);
     if (!token) {
-      process.stderr.write("No admin token: run telemetry-endpoint/deploy.sh, or set NEUROMESH_TELEMETRY_ADMIN.\n");
+      process.stderr.write(NO_TOKEN);
       return 2;
     }
     const n = await pull(home, token);
     process.stdout.write(`${n} report${n === 1 ? "" : "s"} saved in ${join(home, "telemetry", "inbox")}\n`);
     return 0;
   }
-  const waiting = outbox(home).length;
+  // [F111 telemetry-summary] The author's weekly reader.
+  if (what === "summary") {
+    if (!isOn("telemetry-summary")) {
+      process.stderr.write(`The summary is switched off (F111 telemetry-summary). Run without --disable, or read the reports by hand in ${join(home, "telemetry", "inbox")}.\n`);
+      return 1;
+    }
+    const since = parseSince(flags.get("since") ?? "7d");
+    try {
+      return await inFeature("telemetry-summary", async () => {
+        const token = adminToken(home);
+        if (!flags.has("offline") && token) {
+          try {
+            const n = await pull(home, token);
+            process.stderr.write(`Fetched ${n} report${n === 1 ? "" : "s"} from the endpoint.\n`);
+          } catch (error) {
+            process.stderr.write(`Could not fetch new reports (${error instanceof Error ? error.message : String(error)}); reading what the inbox already holds.\n`);
+          }
+        } else if (!flags.has("offline")) {
+          process.stderr.write(`${NO_TOKEN.trim()} Reading what the inbox already holds.\n`);
+        }
+        const { reports, unreadable } = readInbox(home);
+        process.stdout.write(formatTesterSummary(summarize(runViews(reports), since), unreadable));
+        return 0;
+      });
+    } catch (error) {
+      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n${hint(feature("telemetry-summary"))}\n`);
+      return 1;
+    }
+  }
+  let waiting = outbox(home).length;
+  let sending = "";
+  // [F111 telemetry-summary] Waiting reports are tried now, so the person sees whether they arrive.
+  if (waiting > 0 && isOn("telemetry-summary") && telemetryAllowed(settings.telemetry) && endpoint()) {
+    const r = await flush(home);
+    waiting = r.waiting;
+    sending = r.problem ? `Could not send them: ${r.problem}.` : `Sent ${r.sent}.`;
+  }
   process.stdout.write(
     [
       `Sharing: ${settings.telemetry === "on" ? "on" : settings.telemetry === "off" ? "off" : "not asked yet (the TUI asks before the first run)"}${process.env.NEUROMESH_TELEMETRY === "off" ? " (but NEUROMESH_TELEMETRY=off)" : ""}`,
+      ...(settings.telemetry === "unasked" && isOn("tool-preflight") ? ["To share: `neuromesh telemetry on`. Not to: `neuromesh telemetry off`."] : []),
       `Endpoint: ${endpoint() ?? "not set yet; reports wait in the outbox"}`,
-      `Waiting to be sent: ${waiting}`,
+      `Waiting to be sent: ${waiting}${sending ? `. ${sending}` : ""}`,
       "",
       ...NOTICE,
     ].join("\n") + "\n",
@@ -219,7 +267,13 @@ function commandRate({ positional, flags }: Parsed): number {
 }
 
 function commandUsage(): number {
-  process.stdout.write(report(readLog(defaultHome())));
+  const log = readLog(defaultHome());
+  // [F112 tool-preflight] An empty report said nothing; now it says how a run gets in it.
+  if (log.runs.length === 0 && isOn("tool-preflight")) {
+    process.stdout.write('No runs recorded yet. A real run, from the TUI (`neuromesh`) or `neuromesh run "..."`, is recorded here once it ends; demo runs are not.\n');
+    return 0;
+  }
+  process.stdout.write(report(log));
   return 0;
 }
 
@@ -235,6 +289,18 @@ async function commandRun({ positional, flags }: Parsed): Promise<number> {
     return 2;
   }
   const preset = loadPreset(flags.get("preset") ?? DEFAULT_PRESET);
+  // [F112 tool-preflight] A tool that is not installed ends here, saying what to do, not after five retries.
+  if (isOn("tool-preflight") && preset.name !== "demo" && !flags.has("backend")) {
+    try {
+      const missing = await inFeature("tool-preflight", () => missingTools(preset, backends));
+      if (missing.length > 0) {
+        process.stderr.write(missing.join("\n") + "\n");
+        return 2;
+      }
+    } catch (error) {
+      process.stderr.write(`Could not check the tools first (${error instanceof Error ? error.message : String(error)}); going on. ${hint(feature("tool-preflight"))}\n`);
+    }
+  }
   const repairs = flags.has("repairs") ? Number.parseInt(flags.get("repairs")!, 10) : undefined;
   const controller = interruptible();
   const state = await startRun(
@@ -455,6 +521,8 @@ async function commandDoctor({ flags }: Parsed): Promise<number> {
     }
   }
 
+  // [F112 tool-preflight] Said before it starts: it does call the models, a little.
+  if (isOn("tool-preflight")) process.stderr.write(`Checking ${ids.join(", ")}: a few tiny live calls to each tool that is installed (a few cents of your plan's quota; a tool that is not installed is skipped). This takes a minute or two.\n`);
   // Not the system temp folder: Antigravity refuses writes there.
   const home = defaultHome();
   mkdirSync(home, { recursive: true });
@@ -478,6 +546,16 @@ async function commandDoctor({ flags }: Parsed): Promise<number> {
   else process.stdout.write(formatReports(reports) + "\n");
   process.stderr.write(`\nSaved to ${saved}.` + (flags.has("keep") ? ` Scratch folder kept at ${workRoot}` : "") + "\n");
   if (!flags.has("keep")) rmSync(workRoot, { recursive: true, force: true });
+  // [F112 tool-preflight] What the result means for the default preset, and the next step.
+  if (isOn("tool-preflight") && !flags.has("json")) {
+    const needed = presetBackends(loadPreset(DEFAULT_PRESET));
+    const mine = reports.filter((r) => needed.includes(r.backend));
+    if (mine.length === needed.length && mine.every(isConformant)) {
+      process.stdout.write(`\nReady: ${needed.join(" and ")} passed, which is all the default preset (${DEFAULT_PRESET}) needs${reports.every(isConformant) ? "" : "; a FAIL above for another tool only matters if you pick a preset that uses it"}.\nNext: open a git repository and run \`neuromesh\` (or \`neuromesh tui --preset demo\` to look around first).\n`);
+    } else if (mine.length === needed.length) {
+      process.stdout.write(`\nNot ready: the default preset (${DEFAULT_PRESET}) needs ${needed.join(" and ")} to pass, and a FAIL above says why. Fix that (run \`${needed[0]}\` once to sign in if it says not signed in), then run \`neuromesh doctor --backend ${needed.join(",")}\` again.\n`);
+    }
+  }
   return reports.every(isConformant) ? 0 : 1;
 }
 

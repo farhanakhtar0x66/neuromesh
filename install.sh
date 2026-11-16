@@ -48,6 +48,9 @@ chmod +x "$BIN/neuromesh"
 echo "Done: $(node "$APP/src/cli/main.ts" --version 2>/dev/null || echo neuromesh)"
 case ":$PATH:" in
   *":$BIN:"*) ;;
-  *) echo "Add $BIN to your PATH, then run: neuromesh" ;;
+  *)
+    echo "One more step: $BIN is not on your PATH. Add this line to ~/.zshrc (or ~/.bashrc), then open a new terminal:"
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+    ;;
 esac
-echo "Open a project folder (a git repository) and run: neuromesh"
+echo "Next: check your tools with \`neuromesh doctor\`, then open a project folder (a git repository) and run: neuromesh"

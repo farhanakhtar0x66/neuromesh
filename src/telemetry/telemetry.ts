@@ -14,7 +14,7 @@
 // person is: an install is a random id.
 
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { platform, release } from "node:os";
 import { join } from "node:path";
 import type { RunState } from "../engine/types.ts";
@@ -132,15 +132,27 @@ export function outbox(home: string): string[] {
   return existsSync(out) ? readdirSync(out).filter((f) => f.endsWith(".json")).sort() : [];
 }
 
+/** What the endpoint's answer means for a tester, in words that say what to do. */
+function problemFor(status: number): string {
+  if (status === 401) return "the endpoint did not accept this build's key (401): update Neuromesh, then it will be sent";
+  if (status === 429 || status >= 500) return `the endpoint is busy or down (${status}); it will be sent next time`;
+  return `the endpoint refused a report (${status})`;
+}
+
 /**
  * Send what is in the outbox. A report is removed only once the endpoint took
- * it; with no endpoint, or offline, everything waits for next time.
+ * it; with no endpoint, or offline, everything waits for next time. A report
+ * the endpoint refuses for good (400 not a report, 413 too large) is moved to
+ * ~/.neuromesh/telemetry/rejected so it cannot block the ones behind it.
+ * `problem` says why anything is still waiting, for the person to read.
  */
-export async function flush(home: string, fetcher: typeof fetch = fetch): Promise<{ sent: number; waiting: number }> {
+export async function flush(home: string, fetcher: typeof fetch = fetch): Promise<{ sent: number; waiting: number; rejected?: number; problem?: string }> {
   const url = endpoint();
   const files = outbox(home);
   if (!url || files.length === 0) return { sent: 0, waiting: files.length };
   let sent = 0;
+  let rejected = 0;
+  let problem: string | undefined;
   for (const f of files) {
     const path = join(dir(home), "outbox", f);
     try {
@@ -150,27 +162,46 @@ export async function flush(home: string, fetcher: typeof fetch = fetch): Promis
         body: readFileSync(path, "utf8"),
         signal: AbortSignal.timeout(8_000),
       });
-      if (!response.ok) break;
-      rmSync(path);
-      sent += 1;
+      if (response.ok) {
+        rmSync(path);
+        sent += 1;
+      } else if (response.status === 400 || response.status === 413) {
+        mkdirSync(join(dir(home), "rejected"), { recursive: true });
+        renameSync(path, join(dir(home), "rejected", f));
+        rejected += 1;
+        problem = problemFor(response.status);
+      } else {
+        problem = problemFor(response.status);
+        break;
+      }
     } catch {
+      problem = "could not reach the endpoint (offline?); it will be sent next time";
       break;
     }
   }
-  return { sent, waiting: files.length - sent };
+  return { sent, waiting: files.length - sent - rejected, ...(rejected ? { rejected } : {}), ...(problem ? { problem } : {}) };
 }
 
 /** For the owner: fetch every report since a time into ~/.neuromesh/telemetry/inbox. */
 export async function pull(home: string, token: string, since = "", fetcher: typeof fetch = fetch): Promise<number> {
   const url = endpoint();
   if (!url) throw new Error("No telemetry endpoint set (src/telemetry/config.ts, or NEUROMESH_TELEMETRY_URL).");
-  const response = await fetcher(`${url}/v1/reports?since=${encodeURIComponent(since)}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
-  if (!response.ok) throw new Error(`The endpoint said ${response.status} ${response.statusText}`);
-  const reports = (await response.json()) as { id: string; body: string }[];
   const inbox = join(dir(home), "inbox");
   mkdirSync(inbox, { recursive: true });
-  for (const r of reports) writeFileSync(join(inbox, `${r.id}.json`), r.body);
-  return reports.length;
+  let total = 0;
+  // The endpoint gives at most 1000 reports a call, oldest first: go on from the last one's time.
+  for (;;) {
+    const response = await fetcher(`${url}/v1/reports?since=${encodeURIComponent(since)}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
+    if (response.status === 401) throw new Error("The endpoint did not accept the admin token (401). Use the one telemetry-endpoint/deploy.sh kept in ~/.neuromesh/telemetry/admin-token, or set NEUROMESH_TELEMETRY_ADMIN.");
+    if (!response.ok) throw new Error(`The endpoint said ${response.status} ${response.statusText}`.trim());
+    const reports = (await response.json()) as { id: string; received?: string; body: string }[];
+    for (const r of reports) writeFileSync(join(inbox, `${r.id}.json`), r.body);
+    total += reports.length;
+    const last = reports[reports.length - 1]?.received;
+    if (reports.length < 1000 || !last || last === since) break;
+    since = last;
+  }
+  return total;
 }
 
 /** The notice shown before asking. */

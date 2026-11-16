@@ -33,6 +33,7 @@ import type { ProjectsFile, SessionRecord, Settings } from "./store.ts";
 import { Terminal, readColourReplies } from "./term.ts";
 import { CUSTOM, FAVOURITES, modelChoices, opencodeModels, saveTeam, teamProblem } from "./team.ts";
 import type { ModelChoice, Team } from "./team.ts";
+import { missingTools } from "../cli/preflight.ts";
 import { allowed as telemetryAllowed, flush as flushReports, queue as queueReport, ratingReport, runReport } from "../telemetry/telemetry.ts";
 import type { Key, Mouse } from "./term.ts";
 import { setTerminalColours, setTheme, setTransparent } from "./theme.ts";
@@ -157,7 +158,13 @@ export async function runTui(options: TuiOptions): Promise<number> {
       repoError = undefined;
     } catch (error) {
       repoRoot = undefined;
-      repoError = error instanceof Error ? error.message.split("\n")[0]! : String(error);
+      const message = error instanceof Error ? error.message.split("\n")[0]! : String(error);
+      // [F112 tool-preflight] The path made these too long to show; what to do next comes first now.
+      repoError = /not inside a git repository/.test(message)
+        ? "Not a git repository. Run `git init` and commit, then reopen."
+        : /no commits yet/.test(message)
+          ? "No commits yet. Make a first commit, then reopen."
+          : message;
     }
     files = new FileIndex(repoRoot);
     return repoRoot !== undefined;
@@ -386,7 +393,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
             // [F52 telemetry] With consent, the same as a report for the author.
             if (isOn("telemetry") && telemetryAllowed(settings.telemetry)) {
               queueReport(home, runReport(home, state, entry));
-              void flushReports(home);
+              sendReports();
             }
           } catch (error) {
             toast(m, `Usage log not written: ${error instanceof Error ? error.message : String(error)}`, "red");
@@ -414,8 +421,30 @@ export async function runTui(options: TuiOptions): Promise<number> {
     redraw();
   };
 
+  // [F112 tool-preflight] Presets whose tools were found, so the check runs once each.
+  const toolsFound = new Set<string>();
   const start = (prompt: string): void => {
     if (!repoRoot) return void toast(model, repoError ?? "Not in a git repository", "red", 8_000);
+    if (isOn("tool-preflight") && preset.name !== "demo" && !toolsFound.has(preset.name)) {
+      void inFeature("tool-preflight", () => missingTools(preset, backends)).then(
+        (missing) => {
+          if (missing.length === 0) toolsFound.add(preset.name);
+          else {
+            model.log.push({ kind: "error", text: missing.join("\n"), at: Date.now() });
+            toast(model, "A tool this preset needs is not installed; see the message above.", "red", 8_000);
+            redraw();
+            return;
+          }
+          start(prompt);
+        },
+        () => {
+          // The check itself failed: it is switched off for this session and the run goes on.
+          toolsFound.add(preset.name);
+          start(prompt);
+        },
+      );
+      return;
+    }
     const m = model;
     if (isOn("tui-history")) history.add(prompt);
     const attached = m.attachments.map((a) => ({ path: a.path, text: readAttachment(a.path) }));
@@ -579,7 +608,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
       recordRating(home, { run: r.id, at: new Date().toISOString(), score: n });
       if (isOn("telemetry") && telemetryAllowed(settings.telemetry)) {
         queueReport(home, ratingReport(home, r.id, n));
-        void flushReports(home);
+        sendReports();
       }
       toast(model, `Rated ${n}. Recorded in the usage log.`);
     } catch (error) {
@@ -983,12 +1012,21 @@ export async function runTui(options: TuiOptions): Promise<number> {
     checkTools();
   };
 
+  // [F111 telemetry-summary] A report the endpoint would not take is said so; being offline is not worth a notice.
+  const sendReports = (): void => {
+    void flushReports(home)
+      .then((r) => {
+        if (r.problem && !/offline/.test(r.problem) && isOn("telemetry-summary")) toast(model, `A report was not sent: ${r.problem}.`, "amber", 8_000);
+      })
+      .catch(() => undefined);
+  };
+
   // [F52 telemetry] Asked once, before the first run.
   const consent = (yes: boolean): void => {
     model.dialog = undefined;
     setSetting("telemetry", yes ? "on" : "off");
-    toast(model, yes ? "Thank you: reports will be shared. /settings or `neuromesh telemetry off` stops it." : "Nothing will be shared.", yes ? "jade" : "muted", 5_000);
-    if (yes) void flushReports(home);
+    toast(model, yes ? "Thank you. Reports are shared; /settings stops it." : "Nothing will be shared.", yes ? "jade" : "muted", 5_000);
+    if (yes) sendReports();
   };
 
   const choosePreset = (name: string): void => {
@@ -1669,7 +1707,7 @@ export async function runTui(options: TuiOptions): Promise<number> {
   // [F52 telemetry] Ask once; send anything still waiting from earlier.
   if (isOn("telemetry")) {
     if (settings.telemetry === "unasked" && process.env.NEUROMESH_TELEMETRY !== "off") model.dialog = { kind: "consent", at: Date.now() };
-    else if (telemetryAllowed(settings.telemetry)) void flushReports(home);
+    else if (telemetryAllowed(settings.telemetry)) sendReports();
   }
   setTitle();
   draw();

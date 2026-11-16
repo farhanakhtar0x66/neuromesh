@@ -29,7 +29,10 @@ neuromesh tui --preset demo     # the interface with a fake team: no quota spent
 neuromesh doctor                # a few tiny live calls per installed tool
 ```
 
-If `doctor` says Claude Code is not signed in, run `claude` once and log in.
+`doctor` ends by saying whether the default team is ready. Only Claude Code has
+to pass; a FAIL for Codex, Antigravity or opencode does not matter here. If it
+says Claude Code is not installed or not signed in, follow the line it prints
+(install it, or run `claude` once and log in).
 
 ## 4. Do real work
 
@@ -43,6 +46,8 @@ neuromesh diff                  # read what it did
 neuromesh apply                 # keep it  (or: neuromesh discard)
 neuromesh rate last 4 --usual "Claude Code with Opus"
 ```
+
+In the TUI, press 1 to 5 once a run has finished to rate it.
 
 **What to try** (a mix is best):
 

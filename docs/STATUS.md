@@ -687,6 +687,23 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     model still fills `choices` and `open` now that they are not required (Haiku filled
     `choices` 101 of 101 and `open` 95 of 101 while they were).
 
+55. **Beta week 1, telemetry and first run (2026-11-16; offline, fake backend, no live calls).**
+   The telemetry path works end to end against the live endpoint
+   (`https://neuromesh-telemetry.farhanakhtar.workers.dev`): a fake-backend run, its
+   rating and both reports went from a fresh `NEUROMESH_HOME` to the endpoint (201,
+   outbox emptied) and `telemetry pull` returned them (22 reports then, 20 of them the
+   owner's own 0.2.0 and 0.3.0 runs). Found and fixed (F111): one refused report blocked
+   every later one for good; a waiting report never said why; `pull` stopped at 1,000;
+   a wrong admin token printed "401" and nothing else. New: `neuromesh telemetry summary`
+   reads the week (runs by preset, rating spread, bad runs by kind, failed features, five
+   lowest-rated). First run (F112): with no Claude Code a run spent five retries and an
+   escalation and ended in "execvp() of 'claude' failed" with `resume` offered; now it
+   stops before starting and says where to get Claude Code. `doctor` says how to fix a
+   missing tool and whether the default preset is ready; the TUI's "not a git
+   repository" message no longer loses its instruction to the screen edge; the rating keys
+   are in the composer hint. Not changed, and worth the owner's eye: on a 42-row terminal
+   the Apply and rate row of a finished run is below the fold of a long final report.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

@@ -1019,6 +1019,24 @@ export const FEATURES: Feature[] = [
     what: "In the kept logs of 394 Claude turns that gave their answer through the StructuredOutput tool, 79 had a rejection (\"must have required property 'notes'\", 'run', 'choices', 'open') and 5 failed after the tool's fifth: the model leaves out a string field it thinks is empty, and the tool ends the turn with error_max_structured_output_retries after the work is done. That ended a solo task (the work kept but graded as a failure) or climbed a cascade task a rung. Now (1) the report schema requires only status and summary, the one-answer schema only files and summary, and a blind test only path and content (the other fields stay in the schemas and in the prompts' wording, an empty string when there is none; the tester's verdict is unchanged); (2) the Claude adapter keeps the input of the last StructuredOutput call, and when a turn ends with that error the engine takes it as the answer if the matching parser would accept it (a summary for a report; at least one usable file for a one-answer turn), keeping only keys the schema has, and says so in a structured.rescued event with the fields that were missing. Anything else ends as before. Off, the schemas and the failure are as before. Measured on the kept logs only: 134 rejected calls carried 4.39M of 56.1M tokens, and the 5 failed turns 1.53M tokens and 276 s; not measured live yet.",
     optional: true,
   },
+  {
+    id: "F111",
+    key: "telemetry-summary",
+    name: "Weekly reader for testers' reports",
+    added: "2026-11-16",
+    files: ["src/telemetry/summary.ts", "src/cli/main.ts (commandTelemetry)", "src/telemetry/telemetry.ts (flush, pull)"],
+    what: "`neuromesh telemetry summary [--since 7d|24h|2w|<date>|all] [--offline]` (the author's): fetches new reports with the admin token (unless --offline or there is none), then prints from the inbox the runs by preset, the rating spread, the bad runs (failed, paused, checks failed or rated 1 or 2) labelled engine, environment, wrong code, unclear request or unknown by fixed rules over the report's fields (no model call), the features that failed, and the five lowest-rated runs with what was asked and what came back. With it, a report the endpoint refuses for good (400, 413) moves to ~/.neuromesh/telemetry/rejected instead of blocking the ones behind it, `flush` says why a report is still waiting (shown after a CLI run, as a notice in the TUI, and by `telemetry status`), and `pull` goes on past 1,000 reports. Plan items B4 and L5. Off, none of these changes: the summary command says so.",
+    optional: true,
+  },
+  {
+    id: "F112",
+    key: "tool-preflight",
+    name: "Check the tools before a run",
+    added: "2026-11-16",
+    files: ["src/cli/preflight.ts", "src/cli/main.ts (commandRun, commandDoctor)", "src/tui/app.ts (start)", "src/doctor/doctor.ts (installHint)"],
+    what: "Before `neuromesh run` or a TUI run, each tool the preset calls is asked for its version (no model call). If one is not installed, the run does not start and the message says which tool, where to get it and to sign in; before this, a tester without Claude Code watched five retries and an escalation end in \"execvp() of 'claude' failed\" with `neuromesh resume` offered. `neuromesh doctor` now says how to install a missing tool, warns that it makes a few tiny live calls, and ends by saying whether the default preset is ready. Off (or with --backend, which replaces the worker's tool), the run starts as before. Found in the first-run check of 2026-11-16.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
