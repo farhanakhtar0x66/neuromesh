@@ -737,6 +737,24 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     disable wins, and a resumed run keeps what it started with. Re-measure it on
     `evals/real-tasks-2` with it on.
 
+58. **F114 `short-output` built (2026-11-17; offline, fake backend, no live calls).**
+    Plan item C7. Command output is re-read on every later model call of a turn: in the
+    2.05M-token turn (`nm-first-turn-retry`) 29 percent of the input was command output
+    (107k characters; one result 12.9k, test runs 5 to 13k each). Now `nm run -- <command...>`
+    (the F13 tool) runs the command (`sh -c`, 5-minute limit), saves all of it to a log in the
+    system temp folder (never in the repository) and shows `exit <code>`, the log path and,
+    when over 2,000 characters, the failure lines (fail, error, panic, assert, expected,
+    not ok, ✗, ×; one line of context each; at most 40), the first 15 and last 25 lines,
+    about 3,000 characters, and how many lines were left out. `nm checks --only <file>`
+    runs one test file through node --test (the package's own flags), `cargo test <name>`
+    or pytest; elsewhere it says so and runs all. The `nm-tools` prompt gets two short lines
+    (run long commands through these; one test file while iterating, the full checks once
+    at the end; batch related edits). Both `nm checks` and `nm run` now put stderr and
+    stdout in one stream for a whole compound command (`exec 2>&1`), not only its last part.
+    **Not measured live.** Judge it on the next routing run by input tokens per prompt:
+    4.3 is the target (633k of 969k input). Off with `--disable short-output`: the tool
+    still works, no prompt mentions it.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

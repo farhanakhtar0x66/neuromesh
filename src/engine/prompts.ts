@@ -206,7 +206,13 @@ function startSection(task: TaskState): string {
 /** [F13 nm-tools] How to use the shared tool. */
 function toolsNote(): string {
   if (!isOn("nm-tools")) return "";
-  return `\n\nTo find your way cheaply, use this read-only tool from your shell instead of listing directories or reading whole files: \`node ${NM_TOOL} map [words]\` (repository map), \`node ${NM_TOOL} show <file> <function or class>\` (one definition with line numbers), \`node ${NM_TOOL} find <regex> [path]\` (matches grouped by file), \`node ${NM_TOOL} checks\` (the project's checks, failures only in full).`;
+  return `\n\nTo find your way cheaply, use this read-only tool from your shell instead of listing directories or reading whole files: \`node ${NM_TOOL} map [words]\` (repository map), \`node ${NM_TOOL} show <file> <function or class>\` (one definition with line numbers), \`node ${NM_TOOL} find <regex> [path]\` (matches grouped by file), \`node ${NM_TOOL} checks\` (the project's checks, failures only in full).${shortOutputNote()}`;
+}
+
+/** [F114 short-output] Long command output is paid for again on every later call, so it is kept short. */
+function shortOutputNote(): string {
+  if (!isOn("short-output")) return "";
+  return `\nRun tests, builds and any command with long output as \`node ${NM_TOOL} run -- <command>\` (exit code, failure lines and both ends; the full log is saved), never bare. While iterating run one test file with \`node ${NM_TOOL} checks --only <file>\`; run the full \`checks\` once at the end. Batch related edits into one edit.`;
 }
 
 function isWholeRequest(state: RunState, task: TaskState): boolean {

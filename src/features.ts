@@ -1060,6 +1060,15 @@ export const FEATURES: Feature[] = [
     what: "`neuromesh report [run] [--note \"what went wrong\"]` writes ~/.neuromesh/reports/<run-id>.md for a tester to read and paste into a GitHub issue: the version, OS, Node, preset and models; how the run ended and which features failed; the run's event timeline (types, tiers, models, stop reasons, durations, token counts, check names with pass or fail; the agents' own activity is left out); the agents' final reports; the request and the note. Nothing is sent anywhere and no run data goes in the URL it prints. The text goes through the same redactor as F52 (now `redact` in telemetry.ts, which F52's `scrub` calls): fenced code and diff hunks, emails, URLs and host names, keys and tokens (sk-, ghp_, long hex or base64, name=value secrets), the user, host and repository names, and every file path (as <path>) are taken out, and the report says how many of each. The file is cut to about 30 KB from the front of the timeline, so the end of the run stays. Plan item B5 (docs/22). Before it, TESTING.md asked testers to paste `neuromesh status last` and remove the private parts by hand. Off, the command says so.",
     optional: true,
   },
+  {
+    id: "F114",
+    key: "short-output",
+    name: "Agents run long-output commands through nm run, which keeps the failures and both ends",
+    added: "2026-11-17",
+    files: ["src/tools/shortout.ts (shorten, onlyCommand)", "src/tools/nm.ts (run, checks --only)", "src/engine/prompts.ts (toolsNote)"],
+    what: "In a worker turn every model call reads the whole conversation again, so a long command output is paid for again on every later call; in the logged 2.05M-token turn (nm-first-turn-retry) 29 percent of the input was command output (107k characters; test runs printing 5 to 13k each). Neuromesh cannot edit Claude Code's history, but it controls the tool and the prompt. (1) `nm run -- <command...>` (F13's tool) runs the command (sh -c, the repository as cwd, the 5-minute limit `checks` uses), saves everything it prints to a log in the system temp folder (never in the repository), and prints `exit <code>`, the log's path and: all of the output when it is under 2,000 characters; otherwise the lines that look like failures (fail, error, panic, assert, expected, not ok, ✗, ×; one line of context after each, at most 40), the first 15 and last 25 lines, about 3,000 characters in all, and how many lines were left out. (2) `nm checks --only <file or pattern>` runs one test file through node --test (the package's own flags), `cargo test <name>` or pytest; any other project gets a line saying so and all the checks. (3) The nm-tools prompt (workers, seniors, reviewers: every prompt that carries it) gains one short line telling the agent to run tests, builds and long commands through these, one test file while iterating and the full checks once at the end, and to batch related edits. Plan item C7. Not measured live: judge it by input tokens per prompt on the next routing run (4.3 is the target: 633k of 969k). Off, the tool still works but no prompt mentions it.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
