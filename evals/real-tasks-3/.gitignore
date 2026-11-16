@@ -1,0 +1,3 @@
+# The task folders are made from the recipe (batch-3.json, prompts/) by evals/real-tasks-3/build.ts.
+/*/
+!/prompts/

@@ -1,0 +1,123 @@
+[
+  {
+    "name": "dt-typed-adb",
+    "repo": "~/Projects/droidtui",
+    "commit": "ff1aed9",
+    "kind": "refactor",
+    "language": "rust",
+    "runner": "cargo",
+    "testCommand": "CARGO_TARGET_DIR=${TMPDIR:-/tmp}/neuromesh-rt3-target/droidtui cargo test --offline --no-fail-fast --lib --tests",
+    "setup": "cargo fetch --offline || cargo fetch",
+    "prewarm": "cargo fetch",
+    "checks": "rustfmt --check --edition 2021 src/main.rs",
+    "failToPassFrom": "hidden"
+  },
+  {
+    "name": "em-egress-cancel",
+    "repo": "~/.config/terminal-ascii-screensaver/edgemed",
+    "commit": "8fb9fa5",
+    "kind": "bug",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": "uv run --offline pytest --continue-on-collection-errors tests/test_security_boundaries.py tests/test_hospital_lan.py tests/test_provision_assets.py",
+    "setup": "uv sync --offline || uv sync",
+    "prewarm": "uv sync",
+    "checks": "uv run --offline pytest -q -p no:cacheprovider tests/test_security_and_storage.py"
+  },
+  {
+    "name": "em-inverted-index",
+    "repo": "~/.config/terminal-ascii-screensaver/edgemed",
+    "commit": "6d68eb4",
+    "kind": "refactor",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": "uv run --offline pytest --continue-on-collection-errors tests/test_retrieval_performance.py",
+    "setup": "uv sync --offline || uv sync",
+    "prewarm": "uv sync",
+    "checks": "uv run --offline pytest -q -p no:cacheprovider tests/test_security_and_storage.py"
+  },
+  {
+    "name": "em-unix-targets",
+    "repo": "~/.config/terminal-ascii-screensaver/edgemed",
+    "commit": "632bfd4",
+    "kind": "feature",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": "uv run --offline pytest --continue-on-collection-errors tests/test_provision_assets.py tests/test_unix_platform.py",
+    "setup": "uv sync --offline || uv sync",
+    "prewarm": "uv sync",
+    "checks": "uv run --offline pytest -q -p no:cacheprovider tests/test_security_and_storage.py"
+  },
+  {
+    "name": "em-model-provisioning",
+    "repo": "~/.config/terminal-ascii-screensaver/edgemed",
+    "commit": "a109452",
+    "kind": "feature",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": "uv run --offline pytest --continue-on-collection-errors tests/test_provision_assets.py tests/test_relevance.py",
+    "setup": "uv sync --offline || uv sync",
+    "prewarm": "uv sync",
+    "checks": "uv run --offline pytest -q -p no:cacheprovider tests/test_security_and_storage.py"
+  },
+  {
+    "name": "em-hospital-lan",
+    "repo": "~/.config/terminal-ascii-screensaver/edgemed",
+    "commit": "e1a4411",
+    "kind": "feature",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": "uv run --offline pytest --continue-on-collection-errors tests/test_hospital_lan.py",
+    "setup": "uv sync --offline || uv sync",
+    "prewarm": "uv sync",
+    "checks": "uv run --offline pytest -q -p no:cacheprovider tests/test_security_and_storage.py"
+  },
+  {
+    "name": "an-com-demand",
+    "repo": "~/Projects/anpasser",
+    "commit": "5b6ec9d",
+    "kind": "refactor",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": ".venv/bin/pytest --continue-on-collection-errors tools/test_com_object_flow.py tools/test_native_subsystems.py tools/test_subsystem_flow.py",
+    "setup": "uv venv -q .venv && (uv pip install -q --offline --python .venv/bin/python pytest || uv pip install -q --python .venv/bin/python pytest)",
+    "prewarm": "true",
+    "checks": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest) >/dev/null 2>&1; .venv/bin/pytest -q -p no:cacheprovider tools/test_component.py"
+  },
+  {
+    "name": "an-process-init-gate",
+    "repo": "~/Projects/anpasser",
+    "commit": "655e63f",
+    "kind": "bug",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": ".venv/bin/pytest --continue-on-collection-errors tools/test_native_libraries.py tools/test_toolchain.py tools/test_whole_program.py",
+    "setup": "uv venv -q .venv && (uv pip install -q --offline --python .venv/bin/python pytest || uv pip install -q --python .venv/bin/python pytest)",
+    "prewarm": "true",
+    "checks": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest) >/dev/null 2>&1; .venv/bin/pytest -q -p no:cacheprovider tools/test_component.py"
+  },
+  {
+    "name": "an-return-contract",
+    "repo": "~/Projects/anpasser",
+    "commit": "f886605",
+    "kind": "feature",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": ".venv/bin/pytest --continue-on-collection-errors tools/test_subsystem_flow.py tools/test_whole_program.py",
+    "setup": "uv venv -q .venv && (uv pip install -q --offline --python .venv/bin/python pytest || uv pip install -q --python .venv/bin/python pytest)",
+    "prewarm": "true",
+    "checks": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest) >/dev/null 2>&1; .venv/bin/pytest -q -p no:cacheprovider tools/test_component.py"
+  },
+  {
+    "name": "an-leaf-effects",
+    "repo": "~/Projects/anpasser",
+    "commit": "668a66d",
+    "kind": "feature",
+    "language": "python",
+    "runner": "pytest",
+    "testCommand": ".venv/bin/pytest --continue-on-collection-errors tools/test_subsystem_flow.py tools/test_native_subsystems.py tools/test_com_object_flow.py",
+    "setup": "uv venv -q .venv && (uv pip install -q --offline --python .venv/bin/python pytest || uv pip install -q --python .venv/bin/python pytest)",
+    "prewarm": "true",
+    "checks": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest) >/dev/null 2>&1; .venv/bin/pytest -q -p no:cacheprovider tools/test_component.py"
+  }
+]
