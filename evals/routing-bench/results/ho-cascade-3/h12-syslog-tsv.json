@@ -1,0 +1,79 @@
+{
+  "id": "H1.2",
+  "slug": "h12-syslog-tsv",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "grunt",
+  "expectedPath": "T0>T1",
+  "routedTier": "grunt",
+  "routeStage": "rules",
+  "routeReasons": [
+    "scored the instruction only (365 characters of pasted material left out)",
+    "a mechanical transform of text the request contains: the grunt"
+  ],
+  "tierPath": [
+    "grunt"
+  ],
+  "finalTier": "grunt",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS out.tsv exists\nPASS six lines, three tab-separated columns each\nPASS header is TIMESTAMP_UTC, FACILITY_PRI, MESSAGE\nPASS all five timestamps normalised to UTC Z\nPASS sorted oldest first (facility 34, 86, 165, 14, 131)\nPASS messages are the trimmed message text\nPASS no prose or code fences around the table\nSCORE 7/7",
+  "wallMs": 64518,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "grunt",
+      "stop": "done",
+      "durationMs": 62367,
+      "usage": {
+        "input": 4,
+        "output": 16243,
+        "reasoning": 6071,
+        "cacheRead": 5246,
+        "cacheWrite": 11580,
+        "split": {
+          "files": 0,
+          "commands": 126,
+          "earlier": 7502,
+          "calls": 2,
+          "estimated": true,
+          "startup": 7686,
+          "prompt": 1517
+        }
+      },
+      "tokens": 33073,
+      "costUsd": 0.01049036,
+      "quotaUsed": {
+        "five_hour": 0.08,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 33073,
+  "discardedTokens": 0,
+  "costUsd": 0.01049036,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.07,
+      "seven_day": 0.4
+    },
+    "after": {
+      "five_hour": 0.08,
+      "seven_day": 0.4
+    }
+  },
+  "runId": "20261117-000922-4f38",
+  "finishedAt": "2026-11-16T18:40:34.807Z"
+}
