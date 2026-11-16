@@ -1,0 +1,110 @@
+{
+  "id": "H2.1",
+  "slug": "h21-sliding-limiter",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "worker",
+  "expectedPath": "T0>T2",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (1015 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 6,
+    "total": 6
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS limiter module imports\nPASS burst cap saturates inside the quarter window, with the exact retry\nPASS full-window saturation: exact retry across many random bursts\nPASS multi-cost partial expiry waits for the right entry\nPASS impossible costs return (False, -1) and leave no record\nPASS boundary (t - window_ms is expired) and 20,000 calls stay bounded\nSCORE 6/6",
+  "wallMs": 202349,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 105741,
+      "usage": {
+        "input": 20,
+        "output": 12728,
+        "reasoning": 4507,
+        "cacheRead": 152615,
+        "cacheWrite": 20350,
+        "split": {
+          "files": 0,
+          "commands": 4486,
+          "earlier": 65521,
+          "calls": 9,
+          "estimated": true,
+          "startup": 90194,
+          "prompt": 12785
+        }
+      },
+      "tokens": 185713,
+      "costUsd": 0.01196215,
+      "quotaUsed": {
+        "five_hour": 0.09,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 89572,
+      "usage": {
+        "input": 2,
+        "output": 17174,
+        "reasoning": 12856,
+        "cacheRead": 0,
+        "cacheWrite": 4981,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3694,
+          "prompt": 1289
+        }
+      },
+      "tokens": 22157,
+      "costUsd": 0.009583399999999999,
+      "quotaUsed": {
+        "five_hour": 0.09,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 207870,
+  "discardedTokens": 0,
+  "costUsd": 0.021545549999999997,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.08,
+      "seven_day": 0.4
+    },
+    "after": {
+      "five_hour": 0.09,
+      "seven_day": 0.4
+    }
+  },
+  "runId": "20261117-001145-8e68",
+  "finishedAt": "2026-11-16T18:45:18.415Z"
+}
