@@ -1,0 +1,79 @@
+{
+  "id": "H1.3",
+  "slug": "h13-ddl-typeguard",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (288 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 25,
+    "total": 25
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS ledger.ts exports isValidLedgerRow\nPASS valid: standard row\nPASS valid: note null\nPASS valid: note undefined\nPASS valid: note field missing\nPASS valid: note of 120 characters\nPASS valid: amount_paise 1\nPASS valid: tx_id of 36 characters\nPASS invalid: null\nPASS invalid: a string\nPASS invalid: an array\nPASS invalid: empty object\nPASS invalid: tx_id of 37 characters\nPASS invalid: tx_id missing\nPASS invalid: amount_paise 0\nPASS invalid: amount_paise -50\nPASS invalid: amount_paise 12.34\nPASS invalid: amount_paise NaN\nPASS invalid: amount_paise a numeric string\nPASS invalid: currency GBP\nPASS invalid: currency lower case\nPASS invalid: settled the string 'true'\nPASS invalid: settled missing\nPASS invalid: note of 121 characters\nPASS invalid: note a number\nSCORE 25/25",
+  "wallMs": 35537,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 32213,
+      "usage": {
+        "input": 2,
+        "output": 7128,
+        "reasoning": 3539,
+        "cacheRead": 647,
+        "cacheWrite": 3903,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3805,
+          "prompt": 747
+        }
+      },
+      "tokens": 11680,
+      "costUsd": 0.004351270000000001,
+      "quotaUsed": {
+        "five_hour": 0.08,
+        "seven_day": 0.4
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 11680,
+  "discardedTokens": 0,
+  "costUsd": 0.004351270000000001,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.08,
+      "seven_day": 0.4
+    },
+    "after": {
+      "five_hour": 0.08,
+      "seven_day": 0.4
+    }
+  },
+  "runId": "20261117-001044-0ae7",
+  "finishedAt": "2026-11-16T18:41:30.411Z"
+}
