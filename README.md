@@ -190,8 +190,10 @@ The testing build asks once, on first start, whether to share run reports.
 
 ## Limits
 
-- **Beta.** One person's real use and a 30-prompt benchmark so far. F100 to
-  F104 are on by default and mostly unmeasured; `neuromesh features` lists them.
+- **Beta.** One person's real use and a 30-prompt benchmark so far. F101
+  (blind tests) is off by default after an audit found it cost about 7% of
+  cascade-claude runs for no confirmed catch; F102 to F104 are on but never
+  fired in 285 runs. `neuromesh features` lists them.
 - **One plan.** Every tier draws on the same Claude plan, and an interactive
   Claude Code session spends the same windows.
 - **Costs are estimates** from API list prices (`src/usage/prices.ts`). Models

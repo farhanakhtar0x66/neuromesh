@@ -115,7 +115,7 @@ that one: `NEUROMESH_TELEMETRY=off neuromesh run "..."`.
 
 ## Known limits
 
-- F100 to F104 are on and mostly unmeasured; your runs are how they get judged.
+- F101 (blind tests) is off by default; F100 is on, and F102 to F104 are on but have never fired. Your runs are how they get judged.
 - Costs are estimates from API list prices.
 - Agents are sandboxed on macOS only; elsewhere they work in a throwaway git
   worktree and nothing reaches your files until `apply`.

@@ -29,7 +29,7 @@ import { runAcceptance, verifyFindings } from "../checks/acceptance.ts";
 import { BYTECODE, ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
 import { observedText } from "./observed.ts";
 import type { CheckResult } from "../checks/checks.ts";
-import { FeatureError, activeKeys, disable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
+import { FeatureError, activeKeys, disable, enable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { TEST_PATH, buildPacket, startHere, trackedFiles } from "../context/packet.ts";
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../checks/blind.ts";
 import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
@@ -260,6 +260,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   let brief: Brief | undefined;
   resetFeatures();
   disable(preset.disable);
+  enable(preset.enable);
   // [F78 three-tier] The preset's senior rungs follow its worker rungs on one ladder.
   const workerRungs = preset.workerLadder ?? roles.worker ?? [];
   const senior = isOn("three-tier") && Object.keys(override).length === 0 && workerRungs.length > 0 && (preset.seniorLadder?.length ?? 0) > 0 ? preset.seniorLadder : undefined;

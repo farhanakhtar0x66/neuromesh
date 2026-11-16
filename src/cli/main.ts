@@ -20,7 +20,7 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
-import { disable, feature, featureTable, hint, inFeature, isOn } from "../features.ts";
+import { disable, enable, feature, featureTable, hint, inFeature, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
@@ -60,7 +60,8 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
   neuromesh brief "<request>"   show the brief and staffing the engine would use, without running
 ${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open the TUI; also \`neuromesh tui\` [--preset <name>]
   neuromesh features            the features added since v0.1, their ids and whether they are on
-                                (--disable <id or key,...> switches features off for any command)
+                                (--disable <id or key,...> switches features off for any command;
+                                --enable <id or key,...> switches on those that are off by default)
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
   neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
@@ -568,6 +569,10 @@ async function main(): Promise<number> {
       process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
       disable(parsed.flags.get("disable"));
     }
+    if (parsed.flags.get("enable")) {
+      process.env.NEUROMESH_ENABLE = [process.env.NEUROMESH_ENABLE, parsed.flags.get("enable")].filter(Boolean).join(",");
+      enable(parsed.flags.get("enable"));
+    }
     const { runTui } = await import("../tui/app.ts");
     return runTui({ cwd: parsed.flags.get("repo") ?? process.cwd(), preset: parsed.flags.get("preset") });
   }
@@ -585,6 +590,11 @@ async function main(): Promise<number> {
   if (parsed.flags.get("disable")) {
     process.env.NEUROMESH_DISABLE = [process.env.NEUROMESH_DISABLE, parsed.flags.get("disable")].filter(Boolean).join(",");
     disable(parsed.flags.get("disable"));
+  }
+  // --enable F101: switch on a feature that is off by default.
+  if (parsed.flags.get("enable")) {
+    process.env.NEUROMESH_ENABLE = [process.env.NEUROMESH_ENABLE, parsed.flags.get("enable")].filter(Boolean).join(",");
+    enable(parsed.flags.get("enable"));
   }
   if (parsed.flags.has("help")) {
     process.stdout.write(HELP);

@@ -723,6 +723,22 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     `test/pieces.test.ts` instead. Haiku's difficulty is guessed (about 59 percent overall, about 43 without the
     ProofBench ten); the live run `rt2-haiku-1` is what sets it.
 
+56. **F100 to F104 judged offline: F101 off by default (2026-11-17).** No model
+    calls. Audit of 285 kept runs (195 bench, 90 owner; 29 fake-backend runs left out):
+
+    | Feature | Fired | Cost (estimate) | Outcome | Decision |
+    | --- | --- | --- | --- | --- |
+    | F100 start-here | 11 live | under $0.001 | first read hit a listed file 7 of 10 | kept, on |
+    | F101 blind-tests | 83 live turns | ~7% of cascade-claude cost, 27% on solo presets | caught no bug a later check confirmed; helped 1 arguably, hurt 3 (a wrong test in ss2-notes-bound; empty results in nm-stub-scanner and nm-first-turn-retry) | **off by default**, code kept |
+    | F102 repair-race | 0 | 0 | never fired | kept, on, unmeasured |
+    | F103 evidence-override | 0 | 0 | never fired (needs 5 tries in one cell) | kept, on, unmeasured |
+    | F104 quota-shift | 0 | 0 | never fired; its one preset (`cascade-hybrid`) targets Luna | kept, on, unmeasured; preset marked stale |
+
+    F101 is switched on with `--enable blind-tests`, `NEUROMESH_ENABLE=blind-tests` or
+    `"enable": ["blind-tests"]` in a preset (new: `defaultOff` in `src/features.ts`); a
+    disable wins, and a resumed run keeps what it started with. Re-measure it on
+    `evals/real-tasks-2` with it on.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

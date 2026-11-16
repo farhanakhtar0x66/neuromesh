@@ -206,6 +206,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudgetUsd: d.weighted({ none: 4, tiny: 2, small: 3, large: 2 }) === "none" ? undefined : d.pick([0.05, 0.3, 0.6, 3]),
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
+    // [F101 blind-tests] Off by default since 2026-11-17, so the harness switches it on to keep exercising its code (a disable still wins).
+    enable: ["blind-tests"],
     quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,

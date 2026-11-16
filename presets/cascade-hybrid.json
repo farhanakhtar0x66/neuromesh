@@ -1,6 +1,6 @@
 {
   "name": "cascade-hybrid",
-  "description": "Experimental (2026-11-14), not yet run live. The Claude cascade (cascade-claude: Haiku 5.5 grunt and worker, Sonnet 5.5 senior, Opus 5.5 expert that plans and advises), with the cheap turns moving to another plan when the Claude five-hour window is 70% used (F104): grunt, worker and reviewer turns then go to GPT-6 Luna through Codex, and what is left of the Claude window is kept for Sonnet and Opus. Until a Claude turn has reported the window, nothing moves. One in five confident senior matches starts on the worker, to learn its rate (F103).",
+  "description": "STALE / EXPERIMENTAL (marked 2026-11-17): never run live, and it moves cheap turns to GPT-6 Luna, which is no longer used (the default is cascade-claude). Kept for F103 and F104, which only it exercises; not for real work. Experimental (2026-11-14), not yet run live. The Claude cascade (cascade-claude: Haiku 5.5 grunt and worker, Sonnet 5.5 senior, Opus 5.5 expert that plans and advises), with the cheap turns moving to another plan when the Claude five-hour window is 70% used (F104): grunt, worker and reviewer turns then go to GPT-6 Luna through Codex, and what is left of the Claude window is kept for Sonnet and Opus. Until a Claude turn has reported the window, nothing moves. One in five confident senior matches starts on the worker, to learn its rate (F103).",
   "mode": "team",
   "routing": "worker-first",
   "roles": {

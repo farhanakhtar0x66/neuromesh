@@ -9,6 +9,14 @@
 //   neuromesh run --disable F04 "..."
 //   "disable": ["screen-check"] in a preset
 //
+// A feature with `defaultOff: true` is off until asked for, and its code stays:
+//
+//   NEUROMESH_ENABLE=blind-tests neuromesh run "..."
+//   neuromesh run --enable F101 "..."
+//   "enable": ["blind-tests"] in a preset
+//
+// (a disable always wins over an enable).
+//
 // NEUROMESH_FAULT=<key> makes a feature fail on purpose, to check the handling.
 //
 // `neuromesh features` lists them all.
@@ -26,6 +34,11 @@ export interface Feature {
    * the run goes on without it. A core one stops the run with a tagged error.
    */
   optional: boolean;
+  /**
+   * Off unless asked for (NEUROMESH_ENABLE, --enable, or "enable" in a preset). Its code stays,
+   * so it can be measured again later; `--disable` still wins.
+   */
+  defaultOff?: boolean;
 }
 
 export const FEATURES: Feature[] = [
@@ -926,7 +939,7 @@ export const FEATURES: Feature[] = [
     name: "Where a task most likely begins, as line ranges",
     added: "2026-11-14",
     files: ["src/context/packet.ts (startHere)", "src/engine/prompts.ts (startSection)", "src/engine/run.ts (start step)"],
-    what: "Per task, from the task's own brief and with no model call: the definitions whose names match its words, as file:line ranges, the body of the best match when it is short, with files of the last commits breaking ties. F12 maps the repository once for the request; this points one task at its starting lines, so a planned part does not spend its first turns finding them. The match is lexical and can be wrong, so it is worded as where to look first and never as a limit, and it says nothing unless the task names a definition outright (written as an identifier), one of its words is a file's own name, or several weaker matches fall in one file. From a friend's review (docs/21-phase-2-review.md). Not yet measured live.",
+    what: "Per task, from the task's own brief and with no model call: the definitions whose names match its words, as file:line ranges, the body of the best match when it is short, with files of the last commits breaking ties. F12 maps the repository once for the request; this points one task at its starting lines, so a planned part does not spend its first turns finding them. The match is lexical and can be wrong, so it is worded as where to look first and never as a limit, and it says nothing unless the task names a definition outright (written as an identifier), one of its words is a file's own name, or several weaker matches fall in one file. From a friend's review (docs/21-phase-2-review.md). kept: fired 11 times, under $0.001; first read hit a listed file 7 of 10.",
     optional: true,
   },
   {
@@ -935,8 +948,9 @@ export const FEATURES: Feature[] = [
     name: "Tests written without seeing the code",
     added: "2026-11-14",
     files: ["src/checks/blind.ts", "src/engine/run.ts (blindStep, blindApplies, checks step)", "src/engine/prompts.ts (blindPrompt, blindFinding)"],
-    what: "For work on state, parsing, limits or an algorithm that has passed the project's checks: a cheap developer gets the task and the signatures of what was written (taken from the files, no model call), in a folder that holds nothing of the code, and writes one or two test files; the engine runs them on a copy. All pass: nothing changes and they are not kept. They cannot load (a guessed name): dropped. Some fail: they go into the task's folder and the developer gets one turn to judge each against the task (fix the code, or correct the test). If the checks still fail with them after that turn, the engine takes them out and records them, so a wrong blind test costs one cheap turn at most and never an escalation. Once per task; not for the expert's own work or the grunt's. The answer is kept with the task while its tests run, so an engine that dies there does not pay for it again. After the first live run (signatures alone gave 15 wrong tests of 22, and the gap that mattered was one the request leaves open): the tester is also shown the start of the tests that were already there for the changed files, as they were before the work, and may add one open probe (above all for something that grows without limit, checked by comparing sizes); a failing open probe is a one-sentence question for the person, shown with the result, never a gate, a turn or a kept file. From a friend's review. One live run each way (docs/21-phase-2-review.md).",
+    what: "For work on state, parsing, limits or an algorithm that has passed the project's checks: a cheap developer gets the task and the signatures of what was written (taken from the files, no model call), in a folder that holds nothing of the code, and writes one or two test files; the engine runs them on a copy. All pass: nothing changes and they are not kept. They cannot load (a guessed name): dropped. Some fail: they go into the task's folder and the developer gets one turn to judge each against the task (fix the code, or correct the test). If the checks still fail with them after that turn, the engine takes them out and records them, so a wrong blind test costs one cheap turn at most and never an escalation. Once per task; not for the expert's own work or the grunt's. The answer is kept with the task while its tests run, so an engine that dies there does not pay for it again. After the first live run (signatures alone gave 15 wrong tests of 22, and the gap that mattered was one the request leaves open): the tester is also shown the start of the tests that were already there for the changed files, as they were before the work, and may add one open probe (above all for something that grows without limit, checked by comparing sizes); a failing open probe is a one-sentence question for the person, shown with the result, never a gate, a turn or a kept file. From a friend's review. One live run each way (docs/21-phase-2-review.md). Off by default 2026-11-17: 83 live turns across rb-cascade-3..6, ho-*, rt-haiku-1; about 7% of cascade-claude cost (27% on solo presets); no bug caught that a later check confirmed (helped 1 arguably, hurt 3: a wrong test in ss2-notes-bound, empty results in nm-stub-scanner and nm-first-turn-retry). Switch it on with --enable blind-tests, NEUROMESH_ENABLE=blind-tests or \"enable\": [\"blind-tests\"] in a preset. Re-measure on evals/real-tasks-2 with it on.",
     optional: true,
+    defaultOff: true,
   },
   {
     id: "F102",
@@ -944,7 +958,7 @@ export const FEATURES: Feature[] = [
     name: "Two fresh repair attempts side by side before a dearer tier",
     added: "2026-11-14",
     files: ["src/engine/run.ts (raceStep, raceApplies)", "src/engine/prompts.ts (racePrompt, RACE_HINTS)"],
-    what: "A task whose checks still fail after its repair rounds, at the point where the next step is a dearer tier or the expert: two fresh developers of its own tier repair it side by side, each in its own copy and each told to go about it differently (patch in place; rewrite the failing part from the requirement). The project's checks pick the winner (the smaller change when both pass) and its change becomes the task's; with no winner the task goes on to where it was headed. Only where the project has checks, once per task, and only in runs that have somewhere dearer to go. A stopped race is run again from the start on resume. From a friend's review. Not yet measured live.",
+    what: "A task whose checks still fail after its repair rounds, at the point where the next step is a dearer tier or the expert: two fresh developers of its own tier repair it side by side, each in its own copy and each told to go about it differently (patch in place; rewrite the failing part from the requirement). The project's checks pick the winner (the smaller change when both pass) and its change becomes the task's; with no winner the task goes on to where it was headed. Only where the project has checks, once per task, and only in runs that have somewhere dearer to go. A stopped race is run again from the start on resume. From a friend's review. Not yet measured live. Unmeasured: never fired in 285 runs.",
     optional: true,
   },
   {
@@ -953,7 +967,7 @@ export const FEATURES: Feature[] = [
     name: "This machine's record overrules a confident Tier 0 match",
     added: "2026-11-14",
     files: ["src/routing/calibration.ts (evidencePick)", "src/routing/router.ts (routeTier, probeDraw)", "src/engine/run.ts (startRun)"],
-    what: "F81's table was consulted only when the similarity stage was unsure. Now, when that stage is confident but the tier it picked has been tried at least 5 times on that kind of work and its estimate is under the quality bar, the request starts on the cheapest tier above that clears it; and a cheaper tier with 5 tries that clears the bar is used instead of the matched one. A preset may also set cascade.probe, the share of confident senior matches started on the worker (chosen by a hash of the request, so a benchmark repeats), which is the only way the worker's rate on senior work is ever learned; default 0. From a friend's review. Not yet measured live.",
+    what: "F81's table was consulted only when the similarity stage was unsure. Now, when that stage is confident but the tier it picked has been tried at least 5 times on that kind of work and its estimate is under the quality bar, the request starts on the cheapest tier above that clears it; and a cheaper tier with 5 tries that clears the bar is used instead of the matched one. A preset may also set cascade.probe, the share of confident senior matches started on the worker (chosen by a hash of the request, so a benchmark repeats), which is the only way the worker's rate on senior work is ever learned; default 0. From a friend's review. Not yet measured live. Unmeasured: never fired in 285 runs.",
     optional: true,
   },
   {
@@ -962,7 +976,7 @@ export const FEATURES: Feature[] = [
     name: "Cheap turns leave a subscription that is running low",
     added: "2026-11-14",
     files: ["src/engine/quota.ts", "src/engine/run.ts (quotaShiftFor, turn, once)", "src/presets/presets.ts (quotaShift)", "presets/cascade-hybrid.json"],
-    what: "A preset names a tool whose subscription window is watched, a threshold, and another plan's models. Every reading a tool reports is kept in ~/.neuromesh/quota.json; when the window is at or past the threshold, grunt, worker and reviewer turns on that tool go to the other models first, and senior and expert turns stay. A reading whose window has reset, or older than five hours, is unknown, and an unknown moves nothing. From a friend's review. Not yet measured live.",
+    what: "A preset names a tool whose subscription window is watched, a threshold, and another plan's models. Every reading a tool reports is kept in ~/.neuromesh/quota.json; when the window is at or past the threshold, grunt, worker and reviewer turns on that tool go to the other models first, and senior and expert turns stay. A reading whose window has reset, or older than five hours, is unknown, and an unknown moves nothing. From a friend's review. Not yet measured live. Unmeasured: never fired in 285 runs; its only preset, cascade-hybrid, targets GPT-6 Luna, which is no longer used.",
     optional: true,
   },
   {
@@ -1060,6 +1074,8 @@ export function tag(idOrKey: string): string {
 // The switched-off features for this process: NEUROMESH_DISABLE, --disable,
 // and a preset's "disable" list. Optional features that fail are added too.
 const disabled = new Set<string>();
+// The default-off features switched on for this process: NEUROMESH_ENABLE, --enable, a preset's "enable" list.
+const enabled = new Set<string>();
 
 function parse(list: string | string[] | undefined): Feature[] {
   const items = Array.isArray(list) ? list : (list ?? "").split(",");
@@ -1074,24 +1090,35 @@ export function disable(list: string | string[] | undefined): void {
   for (const f of parse(list)) disabled.add(f.key);
 }
 
-/** Back to the process-wide setting (NEUROMESH_DISABLE, which --disable extends). */
+/** Switch on features that are off by default (ids or keys; other features are already on). */
+export function enable(list: string | string[] | undefined): void {
+  for (const f of parse(list)) if (f.defaultOff) enabled.add(f.key);
+}
+
+/** Back to the process-wide setting (NEUROMESH_DISABLE and NEUROMESH_ENABLE, which --disable and --enable extend). */
 export function resetFeatures(): void {
   disabled.clear();
+  enabled.clear();
   disable(process.env.NEUROMESH_DISABLE);
+  enable(process.env.NEUROMESH_ENABLE);
 }
 
 /** Switch off everything not in `keys` (a resumed run keeps the features it started with). */
 export function onlyThese(keys: string[]): void {
-  for (const f of FEATURES) if (!keys.includes(f.key)) disabled.add(f.key);
+  for (const f of FEATURES) {
+    if (!keys.includes(f.key)) disabled.add(f.key);
+    else if (f.defaultOff) enabled.add(f.key); // a run that started with it keeps it
+  }
 }
 resetFeatures();
 
 export function isOn(idOrKey: string): boolean {
-  return !disabled.has(feature(idOrKey).key);
+  const f = feature(idOrKey);
+  return !disabled.has(f.key) && (!f.defaultOff || enabled.has(f.key));
 }
 
 export function activeKeys(): string[] {
-  return FEATURES.filter((f) => !disabled.has(f.key)).map((f) => f.key);
+  return FEATURES.filter((f) => isOn(f.key)).map((f) => f.key);
 }
 
 /** An error raised inside a feature, carrying which one. */

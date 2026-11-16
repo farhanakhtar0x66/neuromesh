@@ -23,6 +23,7 @@ import { validatePreset } from "../src/presets/presets.ts";
 import { MIN_EVIDENCE, calibrated, describeCalibration, evidencePick, record } from "../src/routing/calibration.ts";
 import type { CalibrationTable } from "../src/routing/calibration.ts";
 import { probeDraw, routeTier } from "../src/routing/router.ts";
+import { activeKeys, disable, enable, isOn, onlyThese, resetFeatures } from "../src/features.ts";
 
 const scratch = mkdtempSync(join(tmpdir(), "neuromesh-phase2-test-"));
 after(() => rmSync(scratch, { recursive: true, force: true }));
@@ -60,8 +61,9 @@ const testable = (): string =>
 const WORKER = { backend: "fake", model: "fake-worker", tier: "worker" as const };
 const EXPERT = { backend: "fake", model: "fake-expert", tier: "expert" as const };
 
+// F101 is off by default (2026-11-17); these tests switch it on, as a preset's "enable" list does.
 function preset(roles: RoleChain = {}, extra: Partial<Preset> = {}): Preset {
-  return { name: "phase2", description: "", mode: "solo", roles: { worker: [WORKER], ...roles }, repairs: 1, maxTasks: 4, maxParallel: 1, turnTimeoutMinutes: 1, intake: false, brief: false, routing: "rules", advise: false, test: "no-checks", ...extra };
+  return { name: "phase2", description: "", mode: "solo", roles: { worker: [WORKER], ...roles }, repairs: 1, maxTasks: 4, maxParallel: 1, turnTimeoutMinutes: 1, intake: false, brief: false, routing: "rules", advise: false, test: "no-checks", enable: ["blind-tests"], ...extra };
 }
 
 function context(script: FakeScript, others: Record<string, FakeScript> = {}) {
@@ -269,6 +271,37 @@ test("F101: routine work, and a run with the feature off, get no blind tests", a
   const b = await startRun({ cwd: testable(), prompt: BLIND_REQUEST, preset: preset({}, { disable: ["blind-tests"] }) }, off.ctx);
   assert.equal(b.status, "finished", b.reason);
   assert.deepEqual(b.attempts.map((x) => x.kind), ["initial"]);
+});
+
+test("F101: off by default; --enable, NEUROMESH_ENABLE and a preset's enable list switch it on, and a disable still wins", async () => {
+  resetFeatures();
+  assert.equal(isOn("blind-tests"), false);
+  assert.ok(!activeKeys().includes("blind-tests"));
+  enable("F101");
+  assert.equal(isOn("blind-tests"), true);
+  disable("blind-tests");
+  assert.equal(isOn("blind-tests"), false, "a disable wins over an enable");
+  process.env.NEUROMESH_ENABLE = "blind-tests";
+  try {
+    resetFeatures();
+    assert.equal(isOn("F101"), true);
+  } finally {
+    delete process.env.NEUROMESH_ENABLE;
+    resetFeatures();
+  }
+
+  // A run with no enable list asks for no blind tests, on the work that would get them.
+  const plain = context(cacheWorker(() => {}, [blindTest("x")]));
+  const a = await startRun({ cwd: testable(), prompt: BLIND_REQUEST, preset: preset({}, { enable: undefined }) }, plain.ctx);
+  assert.equal(a.status, "finished", a.reason);
+  assert.deepEqual(a.attempts.map((x) => x.kind), ["initial"]);
+  assert.ok(!a.features?.includes("blind-tests"));
+  assert.equal(plain.events.filter((e) => e.type === "blind.tests").length, 0);
+
+  // A resumed run keeps what it started with.
+  onlyThese(["blind-tests"]);
+  assert.equal(isOn("blind-tests"), true);
+  resetFeatures();
 });
 
 // ---------------------------------------------------------------------------
