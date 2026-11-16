@@ -30,6 +30,18 @@ written to the seed's `neuromesh.json`, because a seed has no `node_modules` and
 choose a type-check that cannot run and the whole slow suite. `validate-task.ts` requires that check to pass on
 the seed.
 
+## Terse prompts
+
+    node evals/make-batch.ts evals/real-tasks/batch-1.json --prompts terse     # makes evals/real-tasks-terse
+    neuromesh eval --suite evals/real-tasks-terse --preset solo-haiku --name rt-terse-haiku-1 --quota
+
+The same ten tasks (same seed, hidden tests, reference and checks) with a 15 to 45 word prompt in
+`prompts-terse/`, written like a user's bug report: the names the tests import or call, and nothing about how.
+Haiku alone passed all ten with the full prompts, so this variant asks how much of that was the prompt. Read its
+result with one caution: in five tasks the tests assert a format or a message the terse prompt does not state
+(`nm-tester-minor-findings`, `nm-stub-scanner`, `nm-quota-cooldown`, `ss2-notes-fold`, `ss2-notes-bound`), so a
+failure there may be a format nobody could guess, not a coding failure.
+
 ## Batch 1 (2026-11-16): 10 tasks, all valid
 
 On the seed every fail-to-pass test fails and every pass-to-pass test passes; on the reference all of them

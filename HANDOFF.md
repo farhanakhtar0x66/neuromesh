@@ -131,6 +131,12 @@ measures. The next steps, concretely:
   with `--name rt-cascade-1` and `rt-opus-1`. `--fake` rehearses it for free.
   Then keep a mix of tasks Haiku passes, fails and half-passes (doc 22,
   phase 1, step 4).
+- [ ] **6d. Structured-output failures (STATUS 53):** build F110 (optional string fields in the
+  report schemas, recover the last attempt on `error_max_structured_output_retries`): about 7.8
+  percent of Claude tokens in the kept logs. Needs engine tests and both fault-harness sweeps.
+- [ ] **6e. Terse-prompt run** (live, owner): `neuromesh eval --suite evals/real-tasks-terse --preset
+  solo-haiku --name rt-terse-haiku-1 --quota` after `node evals/make-batch.ts
+  evals/real-tasks/batch-1.json --prompts terse`. See the caution in `evals/real-tasks/README.md`.
 - [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
   intervals. Then the phases in order.
 

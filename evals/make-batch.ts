@@ -1,13 +1,17 @@
 // Make and validate a batch of real-repository tasks from a manifest (plan item M1). No model is called.
 //
-//   node evals/make-batch.ts evals/real-tasks/batch-1.json [--only name,name] [--out-root dir] [--runs 3]
+//   node evals/make-batch.ts evals/real-tasks/batch-1.json [--only name,name] [--out-root dir] [--runs 3] [--prompts default|terse]
 //
 // The manifest lists, for each task, the repository (a path, "~" allowed, or a URL), the commit, the kind,
 // the language, the runner and test command, and optionally which files are the tests. Each task's prompt is
 // prompts/<name>.md next to the manifest. A task folder that does not exist yet is made; every task is then
 // validated (evals/validate-task.ts). Exit 0 only if every task is valid.
+//
+// --prompts terse makes the same tasks with a short prompt (prompts-terse/<name>.md, 15 to 45 words, written like a
+// user's bug report: the names the tests call and nothing about how) in a sibling folder, <manifest folder>-terse.
+// Seed, hidden tests and reference are the default task's, copied, so the two variants differ only in the prompt.
 
-import { existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,14 +34,21 @@ interface Entry {
 
 function main(): number {
   const argv = process.argv.slice(2);
-  const manifest = argv.find((a, i) => !a.startsWith("--") && !["--only", "--out-root", "--runs"].includes(argv[i - 1] ?? ""));
+  const manifest = argv.find((a, i) => !a.startsWith("--") && !["--only", "--out-root", "--runs", "--prompts"].includes(argv[i - 1] ?? ""));
   if (!manifest) {
-    console.error("usage: node evals/make-batch.ts <manifest.json> [--only a,b] [--out-root dir] [--runs 3]");
+    console.error("usage: node evals/make-batch.ts <manifest.json> [--only a,b] [--out-root dir] [--runs 3] [--prompts default|terse]");
     return 2;
   }
   const opt = (k: string): string | undefined => argv[argv.indexOf(`--${k}`) + 1] && argv.includes(`--${k}`) ? argv[argv.indexOf(`--${k}`) + 1] : undefined;
   const only = opt("only")?.split(",");
-  const root = resolve(opt("out-root") ?? dirname(resolve(manifest)));
+  const variant = opt("prompts") ?? "default";
+  if (!["default", "terse"].includes(variant)) {
+    console.error(`--prompts takes default or terse, not "${variant}"`);
+    return 2;
+  }
+  const home = dirname(resolve(manifest));
+  const defaultRoot = home;
+  const root = resolve(opt("out-root") ?? (variant === "terse" ? `${home}-terse` : home));
   const runs = Number(opt("runs") ?? 3);
   const entries = JSON.parse(readFileSync(manifest, "utf8")) as Entry[];
   let bad = 0;
@@ -45,11 +56,23 @@ function main(): number {
     if (only && !only.includes(e.name)) continue;
     const dir = join(root, e.name);
     try {
-      if (!existsSync(dir)) {
+      const base = join(defaultRoot, e.name);
+      const make = (out: string): void => {
         makeTask({
           repo: e.repo.replace(/^~/, homedir()), commit: e.commit, name: e.name, runner: e.runner, testCommand: e.testCommand, setup: e.setup,
-          kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out: dir, prompt: readFileSync(join(dirname(resolve(manifest)), "prompts", `${e.name}.md`), "utf8"),
+          kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out, prompt: readFileSync(join(home, "prompts", `${e.name}.md`), "utf8"),
         });
+      };
+      if (variant === "default") {
+        if (!existsSync(dir)) make(dir);
+      } else if (!existsSync(dir)) {
+        // The same task with a shorter prompt: the default task is made first if it is not there, then copied.
+        if (!existsSync(base)) make(base);
+        const terse = readFileSync(join(home, "prompts-terse", `${e.name}.md`), "utf8").trim();
+        const words = terse.split(/\s+/).filter(Boolean).length;
+        if (words < 15 || words > 45) throw new Error(`the terse prompt is ${words} words; it must be 15 to 45`);
+        cpSync(base, dir, { recursive: true });
+        writeFileSync(join(dir, "prompt.md"), `${terse}\n`);
       }
       const v = validateTask(dir, { runs });
       if (!v.ok) bad++;

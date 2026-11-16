@@ -616,6 +616,36 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     calls, 67 percent the model's own earlier turns: the next lever is a
     worker turn's history (C2 and C7), not start-up.
 
+53. **Why Haiku's turns fail structured output, and where the 2M tokens go (2026-11-16).**
+    No model calls; from the kept logs. (1) `error_max_structured_output_retries`:
+    of 394 kept Claude turns that used the StructuredOutput tool, 79 (20 percent) had at
+    least one rejection ("Output does not match required schema: root: must have
+    required property 'notes' / 'run' / 'choices' / 'open'"); 74 recovered (55 after one
+    rejection, 8 after two, 6 after three, 5 after four) and 5 failed after the fifth,
+    which is Claude Code's cap. The model sends the core fields and leaves out the string
+    fields it thinks are empty; since F105 made `choices` and `open` required, they are
+    105 of the 192 missing-field mentions. It is not tied to `--resume` (3 of the 5 were
+    first turns) or to long turns (17 to 28 calls, like the others). In the failed turns
+    the work and the report were done: the last attempted report had `status: done` and a
+    summary. One log shows the model reading the error as "the empty run value breaks
+    parsing" and deleting more fields. Cost: the 134 rejected calls carry 4.39M of 56.1M
+    tokens (7.8 percent) in the 405 kept Claude attempts; the 5 failed turns 1.53M tokens
+    and 276 s, and one of them (ho-haiku-1 H2.3, solo, no ladder) lost its task. Proposed fix
+    (F110, not built): make `notes`, `run`, `choices`, `open` optional in the schemas
+    (`parseReport` already treats them so), and in the adapter keep the last StructuredOutput
+    input and, on this error, accept it when only string fields are missing. (2) The 2.05M
+    tokens of nm-first-turn-retry: one turn, 33 model calls, context growing from 14k to
+    95k, so 2.0M is calls times context, not a loop: no command was repeated in any of the
+    ten tasks' turns, test runs 1 to 7, never a failing one repeated. By F106 the 34 calls
+    read start-up 18 percent, prompt 5, files 0, command output 29, earlier turns 48. A
+    call ceiling would have cut working turns (the edits ran to call 34) and Haiku's 2.05M
+    tokens cost about $0.056, so escalating to a dearer tier would cost more: no loop
+    signature to trigger on. The levers are fewer calls (ten single-line Edit calls, three
+    full runs of two slow test files) and smaller results re-read on every call (107k
+    characters of tool output in the turn, one of 12.9k). Across the ten tasks: 217 calls,
+    9.75M input, 49 percent earlier turns. (3) `make-batch --prompts terse` builds the ten
+    tasks with 28 to 42 word prompts (`evals/real-tasks/prompts-terse/`); all ten validate.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

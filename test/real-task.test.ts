@@ -234,3 +234,33 @@ test("M1: the eval runner runs a real-repository task folder, grades it with its
   assert.equal(unsolved.results.clamp!.hidden, "fail");
   assert.deepEqual(unsolved.results.clamp!.score, { passed: 3, total: 4 });
 });
+
+test("M1: make-batch --prompts terse makes the same tasks with a short prompt, and refuses one outside 15 to 45 words", () => {
+  const batch = join(scratch, "batch-t");
+  mkdirSync(join(batch, "prompts"), { recursive: true });
+  mkdirSync(join(batch, "prompts-terse"), { recursive: true });
+  writeFileSync(join(batch, "prompts", "clamp.md"), "A long prompt that explains every detail of clamp and its lower bound.\n");
+  const terse = "clamp() lets values below the lower bound through: clamp(-5, 0, 10) should give 0, not -5. Fix it so both bounds are respected.";
+  writeFileSync(join(batch, "prompts-terse", "clamp.md"), `${terse}\n`);
+  const manifest = join(batch, "batch.json");
+  writeFileSync(manifest, JSON.stringify([{ name: "clamp", repo: made.dir, commit: made.fix, kind: "bug", language: "javascript", runner: "node", testCommand: "node --test" }]));
+  const run = (): { code: number; out: string } => {
+    try {
+      return { code: 0, out: execFileSync("node", ["evals/make-batch.ts", manifest, "--prompts", "terse"], { encoding: "utf8", stdio: "pipe", env: { ...process.env, NODE_TEST_CONTEXT: "" } }) };
+    } catch (e) {
+      return { code: (e as { status: number }).status, out: String((e as { stdout: string }).stdout) };
+    }
+  };
+  const ok = run();
+  assert.equal(ok.code, 0, ok.out);
+  assert.match(ok.out, /valid\s+clamp/);
+  assert.equal(readFileSync(join(`${batch}-terse`, "clamp", "prompt.md"), "utf8").trim(), terse);
+  assert.match(readFileSync(join(batch, "clamp", "prompt.md"), "utf8"), /A long prompt/, "the default task keeps its prompt");
+  assert.equal(readFileSync(join(`${batch}-terse`, "clamp", "seed", "src", "math.js"), "utf8"), readFileSync(join(batch, "clamp", "seed", "src", "math.js"), "utf8"), "the same seed");
+  // Too short a prompt is refused (the folder is made fresh so the check runs).
+  rmSync(`${batch}-terse`, { recursive: true, force: true });
+  writeFileSync(join(batch, "prompts-terse", "clamp.md"), "fix clamp\n");
+  const bad = run();
+  assert.equal(bad.code, 1);
+  assert.match(bad.out, /FAILED\s+clamp.*15 to 45/);
+});

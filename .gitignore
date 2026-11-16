@@ -6,3 +6,6 @@ dist/
 .env
 .env.*
 __pycache__/
+
+# Real-task terse variants are made by evals/make-batch.ts --prompts terse.
+evals/real-tasks-terse/
