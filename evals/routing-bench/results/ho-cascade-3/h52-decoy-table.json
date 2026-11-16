@@ -1,0 +1,79 @@
+{
+  "id": "H5.2",
+  "slug": "h52-decoy-table",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "grunt|worker",
+  "expectedPath": "T0>T1 or T0>T2",
+  "routedTier": "senior",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (177 characters of pasted material left out)",
+    "most like senior work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS schedule.md exists\nPASS header is Component | Owner | Target_Date\nPASS a separator row and exactly three data rows\nPASS sorted by date: 2026-11-18, 2026-11-21, 2026-11-25\nPASS owners follow the dates: Aarav, Meera, Kabir\nPASS components are oauth, sqlite and websocket work\nPASS no code block and no design prose\nSCORE 7/7",
+  "wallMs": 13417,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 12053,
+      "usage": {
+        "input": 6,
+        "output": 581,
+        "reasoning": 0,
+        "cacheRead": 26095,
+        "cacheWrite": 5369,
+        "split": {
+          "files": 0,
+          "commands": 243,
+          "earlier": 594,
+          "calls": 3,
+          "estimated": true,
+          "startup": 27075,
+          "prompt": 3558
+        }
+      },
+      "tokens": 32051,
+      "costUsd": 0.0299075,
+      "quotaUsed": {
+        "five_hour": 0.17,
+        "seven_day": 0.41
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 32051,
+  "discardedTokens": 0,
+  "costUsd": 0.0299075,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.17,
+      "seven_day": 0.41
+    },
+    "after": {
+      "five_hour": 0.17,
+      "seven_day": 0.41
+    }
+  },
+  "runId": "20261117-004143-0fad",
+  "finishedAt": "2026-11-16T19:12:01.778Z"
+}
