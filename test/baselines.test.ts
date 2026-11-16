@@ -6,7 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
-import { gate, parseComparison, progressOf, RUNS } from "../evals/baselines.ts";
+import { gate, parseComparison, progressOf, RUNS, runsFor } from "../evals/baselines.ts";
 import type { Comparison, RunFigures } from "../evals/baselines.ts";
 import type { EvalReport, EvalTask } from "../src/eval/eval.ts";
 
@@ -116,4 +116,11 @@ test("gate: each line is met, not met or unknown, never guessed", () => {
   const none = gate(fig("rt2-haiku-1", 14), fig("rt2-opus-1", 0, 29, 0), cmp(), cmp());
   assert.deepEqual(none.map((l) => l.met), [true, undefined, undefined, undefined]);
   assert.match(none[1]!.detail, /unknown/);
+});
+
+test("each real-tasks suite gets its own run names, so suites never continue each other's run", () => {
+  assert.deepEqual(runsFor("evals/real-tasks-2").map((r) => r.name), RUNS.map((r) => r.name));
+  assert.deepEqual(runsFor("evals/real-tasks-3/").map((r) => r.name), ["rt3-haiku-1", "rt3-cascade-1", "rt3-cascade-2", "rt3-opus-1"]);
+  assert.equal(runsFor("/tmp/x/suite-4")[0]!.name, "rt2-haiku-1");
+  assert.equal(runsFor("evals/real-tasks-3").find((r) => r.opus)?.preset, "solo-opus");
 });

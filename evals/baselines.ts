@@ -51,6 +51,17 @@ export const RUNS: RunSpec[] = [
   { key: "opus", name: "rt2-opus-1", preset: "solo-opus", opus: true },
 ];
 
+/**
+ * The runs for a suite: the same four, named after a real-tasks-<n> folder (real-tasks-3 gives rt3-haiku-1, ...), so
+ * two real suites never continue each other's run. Any other folder keeps the names in RUNS (rt2-...).
+ */
+export function runsFor(suite: string): RunSpec[] {
+  const folder = suite.replace(/\/+$/, "").replace(/^.*\//, "");
+  const n = /^real-tasks-(\d+)$/.exec(folder)?.[1];
+  const prefix = n !== undefined ? `rt${n}` : "rt2";
+  return RUNS.map((r) => ({ ...r, name: r.name.replace(/^rt2/, prefix) }));
+}
+
 /** A result that is not final: the task did not really get its turn (eval.ts redoes these on resume). */
 const UNFINISHED = new Set(["paused", "interrupted", "running"]);
 
@@ -340,7 +351,7 @@ function comparisonTable(cs: Comparison[]): string {
 export function renderResults(params: { suite: string; tasks: EvalTask[]; fake: boolean; generated?: string }): string {
   const home = defaultHome();
   const { tasks } = params;
-  const figs = RUNS.map((run) => figuresOf(run, loadReport(home, run.name), tasks));
+  const figs = runsFor(params.suite).map((run) => figuresOf(run, loadReport(home, run.name), tasks));
   const [haiku, c1, c2, opus] = figs as [RunFigures, RunFigures, RunFigures, RunFigures];
   const cascade = [c1, c2];
   const complete = (fs: RunFigures[]): RunFigures[] => fs.filter((f) => isComplete(f.progress));
@@ -399,7 +410,8 @@ export function renderResults(params: { suite: string; tasks: EvalTask[]; fake: 
 // ---- main ----
 
 function printLater(suite: string): void {
-  process.stderr.write(`\nOpus alone (rt2-opus-1) was not started: it is the dearest step of the plan and needs --allow-opus. When you want it:\n\n  node evals/baselines.ts --suite ${suite} --only opus --allow-opus\n\n`);
+  const name = runsFor(suite).find((r) => r.opus)?.name ?? "the Opus run";
+  process.stderr.write(`\nOpus alone (${name}) was not started: it is the dearest step of the plan and needs --allow-opus. When you want it:\n\n  node evals/baselines.ts --suite ${suite} --only opus --allow-opus\n\n`);
 }
 
 async function main(): Promise<number> {
@@ -428,7 +440,7 @@ async function main(): Promise<number> {
       return 2;
     }
     const allowOpus = flag("allow-opus");
-    const wanted = RUNS.filter((r) => !keys || keys.includes(r.key));
+    const wanted = runsFor(suiteArg).filter((r) => !keys || keys.includes(r.key));
     note(`baselines: ${tasks.length} tasks in ${suiteArg}${fake ? " (--fake, home " + home + ")" : ""}; runs: ${wanted.map((r) => r.key).join(", ")}${allowOpus ? "; Opus allowed" : ""}`);
     let stoppedEarly = false;
     for (const run of wanted) {
