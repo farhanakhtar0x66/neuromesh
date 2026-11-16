@@ -60,9 +60,111 @@ function version(): string {
   }
 }
 
-/** Paths in free text become "…/name", so a report never says where on whose disk. */
+export interface RedactOptions {
+  /** "name": a path becomes "…/name" (F52, read in aggregate by the owner). "drop": it becomes "<path>" (F113, a report a person pastes in public). */
+  paths?: "name" | "drop";
+  /** Words that identify this machine or person (user name, host name, repository name) and what to put instead. */
+  names?: [string, string][];
+}
+
+/** How many of each kind of thing a redaction took out, for the person to see. */
+export type RedactStats = Record<string, number>;
+
+// [F113 bad-run-report] Secrets: keys and tokens by their well-known shapes, then by length.
+const SECRETS: RegExp[] = [
+  /\bsk-[A-Za-z0-9][A-Za-z0-9_-]{7,}/g,
+  /\bgh[pousr]_[A-Za-z0-9]{16,}/g,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bAIza[0-9A-Za-z_-]{30,}/g,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*/g,
+  /\bBearer\s+[A-Za-z0-9._~+/=-]{12,}/gi,
+  /\b[A-Fa-f0-9]{32,}\b/g,
+  // Long base64-looking runs with both letters and digits.
+  /(?<![A-Za-z0-9+/_])(?=[A-Za-z0-9+/_]{40,}(?![A-Za-z0-9+/_]))(?=[A-Za-z0-9+/_]*\d)(?=[A-Za-z0-9+/_]*[A-Za-z])[A-Za-z0-9+/_]{40,}={0,2}/g,
+];
+// name=value where the name says it is a secret and the value is not just a number.
+const SECRET_ASSIGN = /(\b[\w-]*(?:api[_-]?key|token|secret|passw(?:or)?d|credential)[\w-]*["']?\s*[:=]\s*["']?)(?!\d+\b|<secret>)[^\s"',;]{8,}/gi;
+// Each pattern below starts only at the start of a run of word characters (a lookbehind), so one very long
+// token is read once, not once per character: a report may hold a 50,000-character line.
+const EMAIL = /(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+const URL_RE = /\b(?:https?|ftp|ssh|git|file):\/\/[^\s"'`<>)\]]+/g;
+const HOST = /(?<![\w.-])(?:(?:[a-z0-9-]+\.){1,8}(?:local|lan|internal|home|corp|localdomain|com|net|org|io|dev|app|ai|cloud)|\d{1,3}(?:\.\d{1,3}){3})(?![\w-])/gi;
+const EXT = "ts|tsx|js|jsx|mjs|cjs|json|jsonl|md|py|rs|go|java|kt|swift|c|h|cc|cpp|hpp|cs|rb|php|sh|zsh|bash|css|scss|html|yml|yaml|toml|lock|txt|log|sql|ini|cfg|xml|csv|patch|diff|vue|svelte";
+const WIN_PATH = /\b[A-Za-z]:\\(?:[^\s"'`<>|\\]+\\)*[^\s"'`<>|\\]*/g;
+const HOME_PATH = /\/(?:Users|home)\/[^\s/]+(?:\/[^\s"'`<>()|,;]*)*/g;
+const ABS_PATH = /(?<![\w.~/:@-])\/[\w.@+\-]+(?:\/[\w.@+\-]*)*(?::\d+){0,2}/g;
+const TILDE_PATH = /(?<!\w)~(?:\/[\w.@+\-]*)+/g;
+const REL_PATH = /(?<![\w./@-])(?:\.{1,2}\/)?[\w.@+\-]+(?:\/[\w.@+\-]+)+\/?(?::\d+){0,2}/g;
+const FILE_NAME = new RegExp(`(?<![\\w/@.-])(?:[\\w@.-]*\\w)?\\.(?:${EXT})\\b(?::\\d+){0,2}`, "g");
+const DOT_ENV = /(?<![\w/-])\.env(?:\.[\w-]+)?\b/g;
+const TOP_DIRS = /^(?:\.{1,2}\/)?(?:src|test|tests|lib|app|apps|packages|docs|evals|bin|scripts|node_modules|dist|build|public|pkg|cmd|internal)\//;
+const FRAMEWORKS = /^(?:node|next|vue|react|three|d3|express|nuxt|chart|alpine|backbone|ember)\.js$/i;
+
+/** Code the model or a tool printed: fenced blocks and diff hunks. Neither belongs in a report. */
+function stripCode(text: string, stats?: RedactStats): string {
+  const count = (): void => void (stats && (stats.code = (stats.code ?? 0) + 1));
+  const out: string[] = [];
+  let inDiff = false;
+  for (const line of text.replace(/```[\s\S]*?(?:```|$)/g, () => (count(), "<code removed>")).split("\n")) {
+    const header = /^(?:diff --git |@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@|--- (?:a\/|\/dev\/null)|\+\+\+ (?:b\/|\/dev\/null))/.test(line);
+    if (header && !inDiff) {
+      inDiff = true;
+      count();
+      out.push("<diff removed>");
+      continue;
+    }
+    if (inDiff && /^(?:[+\- \\]|@@|diff |index |new file|deleted file|old mode|new mode|similarity|rename |Binary files)/.test(line) && line !== "") continue;
+    inDiff = false;
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+/**
+ * [F52 telemetry] [F113 bad-run-report] The one redactor. Takes out what a
+ * report must not hold: code (fenced blocks and diff hunks), keys and tokens,
+ * emails, URLs and host names, the person's and machine's names, and file
+ * locations (as "…/name" or "<path>"). The text comes back with the same words
+ * around the holes, so it still reads. `stats` counts what was taken out.
+ */
+export function redact(text: string, options: RedactOptions = {}, stats?: RedactStats): string {
+  const mode = options.paths ?? "name";
+  const swap = (kind: string, to: string) => (): string => ((stats && (stats[kind] = (stats[kind] ?? 0) + 1)), to);
+  let t = stripCode(text, stats);
+  t = t.replace(EMAIL, swap("email", "<email>"));
+  for (const re of SECRETS) t = t.replace(re, swap("secret", "<secret>"));
+  t = t.replace(SECRET_ASSIGN, (_all, head: string) => (swap("secret", "")(), `${head}<secret>`));
+  if (mode === "name") return t.replace(/(?:\/(?:Users|home)\/[^\s/]+|~)(?:\/[^\s/]+)*\/([^\s/]+)/g, "…/$1");
+  t = t.replace(URL_RE, swap("url", "<url>"));
+  // A path ends where the sentence's punctuation starts: "in src/a.ts." keeps its full stop.
+  const path = (m: string): string => ((stats && (stats.path = (stats.path ?? 0) + 1)), `<path>${/[.,;:]+$/.exec(m)?.[0] ?? ""}`);
+  t = t.replace(WIN_PATH, path).replace(HOME_PATH, path).replace(TILDE_PATH, path).replace(ABS_PATH, path);
+  t = t.replace(REL_PATH, (m) => {
+    const segments = m.split("/").filter(Boolean);
+    const named = segments.some((s) => /\.[A-Za-z]{1,6}(?::\d+)*[.,;:]*$/.test(s));
+    const deep = segments.length >= 3 && segments.some((s) => /[A-Za-z]/.test(s));
+    return named || deep || TOP_DIRS.test(m) ? path(m) : m;
+  });
+  t = t.replace(FILE_NAME, (m) => (FRAMEWORKS.test(m) ? m : (swap("path", "<path>")(), "<path>")));
+  t = t.replace(DOT_ENV, swap("path", "<path>"));
+  t = t.replace(HOST, swap("host", "<host>"));
+  // The person's, machine's and repository's names last: a path holding them is already one <path>.
+  for (const [word, as] of options.names ?? []) {
+    if (word.length < 3) continue;
+    t = t.replace(new RegExp(`(?<![\\w-])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`, "gi"), swap("name", as));
+  }
+  return t;
+}
+
+/** [F52 telemetry] What a tester's run report holds of free text: paths keep their last name, the rest is as `redact`. */
 function scrub(text: string): string {
-  return text.replace(/(?:\/(?:Users|home)\/[^\s/]+|~)(?:\/[^\s/]+)*\/([^\s/]+)/g, "…/$1");
+  return redact(text, { paths: "name" });
+}
+
+export function packageVersion(): string {
+  return version();
 }
 
 export interface RunReport {

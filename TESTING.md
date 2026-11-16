@@ -89,10 +89,18 @@ shows which.
   without it, and tell us which one.
 - **It failed or did the wrong thing:** rate it 1 or 2. That is the most
   useful report there is.
-- **A bug:** open an issue at
-  <https://github.com/farhanakhtar0x66/neuromesh/issues> with what you asked,
-  `neuromesh status last` (read it first and remove anything private), and
-  your OS and Node version. Please don't paste your code.
+- **A bug, or a run that went wrong:** run
+  `neuromesh report last --note "what went wrong"` (use a run id instead of
+  `last` for an older run). It writes one file,
+  `~/.neuromesh/reports/<run-id>.md`, and prints where. The file holds your
+  version, OS and Node version, the preset and models, how the run ended and
+  which features failed, the run's timeline (what ran, which model, how long,
+  tokens, which checks passed or failed), the agents' final reports, your
+  request and your note. Code, diffs, file paths, names, emails, hosts and keys
+  are taken out first, and the file says how many of each. It is cut to about
+  30 KB, keeping the end of the run. Nothing is sent: read the file, then open
+  <https://github.com/farhanakhtar0x66/neuromesh/issues/new> and paste it in
+  or attach it. If your request itself is private, edit that part out first.
 
 Two kinds of failure, so we can tell them apart:
 - **Engine failure:** a crash, a hang, a lost run, a process left running. Always a bug.

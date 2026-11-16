@@ -1051,6 +1051,15 @@ export const FEATURES: Feature[] = [
     what: "Before `neuromesh run` or a TUI run, each tool the preset calls is asked for its version (no model call). If one is not installed, the run does not start and the message says which tool, where to get it and to sign in; before this, a tester without Claude Code watched five retries and an escalation end in \"execvp() of 'claude' failed\" with `neuromesh resume` offered. `neuromesh doctor` now says how to install a missing tool, warns that it makes a few tiny live calls, and ends by saying whether the default preset is ready. Off (or with --backend, which replaces the worker's tool), the run starts as before. Found in the first-run check of 2026-11-16.",
     optional: true,
   },
+  {
+    id: "F113",
+    key: "bad-run-report",
+    name: "Report a bad run in one command",
+    added: "2026-11-17",
+    files: ["src/telemetry/report.ts", "src/cli/main.ts (commandReport)", "src/telemetry/telemetry.ts (redact)"],
+    what: "`neuromesh report [run] [--note \"what went wrong\"]` writes ~/.neuromesh/reports/<run-id>.md for a tester to read and paste into a GitHub issue: the version, OS, Node, preset and models; how the run ended and which features failed; the run's event timeline (types, tiers, models, stop reasons, durations, token counts, check names with pass or fail; the agents' own activity is left out); the agents' final reports; the request and the note. Nothing is sent anywhere and no run data goes in the URL it prints. The text goes through the same redactor as F52 (now `redact` in telemetry.ts, which F52's `scrub` calls): fenced code and diff hunks, emails, URLs and host names, keys and tokens (sk-, ghp_, long hex or base64, name=value secrets), the user, host and repository names, and every file path (as <path>) are taken out, and the report says how many of each. The file is cut to about 30 KB from the front of the timeline, so the end of the run stays. Plan item B5 (docs/22). Before it, TESTING.md asked testers to paste `neuromesh status last` and remove the private parts by hand. Off, the command says so.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

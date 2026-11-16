@@ -4,6 +4,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { NOTICE, allowed as telemetryAllowed, endpoint, flush, outbox, pull, queue, ratingReport, runReport } from "../telemetry/telemetry.ts";
+import { ISSUES_URL, writeReport } from "../telemetry/report.ts";
 import { formatTesterSummary, parseSince, readInbox, runViews, summarize } from "../telemetry/summary.ts";
 import { loadSettings, saveSettings } from "../tui/store.ts";
 import { join, resolve } from "node:path";
@@ -20,7 +21,7 @@ import type { NeuromeshEvent } from "../engine/store.ts";
 import type { RunState } from "../engine/types.ts";
 import { buildBrief, renderBrief, repoFacts } from "../intake/brief.ts";
 import { askRating, entryFor, readLog, recordRating, recordRun, report, usageDir } from "../usage/log.ts";
-import { disable, enable, feature, featureTable, hint, inFeature, isOn } from "../features.ts";
+import { FeatureError, disable, enable, feature, featureTable, hint, inFeature, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
@@ -65,6 +66,8 @@ ${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open 
   neuromesh usage               the usage log: real runs by preset, cost, time and your ratings
   neuromesh rate <run> <1-5>    rate a run against your usual way of working (--usual "<what>")
   neuromesh presets             list presets
+  neuromesh report [run]        report a bad run: writes a file with the run's timeline, the agents' reports
+      --note "<what went wrong>" and your request, with code, paths, names and keys removed; nothing is sent
   neuromesh telemetry [on|off|pull|summary]
                                 share run reports with Neuromesh's author (asked once in the TUI),
                                 stop sharing, or (the author) fetch everyone's reports, or
@@ -459,6 +462,38 @@ function commandStatus({ positional, flags }: Parsed): number {
   return 0;
 }
 
+/** [F113 bad-run-report] neuromesh report [run] [--note "..."]: a file to read and paste into an issue. Nothing is sent. */
+function commandReport({ positional, flags }: Parsed): number {
+  if (!isOn("bad-run-report")) {
+    process.stderr.write(`The report command is switched off (F113 bad-run-report). Run without --disable.\n`);
+    return 1;
+  }
+  try {
+    const home = defaultHome();
+    const state = findRun(home, repoRoot(flags), positional[0]);
+    const done = inFeature("bad-run-report", () => writeReport(home, state, flags.get("note"), (b) => backends[b]?.sessionTotals === true));
+    const kb = (done.bytes / 1024).toFixed(1);
+    process.stdout.write(
+      [
+        `Wrote ${done.path} (${kb} KB; ${done.eventsShown} of ${done.eventsTotal} events).`,
+        "",
+        "Next:",
+        "  1. Read the file first. It holds no code, diffs, file paths, names, emails or keys, but you know your work best.",
+        `  2. Open ${ISSUES_URL}`,
+        "     and paste the file's text there, or attach the file.",
+        "Nothing has been sent anywhere.",
+        ...(flags.has("note") ? [] : ["(No note: add --note \"what went wrong\" and run it again, so the file says what you saw.)"]),
+        "",
+      ].join("\n"),
+    );
+    return 0;
+  } catch (error) {
+    // Only a failure inside the feature is the feature's: "no runs yet" is just the answer.
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n${error instanceof FeatureError ? `${hint(feature("bad-run-report"))}\n` : ""}`);
+    return 1;
+  }
+}
+
 function commandDiff({ positional, flags }: Parsed): number {
   const state = findRun(defaultHome(), repoRoot(flags), positional[0]);
   const patch = currentPatch(state);
@@ -607,6 +642,8 @@ async function main(): Promise<number> {
       return commandResume(parsed);
     case "status":
       return commandStatus(parsed);
+    case "report":
+      return commandReport(parsed);
     case "diff":
       return commandDiff(parsed);
     case "apply":
