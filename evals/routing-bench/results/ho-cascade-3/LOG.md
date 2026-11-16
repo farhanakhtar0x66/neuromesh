@@ -45,3 +45,6 @@ Configuration: cascade (preset cascade-claude). Each line is written as it happe
 - 2026-11-16 19:11:38 UTC: H5.2 h52-decoy-table: reading quota, then running
 - 2026-11-16 19:11:43 UTC: H5.2 route.tier senior
 - 2026-11-16 19:12:01 UTC: H5.2 h52-decoy-table: applied, quality 10.0/10 (7/7), path senior, 32,051 tokens, est. $0.0299 (API list prices), 0.2 min; quota before five_hour 17%, seven_day 41%, after five_hour 17%, seven_day 41%
+- 2026-11-16 19:12:03 UTC: H5.3 h53-rwlock: reading quota, then running
+- 2026-11-16 19:12:08 UTC: H5.3 route.tier worker
+- 2026-11-16 19:14:57 UTC: H5.3 h53-rwlock: applied, quality 10.0/10 (6/6), path worker, 297,212 tokens, est. $0.0260 (API list prices), 2.7 min; quota before five_hour 17%, seven_day 41%, after five_hour 17%, seven_day 41%
