@@ -49,7 +49,8 @@ An assistant got this wrong on 2026-11-14 and wrote a plan around Luna.
 
 | Branch | What it holds |
 | --- | --- |
-| `main`, `neuromesh-testing`, `neuromesh-research` | the same commit since 2026-11-16 (the 0.3.0 beta): F01 to F110, `cascade-claude` the default. New experiments go on `neuromesh-research` again; testers install `neuromesh-testing`. |
+| `main`, `neuromesh-testing` | the 0.3.0 beta (2026-11-16): F01 to F110, `cascade-claude` the default. Testers install `neuromesh-testing`. |
+| `neuromesh-research` | ahead of them since 2026-11-17: F101 off by default (STATUS 57), F113 `neuromesh report`, F114 `nm run` short output (on, not measured live), F115 reproduce-first (off until measured), `evals/real-tasks-2` (29 tasks), `evals/real-tasks-3` (10), `evals/baselines.ts`. Merge to testing once the Haiku runs below show nothing broke. |
 
 The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, which is
 checked out on **`neuromesh-research`** (since 2026-11-14, at the owner's
@@ -147,6 +148,10 @@ measures. The next steps, concretely:
   validated offline, then Haiku alone once to set the mix. Week 2: Opus alone once, the cascade twice, Haiku
   once, `bench --compare`, the numbers into `README.md`. Phases 3 to 9 of doc 22 are the roadmap for after
   the beta, with testers' reports as their evidence.
+  *2026-11-17:* both batches built offline (29 + 10 tasks, `evals/real-tasks-2/MANIFEST.md`, `evals/real-tasks-3/MANIFEST.md`).
+  Haiku alone runs on both overnight: `node evals/baselines.ts --suite evals/real-tasks-2 --only haiku` (then `real-tasks-3`);
+  results in each suite's `RESULTS.md`. Next: keep about 40 tasks with Haiku at 40 to 70 percent, then the cascade twice
+  (`--only cascade1,cascade2`) and Opus once (`--only opus --allow-opus`, the owner's OK first).
 - [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
   intervals. Then the phases in order.
 
@@ -169,7 +174,7 @@ by itself; run `backfill` after a bench to pick up its result lines.
     finds what nothing else does. A step that makes a copy removes a
     leftover one on entry; cleanup on the way out does not survive a kill.
   - **Every new behaviour is a feature** in `src/features.ts` with an id, a
-    switch, and its events tagged. Next free id: F109.
+    switch, and its events tagged. Next free id: F116.
   - **A number from one run is a hint.** Write "one run" beside it.
   - **Never tune on what you judge by.** The 15 routing prompts are a
     regression set; the held-out set stays untouched.
