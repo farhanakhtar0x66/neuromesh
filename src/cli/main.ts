@@ -22,6 +22,7 @@ import { disable, feature, featureTable, hint, isOn } from "../features.ts";
 import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../presets/presets.ts";
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
+import { referenceBackend } from "../eval/reference.ts";
 import { ROUTING_HELP, commandRouting } from "./routing.ts";
 import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
@@ -45,7 +46,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --keep                    keep the run's worktree afterwards
   neuromesh discard [run]       throw a run's changes away
   neuromesh resume [run]        continue an interrupted, paused or failed run
-  neuromesh eval                run the task suite against a preset (live model calls)
+  neuromesh eval                run the task suite against a preset (live model calls; --suite <folder>, --fake for none)
       --preset <name>           preset to measure (default: ${DEFAULT_PRESET})
       --tasks a,b  --kinds k,l  run only some tasks, or some kinds (bug, feature, multi, ...)
       --name <name>             results name; rerunning a name continues where it stopped
@@ -70,7 +71,7 @@ ${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open 
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate", "fake"]);
 
 interface Parsed {
   positional: string[];
@@ -311,6 +312,10 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
   const controller = interruptible();
   const ctx = engineContext(new Map(), controller.signal);
   const verbose = flags.has("verbose");
+  // --fake: no model calls. Every build turn writes the task's reference solution (a task folder with a reference/,
+  // as the real-repository tasks have), to test seeding, grading and the record end to end for free.
+  let currentTask: { dir: string } | undefined;
+  if (flags.has("fake")) ctx.backends = { claude: referenceBackend(() => currentTask) };
   ctx.onEvent = (event) => {
     if (!verbose && (event.type === "agent.activity" || event.type === "checks.detected" || event.type === "workspace.ready")) return;
     const line = formatEvent(event);
@@ -351,7 +356,10 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     specFor,
     rerun: flags.get("rerun")?.split(",").filter(Boolean),
     workerModel: flags.get("model"),
-    onTaskStart: (task, i, total) => process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`),
+    onTaskStart: (task, i, total) => {
+      currentTask = task;
+      process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`);
+    },
     onTaskDone: (r) =>
       process.stderr.write(
         `  -> ${r.hidden === "pass" ? green("hidden tests pass") : red(`hidden tests ${r.hidden}`)} · ${r.status}` +

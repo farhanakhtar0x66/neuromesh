@@ -206,3 +206,31 @@ test("M1: make-batch builds every task in a manifest from its prompt file, valid
   assert.equal(second.code, 1);
   assert.match(second.out, /FAILED\s+other/);
 });
+
+test("M1: the eval runner runs a real-repository task folder, grades it with its hidden grader, and records the result (fake backend, no model calls)", async () => {
+  const { runEval, loadTasks } = await import("../src/eval/eval.ts");
+  const { referenceBackend } = await import("../src/eval/reference.ts");
+  const { createFakeBackend } = await import("../src/backends/fake.ts");
+  const { loadPreset } = await import("../src/presets/presets.ts");
+  const { readRecord, select } = await import("../src/record/record.ts");
+  const suite = join(scratch, "suite");
+  cpSync(made.task, join(suite, "clamp"), { recursive: true });
+  const tasks = loadTasks(suite);
+  assert.deepEqual(tasks.map((t) => [t.name, t.kind, t.hiddenCheck]), [["clamp", "bug", "node hidden/grade.ts"]]);
+  const preset = loadPreset("solo-haiku");
+  const run = async (name: string, backend: ReturnType<typeof referenceBackend>, home: string) =>
+    runEval({ name, preset, tasks, ctx: { home, backends: { claude: backend }, onEvent: () => {}, turnTimeoutMs: 60_000 }, onTaskStart: (t) => { current = t; } });
+  let current: { dir: string } | undefined;
+  // The reference solves it: the hidden grader passes, with its score of fail-to-pass plus pass-to-pass.
+  const home = join(scratch, "eval-home");
+  const solved = await run("solved", referenceBackend(() => current), home);
+  assert.equal(solved.results.clamp!.hidden, "pass");
+  assert.deepEqual(solved.results.clamp!.score, { passed: 4, total: 4 });
+  const lines = select(readRecord(home), { kind: "result" }) as { name: string; task: string; passed?: number; total?: number; src: string }[];
+  assert.deepEqual(lines.map((l) => [l.name, l.task, l.passed, l.total, l.src]), [["solved", "clamp", 4, 4, "eval"]]);
+  // A backend that changes nothing leaves the bug: the fail-to-pass test fails, and the result says so.
+  const idle = createFakeBackend((req) => ("status" in ((req.outputSchema?.properties ?? {}) as object) ? { structured: { status: "done", summary: "nothing", notes: "", run: "" } } : { structured: {} }), "claude");
+  const unsolved = await run("unsolved", idle, join(scratch, "eval-home-2"));
+  assert.equal(unsolved.results.clamp!.hidden, "fail");
+  assert.deepEqual(unsolved.results.clamp!.score, { passed: 3, total: 4 });
+});

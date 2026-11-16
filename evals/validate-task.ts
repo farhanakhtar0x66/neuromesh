@@ -6,6 +6,7 @@
 // (the real change), all of them must pass, in each of 3 runs in fresh copies, and no test may change its
 // result between runs: a check that is flaky cannot tell two systems apart. Exit 0 only if all of that holds.
 
+import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -53,6 +54,18 @@ export function validateTask(dir: string, options: { runs?: number } = {}): Vali
     add("on the seed, every fail-to-pass test fails", stillPass.length === 0, stillPass.slice(0, 5).join("; "));
     const broken = names(onSeed.passToPass, false);
     add("on the seed, every pass-to-pass test passes", broken.length === 0, broken.slice(0, 5).join("; "));
+
+    // The project's own check (task.json "checks"), which Neuromesh runs while it works, must pass on the seed:
+    // one that fails before anyone has done anything sends every attempt after a phantom.
+    const own = (JSON.parse(readFileSync(join(task, "task.json"), "utf8")) as { checks?: { name: string; command: string }[] }).checks ?? [];
+    for (const c of own) {
+      const env: NodeJS.ProcessEnv = { ...process.env, CI: "1" };
+      delete env.NODE_TEST_CONTEXT;
+      const plain = join(tmp, "seed-plain");
+      if (!existsSync(plain)) cpSync(join(task, "seed"), plain, { recursive: true });
+      const r = spawnSync("sh", ["-c", c.command], { cwd: plain, encoding: "utf8", env, timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
+      add(`the project's own check "${c.name}" passes on the seed`, r.status === 0, `${c.command}: ${(r.stdout + r.stderr).split("\n").slice(-6).join(" | ").slice(0, 300)}`);
+    }
 
     // 2. On the reference, several times, each in a fresh copy.
     const seen = new Map<string, Set<boolean>>();

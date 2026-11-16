@@ -6,7 +6,8 @@
     "kind": "bug",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test test/routing.test.ts"
+    "testCommand": "node --test test/routing.test.ts",
+    "checks": "node --test test/routing.test.ts"
   },
   {
     "name": "nm-screen-countdown",
@@ -15,7 +16,8 @@
     "kind": "feature",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test test/features.test.ts"
+    "testCommand": "node --test test/features.test.ts",
+    "checks": "node --test test/features.test.ts"
   },
   {
     "name": "nm-first-turn-retry",
@@ -24,7 +26,8 @@
     "kind": "bug",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test --test-name-pattern=\"F97|cancelling interrupts|subscription limit\" test/cascade.test.ts test/engine.test.ts"
+    "testCommand": "node --test --test-name-pattern=\"F97|cancelling interrupts|subscription limit\" test/cascade.test.ts test/engine.test.ts",
+    "checks": "node --test test/cascade.test.ts"
   },
   {
     "name": "nm-dropped-connection",
@@ -33,7 +36,8 @@
     "kind": "bug",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test --test-name-pattern=\"dropped connection\" test/engine.test.ts"
+    "testCommand": "node --test --test-name-pattern=\"dropped connection\" test/engine.test.ts",
+    "checks": "node --test test/engine.test.ts"
   },
   {
     "name": "nm-quota-cooldown",
@@ -42,7 +46,8 @@
     "kind": "feature",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test --test-name-pattern=\"stays out for later runs|subscription limit pauses\" test/engine.test.ts"
+    "testCommand": "node --test --test-name-pattern=\"stays out for later runs|subscription limit pauses\" test/engine.test.ts",
+    "checks": "node --test test/engine.test.ts"
   },
   {
     "name": "nm-tester-minor-findings",
@@ -51,7 +56,8 @@
     "kind": "feature",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test --test-name-pattern=\"only minor findings\" test/engine.test.ts"
+    "testCommand": "node --test --test-name-pattern=\"only minor findings\" test/engine.test.ts",
+    "checks": "node --test test/engine.test.ts"
   },
   {
     "name": "nm-stub-scanner",
@@ -63,7 +69,8 @@
     "testCommand": "node --test test/stubs.test.ts",
     "tests": [
       "test/stubs.test.ts"
-    ]
+    ],
+    "checks": "node --test test/routing.test.ts"
   },
   {
     "name": "ss2-notes-fold",
@@ -90,6 +97,7 @@
     "kind": "bug",
     "language": "typescript",
     "runner": "node",
-    "testCommand": "node --test --test-name-pattern=\"Python work folder|never enters the diff\" test/python-bot-fixes.test.ts"
+    "testCommand": "node --test --test-name-pattern=\"Python work folder|never enters the diff\" test/python-bot-fixes.test.ts",
+    "checks": "node --test test/python-bot-fixes.test.ts"
   }
 ]

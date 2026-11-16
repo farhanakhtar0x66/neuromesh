@@ -467,3 +467,33 @@ dependencies re-ran on each render. rb-cascade-5's 3.1 went from 9/14 to 14/14.
 
 The kill rule (resolution down by more than the interval, or tokens per prompt not down) needs a run in
 which F109 fires. The default stays on; the next live run settles it.
+
+
+## F109 kept: `rb-cascade-6` (2026-11-16)
+
+With the wiring fixed, one run of the original 15 (`rb-cascade-6`, router unchanged, F109 on). It fired on 2.1,
+2.2, 2.3, 3.1 and 5.1: each has one `task.direct` event, no preamble and no tools. 4.3 and 5.3 stayed on
+tools, as designed, and the 5.3 gate stopped the worker.
+
+| | rb-cascade-5 (F109 never fired) | rb-cascade-6 (F109 on) |
+| --- | --- | --- |
+| The five prompts: calls | 43 | 8 |
+| The five prompts: input tokens | 794.7k | 46.3k (minus 94.2%) |
+| The five prompts: score | 50.0 of 50 | 50.0 of 50 |
+| Whole suite: calls | 84 | 54 |
+| Whole suite: input tokens | 1,370k | 969k |
+| Whole suite: score | 146.8 | 147.8 (Opus alone 147.9) |
+| Gap@Oracle | | 0.1% |
+| WCTR | | 1.0% |
+| CostSave, unweighted / weighted | | 82.3% ($0.6866 against $3.8746) / 87.1% |
+| Five-hour window | | 6% (Opus alone 21%) |
+| Traps 5.1, 5.2, 5.3 | held | held |
+
+Input per prompt for the five: 2.1 16.1k (was 212.2k), 2.2 4.1k (249.1k), 2.3 4.1k (134.3k), 3.1 17.8k (122.0k), 5.1 4.2k
+(77.1k). The kill rule (resolution down by more than the interval, or tokens not down) is not met: F109 is kept, on
+by default.
+
+What one run has not shown: every one of the five passed on its first no-tools turn, so the path where the checks fail
+and a worker with tools repairs it was not exercised; the held-out set has not been run with F109 (H1.3 and H5.1 are
+the prompts it should take, H5.2 the trap); and the five prompts are small. Where the input is now: 4.3 alone is
+633k of the suite's 969k (65%), 18 calls, 67% of it the model's own earlier turns.

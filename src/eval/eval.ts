@@ -20,6 +20,9 @@ import type { AttemptRecord, RunState } from "../engine/types.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Preset } from "../presets/presets.ts";
 import { estimateCost } from "../usage/prices.ts";
+import { inFeature, isOn } from "../features.ts";
+import { evalResultLine } from "../record/backfill.ts";
+import { appendRecord } from "../record/record.ts";
 
 export const TASKS_DIR = fileURLToPath(new URL("../../evals/tasks/", import.meta.url));
 
@@ -30,6 +33,8 @@ export interface EvalTask {
   language: string;
   hiddenCheck: string;
   prompt: string;
+  /** The project's checks while Neuromesh works, when the seed has none of its own that can run (written to the seed's neuromesh.json). */
+  checks?: { name: string; command: string }[];
 }
 
 export function loadTasks(root = TASKS_DIR, filter?: { names?: string[]; kinds?: string[] }): EvalTask[] {
@@ -45,6 +50,7 @@ export function loadTasks(root = TASKS_DIR, filter?: { names?: string[]; kinds?:
       language: config.language ?? "unknown",
       hiddenCheck: config.hiddenCheck ?? "false",
       prompt: readFileSync(join(dir, "prompt.md"), "utf8").trim(),
+      ...(Array.isArray(config.checks) ? { checks: config.checks } : {}),
     };
     if (filter?.names && !filter.names.includes(name)) continue;
     if (filter?.kinds && !filter.kinds.includes(task.kind)) continue;
@@ -127,6 +133,7 @@ function seedRepo(task: EvalTask, into: string): string {
   if (existsSync(into)) rmSync(into, { recursive: true, force: true });
   mkdirSync(into, { recursive: true });
   cpSync(join(task.dir, "seed"), into, { recursive: true });
+  if (task.checks && !existsSync(join(into, "neuromesh.json"))) writeFileSync(join(into, "neuromesh.json"), `${JSON.stringify({ checks: task.checks }, null, 2)}\n`);
   for (const args of [["init", "-q", "-b", "main"], ["add", "-A"], ["commit", "-q", "-m", "seed"]]) {
     const r = spawnSync("git", ["-c", "user.name=neuromesh-eval", "-c", "user.email=eval@localhost", ...args], { cwd: into });
     if (r.status !== 0) throw new Error(`could not seed ${task.name}: git ${args[0]} failed`);
@@ -251,6 +258,14 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
     };
     report.results[task.name] = result;
     saveReport(ctx.home, report);
+    // [F108 run-record] The result goes into the record as it happens, not only when a backfill finds the report.
+    if (isOn("run-record")) {
+      try {
+        inFeature("F108", () => appendRecord(ctx.home, [evalResultLine(report.name, report.preset, task.name, result as unknown as Record<string, unknown>, "eval")]));
+      } catch {
+        // The record failing never touches the eval.
+      }
+    }
     options.onTaskDone?.(result);
 
     // Out of quota: stop here. Running on would only mark the rest as paused.

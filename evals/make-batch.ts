@@ -25,6 +25,7 @@ interface Entry {
   testCommand: string;
   setup?: string;
   tests?: string[];
+  checks?: string;
 }
 
 function main(): number {
@@ -47,7 +48,7 @@ function main(): number {
       if (!existsSync(dir)) {
         makeTask({
           repo: e.repo.replace(/^~/, homedir()), commit: e.commit, name: e.name, runner: e.runner, testCommand: e.testCommand, setup: e.setup,
-          kind: e.kind, language: e.language, tests: e.tests, out: dir, prompt: readFileSync(join(dirname(resolve(manifest)), "prompts", `${e.name}.md`), "utf8"),
+          kind: e.kind, language: e.language, tests: e.tests, checks: e.checks, out: dir, prompt: readFileSync(join(dirname(resolve(manifest)), "prompts", `${e.name}.md`), "utf8"),
         });
       }
       const v = validateTask(dir, { runs });

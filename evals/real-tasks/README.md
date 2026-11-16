@@ -10,6 +10,26 @@ batch is rebuilt from its recipe with
 The task folders themselves (seed, reference, hidden tests) are made from the recipe and are not committed:
 `batch-1.json` names each repository and commit, `prompts/<name>.md` is each prompt.
 
+## Running them
+
+    node evals/make-batch.ts evals/real-tasks/batch-1.json                    # make and validate (no model)
+    neuromesh eval --suite evals/real-tasks --preset solo-haiku --name rt-haiku-1 --quota
+    neuromesh eval --suite evals/real-tasks --preset cascade-claude --name rt-cascade-1 --quota
+    neuromesh eval --suite evals/real-tasks --preset solo-opus --name rt-opus-1 --quota
+    neuromesh eval --suite evals/real-tasks --preset solo-haiku --name rt-fake --fake   # no model calls
+
+Each task is seeded into a fresh git repository, run, and graded by its own `hidden/grade.ts` (the tests that
+came with the change laid over the workspace; passes only if every fail-to-pass test passes and every
+pass-to-pass test still does). The result is saved with the eval (`~/.neuromesh/evals/<name>`) and added to
+`~/.neuromesh/record/record.jsonl` as it happens. `node evals/bench.ts rt-haiku-1 rt-opus-1` tables the runs and
+`--compare` gives the paired interval. `--fake` makes every build turn write the task's reference solution:
+no model call, and every task should come out `pass`.
+
+Each neuromesh task carries `checks` in its `task.json`: the test file that exists on the seed (a quick one),
+written to the seed's `neuromesh.json`, because a seed has no `node_modules` and Neuromesh's own detection would
+choose a type-check that cannot run and the whole slow suite. `validate-task.ts` requires that check to pass on
+the seed.
+
 ## Batch 1 (2026-11-16): 10 tasks, all valid
 
 On the seed every fail-to-pass test fails and every pass-to-pass test passes; on the reference all of them
@@ -37,9 +57,11 @@ pass in each of 3 runs, in fresh copies, and no test changes its result between 
 - **Two repositories, not independent ones.** Eight tasks are from neuromesh itself, so they cannot be split
   into tuning and held-out halves by repository, and a model working on Neuromesh's own code knows its style.
   Both repositories are private, so no model has seen these changes, but Claude models wrote much of them.
-- **Prompts are checked by one reader.** Each prompt names the files, functions, fields and formats its tests
-  rely on (a solution cannot be right without them) and says nothing about how to implement them. A person
-  other than the author should read each one for leaks before it counts.
+- **Prompts have had two reads, both a model's.** Each prompt names the files, functions, fields and formats
+  its tests rely on (a solution cannot be right without them) and says nothing about how to implement them. A
+  second strict read on 2026-11-16, against each reference diff and test, cut five details the tests do not
+  assert (a digit count and unit list, a 5-second floor, a 30-minute default, how folded notes are joined,
+  which other errors are retried). A person should still read each one before it counts.
 - **A test that cannot load counts as failing.** In the scope-test-2 tasks the test files import a function
   that does not exist on the seed, so all their tests fail there; that is why `ss2-notes-fold` has 28
   fail-to-pass tests, most of them older tests that only needed the file to load.

@@ -113,9 +113,11 @@ measures. The next steps, concretely:
 - [ ] **5. Start-up tokens** (C1): extend the no-tools path from the grunt
   to worker turns that have a spec or a named file; measure tokens per
   prompt on the routing suite. Built as F109 (STATUS 47); it never fired on
-  its first live run (a wiring bug, STATUS 49, fixed). The next live run of
-  the routing suite and held-out set is its first real measurement: look for
-  `task.direct` events with `feature: F109`, then `bench --split`.
+  its first live run (a wiring bug, STATUS 49, fixed), and on the next
+  (`rb-cascade-6`) it cut the five prompts it takes by 94 percent of their
+  input at no loss of score: **kept** (STATUS 52). Still to do: run the held-out
+  set with it (`ho-cascade-3`), and look at 4.3's history (65 percent of the
+  suite's input).
 - [ ] **6. Read the owner's usage log weekly.** The owner is building real
   projects with the cascade; each run is rated there. A low rating or a
   failed feature is the next thing to fix, ahead of the plan.
@@ -123,6 +125,12 @@ measures. The next steps, concretely:
   `evals/real-tasks/` (rebuild with `evals/make-batch.ts`). Next: a second reader
   for the prompts, Haiku alone once on each to set the difficulty mix, more
   repositories (Python, Rust, a refactor), and a split by repository.
+- [ ] **6c. Phase 1 step 4, the difficulty check** (run by the owner, live): from the
+  repository, `neuromesh eval --suite evals/real-tasks --preset solo-haiku --name rt-haiku-1 --quota`
+  (once on every task), then `cascade-claude` and `solo-opus` the same way
+  with `--name rt-cascade-1` and `rt-opus-1`. `--fake` rehearses it for free.
+  Then keep a mix of tasks Haiku passes, fails and half-passes (doc 22,
+  phase 1, step 4).
 - [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
   intervals. Then the phases in order.
 

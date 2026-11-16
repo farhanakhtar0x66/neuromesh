@@ -112,6 +112,27 @@ function benchResults(dir: string): ResultLine[] {
   return out;
 }
 
+/** One eval task's result as a record line. The backfill and a live eval make the same line, so a result is never recorded twice. */
+export function evalResultLine(name: string, preset: string | undefined, task: string, r: Record<string, unknown>, src = "backfill:eval"): ResultLine {
+  const score = r.score as { passed: number; total: number } | undefined;
+  return {
+    v: RECORD_VERSION,
+    kind: "result",
+    source: "eval",
+    at: typeof r.finishedAt === "string" ? r.finishedAt : new Date(0).toISOString(),
+    src,
+    name,
+    task,
+    config: preset,
+    passed: score?.passed,
+    total: score?.total,
+    hidden: typeof r.hidden === "string" ? r.hidden : undefined,
+    tokens: typeof r.expertTokens === "number" && typeof r.workerTokens === "number" ? r.expertTokens + r.workerTokens : undefined,
+    wallMs: typeof r.wallMs === "number" ? r.wallMs : undefined,
+    quota: (r.quota as Record<string, unknown> | undefined) ?? undefined,
+  } as ResultLine;
+}
+
 /** ~/.neuromesh/evals/<name>/results.json: the older evals, one result line per task. */
 function evalResults(home: string): ResultLine[] {
   const out: ResultLine[] = [];
@@ -122,25 +143,7 @@ function evalResults(home: string): ResultLine[] {
     if (!existsSync(file)) continue;
     try {
       const report = JSON.parse(readFileSync(file, "utf8")) as { name?: string; preset?: string; results?: Record<string, Record<string, unknown>> };
-      for (const [task, r] of Object.entries(report.results ?? {})) {
-        const score = r.score as { passed: number; total: number } | undefined;
-        out.push({
-          v: RECORD_VERSION,
-          kind: "result",
-          source: "eval",
-          at: typeof r.finishedAt === "string" ? r.finishedAt : new Date(0).toISOString(),
-          src: "backfill:eval",
-          name: report.name ?? name,
-          task,
-          config: report.preset,
-          passed: score?.passed,
-          total: score?.total,
-          hidden: typeof r.hidden === "string" ? r.hidden : undefined,
-          tokens: typeof r.expertTokens === "number" && typeof r.workerTokens === "number" ? r.expertTokens + r.workerTokens : undefined,
-          wallMs: typeof r.wallMs === "number" ? r.wallMs : undefined,
-          quota: (r.quota as Record<string, unknown> | undefined) ?? undefined,
-        } as ResultLine);
-      }
+      for (const [task, r] of Object.entries(report.results ?? {})) out.push(evalResultLine(report.name ?? name, report.preset, task, r));
     } catch {
       // not a report
     }

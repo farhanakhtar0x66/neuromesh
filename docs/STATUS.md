@@ -571,6 +571,51 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     `evals/real-tasks/README.md`. `tsconfig.json` leaves generated task
     folders and the routing-bench task folders out of the type-check.
 
+51. **Real tasks run through the eval runner; prompt audit; batch-2 survey (2026-11-16).**
+    No model calls. (1) The ten prompts were re-read against each reference
+    diff and test; five details the tests do not assert were cut (a 5-second
+    floor and unit list, a 30-minute default, the "; " join, which other
+    errors are retried, the check and acceptance runs' environment). (2) `neuromesh
+    eval --suite evals/real-tasks --preset <preset> --name <n>` runs the real
+    tasks on any preset and grades them with each task's hidden grader; it
+    already took `--suite`, and now takes `--fake` (every build turn writes the
+    task's reference, so the harness is tested end to end for free) and a task's
+    `checks` (written to the seed's `neuromesh.json`: a seed has no `node_modules`,
+    so detection would choose a type-check that cannot run and the whole slow
+    suite). `validate-task.ts` now also requires that check to pass on the
+    seed. Each eval result is appended to `record.jsonl` as it happens
+    (F108; the backfill makes the same line, so nothing is recorded twice).
+    Checked with `--fake` on solo-haiku, cascade-claude and solo-opus: every
+    task passes its grader, 3 runs, the record has one line each. (3) Where
+    batch 2 can come from: `evals/real-tasks/BATCH-2.md`. Of 30-odd local
+    repositories only neuromesh and scope-test-2 have tests that run offline;
+    ProofBench's ten Rust fixtures run offline and are the next source; the
+    rest (anpasser, droidtui, edgemed, JalNet) need a network once and hold the
+    real refactor commits; refactors can otherwise only be written, not mined.
+
+52. **F109 `direct-worker` kept: rb-cascade-6 (2026-11-16).** No model calls
+    in the audit. With the wiring fixed (STATUS 49), the owner ran the
+    routing suite once (`rb-cascade-6`). F109 fired on the five prompts it
+    should take, each with one `task.direct` event, no preamble and no tools:
+    2.1, 2.2, 2.3, 3.1 and 5.1 went from 43 calls and 794.7k input tokens
+    (`rb-cascade-5`) to 8 calls and 46.3k, minus 94.2 percent, every one
+    10.0 of 10 (50 of 50). 4.3 and 5.3 stayed on tools with their preamble
+    (a derivation, a complexity bound), and the 5.3 early-exit gate still
+    stopped the worker. Whole suite: 84 to 54 calls, input 1,370k to 969k
+    (the first run under a million), 147.8 of 150 against 147.9 (4.2, a
+    rubric item, is 7.8; Gap@Oracle 0.1 percent), WCTR 1.0 percent, all three
+    traps held, CostSave 82.3 percent ($0.6866 against $3.8746; 87.1
+    weighted), five-hour window 6 percent against 21 for Opus alone. The kill
+    rule (resolution down by more than the interval, or tokens not down) is
+    not met: F109 stays on by default. One run, and what it has not shown:
+    all five passed on the first no-tools turn, so the repair path (a failing
+    check after the one-answer turn, then a worker with tools) was not
+    exercised; the held-out set has not been re-run with F109 (H1.3 and H5.1
+    are its targets, H5.2 its trap); the five prompts are small. Where the
+    tokens are now: 4.3 alone is 633k of 969k, 65 percent of the suite, 18
+    calls, 67 percent the model's own earlier turns: the next lever is a
+    worker turn's history (C2 and C7), not start-up.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

@@ -3,7 +3,7 @@
 //   node evals/make-task.ts --repo <path or url> --commit <hash> --name <name> \
 //        --runner node|pytest|cargo --test-cmd "node --test" [--setup "npm ci"] \
 //        [--kind bug|feature|refactor|program] [--language javascript] \
-//        [--prompt "text" | --prompt-file file] [--tests "glob,glob"] [--out dir] [--no-run]
+//        [--prompt "text" | --prompt-file file] [--tests "glob,glob"] [--checks "cmd"] [--out dir] [--no-run]
 //
 // The recipe is the one public benchmarks use:
 //   seed        the repository as it was before the change (the commit's parent)
@@ -38,6 +38,8 @@ export interface MakeOptions {
   out?: string;
   /** Do not run the tests: the two lists stay empty for the person to fill in. */
   noRun?: boolean;
+  /** The command Neuromesh runs as the project's own check while it works (a quick test of the code as it was before the change). Without it Neuromesh detects the project's checks, which for a repository seeded without its dependencies can only fail. */
+  checks?: string;
 }
 
 export interface MadeTask {
@@ -152,7 +154,7 @@ export function makeTask(o: MakeOptions): MadeTask {
     cpSync(join(here, "real-task", "grade.ts"), join(stage, "hidden", "grade.ts"));
     writeFileSync(
       join(stage, "task.json"),
-      `${JSON.stringify({ kind: o.kind ?? "other", language: o.language ?? "unknown", hiddenCheck: "node hidden/grade.ts", source: { repo: o.repo, commit: sha, parent }, runner: o.runner, testCommand: o.testCommand, ...(o.setup ? { setup: o.setup } : {}), madeAt: new Date().toISOString() }, null, 2)}\n`,
+      `${JSON.stringify({ kind: o.kind ?? "other", language: o.language ?? "unknown", hiddenCheck: "node hidden/grade.ts", source: { repo: o.repo, commit: sha, parent }, runner: o.runner, testCommand: o.testCommand, ...(o.setup ? { setup: o.setup } : {}), ...(o.checks ? { checks: [{ name: "tests", command: o.checks }] } : {}), madeAt: new Date().toISOString() }, null, 2)}\n`,
     );
     mkdirSync(dirname(out), { recursive: true });
     cpSync(stage, out, { recursive: true });
@@ -207,6 +209,7 @@ function main(): number {
     tests: typeof a.tests === "string" ? a.tests.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
     out: typeof a.out === "string" ? a.out : undefined,
     noRun: a["no-run"] === true,
+    checks: typeof a.checks === "string" ? a.checks : undefined,
   });
   console.log(`Task written to ${made.dir}
   seed: ${made.parent.slice(0, 10)}  reference: ${made.sha.slice(0, 10)}
