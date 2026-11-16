@@ -5,6 +5,7 @@ import type { ProgressHistory } from "./progress.ts";
 import type { Brief } from "../intake/brief.ts";
 import type { CascadeTier, TierRoute } from "../routing/router.ts";
 import type { QuotaShift } from "./quota.ts";
+import type { Reproduction } from "./reproduce.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -58,7 +59,9 @@ export type AttemptKind =
   // [F102 repair-race] One of two fresh repair attempts made side by side.
   | "race"
   // [F101 blind-tests] Tests written from the task and the signatures alone.
-  | "blind";
+  | "blind"
+  // [F115 reproduce-first] A test that reproduces the reported bug, written before the first build turn.
+  | "reproduce";
 
 export interface AttemptRecord {
   role: Role;
@@ -151,7 +154,7 @@ export interface Plan {
   tasks: PlannedTask[];
 }
 
-export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done" | "race" | "blind";
+export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done" | "race" | "blind" | "reproduce";
 
 export interface TaskState extends PlannedTask {
   status: "pending" | "active" | "passed" | "failed";
@@ -214,6 +217,8 @@ export interface TaskState extends PlannedTask {
   startHere?: string;
   /** [F102 repair-race] The two side-by-side repair attempts were made (once per task). */
   raced?: boolean;
+  /** [F115 reproduce-first] The test that reproduces the bug, asked for once per task, and what became of it. */
+  reproduce?: Reproduction;
   /** [F101 blind-tests] The blind tests were asked for (once per task). */
   blindDone?: boolean;
   /**

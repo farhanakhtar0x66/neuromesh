@@ -183,6 +183,17 @@ export function hollowReason(lines: string[]): string | undefined {
 
 const TAIL_LINES = 60;
 
+/**
+ * The environment a check runs in. A check is its own program, never a child of the process that runs the
+ * engine: when that is a `node --test` run, its NODE_TEST_CONTEXT would make a `node --test` inside the check
+ * report to the wrong parent and exit 0 whatever its tests did.
+ */
+function checkEnv(extra: Record<string, string> | undefined): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env, ...extra, CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" };
+  delete env.NODE_TEST_CONTEXT;
+  return env;
+}
+
 export async function runChecks(options: RunChecksOptions): Promise<CheckResult[]> {
   const results: CheckResult[] = [];
   for (const check of options.checks) {
@@ -197,7 +208,7 @@ export async function runChecks(options: RunChecksOptions): Promise<CheckResult[
       timeoutMs: options.timeoutMs ?? 10 * 60_000,
       signal: options.signal,
       logPath,
-      env: { ...process.env, ...options.env, CI: "1", NO_COLOR: "1", FORCE_COLOR: "0" },
+      env: checkEnv(options.env),
       onLine: (line) => {
         lines.push(line);
         if (lines.length > TAIL_LINES * 4) lines.splice(0, lines.length - TAIL_LINES);

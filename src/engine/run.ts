@@ -28,10 +28,11 @@ import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
 import { runAcceptance, verifyFindings } from "../checks/acceptance.ts";
 import { BYTECODE, ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
 import { observedText } from "./observed.ts";
-import type { CheckResult } from "../checks/checks.ts";
+import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, enable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { TEST_PATH, buildPacket, startHere, trackedFiles } from "../context/packet.ts";
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../checks/blind.ts";
+import { REPRODUCE_SCHEMA, failedForTheBug, parseReproduce, reproduceCommand, reproducePathOk, reproducePrompt } from "./reproduce.ts";
 import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
 import { estimateCost } from "../usage/prices.ts";
 import { splitFromLog } from "../usage/split.ts";
@@ -756,17 +757,18 @@ interface RunCtx {
   abortAll: () => void;
 }
 
-async function check(run: RunCtx, dir: string, label: string): Promise<CheckResult[]> {
-  if (run.state.checks.length === 0) return [];
+async function check(run: RunCtx, dir: string, label: string, only?: CheckSpec[]): Promise<CheckResult[]> {
+  const checks = only ?? run.state.checks;
+  if (checks.length === 0) return [];
   // [F57 hollow-checks] After the baseline, a check that tests nothing is not a
   // pass, unless it already tested nothing before the work started.
   const strict =
     label !== "baseline" && isOn("hollow-checks")
-      ? new Set(run.state.checks.map((c) => c.name).filter((n) => !run.state.baseline?.find((b) => b.name === n)?.hollow))
+      ? new Set(checks.map((c) => c.name).filter((n) => !run.state.baseline?.find((b) => b.name === n)?.hollow))
       : undefined;
   return runChecks({
     dir,
-    checks: run.state.checks,
+    checks,
     logDir: runPaths(run.state.dir).checkLogs,
     label,
     timeoutMs: run.ctx.checkTimeoutMs,
@@ -2152,6 +2154,176 @@ async function raceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined>
   }
 }
 
+/** [F115 reproduce-first] The cheapest worker-tier model, at low effort: who writes the reproducing test. */
+function reproduceChain(state: RunState): RoleConfig[] {
+  const first = state.workerLadder?.[state.workerRung ?? 0] ?? state.roles.worker?.[0];
+  return first && !state.exhausted.includes(modelKey(first)) ? [{ ...first, effort: "low" }] : [];
+}
+
+/**
+ * [F115 reproduce-first] Whether this task starts with a reproduction: a bug fix (the brief's own kind), the whole
+ * request as one task, on a worker or senior rung (not the grunt's, not the expert's), not a no-tools direct answer.
+ * A task that already has one (a redo into a fresh folder, a resumed run) goes through the step again to put it back.
+ */
+function reproduceApplies(run: RunCtx, task: TaskState): boolean {
+  const { state } = run;
+  if (!isOn("reproduce-first")) return false;
+  if (task.reproduce) return task.reproduce.stage !== "rejected";
+  if (state.brief?.kind !== "bug" || !wholeRequest(state, task)) return false;
+  if (task.owner === "expert" || task.escalated || task.advised || task.next !== "initial") return false;
+  if (gruntGate(state, task) || directApplies(run, task)) return false;
+  return reproduceChain(state).length > 0;
+}
+
+/** Files a test run leaves behind that are not the model's work. */
+const RUN_LEFTOVERS = /(^|\/)(__pycache__|\.pytest_cache|\.mypy_cache|\.ruff_cache|node_modules|target|\.venv|venv)\/|\.pyc$/;
+
+/** [F115 reproduce-first] Take the reproduction out: its check and its file, and remember that it was discarded. */
+function reproduceDrop(run: RunCtx, task: TaskState, outcome: string): void {
+  const r = task.reproduce;
+  if (r?.path) rmSync(join(task.worktree, r.path), { force: true });
+  run.state.checks = run.state.checks.filter((c) => c.name !== "reproduce");
+  task.reproduce = { stage: "rejected", outcome, path: r?.path };
+  saveState(run.state);
+}
+
+/**
+ * [F115 reproduce-first] One cheap turn, before the first build turn, writes a test that reproduces the reported bug.
+ * The engine runs only that file on the code as it is. It is kept only if it fails there for a reason other than a
+ * syntax or import error: then it stays in the work, its command joins the task's checks, and the build must make
+ * it pass. Anything else (it passes, cannot load, came with a changed source file, no runner, an unusable answer) is
+ * discarded and the task goes on as if the feature were off. At most one turn per task.
+ */
+async function reproduceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const next = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
+    task.step = "agent";
+    saveState(state);
+    log.emit("reproduce.tests", { feature: "F115", task: task.id, outcome, ...extra });
+    return undefined;
+  };
+  if (!isOn("reproduce-first")) return next("skipped");
+  try {
+    return await inFeature("reproduce-first", () => reproduceBody(run, task, next));
+  } catch (error) {
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+    featureFailed(run, error, "reproduce-first");
+    // Whatever the step had put into the folder goes out again: the task starts as if it had never been asked.
+    resetTo(task.worktree, task.base!);
+    reproduceDrop(run, task, "feature failed");
+    return next("skipped");
+  }
+}
+
+async function reproduceBody(run: RunCtx, task: TaskState, next: (outcome: string, extra?: Record<string, unknown>) => undefined): Promise<Stop | undefined> {
+  const { state } = run;
+  const kept = task.reproduce;
+  const reject = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
+    resetTo(task.worktree, task.base!);
+    reproduceDrop(run, task, outcome);
+    return next(outcome, extra);
+  };
+  const keep = (r: NonNullable<TaskState["reproduce"]>): void => {
+    if (r.path && r.content !== undefined && r.command && !existsSync(join(task.worktree, r.path))) {
+      mkdirSync(dirname(join(task.worktree, r.path)), { recursive: true });
+      writeFileSync(join(task.worktree, r.path), r.content);
+    }
+  };
+  // Settled before (a redo in a fresh folder, a resumed run): the test is put back and no turn is paid for twice.
+  if (kept?.stage === "accepted" && kept.path && kept.content !== undefined && kept.command) {
+    keep(kept);
+    if (!state.checks.some((c) => c.name === "reproduce")) state.checks = [...state.checks, { name: "reproduce", command: kept.command }];
+    return next("kept", { path: kept.path, again: true });
+  }
+  let path: string;
+  let offered: string | undefined;
+  if (kept?.stage === "judging" && kept.path && kept.content !== undefined) {
+    // The engine died after the turn and before the verdict: the answer is used as it is.
+    path = kept.path;
+    offered = kept.command;
+    if (!existsSync(join(task.worktree, path))) {
+      mkdirSync(dirname(join(task.worktree, path)), { recursive: true });
+      writeFileSync(join(task.worktree, path), kept.content);
+    }
+  } else {
+    // What an earlier, cut-short pass left in the folder is gone before anything else.
+    resetTo(task.worktree, task.base!);
+    const chain = reproduceChain(state);
+    if (chain.length === 0) return next("skipped");
+    const { result } = await turn(run, {
+      key: `${task.id}-reproduce`,
+      role: "worker",
+      kind: "reproduce",
+      task: task.id,
+      round: task.round,
+      cwd: task.worktree,
+      prompt: reproducePrompt(state.request ?? state.prompt, trackedFiles(task.worktree).filter((f) => TEST_PATH.test(f)).slice(0, 12), state.checks),
+      access: "write",
+      schema: REPRODUCE_SCHEMA,
+      chain,
+      rungBase: state.workerRung ?? 0,
+      timeoutMs: 10 * 60_000,
+    });
+    if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "worker");
+    // [F73 heal-worktree] The writer may have left the folder unusable.
+    healTask(run, task);
+    if (result.stop !== "done") return reject("turn-failed", { stop: result.stop, detail: result.detail?.slice(0, 200) });
+    const answer = parseReproduce(result);
+    if (!answer) return reject("none");
+    if (!reproducePathOk(answer.path) || !existsSync(join(task.worktree, answer.path))) return reject("bad-path", { path: answer.path.slice(0, 200) });
+    // The writer changes no file but its test: a changed source file could be what makes the test fail.
+    const changed = snapshot(task.worktree, task.base!, task.prepared).files.map((f) => f.path).filter((f) => !RUN_LEFTOVERS.test(f));
+    const stray = changed.filter((f) => f !== answer.path);
+    const existed = tryGit(task.worktree, "cat-file", "-e", `${task.base}:${answer.path}`) !== undefined;
+    if (stray.length > 0 || existed || !changed.includes(answer.path)) return reject("touched-code", { path: answer.path, files: (existed ? [answer.path] : stray).slice(0, 6) });
+    const content = readFileSync(join(task.worktree, answer.path), "utf8");
+    if (content.trim() === "" || content.length > 60_000) return reject("bad-path", { path: answer.path });
+    path = answer.path;
+    offered = answer.command;
+    task.reproduce = { stage: "judging", path, content, command: offered };
+    saveState(state);
+  }
+  const command = reproduceCommand(task.worktree, path, offered);
+  if (!command) return reject("no-runner", { path });
+  const [first] = await check(run, task.worktree, `${task.id}-reproduce`, [{ name: "reproduce", command }]);
+  if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+  const verdict = first ? failedForTheBug(first) : { ok: false as const, why: "the run gave no result" };
+  if (!verdict.ok) return reject(verdict.why.startsWith("passes") ? "passed-on-seed" : verdict.why.startsWith("cannot load") ? "load-error" : "not-a-failure", { path, why: verdict.why, tail: first?.tail.slice(-400) });
+  task.reproduce = { stage: "accepted", path, content: task.reproduce?.content ?? readFileSync(join(task.worktree, path), "utf8"), command, outcome: "fails on the seed" };
+  state.checks = [...state.checks.filter((c) => c.name !== "reproduce"), { name: "reproduce", command }];
+  return next("accepted", { path, command, tail: first!.tail.slice(-400) });
+}
+
+/**
+ * [F115 reproduce-first] A build turn that edited (or deleted) the reproducing test has weakened its own oracle:
+ * the engine puts the file back as it was accepted. A failure here drops the reproduction and the task goes on.
+ */
+function reproduceGuard(run: RunCtx, task: TaskState): void {
+  const r = task.reproduce;
+  if (r?.stage !== "accepted" || !r.path || r.content === undefined) return;
+  try {
+    inFeature("reproduce-first", () => {
+      const full = join(task.worktree, r.path!);
+      let now: string | undefined;
+      try {
+        now = readFileSync(full, "utf8");
+      } catch {
+        now = undefined;
+      }
+      if (now === r.content) return;
+      mkdirSync(dirname(full), { recursive: true });
+      writeFileSync(full, r.content!);
+      r.restored = (r.restored ?? 0) + 1;
+      saveState(run.state);
+      run.log.emit("reproduce.restored", { feature: "F115", task: task.id, path: r.path, deleted: now === undefined, times: r.restored });
+      run.log.emit("note", { feature: "F115", message: `Task ${task.id}: the build ${now === undefined ? "deleted" : "edited"} the test that reproduces the bug (${r.path}); it was put back as it was.` });
+    });
+  } catch (error) {
+    featureFailed(run, error, "reproduce-first");
+    reproduceDrop(run, task, "feature failed");
+  }
+}
+
 /** [F101 blind-tests] The blind test files now in the task's folder. */
 function blindFiles(task: TaskState): string[] {
   return task.blind?.files ?? [];
@@ -2375,7 +2547,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       task.prepared = prepareWorktree(state.repo, task.worktree);
       // [F54 work-env] Before the first turn, so the worker can run what it writes.
       await prepareEnv(run, task.worktree, task.prepared, task.id);
-      task.step = "agent";
+      // [F115 reproduce-first] A bug fix first gets a test that fails on the code as it is.
+      task.step = reproduceApplies(run, task) ? "reproduce" : "agent";
       // [F100 start-here] Where this task most likely begins, from its own words; nothing when nothing matches by name.
       if (isOn("start-here") && task.startHere === undefined) {
         const lead = optional(run, "start-here", undefined, () => startHere(task.worktree, wholeRequest(state, task) ? (state.request ?? state.prompt) : `${task.title}\n${task.brief}`));
@@ -2392,6 +2565,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       }
       saveState(state);
       log.emit("task.started", { task: task.id, title: task.title, owner: task.owner, owned: task.owned });
+      continue;
+    }
+
+    if (task.step === "reproduce") {
+      const stop = await reproduceStep(run, task);
+      if (stop) return stop;
       continue;
     }
 
@@ -2534,6 +2713,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "checks") {
+      // [F115 reproduce-first] A build turn that edited the reproducing test gets it put back before anything is checked.
+      reproduceGuard(run, task);
       // A project that had no checks may get some from the work itself (a new
       // program with its own tests). From then on they gate the task.
       // [F10 work-created-checks]

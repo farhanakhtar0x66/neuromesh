@@ -755,6 +755,38 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     4.3 is the target (633k of 969k input). Off with `--disable short-output`: the tool
     still works, no prompt mentions it.
 
+59. **F115 `reproduce-first` built, off by default (2026-11-17).** Plan item O1 (docs/22, Track O). Offline: no model
+    calls. For a request the brief calls a bug fix, before the first build turn, one cheap turn (the preset's cheapest
+    worker model, low effort, with tools) writes ONE new test file that reproduces the reported bug. The engine runs
+    only that file and keeps it only if it FAILS on the current code and not with a syntax, name or import error; it
+    then stays in the work, its command joins the task's checks, the build prompt gets "A test reproducing the bug is
+    at <path>; make it pass without weakening it.", and a build that edits it has it put back (`reproduce.restored`).
+    A test that passes on the seed, cannot load, came with a changed source file, has no runner, or an unusable answer
+    is discarded (`reproduce.tests` event, outcome says which) and the task goes on as if the feature were off. At most
+    one turn per task, attempt kind `reproduce`; not for grunt-tier tasks or no-tools direct answers. The code is in
+    `src/engine/reproduce.ts` and `reproduceStep`/`reproduceGuard` in `src/engine/run.ts`; tests in
+    `test/reproduce.test.ts`; the fault harness draws a bug request in a fifth of its seeds and makes the reproduce
+    turn crash, hang, return garbage, name an existing file, write a test that passes or cannot load, or change code
+    (`test/support/chaos.ts`).
+
+    How to measure (live; says so before it is run, it spends quota): the 12 bug tasks of `evals/real-tasks-2` with it
+    on, against the plain cascade run on the same tasks:
+
+        neuromesh eval --suite evals/real-tasks-2 --kinds bug --preset cascade-claude --enable reproduce-first --name rt2-cascade-repro-1
+
+    Read from each task's events: how many fired (`reproduce.tests` outcomes: accepted, passed-on-seed, load-error,
+    touched-code, not-a-failure, no-runner, none, turn-failed), the cost of the `reproduce` turns, and resolved or not
+    against the plain run. The risk to look for is the one the plan names: an accepted test that is wrong gates the task
+    (the build must make it pass), so a wrong test that fails for a plausible reason costs repairs and may climb.
+    Known limits: (1) the trigger is the brief's kind, not the suite's label. Run offline on the suite's prompts, the
+    brief calls 7 of the 12 bug tasks "bug" (nm-resume-usage-totals, nm-linger-plan-fail, nm-blind-resume,
+    pb-checksum-lint and pb-normalizer-lint come out "feature" or "other") and also calls three feature-labelled tasks
+    (nm-expert-patch, nm-two-step-escalation, nm-worker-ladder) "bug"; `--kinds bug` selects by label, so compare the
+    tasks where it fired, not only the label. (2) Only the whole request as one task gets one. (3) The runner comes
+    from the project's files (node:test, vitest, jest, mocha, pytest or unittest, cargo `tests/*.rs`); otherwise the
+    writer's own command is used if it starts with a known runner and has no shell syntax. (4) A kept test that the
+    build cannot satisfy is not dropped (unlike F101): it fails the task like any check.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

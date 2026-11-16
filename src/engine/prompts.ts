@@ -6,6 +6,7 @@ import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import { fileURLToPath } from "node:url";
 import { isOn } from "../features.ts";
+import { reproduceLine } from "./reproduce.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Advice, BlindTest, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
@@ -345,7 +346,7 @@ export function taskPrompt(state: RunState, task: TaskState): string {
     return `You are working on a software project. Complete the request below by editing the files in the current directory.
 
 Request:
-${state.prompt}${contextSection(state)}${startSection(task)}${toolsNote()}
+${state.prompt}${contextSection(state)}${startSection(task)}${reproduceLine(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -360,7 +361,7 @@ ${state.prompt}
 Your task: ${task.title}
 ${task.brief}${owned}
 
-Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${startSection(task)}${toolsNote()}
+Other tasks of the plan are done by others. Do not do them, but do not break them either.${contextSection(state)}${startSection(task)}${reproduceLine(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 

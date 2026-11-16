@@ -54,7 +54,7 @@ export interface ChaosResult {
   ms: number;
   /** Rules the run broke; empty when it kept them all. */
   violations: string[];
-  /** Paths of F100 to F104 this run took (a race, a race that was won, blind tests and what became of them, a moved turn), so a clean sweep can be told from an idle one. */
+  /** Paths of F100 to F104 and F115 this run took (a race, a race that was won, blind tests and what became of them, a moved turn), so a clean sweep can be told from an idle one. */
   seen?: string[];
 }
 
@@ -99,7 +99,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -111,6 +111,8 @@ function callKind(r: AgentRequest): Call {
   if ("bottleneck" in p) return "diagnose";
   // [F101 blind-tests]
   if ("tests" in p) return "blind";
+  // [F115 reproduce-first]
+  if ("path" in p && "command" in p) return "reproduce";
   return "build";
 }
 
@@ -139,6 +141,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   // that has a definition the request names (F100's lead).
   const withBlind = phaseDice.chance(0.25);
   // [F104 quota-shift] A third of the runs may move cheap turns to another tool's model.
+  // [F115 reproduce-first] A fifth of the runs report a bug (the brief then calls the request one), and the harness switches the
+  // feature on (it is off by default). Its own dice again, so a seed's scenario otherwise stays what it was.
+  const reproDice = dice(seed + 3_333_331);
+  const withRepro = reproDice.chance(0.2);
   const quotaShift = phaseDice.chance(0.33) ? { backend: "fake", window: "five_hour", above: phaseDice.pick([0.05, 0.22, 0.9]), to: [{ backend: "other", model: "shift-1", tier: "worker" as const }] } : undefined;
   // ---- The repository: its check passes when every listed file says "ok".
   const repo = join(options.scratch, `repo-${seed}`);
@@ -185,7 +191,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const briefer = d.weighted({ expert: 4, worker: 2, none: 3 });
   if (briefer === "expert") roles.briefer = [EXPERT];
   if (briefer === "worker") roles.briefer = [{ backend: "fake", model: "fake-briefer", tier: "worker" }];
-  const off = [...ALWAYS_OFF, ...Array.from({ length: d.weighted({ "0": 5, "1": 2, "2": 2, "4": 1 }) === "0" ? 0 : d.int(1, 4) }, () => d.pick(OPTIONAL))];
+  // [F115 reproduce-first] A run that reports a bug keeps the brief engine and the feature on, so the path is taken.
+  const off = [...ALWAYS_OFF, ...Array.from({ length: d.weighted({ "0": 5, "1": 2, "2": 2, "4": 1 }) === "0" ? 0 : d.int(1, 4) }, () => d.pick(OPTIONAL))].filter((k) => !(withRepro && ["brief-engine", "reproduce-first"].includes(k)));
   const preset: Preset = {
     name: "chaos",
     description: "",
@@ -196,7 +203,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     maxParallel: d.int(1, 3),
     turnTimeoutMinutes: 1,
     intake: d.chance(0.5),
-    brief: d.chance(0.7),
+    brief: d.chance(0.7) || withRepro,
     routing: d.pick(["rules", "worker-first"] as const),
     advise: d.chance(0.6),
     test: d.pick(["always", "always", "no-checks"] as const),
@@ -207,7 +214,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
     // [F101 blind-tests] Off by default since 2026-11-17, so the harness switches it on to keep exercising its code (a disable still wins).
-    enable: ["blind-tests"],
+    enable: ["blind-tests", "reproduce-first"],
     quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -233,7 +240,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   ]);
   // [F89 instruction-scoring] [F90 direct-grunt] Some cascade runs get a transform of pasted text (the cascade's own dice).
   const transform = withCascade && cascadeDice.chance(0.3);
-  const prompt = transform ? `turn this list into ${fileCount} files, one value each: 'alpha=1, beta=2, gamma=3, delta=4, epsilon=5, zeta=6, eta=7'` : withBlind ? "add a bounded queue that drops the oldest entry when full, so that the test passes" : drawn;
+  const bugReport = `fix the bug: ${files[0]} is wrong, so the test fails; make the test pass`;
+  const prompt = withRepro && !transform && !withBlind ? bugReport : transform ? `turn this list into ${fileCount} files, one value each: 'alpha=1, beta=2, gamma=3, delta=4, epsilon=5, zeta=6, eta=7'` : withBlind ? "add a bounded queue that drops the oldest entry when full, so that the test passes" : drawn;
   // How badly the agents behave in this run: none at all (the engine must then
   // succeed), or a share of the turns.
   const trouble = d.weighted({ none: 1.5, some: 4, much: 3, most: 1 });
@@ -340,6 +348,28 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (view === "existing") return { ...extra, structured: { tests: [{ path: "check.js", content: "process.exit(1)" }, { path: "../escape.txt", content: "x" }], summary: "replaces the checks" } };
       return { ...extra, structured: { tests: [{ path: view === "good" ? `blind-pass-${index}.txt` : `blind-fail-${index}.txt`, content: "a test" }], summary: "long runs" } };
     }
+    // [F115 reproduce-first] A cheap writer's reproducing test. A good one fails on the seed; a troubled one's passes, cannot load,
+    // changes the code, names nothing usable, crashes or hangs (good agents included: the feature must never cost the run anything).
+    if (kind === "reproduce") {
+      const view = reproDice.weighted({ good: 6, passes: 2, loadError: 2, edits: 2, existing: 1, garbage: p * 5 + 0.5, none: 1, crash: 1, hang: 1 });
+      const path = `tests/repro-${index}.test.js`;
+      const head = "const test=require('node:test');const assert=require('node:assert');const fs=require('fs');\n";
+      const asserts = `test('reproduces the bug',()=>{assert.ok(fs.existsSync(${JSON.stringify(files[0])})&&fs.readFileSync(${JSON.stringify(files[0])},'utf8').trim()==='ok','expected ${files[0]} to say ok')});`;
+      const answer = { ...extra, structured: { path, command: "", summary: "asserts the file says ok" } };
+      if (view === "crash") throw new Error("the backend itself crashed");
+      if (view === "hang") return never;
+      if (view === "garbage") return { ...extra, structured: reproDice.pick([{}, { path: 5 }, { path: "" , summary: "could not reproduce"}, { path: "../escape.test.js", command: "", summary: "x" }, null, "not json"]) };
+      if (view === "none") return { ...extra, structured: { path: "tests/never-written.test.js", command: "", summary: "wrote nothing" } };
+      if (view === "existing") return { ...extra, structured: { path: "check.js", command: "", summary: "replaces the checks" } };
+      if (view === "passes") put(req.cwd, path, `${head}test('always fine',()=>{});`);
+      else if (view === "loadError") put(req.cwd, path, `${head}require('./no-such-module-here');`);
+      else {
+        put(req.cwd, path, head + asserts);
+        // Changed code beside the test: the test might fail, or pass, because of it.
+        if (view === "edits") put(req.cwd, files[0]!, "ok");
+      }
+      return answer;
+    }
     if (kind === "scout") return { ...extra, structured: { facts: d.chance(0.5) ? ["node is installed"] : [] } };
     if (kind === "spec") {
       const plan = planFor(files, "", "t") as { tasks: unknown[] };
@@ -402,6 +432,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     const own = mine(req.cwd);
     // [F101 blind-tests] Code with a signature, so there is something for a blind tester to be told about.
     if (withBlind && (work === "good" || work === "wrong" || work === "partial")) put(req.cwd, "helper.js", "function helper() {\n  return 1;\n}");
+    // [F115 reproduce-first] A build that weakens the reproducing test so that it passes: the engine must put it back.
+    if (existsSync(join(req.cwd, "tests")) && reproDice.chance(0.3)) {
+      for (const f of readdirSync(join(req.cwd, "tests"))) if (/^repro-.*\.test\.js$/.test(f)) writeFileSync(join(req.cwd, "tests", f), "// weakened\nrequire('node:test')('x',()=>{});\n");
+    }
     // Given failing blind tests, half the developers correct the test (here: remove it); the others leave it to the engine.
     if (/A second developer, who saw the task/.test(req.prompt) && existsSync(req.cwd) && phaseDice.chance(0.5)) {
       for (const f of readdirSync(req.cwd)) if (/^blind-fail/.test(f)) rmSync(join(req.cwd, f), { force: true });
@@ -681,6 +715,23 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     // An open probe is a question for the person: its file never reaches the result, and it is recorded when it failed.
     if (state.status === "finished" && existsSync(state.worktree) && readdirSync(state.worktree).some((f) => /^blind-fail-open/.test(f))) broke("an open probe's file was kept in the result");
     if (events.some((e) => e.type === "blind.open") && !state.tasks.some((t) => (t.openQuestions?.length ?? 0) > 0) && !options.resume) broke("an open question was raised and is not in the run's record");
+    // [F115 reproduce-first] One reproduction turn per task (again only after one that was cut short), always a cheap worker's, never the
+    // expert's; a discarded reproduction leaves no check and no file behind; a kept one is never weakened.
+    for (const t of state.tasks) {
+      const turns = state.attempts.filter((a) => a.task === t.id && a.kind === "reproduce");
+      if (turns.filter((a) => a.stop === "done").length > 1) broke(`task ${t.id}: a reproducing test was written ${turns.filter((a) => a.stop === "done").length} times`);
+      if (turns.some((a) => a.tier === "expert" || a.cascadeTier === "expert" || a.role !== "worker")) broke(`task ${t.id}: the reproducing test was not written by a cheap worker`);
+      if (turns.some((a) => a.cascadeTier === "grunt") && !off.includes("grunt-tier")) broke(`task ${t.id}: a reproduction turn is recorded on the grunt tier`);
+    }
+    if (state.tasks.some((t) => t.reproduce?.stage === "rejected") && state.checks.some((c) => c.name === "reproduce")) broke("a discarded reproduction left its check behind");
+    if (state.status === "finished" && existsSync(state.worktree)) {
+      const tests = existsSync(join(state.worktree, "tests")) ? readdirSync(join(state.worktree, "tests")).filter((f) => /^repro-/.test(f)) : [];
+      if (tests.some((f) => readFileSync(join(state.worktree, "tests", f), "utf8").includes("weakened"))) broke("a build weakened the reproducing test and the engine left it weakened in the result");
+      if (state.tasks.some((t) => t.reproduce?.stage === "rejected" && t.reproduce.path && existsSync(join(state.worktree, t.reproduce.path)))) broke("a discarded reproduction's file is in the result");
+      for (const t of state.tasks) {
+        if (t.reproduce?.stage === "accepted" && t.status === "passed" && t.reproduce.path && !existsSync(join(state.worktree, t.reproduce.path))) broke("an accepted reproduction is missing from the result");
+      }
+    }
     // [F104 quota-shift] Only cheap turns move to the other tool: never the expert's, never a senior's.
     for (const a of state.attempts) {
       if (a.backend !== "other") continue;
@@ -768,6 +819,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "blind.dropped") seen.add("blind tests dropped");
     if (e.type === "blind.open") seen.add("open question");
     if (e.type === "quota.shifted") seen.add("turn moved");
+    if (e.type === "reproduce.tests") seen.add(`reproduce ${String(e.outcome)}`);
+    if (e.type === "reproduce.restored") seen.add("reproduce restored");
     if (e.type === "context.start-here") seen.add("start-here");
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
     // [F110 structured-rescue]
