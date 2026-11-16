@@ -62,7 +62,7 @@ Do not run `install.sh` on this Mac: it resets the copy to
 reaches them until the owner merges.
 
 F100 to F104 (`docs/21-phase-2-review.md`) were audited offline on 2026-11-17
-(`docs/STATUS.md` 56): F101 is off by default (`--enable blind-tests` or
+(`docs/STATUS.md` 57): F101 is off by default (`--enable blind-tests` or
 `NEUROMESH_ENABLE=blind-tests` turns it on), F100 is kept, F102 to F104 are on
 but have never fired. If one misbehaves in the owner's real work,
 `--disable <key>` switches it off; fix it or turn it off by default, and say so

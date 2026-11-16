@@ -723,7 +723,7 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     `test/pieces.test.ts` instead. Haiku's difficulty is guessed (about 59 percent overall, about 43 without the
     ProofBench ten); the live run `rt2-haiku-1` is what sets it.
 
-56. **F100 to F104 judged offline: F101 off by default (2026-11-17).** No model
+57. **F100 to F104 judged offline: F101 off by default (2026-11-17).** No model
     calls. Audit of 285 kept runs (195 bench, 90 owner; 29 fake-backend runs left out):
 
     | Feature | Fired | Cost (estimate) | Outcome | Decision |
