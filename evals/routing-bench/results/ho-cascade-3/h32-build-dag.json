@@ -1,0 +1,110 @@
+{
+  "id": "H3.2",
+  "slug": "h32-build-dag",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "worker",
+  "routeStage": "calibrated",
+  "routeReasons": [
+    "scored the instruction only (1397 characters of pasted material left out)",
+    "ambiguous (no cluster matched); past runs give worker a 80% chance"
+  ],
+  "tierPath": [
+    "worker"
+  ],
+  "finalTier": "worker",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS dag_scheduler.ts exports BuildGraph\nPASS implicit dependencies are registered; markDirty is topological with id tie-breaks\nPASS a self-loop is rejected with a cycle and the graph stays as it was\nPASS a 4-hop cycle A->B->C->D->A is rejected and nothing changes\nPASS updating a node's dependencies works; a cycle-inducing update is rejected\nPASS criticalPath weighs durations: 100+100 beats four nodes of 20, with exact waves\nPASS several targets: only their subgraph counts\nSCORE 7/7",
+  "wallMs": 212923,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "cascadeTier": "worker",
+      "stop": "done",
+      "durationMs": 70061,
+      "usage": {
+        "input": 16,
+        "output": 13393,
+        "reasoning": 3705,
+        "cacheRead": 136824,
+        "cacheWrite": 20538,
+        "split": {
+          "files": 0,
+          "commands": 3520,
+          "earlier": 61675,
+          "calls": 8,
+          "estimated": true,
+          "startup": 80048,
+          "prompt": 12136
+        }
+      },
+      "tokens": 170771,
+      "costUsd": 0.012173940000000001,
+      "quotaUsed": {
+        "five_hour": 0.12,
+        "seven_day": 0.41
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 137001,
+      "usage": {
+        "input": 2,
+        "output": 34189,
+        "reasoning": 25005,
+        "cacheRead": 625,
+        "cacheWrite": 4532,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3704,
+          "prompt": 1456
+        }
+      },
+      "tokens": 39348,
+      "costUsd": 0.01800735,
+      "quotaUsed": {
+        "five_hour": 0.12,
+        "seven_day": 0.41
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 210119,
+  "discardedTokens": 0,
+  "costUsd": 0.03018129,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.12,
+      "seven_day": 0.41
+    },
+    "after": {
+      "five_hour": 0.12,
+      "seven_day": 0.41
+    }
+  },
+  "runId": "20261117-002142-5598",
+  "finishedAt": "2026-11-16T18:55:25.267Z"
+}
