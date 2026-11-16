@@ -21,6 +21,8 @@ export interface ParsedRun {
   detail?: string;
   /** [F67 session-cap] */
   peakPrompt?: number;
+  /** [F110 structured-rescue] The input of the last StructuredOutput call the tool saw. */
+  lastStructured?: Record<string, unknown>;
 }
 
 export interface StreamParser {
@@ -126,6 +128,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     quotaResets: parsed.quotaResets,
     durationMs: proc.durationMs,
     peakPrompt: parsed.peakPrompt,
+    lastStructured: parsed.lastStructured,
     exitCode: proc.exitCode,
     detail,
     logPath: request.logPath,

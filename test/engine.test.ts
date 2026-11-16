@@ -1180,3 +1180,70 @@ test("a follow-up starts from the earlier run's result, knows what it did, and b
   assert.equal(third.session, first.id);
   assert.ok(!third.outcome?.files.some((f) => f.path === "a.txt"), "applied work is not applied twice");
 });
+
+// A Claude Code turn whose report the tool rejected five times (a missing optional field): the work is done, the tool gives up on the format.
+const EXHAUSTED = { stop: "error", detail: "error_max_structured_output_retries", exitCode: 1 } as const;
+
+test("a turn the tool gave up on for its report format fails a solo task, and keeps the work in the run's folder (the behaviour F110 removes)", async () => {
+  process.env.NEUROMESH_DISABLE = "structured-rescue";
+  try {
+    const repo = fixableRepo();
+    const { ctx, fake } = context((req) => {
+      write(req.cwd, "fixed.txt", "ok");
+      return { ...EXHAUSTED, lastStructured: { status: "done", summary: "fixed it" } };
+    });
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+    assert.equal(state.status, "failed");
+    assert.equal(state.failure, "agent");
+    assert.match(state.reason ?? "", /worker error: error_max_structured_output_retries/);
+    assert.equal(fake.calls.length, 1, "nothing climbs in a solo preset");
+    assert.equal(readFileSync(join(state.worktree, "fixed.txt"), "utf8").trim(), "ok", "the work was merged into the run's folder, not thrown away");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("F110: a turn the tool gave up on for its report format finishes the task from the model's last attempt, and says so", async () => {
+  const repo = fixableRepo();
+  const { ctx, fake, events } = context((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return { ...EXHAUSTED, lastStructured: { status: "done", summary: "fixed it", surprise: 1 } };
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.equal(state.outcome?.checks, "passed");
+  assert.equal(fake.calls.length, 1);
+  assert.equal(state.tasks[0]?.report?.summary, "fixed it");
+  const rescued = events.find((e) => e.type === "structured.rescued");
+  assert.equal(rescued?.feature, "F110");
+  assert.deepEqual([...(rescued?.missing as string[])].sort(), ["choices", "notes", "open", "run"]);
+  assert.equal(state.attempts[0]?.stop, "done", "the attempt is recorded as the answer it became");
+});
+
+test("F110: a last attempt with no summary is not taken: the turn fails as it always did", async () => {
+  const repo = fixableRepo();
+  const { ctx, events } = context((req) => {
+    write(req.cwd, "fixed.txt", "ok");
+    return { ...EXHAUSTED, lastStructured: { status: "done" } };
+  });
+  const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+  assert.equal(state.status, "failed");
+  assert.match(state.reason ?? "", /error_max_structured_output_retries/);
+  assert.ok(!events.some((e) => e.type === "structured.rescued"));
+});
+
+test("F110: a failure inside the rescue switches the feature off and the turn ends as before (NEUROMESH_FAULT)", async () => {
+  process.env.NEUROMESH_FAULT = "structured-rescue";
+  try {
+    const repo = fixableRepo();
+    const { ctx, events } = context((req) => {
+      write(req.cwd, "fixed.txt", "ok");
+      return { ...EXHAUSTED, lastStructured: { status: "done", summary: "fixed it" } };
+    });
+    const state = await startRun({ cwd: repo, prompt: "make the test pass", preset: preset() }, ctx);
+    assert.equal(state.status, "failed");
+    assert.ok(events.some((e) => e.type === "feature.failed" && e.feature === "F110"), JSON.stringify(events.filter((e) => /fail|feature/.test(e.type)).map((e) => e.type)));
+  } finally {
+    delete process.env.NEUROMESH_FAULT;
+  }
+});

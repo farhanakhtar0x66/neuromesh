@@ -660,3 +660,34 @@ test("F109 judges the user's request, not the brief's working standards appended
   assert.equal(direct?.feature, "F109", "it fired");
   assert.ok(fake.calls.some((c) => c.direct === true), "a no-tools call was made");
 });
+
+test("a turn the tool gave up on for its report format makes the cascade climb a rung (the behaviour F110 removes)", async () => {
+  process.env.NEUROMESH_DISABLE = "structured-rescue";
+  try {
+    const { ctx, fake, events } = context((req) => {
+      if (!isBuild(req)) return report("n/a");
+      write(req.cwd, "fixed.txt", "ok");
+      if (req.model === "worker") return { stop: "error", detail: "error_max_structured_output_retries", exitCode: 1, lastStructured: { status: "done", summary: "fixed it" } };
+      return report("done");
+    });
+    const state = await startRun({ cwd: repo(), prompt: SMALL, preset: preset() }, ctx);
+    assert.equal(state.status, "finished", state.reason);
+    assert.deepEqual(fake.calls.filter(isBuild).map((c) => c.model), ["worker", "senior"]);
+    assert.ok(events.some((e) => e.type === "task.climbed"), "the task climbed after the worker's report failed");
+  } finally {
+    delete process.env.NEUROMESH_DISABLE;
+  }
+});
+
+test("F110: with the report's last attempt taken, the cascade does not climb for a format failure", async () => {
+  const { ctx, fake, events } = context((req) => {
+    if (!isBuild(req)) return report("n/a");
+    write(req.cwd, "fixed.txt", "ok");
+    return { stop: "error", detail: "error_max_structured_output_retries", exitCode: 1, lastStructured: { status: "done", summary: "fixed it" } };
+  });
+  const state = await startRun({ cwd: repo(), prompt: SMALL, preset: preset() }, ctx);
+  assert.equal(state.status, "finished", state.reason);
+  assert.deepEqual(fake.calls.filter(isBuild).map((c) => c.model), ["worker"]);
+  assert.ok(!events.some((e) => e.type === "task.climbed"));
+  assert.ok(events.some((e) => e.type === "structured.rescued" && e.feature === "F110"));
+});

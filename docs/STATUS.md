@@ -623,28 +623,69 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     required property 'notes' / 'run' / 'choices' / 'open'"); 74 recovered (55 after one
     rejection, 8 after two, 6 after three, 5 after four) and 5 failed after the fifth,
     which is Claude Code's cap. The model sends the core fields and leaves out the string
-    fields it thinks are empty; since F105 made `choices` and `open` required, they are
-    105 of the 192 missing-field mentions. It is not tied to `--resume` (3 of the 5 were
+    fields it thinks are empty. Counted per mention there are 221 missing-property mentions
+    (corrected on 2026-11-16; this entry first said 192): 172 at the top level of the report
+    (notes 70, choices 49, open 37, run 16), 46 in blind-test items (open 23, question 23) and 3
+    other (status 1, findings 2); two more rejections were an invented extra property.
+    `choices` and `open` at the top level are 86 of the 221 (39 percent). The failures
+    triggered climbs in ho-cascade-2 H1.3 and H3.2 (the task climbed to the same Haiku on a
+    "worker error"), and ended ho-haiku-1 H2.3 and the two resumed repairs here. It is not tied to `--resume` (3 of the 5 were
     first turns) or to long turns (17 to 28 calls, like the others). In the failed turns
     the work and the report were done: the last attempted report had `status: done` and a
     summary. One log shows the model reading the error as "the empty run value breaks
     parsing" and deleting more fields. Cost: the 134 rejected calls carry 4.39M of 56.1M
     tokens (7.8 percent) in the 405 kept Claude attempts; the 5 failed turns 1.53M tokens
-    and 276 s, and one of them (ho-haiku-1 H2.3, solo, no ladder) lost its task. Proposed fix
-    (F110, not built): make `notes`, `run`, `choices`, `open` optional in the schemas
-    (`parseReport` already treats them so), and in the adapter keep the last StructuredOutput
-    input and, on this error, accept it when only string fields are missing. (2) The 2.05M
+    and 276 s, and one of them (ho-haiku-1 H2.3, solo, no ladder) lost its task. Fix:
+    F110 (STATUS 54): the schemas ask for less, and the last attempt is taken as the answer. (2) The 2.05M
     tokens of nm-first-turn-retry: one turn, 33 model calls, context growing from 14k to
     95k, so 2.0M is calls times context, not a loop: no command was repeated in any of the
     ten tasks' turns, test runs 1 to 7, never a failing one repeated. By F106 the 34 calls
     read start-up 18 percent, prompt 5, files 0, command output 29, earlier turns 48. A
     call ceiling would have cut working turns (the edits ran to call 34) and Haiku's 2.05M
     tokens cost about $0.056, so escalating to a dearer tier would cost more: no loop
-    signature to trigger on. The levers are fewer calls (ten single-line Edit calls, three
-    full runs of two slow test files) and smaller results re-read on every call (107k
-    characters of tool output in the turn, one of 12.9k). Across the ten tasks: 217 calls,
+    signature to trigger on. The levers are fewer calls (the ten Edit uses were already batched, in three
+    parallel groups inside model calls 15, 20 and 26, and only one was a single line;
+    the two slow test files were run four times, plus a full `npm test` and two `tsc`
+    attempts: corrected 2026-11-16, this entry first said ten single-line Edit calls and three
+    runs) and smaller results re-read on every call (107k characters of tool output in
+    the turn, one of 12.9k). Across the ten tasks: 217 calls,
     9.75M input, 49 percent earlier turns. (3) `make-batch --prompts terse` builds the ten
     tasks with 28 to 42 word prompts (`evals/real-tasks/prompts-terse/`); all ten validate.
+
+54. **F110 `structured-rescue` built (2026-11-16).** No model calls. From STATUS 53:
+    the tool ends a turn with `error_max_structured_output_retries` when a model leaves
+    out a string field it thinks is empty, after the work is done. Harness first: a new
+    per-turn fault (a report or one-answer turn ends with that error and a last attempt
+    with `status` and `summary` only), and two tests of what the code did before:
+    a cascade climbed a rung for it, a solo task failed (`failure: agent`, "worker
+    error: error_max_structured_output_retries") with its work merged into the run's
+    folder. Before F110 both sweeps ran with the fault (61 of 1000 seeds took the
+    failure; 20 failed runs of 1000, 12 of 400). Then: (1) the report schema requires
+    `status` and `summary`, the one-answer schema `files` and `summary`, a blind test
+    `path` and `content`; the other fields stay in the schemas and the prompts'
+    wording, and the verdict's `findings` and every other schema are as before; (2)
+    the Claude adapter keeps the input of the last StructuredOutput call
+    (`AgentResult.lastStructured`), and `once()` takes it as the answer when the turn
+    ended with that error and `rescueStructured` says the parser would accept it (a
+    non-blank summary for a report; a usable file for a one-answer turn), keeping only the
+    schema's keys, with a `structured.rescued` event tagged F110 that lists the fields
+    left out; anything else ends as before. One place differs from the request: the
+    adapter only stores the attempt, and the engine does the rescue, because the
+    parsers and the event log are the engine's, a backend must not import them, and the
+    fake backend the fault harness uses has to take the same path. `--disable
+    structured-rescue` gives every old schema and the old failure; `NEUROMESH_FAULT=
+    structured-rescue` fails the rescue, which switches the feature off and ends the turn
+    as before. A new harness rule: with F110 on, no attempt may end in that error. After:
+    `tsc` clean, 306 of 306 tests, chaos 1000 seeds clean (986 finished, 14 failed; 59 seeds
+    rescued; the one seed that still ends a turn in the error is a scenario with F110 switched off, the only place the new rule allows it) and kill 400
+    clean (16 rescued). Two harness rules were widened on the way: a chain fallback that
+    stopped on a revoked login or an unavailable model did no work and is not the task
+    going up a rung (seed 38, which the new fault's draws moved onto). Not measured live:
+    the kept logs say 134 rejected calls carried 4.39M of 56.1M tokens and 5 turns were
+    lost; check on the next live run with `node` over the kept logs (the script of STATUS
+    53's reading) and the `structured.rescued` events. One thing to watch: whether the
+    model still fills `choices` and `open` now that they are not required (Haiku filled
+    `choices` 101 of 101 and `open` 95 of 101 while they were).
 
 ## Next steps
 

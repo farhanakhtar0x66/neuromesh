@@ -290,6 +290,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   let sessions = 0;
 
   const act = (req: AgentRequest, index: number): Partial<AgentResult> | Promise<Partial<AgentResult>> => {
+    let structuredFault = false;
     if (index >= maxCalls) {
       runaway = true;
       aborter.abort();
@@ -306,7 +307,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     const extra: Partial<AgentResult> = { usage, peakPrompt: d.chance(0.1) ? d.int(95_000, 180_000) : d.int(5_000, 60_000), quotaUsed: d.chance(0.5) ? { five_hour: 0.2 + index / 500 } : undefined };
     // Trouble any turn can have.
     if (d.chance(p)) {
-      const fault = d.weighted({ transient: 3, error: 3, quota: 1.5, auth: 0.7, unavailable: 1, timeout: 1.5, crash: 1, garbage: 3, text: 1, cut: expert ? 3 : 0 });
+      // [F110 structured-rescue] A report or one-answer turn whose tool gave up on the structured format after doing the work.
+      const props = (req.outputSchema?.properties ?? {}) as Record<string, unknown>;
+      const reportish = ("status" in props || "files" in props) && !("tests" in props);
+      const fault = d.weighted({ transient: 3, error: 3, quota: 1.5, auth: 0.7, unavailable: 1, timeout: 1.5, crash: 1, garbage: 3, text: 1, cut: expert ? 3 : 0, structured: reportish ? 2.5 : 0 });
+      if (fault === "structured") structuredFault = true;
       if (fault === "transient") return { stop: "error", detail: d.pick(["ECONNRESET", "stream was interrupted", "503 overloaded"]) };
       if (fault === "error") return { stop: "error", detail: d.pick(["boom", "the model refused", "", "exit code 1"]), exitCode: 1 };
       if (fault === "quota") return { stop: "quota", detail: "usage limit reached, resets in 5 minutes" };
@@ -375,13 +380,18 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (view === "escalate" || view === "low") return never;
     }
     // A build, repair or fix turn.
-    const report = (status: string, summary: string, notes = ""): Partial<AgentResult> => ({ ...extra, sessionId: `s${++sessions}`, structured: { status, summary, notes, run: "" } });
+    // [F110 structured-rescue] With the fault, the work is done and the report has its status and summary but not the optional fields; the tool gives up on the format.
+    const exhausted = { stop: "error", detail: "error_max_structured_output_retries", exitCode: 1 } as const;
+    const report = (status: string, summary: string, notes = ""): Partial<AgentResult> =>
+      structuredFault ? { ...extra, sessionId: `s${++sessions}`, ...exhausted, lastStructured: { status, summary } } : { ...extra, sessionId: `s${++sessions}`, structured: { status, summary, notes, run: "" } };
     // [F77 direct-build] [F90 direct-grunt] A one-answer turn: the files come back in the answer.
     if (req.direct) {
       const view = d.weighted({ good: 10, wrong: p * 8, garbage: p * 5, none: p * 3 });
       if (view === "garbage") return { ...extra, structured: d.pick([{}, { files: "all of them" }, { files: [{ path: 3 }] }]) };
       if (view === "none") return { ...extra, structured: { files: [], summary: "nothing", notes: "", run: "" } };
-      return { ...extra, structured: { files: mine(req.cwd).map((f) => ({ path: f, content: view === "good" ? "ok" : "not ok" })), summary: "wrote them", notes: "", run: "" } };
+      const answer = { files: mine(req.cwd).map((f) => ({ path: f, content: view === "good" ? "ok" : "not ok" })), summary: "wrote them" };
+      if (structuredFault && answer.files.length > 0) return { ...extra, ...exhausted, lastStructured: answer };
+      return { ...extra, structured: { ...answer, notes: "", run: "" } };
     }
     if (req.access !== "write") return report("done", "looked");
     // A split is asked for where the engine offers one; a troubled worker may ask anyway.
@@ -622,13 +632,18 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     }
     // [F82 grunt-tier] [F83 early-exit] The grunt's gate is the checks, never its own word.
     if (gruntAsked) broke("a grunt turn was asked for a confidence preamble");
+    // [F110 structured-rescue] A report the tool gave up on, with its status and summary in the last attempt, is never a failed turn.
+    if (!off.includes("structured-rescue") && state.attempts.some((a) => String(a.detail ?? "").startsWith("error_max_structured_output_retries"))) {
+      broke("a structured-output failure with a usable last attempt was not rescued");
+    }
     // [F80-F86] A task's tier on the ladder only goes up.
     const rank = { grunt: 0, worker: 1, senior: 2 } as Record<string, number>;
     const lastTier = new Map<string, number>();
     for (const a of state.attempts) {
-      // A turn that stopped on a usage limit did no work: it is the model chain moving on to the next model
-      // (a senior model after the worker's), not the task being sent up. The task stays on its own rung.
-      if (!a.task || !a.cascadeTier || a.cascadeTier === "expert" || a.stop === "quota") continue;
+      // A turn that stopped on a usage limit, a revoked login or a model that is not offered did no work: it is the
+      // model chain moving on to the next model (a senior model after the worker's), not the task being sent up.
+      // The task stays on its own rung.
+      if (!a.task || !a.cascadeTier || a.cascadeTier === "expert" || a.stop === "quota" || a.stop === "auth" || (a.stop === "error" && /model not found|not available/i.test(a.detail ?? ""))) continue;
       const r = rank[a.cascadeTier]!;
       if (r < (lastTier.get(a.task) ?? -1)) {
         broke(`task ${a.task} went down the ladder to ${a.cascadeTier}`);
@@ -753,6 +768,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "quota.shifted") seen.add("turn moved");
     if (e.type === "context.start-here") seen.add("start-here");
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
+    // [F110 structured-rescue]
+    if (e.type === "agent.finished" && String(e.detail ?? "").startsWith("error_max_structured_output_retries")) seen.add("structured exhausted");
+    if (e.type === "structured.rescued") seen.add("structured rescued");
   }
   return { seed, scenario, status: state?.status ?? "none", reason: state?.reason, calls: calls.length, resumes, ms: Date.now() - started, violations, seen: [...seen] };
 }

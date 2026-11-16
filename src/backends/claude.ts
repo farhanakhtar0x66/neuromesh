@@ -115,6 +115,9 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
           } else if (b?.type === "tool_use") {
             writtenChars += JSON.stringify(b.input ?? "").length;
             request.onActivity?.({ kind: "tool", summary: `${str(b.name) ?? "tool"} ${short(b.input, 100)}` });
+            // [F110 structured-rescue] The answer the model last tried to give in the required format, kept in case the tool gives up on it.
+            const attempt = str(b.name) === "StructuredOutput" ? obj(b.input) : undefined;
+            if (attempt && isOn("structured-rescue")) run.lastStructured = { ...attempt };
           }
         }
         reportUsage();

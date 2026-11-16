@@ -19,11 +19,15 @@ test("F105: choices and open come through whole; empty ones are dropped", () => 
   assert.equal(d?.report.open, "q?");
 });
 
-test("F105: the schemas ask for both fields, and ask for nothing new when switched off", () => {
+test("F105: the schemas ask for both fields (and, with F110 off, require them), and ask for nothing new when switched off", () => {
+  assert.ok("choices" in reportSchema().properties && "open" in reportSchema().properties, "asked for");
+  assert.ok(!reportSchema().required.includes("choices"), "but not required: F110");
+  disable("structured-rescue");
   assert.ok(reportSchema().required.includes("choices") && reportSchema().required.includes("open"));
   assert.ok(directSchema().required.includes("choices"));
+  resetFeatures();
   disable("choices-shown");
-  assert.ok(!reportSchema().required.includes("choices"));
+  assert.ok(!("choices" in reportSchema().properties));
   assert.equal(parseReport(result({ status: "done", summary: "s", notes: "", choices: "c", open: "o", run: "" })).choices, undefined);
 });
 

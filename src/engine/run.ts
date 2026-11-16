@@ -62,7 +62,7 @@ import { coolingModels, recordCooldown } from "./cooldown.ts";
 import { attemptFrom, newHistory, observe } from "./progress.ts";
 import {
   ADVICE_SCHEMA,
-  BLIND_SCHEMA,
+  blindSchema,
   blindFinding,
   blindPrompt,
   parseBlind,
@@ -94,6 +94,7 @@ import {
   integrationPrompt,
   parsePlan,
   parseReport,
+  rescueStructured,
   parseSpec,
   parseVerdict,
   PLAN_SCHEMA,
@@ -1110,6 +1111,15 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     // The tool's adapter itself failed (it could not start the tool, or broke on its output):
     // a failed turn like any other, never a crashed run.
     result = { stop: "error", finalText: "", usage: {}, durationMs: Date.now() - Date.parse(startedAt), exitCode: null, detail: `the ${backend.id} adapter failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
+
+  // [F110 structured-rescue] The tool gave up on the answer's format after the work was done: take the last attempt, if the parser would.
+  if (result.stop === "error" && isOn("structured-rescue") && result.lastStructured !== undefined) {
+    const rescued = optional(run, "structured-rescue", undefined, () => rescueStructured(req.schema, result));
+    if (rescued) {
+      log.emit("structured.rescued", { feature: "F110", task: req.task, role: req.role, kind: req.kind, missing: rescued.missing });
+      result = { ...result, stop: "done", structured: rescued.structured, exitCode: 0, detail: `the last attempt at the answer was used (left out: ${rescued.missing.join(", ") || "nothing"})` };
+    }
   }
 
   // [F104 quota-shift] The tool's latest reading of its subscription windows, kept for this run's next turn and the next run.
@@ -2251,7 +2261,7 @@ async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signa
       cwd: scratch,
       prompt: blindPrompt(state, task, signatures, existing, usage),
       access: "read-only",
-      schema: BLIND_SCHEMA,
+      schema: blindSchema(),
       direct: ctx.backends[chain[0]!.backend]?.direct === true ? true : undefined,
       chain,
       timeoutMs: 10 * 60_000,

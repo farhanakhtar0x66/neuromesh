@@ -134,6 +134,8 @@ export interface AgentResult {
   /** Error or refusal text, when there is one. */
   detail?: string;
   logPath?: string;
+  /** [F110 structured-rescue] The input of the last StructuredOutput call the tool saw, when it gave up on the format. */
+  lastStructured?: Record<string, unknown>;
 }
 
 export interface AgentBackend {

@@ -47,8 +47,16 @@ function withChoices<T extends { properties: Record<string, unknown>; required: 
   if (!isOn("choices-shown")) return schema;
   return { ...schema, properties: { ...schema.properties, choices: { type: "string" }, open: { type: "string" } }, required: [...schema.required, "choices", "open"] };
 }
-export const reportSchema = (): typeof REPORT_SCHEMA_BASE => withChoices(REPORT_SCHEMA_BASE);
-export const directSchema = (): typeof DIRECT_SCHEMA_BASE => withChoices(DIRECT_SCHEMA_BASE);
+/**
+ * [F110 structured-rescue] Only the fields without which there is no answer are required. A model leaves out a string
+ * field it thinks is empty, and the tool ends the turn after its fifth rejection, work done; the fields stay in the
+ * schema and in the prompt's wording ("an empty string if none"). Off, every field is required as before.
+ */
+function asksLess<T extends { required: string[] }>(schema: T, core: string[]): T {
+  return isOn("structured-rescue") ? { ...schema, required: core } : schema;
+}
+export const reportSchema = (): typeof REPORT_SCHEMA_BASE => asksLess(withChoices(REPORT_SCHEMA_BASE), ["status", "summary"]);
+export const directSchema = (): typeof DIRECT_SCHEMA_BASE => asksLess(withChoices(DIRECT_SCHEMA_BASE), ["files", "summary"]);
 
 export const SPEC_SCHEMA = {
   type: "object",
@@ -549,7 +557,7 @@ You work in your own copy of the project. Run the checks before you stop: your c
 }
 
 /** [F101 blind-tests] The blind tester's answer: new test files and what they probe. */
-export const BLIND_SCHEMA = {
+const BLIND_SCHEMA_BASE = {
   type: "object",
   properties: {
     tests: {
@@ -565,6 +573,13 @@ export const BLIND_SCHEMA = {
   },
   required: ["tests", "summary"],
   additionalProperties: false,
+};
+
+/** [F110 structured-rescue] A blind test needs a path and its content; whether it is an open one and its question may be left out. */
+export const blindSchema = (): typeof BLIND_SCHEMA_BASE => {
+  if (!isOn("structured-rescue")) return BLIND_SCHEMA_BASE;
+  const items = BLIND_SCHEMA_BASE.properties.tests.items;
+  return { ...BLIND_SCHEMA_BASE, properties: { ...BLIND_SCHEMA_BASE.properties, tests: { ...BLIND_SCHEMA_BASE.properties.tests, items: { ...items, required: ["path", "content"] } } } };
 };
 
 /**
@@ -926,6 +941,29 @@ function choiceFields(raw: { choices?: unknown; open?: unknown }): { choices?: s
   const choices = text(raw.choices);
   const open = text(raw.open);
   return { ...(choices ? { choices } : {}), ...(open ? { open } : {}) };
+}
+
+/**
+ * [F110 structured-rescue] A turn the tool ended with error_max_structured_output_retries after the work was done: the
+ * last answer the model tried to give, if the parser for this schema would take it. Only keys the schema has are kept.
+ * A report needs a summary; a one-answer turn needs at least one usable file. Anything else is not rescued (and the
+ * turn ends as it always did). `missing` lists the schema's fields the attempt left out.
+ */
+export function rescueStructured(schema: Record<string, unknown> | undefined, result: AgentResult): { structured: Record<string, unknown>; missing: string[] } | undefined {
+  if (!isOn("structured-rescue") || result.stop !== "error" || !/^error_max_structured_output_retries/.test(result.detail ?? "")) return undefined;
+  const last = result.lastStructured;
+  const props = schema?.properties as Record<string, unknown> | undefined;
+  if (!last || typeof last !== "object" || !props) return undefined;
+  const direct = "files" in props;
+  if ("tests" in props || (!direct && !("status" in props && "summary" in props))) return undefined;
+  const kept: Record<string, unknown> = {};
+  for (const key of Object.keys(props)) if (key in last) kept[key] = last[key];
+  if (direct && Array.isArray(kept.files)) {
+    kept.files = kept.files.map((f) => (f && typeof f === "object" ? { path: (f as { path?: unknown }).path, content: (f as { content?: unknown }).content } : f));
+  }
+  const accepted = direct ? parseDirect({ ...result, stop: "done", structured: kept }) !== undefined : typeof kept.summary === "string" && kept.summary.trim() !== "";
+  if (!accepted) return undefined;
+  return { structured: kept, missing: Object.keys(props).filter((k) => !(k in kept)) };
 }
 
 export function parseReport(result: AgentResult): WorkerReport {
