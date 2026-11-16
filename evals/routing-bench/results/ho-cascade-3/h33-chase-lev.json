@@ -1,0 +1,110 @@
+{
+  "id": "H3.3",
+  "slug": "h33-chase-lev",
+  "config": "cascade",
+  "set": "held-out",
+  "preset": "cascade-claude",
+  "name": "ho-cascade-3",
+  "expectedTier": "senior",
+  "expectedPath": "T0>T3",
+  "routedTier": "expert",
+  "routeStage": "similarity",
+  "routeReasons": [
+    "scored the instruction only (805 characters of pasted material left out)",
+    "most like expert work (100% of the match)"
+  ],
+  "tierPath": [
+    "senior"
+  ],
+  "finalTier": "senior",
+  "status": "applied",
+  "score": {
+    "passed": 7,
+    "total": 7
+  },
+  "quality": 10,
+  "hiddenOutput": "PASS Cargo.toml and src/lib.rs exist\nPASS no external dependencies\nPASS uses std::sync::atomic, UnsafeCell and MaybeUninit\nPASS cargo build --release passes\nPASS FIFO steal, LIFO pop and full-capacity Err(item)\nPASS owner push+pop against 6 stealers over 250,000 items: none lost, none duplicated\nPASS 1,000 Arc items are each dropped exactly once\nSCORE 7/7",
+  "wallMs": 190972,
+  "turns": [
+    {
+      "role": "worker",
+      "kind": "initial",
+      "model": "claude-sonnet-5-5",
+      "tier": "worker",
+      "cascadeTier": "senior",
+      "stop": "done",
+      "durationMs": 59663,
+      "usage": {
+        "input": 12,
+        "output": 8326,
+        "reasoning": 875,
+        "cacheRead": 80139,
+        "cacheWrite": 14208,
+        "split": {
+          "files": 0,
+          "commands": 1666,
+          "earlier": 29040,
+          "calls": 6,
+          "estimated": true,
+          "startup": 55343,
+          "prompt": 8312
+        }
+      },
+      "tokens": 102685,
+      "costUsd": 0.14812989999999998,
+      "quotaUsed": {
+        "five_hour": 0.12,
+        "seven_day": 0.41
+      },
+      "discarded": false
+    },
+    {
+      "role": "tester",
+      "kind": "blind",
+      "model": "claude-haiku-5-5",
+      "tier": "worker",
+      "stop": "done",
+      "durationMs": 125797,
+      "usage": {
+        "input": 2,
+        "output": 29854,
+        "reasoning": 22157,
+        "cacheRead": 625,
+        "cacheWrite": 4488,
+        "split": {
+          "files": 0,
+          "commands": 0,
+          "earlier": 0,
+          "calls": 1,
+          "estimated": true,
+          "startup": 3833,
+          "prompt": 1282
+        }
+      },
+      "tokens": 34969,
+      "costUsd": 0.01583105,
+      "quotaUsed": {
+        "five_hour": 0.12,
+        "seven_day": 0.41
+      },
+      "discarded": false
+    }
+  ],
+  "tokens": 137654,
+  "discardedTokens": 0,
+  "costUsd": 0.16396095,
+  "discardedCostUsd": 0,
+  "unpricedTurns": 0,
+  "quota": {
+    "before": {
+      "five_hour": 0.12,
+      "seven_day": 0.41
+    },
+    "after": {
+      "five_hour": 0.13,
+      "seven_day": 0.41
+    }
+  },
+  "runId": "20261117-002535-6e81",
+  "finishedAt": "2026-11-16T18:58:58.193Z"
+}
