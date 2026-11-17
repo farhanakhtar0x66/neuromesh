@@ -798,6 +798,17 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     The engine's own checks were already safe (`src/backends/proc.ts` kills the group). Found before `rt2-haiku-1` started, so its
     grading runs on the fixed grader.
 
+
+61. **`rt2-haiku-1`: Haiku alone passes 28 of 29 of batch 2 (2026-11-17; one run, live).** `solo-haiku` on `evals/real-tasks-2`,
+    est. $1.12 at list prices, 6 points of the five-hour window, 2 of the weekly, 86 minutes of work, 0 engine failures
+    (`evals/real-tasks-2/RESULTS.md`). The one miss is nm-split-payload (19 of 20 hidden tests). The ten ProofBench tasks were each
+    answered in one call in 12 to 25 s. **Batch 2 is too easy to tell presets apart** (doc 22 phase 1 wants Haiku at 40 to 70
+    percent), as batch 1 was: the cascade and Opus are not run on it. Keep nm-split-payload and look at the hardest few by tokens
+    (nm-two-step-escalation, nm-worker-ladder, nm-senior-first-expert, over 2.3M each) for the final mix; batch 3 has to carry the
+    difficulty. The night's run was interrupted twice: the network dropped (eight tasks recorded as failed with 0 tokens after 18 to
+    24 minutes each; their entries were removed and redone, the old file kept as `results.before-network-redo.json`, see 62) and the
+    machine restarted; re-running the same name continued where it stopped.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
