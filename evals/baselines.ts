@@ -10,8 +10,9 @@
 //                            opus      rt2-opus-1     solo-opus      (only with --allow-opus; Opus is the dearest step)
 //
 // Each run is `neuromesh eval --suite <suite> --preset <p> --name <n> --quota`. Before each one the script waits for the
-// five-hour window to reset (evals/wait-reset.ts, as routing-bench's --wait-reset does), unless it is under 10 percent
-// used: the window is read before and after every task, so a few points spent earlier do not change a run's figure. A run that stops with tasks
+// five-hour window to reset (evals/wait-reset.ts, as routing-bench's --wait-reset does), unless more than 10 percent
+// of it is left: the window is read before and after every task, so points spent earlier do not change a run's figure,
+// and a task that hits the limit pauses and is redone after the reset. A run that stops with tasks
 // paused or interrupted (out of quota) is waited out and started again under the same name, which redoes only those
 // tasks, until every task has a final result; after 12 tries it gives up and says so. One line per event goes to
 // <home>/evals/baselines.log (~/.neuromesh/evals/baselines.log). It ends by writing <suite>/RESULTS.md.
@@ -132,7 +133,7 @@ async function waitOutLimits(tag: string, home: string, fake: boolean): Promise<
     note(`${tag}  waiting until ${utcMinute(until / 1000)} UTC (${Math.round((until - Date.now()) / 60_000)} min): ${cooling.map(([m]) => m.replace(/^claude\//, "")).join(", ")} hit a limit`);
     await new Promise((r) => setTimeout(r, Math.max(0, until - Date.now())));
   }
-  await waitForReset(liveBackends.claude!, (line) => note(`${tag}  ${line}`), { freshBelow: 0.1 });
+  await waitForReset(liveBackends.claude!, (line) => note(`${tag}  ${line}`), { freshBelow: 0.9 });
 }
 
 async function runOne(run: RunSpec, suite: string, tasks: EvalTask[], home: string, fake: boolean): Promise<"finished" | "gave-up" | "interrupted"> {
