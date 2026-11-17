@@ -1079,6 +1079,15 @@ export const FEATURES: Feature[] = [
     optional: true,
     defaultOff: true,
   },
+  {
+    id: "F116",
+    key: "network-pause",
+    name: "Lost network: pause, do not fail or escalate",
+    added: "2026-11-17",
+    files: ["src/engine/run.ts (OFFLINE, offline, held, stopFor)", "test/support/chaos.ts (offline fault, outage scenario)"],
+    what: "A turn that cannot reach its service (connection refused, DNS failure, no route, connection reset, a firewall or proxy) is tried once more, as a dropped connection always was (ECONNREFUSED and the DNS errors joined that list); if it fails the same way again, the run pauses with \"check the network, then resume\" instead of failing the task, climbing the ladder or calling the expert, since no model can get past it. A stall or a 5xx is left as it was: those can be the model's own trouble. Seen 2026-11-17: overnight, the network dropped during rt2-haiku-1 and eight tasks were recorded as failed with 0 tokens after 18 to 24 minutes each; the fault harness then showed the cascade sending a task to the expert on a dead network. Same shape as F64 auth-pause.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

@@ -250,11 +250,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const interruptDrawn = [d.chance(0.25), d.int(0, 12)] as const;
   const interruptAt = interruptDrawn[0] && options.killAt === undefined && !options.resume ? interruptDrawn[1] : -1;
   const killDelay = d.int(0, 700);
+  // [F116 network-pause] Some runs lose the network for good from one call on (their own dice, so other seeds are unchanged).
+  const netDice = dice(seed + 3_333_331);
+  const outageFrom = netDice.chance(0.08) && !options.resume ? netDice.int(0, 10) : -1;
   // Good agents on a run nobody stopped: the engine must then waste nothing.
-  const calm = trouble === "none" && interruptAt < 0 && options.killAt === undefined && !options.resume;
+  const calm = trouble === "none" && outageFrom < 0 && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt}${outageFrom >= 0 ? ` offline>${outageFrom}` : ""} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
@@ -311,6 +314,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       return never;
     }
     if (index === options.killAt) setTimeout(() => process.kill(process.pid, "SIGKILL"), killDelay);
+    if (outageFrom >= 0 && index >= outageFrom) return { stop: "error", detail: "API Error: Connection refused — a firewall or proxy may be blocking it (ECONNREFUSED)" };
     const kind = callKind(req);
     const expert = req.model === EXPERT.model;
     const usage = d.chance(0.7) ? { input: d.int(1, 50), cacheRead: d.int(0, 50_000), cacheWrite: d.int(0, 20_000), output: d.int(100, expert ? 12_000 : 40_000) } : {};
@@ -320,10 +324,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       // [F110 structured-rescue] A report or one-answer turn whose tool gave up on the structured format after doing the work.
       const props = (req.outputSchema?.properties ?? {}) as Record<string, unknown>;
       const reportish = ("status" in props || "files" in props) && !("tests" in props);
-      const fault = d.weighted({ transient: 3, error: 3, quota: 1.5, auth: 0.7, unavailable: 1, timeout: 1.5, crash: 1, garbage: 3, text: 1, cut: expert ? 3 : 0, structured: reportish ? 2.5 : 0 });
+      const fault = d.weighted({ transient: 3, offline: 1, error: 3, quota: 1.5, auth: 0.7, unavailable: 1, timeout: 1.5, crash: 1, garbage: 3, text: 1, cut: expert ? 3 : 0, structured: reportish ? 2.5 : 0 });
       if (fault === "structured") structuredFault = true;
       if (fault === "transient") return { stop: "error", detail: d.pick(["ECONNRESET", "stream was interrupted", "503 overloaded"]) };
       if (fault === "error") return { stop: "error", detail: d.pick(["boom", "the model refused", "", "exit code 1"]), exitCode: 1 };
+      // [F116 network-pause] The machine lost its network: seen in a real run (2026-11-17), eight tasks recorded as failed.
+      if (fault === "offline") return { stop: "error", detail: d.pick(["API Error: Connection refused — a firewall or proxy may be blocking it (ECONNREFUSED)", "getaddrinfo ENOTFOUND api.anthropic.com", "fetch failed"]) };
       if (fault === "quota") return { stop: "quota", detail: "usage limit reached, resets in 5 minutes" };
       if (fault === "auth") return { stop: "auth", detail: "OAuth token revoked" };
       if (fault === "unavailable") return { stop: d.pick(["error", "auth"] as const), detail: "model not found" };
@@ -619,10 +625,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
           broke("the run says its checks passed, but the check fails on the result");
         }
       }
-      if (trouble === "none" && interruptAt < 0 && withChecks && state.outcome?.checks !== "passed") broke(`every agent did its work, yet the checks ${state.outcome?.checks}`);
-      if (trouble === "none" && interruptAt < 0 && state.tasks.some((t) => t.status === "failed")) broke(`every agent did its work, yet task ${state.tasks.find((t) => t.status === "failed")!.id} failed: ${state.tasks.find((t) => t.status === "failed")!.error}`);
+      if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && withChecks && state.outcome?.checks !== "passed") broke(`every agent did its work, yet the checks ${state.outcome?.checks}`);
+      if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && state.tasks.some((t) => t.status === "failed")) broke(`every agent did its work, yet task ${state.tasks.find((t) => t.status === "failed")!.id} failed: ${state.tasks.find((t) => t.status === "failed")!.error}`);
     }
-    if (trouble === "none" && interruptAt < 0 && state.status !== "finished") broke(`every agent did its work, yet the run ${state.status}: ${state.reason}`);
+    if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && state.status !== "finished") broke(`every agent did its work, yet the run ${state.status}: ${state.reason}`);
     // Good work is not redone, repaired or sent to the expert.
     if (calm) {
       const waste = state.attempts.filter((a) => ["repair", "review-fix", "advised-fix", "climb", "redo", "continue", "advice", "escalation", "integration", "race"].includes(a.kind));
@@ -671,6 +677,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     // [F110 structured-rescue] A report the tool gave up on, with its status and summary in the last attempt, is never a failed turn.
     if (!off.includes("structured-rescue") && state.attempts.some((a) => String(a.detail ?? "").startsWith("error_max_structured_output_retries"))) {
       broke("a structured-output failure with a usable last attempt was not rescued");
+    }
+    // [F116 network-pause] A lost network is never the model's failure: the run pauses (resume redoes it), it does not fail.
+    const OFFLINE_DETAIL = /ECONNREFUSED|Connection refused|ENOTFOUND|fetch failed/;
+    if (!off.includes("network-pause") && state.status === "failed" && OFFLINE_DETAIL.test(state.reason ?? "")) broke(`the run failed on a lost network: ${state.reason}`);
+    if (!off.includes("network-pause")) {
+      const lost = state.tasks.find((t) => t.status === "failed" && OFFLINE_DETAIL.test(t.error ?? ""));
+      if (lost) broke(`task ${lost.id} failed on a lost network: ${lost.error}`);
     }
     // [F80-F86] A task's tier on the ladder only goes up.
     const rank = { grunt: 0, worker: 1, senior: 2 } as Record<string, number>;

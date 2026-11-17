@@ -864,7 +864,10 @@ interface TurnResult {
   config?: RoleConfig;
 }
 
-const TRANSIENT = /^stalled: |stream was interrupted|^interrupted$|ECONNRESET|socket hang up|ETIMEDOUT|read tcp|connection reset|request failed: Post|\b50[23]\b|UNAVAILABLE|overloaded|temporarily unavailable|internal server error/i;
+const TRANSIENT = /^stalled: |stream was interrupted|^interrupted$|ECONNRESET|socket hang up|ETIMEDOUT|read tcp|connection reset|request failed: Post|\b50[23]\b|UNAVAILABLE|overloaded|temporarily unavailable|internal server error|ECONNREFUSED|connection refused|ENOTFOUND|EAI_AGAIN|ENETUNREACH|EHOSTUNREACH|fetch failed/i;
+
+/** [F116 network-pause] The machine cannot reach the service at all. Not a stall or a 5xx: those can be the model's own trouble. */
+const OFFLINE = /ECONNREFUSED|connection refused|ENOTFOUND|getaddrinfo|EAI_AGAIN|ENETUNREACH|EHOSTUNREACH|network is unreachable|fetch failed|firewall or proxy|ECONNRESET|socket hang up|ETIMEDOUT|connection reset/i;
 
 const UNAVAILABLE =
   /invalid model|not recognized as a known model|not supported when using|issue with the selected model|model .*(not found|unavailable|does not exist)|no longer (available|supported)|does not have access to (the )?model/i;
@@ -1215,12 +1218,30 @@ function signedOut(result: AgentResult): boolean {
   return isOn("auth-pause") && result.stop === "auth" && !UNAVAILABLE.test(result.detail ?? "");
 }
 
+/**
+ * [F116 network-pause] The machine cannot reach the service (after the one retry): no model can do anything, so the
+ * run pauses instead of failing the task or sending it up the ladder (seen 2026-11-17: eight eval tasks recorded as
+ * failed overnight, and in the fault harness an expert called on a dead network).
+ */
+function offline(result: AgentResult): boolean {
+  return isOn("network-pause") && result.stop === "error" && OFFLINE.test(result.detail ?? "");
+}
+
+/** A stop no model can get past: a lost login or a lost network. The run pauses. */
+function held(result: AgentResult): boolean {
+  return signedOut(result) || offline(result);
+}
+
 /** Turn a non-finished agent result into how the run should stop. */
 function stopFor(result: AgentResult, what: string): Stop {
   if (result.stop === "cancelled") return { status: "interrupted", reason: "stopped by the user" };
   // [F64 auth-pause]
   if (signedOut(result)) {
     return { status: "paused", reason: `the ${what}'s tool is no longer signed in (${(result.detail ?? "").replace(/^success\s+/, "").slice(0, 160)}). Sign in again (/connect in the TUI, or \`claude auth login\` for Claude Code), then resume the run.` };
+  }
+  // [F116 network-pause]
+  if (offline(result)) {
+    return { status: "paused", reason: `the ${what}'s tool cannot reach its service (${(result.detail ?? "").replace(/^success\s+/, "").slice(0, 160)}). Check the network, then resume the run.` };
   }
   if (result.stop === "quota") {
     return { status: "paused", reason: `subscription limits reached for every ${what} model: ${result.detail ?? ""} (see "neuromesh cooldowns" for when they reset)`.trim() };
@@ -1255,7 +1276,7 @@ async function specStep(run: RunCtx): Promise<Stop | undefined> {
     access: "read-only",
     schema: SPEC_SCHEMA,
   });
-  if (result.stop === "quota" || result.stop === "cancelled" || signedOut(result)) return stopFor(result, "briefer");
+  if (result.stop === "quota" || result.stop === "cancelled" || held(result)) return stopFor(result, "briefer");
   const spec = result.stop === "done" ? parseSpec(result) : undefined;
   if (!spec) {
     log.emit("note", { message: "No usable product spec came back; the work goes on from the request as it is." });
@@ -1728,7 +1749,7 @@ async function diagnoseStep(run: RunCtx, task: TaskState): Promise<Stop | undefi
     timeoutMs: 5 * 60_000,
     rungBase: task.rung,
   });
-  if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "worker");
+  if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
   const text = result.stop === "done" ? parseDiagnosis(result) : undefined;
   if (text) {
     task.bottleneck = text;
@@ -1930,7 +1951,7 @@ async function directTurn(run: RunCtx, task: TaskState): Promise<Stop | undefine
     rungBase: task.rung,
   });
   task.directTurns = (task.directTurns ?? 0) + 1;
-  if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {
+  if (result.stop === "cancelled" || result.stop === "quota" || held(result)) {
     saveState(state);
     return stopFor(result, "worker");
   }
@@ -2097,7 +2118,7 @@ async function raceStep(run: RunCtx, task: TaskState): Promise<Stop | undefined>
       ),
     );
     if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
-    const stopped = turns.find(({ result }) => result.stop === "cancelled" || result.stop === "quota" || signedOut(result));
+    const stopped = turns.find(({ result }) => result.stop === "cancelled" || result.stop === "quota" || held(result));
     if (stopped) return stopFor(stopped.result, "worker");
     // The checks, one copy at a time: two test suites at once would slow and disturb each other.
     for (const [i, lane] of lanes.entries()) {
@@ -2264,7 +2285,7 @@ async function reproduceBody(run: RunCtx, task: TaskState, next: (outcome: strin
       rungBase: state.workerRung ?? 0,
       timeoutMs: 10 * 60_000,
     });
-    if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "worker");
+    if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
     // [F73 heal-worktree] The writer may have left the folder unusable.
     healTask(run, task);
     if (result.stop !== "done") return reject("turn-failed", { stop: result.stop, detail: result.detail?.slice(0, 200) });
@@ -2442,7 +2463,7 @@ async function blindAsk(run: RunCtx, task: TaskState, chain: RoleConfig[], signa
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
-  if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "tester");
+  if (result.stop === "cancelled" || held(result)) return stopFor(result, "tester");
   return result.stop === "done" ? parseBlind(result) : undefined;
 }
 
@@ -2692,7 +2713,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         saveState(state);
         continue;
       }
-      if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) {
+      if (result.stop === "cancelled" || result.stop === "quota" || held(result)) {
         // The turn may have changed files before it stopped; the next one checks first. One that changed
         // nothing is tried again as a first turn, with its preamble and one-answer mode. [F97 retry-first-turn]
         if (task.next === "initial" && !task.escalated && leftChanges(task)) task.next = "continue";
@@ -2880,7 +2901,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         removeDetachedWorktree(state.repo, testerDir);
       }
       const { result } = outcome;
-      if (result.stop === "cancelled" || signedOut(result)) return stopFor(result, "tester");
+      if (result.stop === "cancelled" || held(result)) return stopFor(result, "tester");
       task.testRounds += 1;
       if (!verdict) {
         log.emit("note", { message: `The tester gave no usable verdict for task ${task.id} (${result.stop}); relying on the checks.` });
@@ -3004,7 +3025,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         access: "read-only",
         schema: ADVICE_SCHEMA,
       });
-      if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
+      if (result.stop === "cancelled" || result.stop === "quota" || held(result)) return stopFor(result, "escalation");
       task.advised = true;
       const advice = result.stop === "done" ? parseAdvice(result) : undefined;
       if (!advice) {
@@ -3101,7 +3122,7 @@ async function splitStep(run: RunCtx, task: TaskState): Promise<Stop | "split" |
     access: "read-only",
     schema: PLAN_SCHEMA,
   });
-  if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "orchestrator");
+  if (result.stop === "cancelled" || result.stop === "quota" || held(result)) return stopFor(result, "orchestrator");
   let plan: Plan | undefined;
   if (result.stop === "done") {
     try {
@@ -3233,7 +3254,7 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
       access: "write",
       schema: reportSchema(),
     });
-    if (result.stop === "cancelled" || result.stop === "quota" || signedOut(result)) return stopFor(result, "escalation");
+    if (result.stop === "cancelled" || result.stop === "quota" || held(result)) return stopFor(result, "escalation");
     // [F73 heal-worktree]
     if (isOn("heal-worktree")) {
       const healed = optional(run, "heal-worktree", undefined, () => healWorktree(state.repo, state.worktree, state.branch, state.base));

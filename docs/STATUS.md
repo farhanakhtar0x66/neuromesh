@@ -809,6 +809,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     24 minutes each; their entries were removed and redone, the old file kept as `results.before-network-redo.json`, see 62) and the
     machine restarted; re-running the same name continued where it stopped.
 
+
+62. **F116 `network-pause` (2026-11-17; engine, offline).** A lost network was recorded as the model's failure: in `rt2-haiku-1` eight
+    tasks failed with `ECONNREFUSED` and 0 tokens. Added to the fault harness first: an `offline` fault, and a run whose network goes for
+    good from one call on (8 percent of seeds, their own dice); the rule that a lost network never fails a run or a task broke on 4 of
+    300 seeds, one of them a task sent to the expert on a dead network. Fix: `ECONNREFUSED` and the DNS errors join the one-retry list;
+    a turn that still cannot reach its service pauses the run ("check the network, then resume"), as F64 does for a lost login; all
+    twelve stop checks go through `held()`. A stall or a 5xx is unchanged. npm test 361/361; 1000 seeds (26 paused) and kill 400 clean.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
