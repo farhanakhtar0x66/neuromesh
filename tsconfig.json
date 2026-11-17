@@ -15,5 +15,5 @@
     "types": ["node"]
   },
   "include": ["src", "test", "evals"],
-  "exclude": ["evals/tasks", "evals/real-tasks/*/seed", "evals/real-tasks/*/hidden", "evals/real-tasks/*/reference", "evals/real-tasks-2/*/seed", "evals/real-tasks-2/*/hidden", "evals/real-tasks-2/*/reference", "evals/real-tasks-3/*/seed", "evals/real-tasks-3/*/hidden", "evals/real-tasks-3/*/reference", "evals/real-tasks-terse", "evals/hard-tasks/*/seed", "evals/hard-tasks/*/hidden", "evals/hard-tasks/*/reference", "evals/routing-bench/tasks", "evals/routing-bench/held-out"]
+  "exclude": ["evals/tasks", "evals/real-tasks/*/seed", "evals/real-tasks/*/hidden", "evals/real-tasks/*/reference", "evals/real-tasks-2/*/seed", "evals/real-tasks-2/*/hidden", "evals/real-tasks-2/*/reference", "evals/real-tasks-3/*/seed", "evals/real-tasks-3/*/hidden", "evals/real-tasks-3/*/reference", "evals/real-tasks-terse", "evals/hard-tasks/*/seed", "evals/hard-tasks/*/hidden", "evals/hard-tasks/*/reference", "evals/routing-bench/tasks", "evals/routing-bench/held-out", "evals/swe-live/tasks", "evals/swe-live/tasks-rejected"]
 }

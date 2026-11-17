@@ -137,7 +137,10 @@ function workspace(task: string, withReference: boolean): string {
 function grade(task: string, withReference: boolean): { ok: boolean; secs: number; tail: string } {
   const ws = workspace(task, withReference);
   const started = Date.now();
-  const r = run("sh", ["hidden/grade.sh"], { cwd: ws, timeoutSec: 1500 });
+  // Under the eval's 10-minute limit for the hidden check, with a margin: a grading that takes longer cannot score in a run,
+  // so the task is rejected rather than waited on (privacyidea's took 16 minutes).
+  const r = run("sh", ["hidden/grade.sh"], { cwd: ws, timeoutSec: 540 });
+  if (Date.now() - started >= 539_000) run("pkill", ["-f", ws]); // the harness outlives the killed shell
   rmSync(ws, { recursive: true, force: true });
   return { ok: r.code === 0, secs: Math.round((Date.now() - started) / 1000), tail: r.out.split("\n").slice(-4).join(" | ") };
 }
