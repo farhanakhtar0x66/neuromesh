@@ -836,6 +836,20 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     Opus stays medium and plans only. Batches 2 and 3 cannot measure this (Haiku passes them): the measure is the hard set
     (`evals/hard-tasks/DESIGN.md`): 12 tasks built by four Sonnet sessions and merged, all valid in this checkout. npm test 361/361; 1000 seeds and kill 400 clean.
 
+64. **The hard set measured; SWE-bench-Live added (2026-11-17).** `hd-haiku-1` (solo-haiku, high): **9 of 12**, est. $1.16,
+    4 five-hour points, 50 minutes; its three failures were near-misses (regex 452/453, chunked-csv 110/111, streaming-stats
+    86/88). The design aimed at 2 to 5: synthetic, well-specified tasks of a few hundred lines no longer separate Haiku 5.5 at
+    high effort from the frontier. `hd-cascade-1` (cascade-claude after STATUS 63): **11 of 12**, est. $3.12, 17 points (the
+    advisor's own turns shared the window), 50 minutes, 0 engine failures: it turned all three near-misses into passes (one by
+    Haiku, two by Sonnet) and lost `hd-py-ledger-cents` (32/35), which it gave to the same Haiku high in one 1-minute turn that
+    solo Haiku passed: one run each, so a flip of one task either way is noise. One task paused mid-run when the Claude CLI's
+    OAuth token was revoked (F64 paused it correctly; the eval summary called it "quota": a labelling bug to fix). Opus alone
+    was skipped (owner's call: on a set Haiku passes 9 of 12 it shows little, and the weekly window was at 66 percent).
+    Next measure: **SWE-bench-Live** (`evals/swe-live/`, MIT): real issues from June to September 2025, each in its own x86
+    Docker image (a colima profile `swe` with Rosetta), the agent working on the host with a runner that executes commands in
+    the image, the official harness as the hidden check, validated with the gold patch (seed fails, gold passes twice).
+    31 instances from 25 repositories are being imported; the first 8 are all valid, grading in 26 to 153 s.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live
