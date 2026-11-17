@@ -1,0 +1,1 @@
+{ "zone": "Europe/London", "start": "2026-01-01", "time": "08:30", "repeat": { "type": "monthly", "day": 31 }, "until": "2026-12-31" }

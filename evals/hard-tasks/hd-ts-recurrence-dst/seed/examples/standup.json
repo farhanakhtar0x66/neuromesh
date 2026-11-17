@@ -1,0 +1,1 @@
+{ "zone": "America/New_York", "start": "2026-01-05", "time": "09:00", "repeat": { "type": "weekly", "days": ["MO", "TU", "WE", "TH", "FR"] } }

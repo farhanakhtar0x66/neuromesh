@@ -1,0 +1,9 @@
+{
+  "kind": "feature",
+  "language": "typescript",
+  "hiddenCheck": "node hidden/grade.ts",
+  "synthetic": true,
+  "runner": "node",
+  "testCommand": "node --test test/*.test.ts",
+  "checks": [{ "name": "tests", "command": "node --test test/*.test.ts" }]
+}

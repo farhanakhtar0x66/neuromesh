@@ -1,0 +1,10 @@
+{
+  "name": "track",
+  "version": "0.7.0",
+  "description": "A small issue tracker library and CLI",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  }
+}

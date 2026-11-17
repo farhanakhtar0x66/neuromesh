@@ -1,0 +1,7 @@
+[
+  { "id": 1, "title": "Login page crashes on submit", "body": "Clicking Sign in with an empty password throws a TypeError.", "status": "open", "priority": 1, "assignee": "ann", "reporter": "bob", "labels": ["bug", "auth"], "created": "2024-04-01", "due": "2024-04-15", "estimate": 4 },
+  { "id": 2, "title": "Add dark mode", "body": "Users keep asking for a dark theme in the settings.", "status": "open", "priority": 3, "assignee": null, "reporter": "carol", "labels": ["feature", "ui"], "created": "2024-04-20", "due": null, "estimate": 8 },
+  { "id": 3, "title": "Fix typo in README", "body": "The word recieve is misspelled in the install section.", "status": "closed", "priority": 5, "assignee": "bob", "reporter": "ann", "labels": ["docs"], "created": "2024-03-02", "due": "2024-03-05", "estimate": 0.5 },
+  { "id": 4, "title": "Upgrade the login library", "body": "Security fix, see the advisory from last week.", "status": "in-progress", "priority": 2, "assignee": "ann", "reporter": "carol", "labels": ["security", "auth"], "created": "2024-05-01", "due": "2024-05-20", "estimate": 2 },
+  { "id": 5, "title": "Slow search on large projects", "body": "Searching a project with 10k issues takes several seconds.", "status": "open", "priority": 4, "assignee": "carol", "reporter": "bob", "labels": ["performance"], "created": "2024-02-11", "due": null, "estimate": null }
+]
