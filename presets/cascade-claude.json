@@ -1,6 +1,6 @@
 {
   "name": "cascade-claude",
-  "description": "The default team since 2026-11-14: the routing cascade (F80 to F99) on Claude models only, one Claude plan (measured in evals/routing-bench). Grunt: Claude Haiku 5.5 low, gated only by checks. Worker: Haiku 5.5 medium, then high. Senior: Claude Sonnet 5.5 medium, then high. Expert: Claude Opus 5.5 medium, which plans and writes blueprints and builds nothing. No spec writer, so the expert is called only when Tier 0 or an escalation asks for it.",
+  "description": "The default team since 2026-11-14: the routing cascade (F80 to F99) on Claude models only, one Claude plan (measured in evals/routing-bench). Grunt: Claude Haiku 5.5 low, gated only by checks. Worker: Haiku 5.5 high. Senior: Claude Sonnet 5.5 high. Tester: Sonnet 5.5 high. Expert: Claude Opus 5.5 medium, which plans and writes blueprints and builds nothing. No spec writer, so the expert is called only when Tier 0 or an escalation asks for it. Efforts raised from medium on 2026-11-17 (STATUS 63): on batch 3 solo Haiku at high passed 8 of 10 and this preset at medium 7 of 10, with Sonnet at medium thinking about 1k tokens a turn against Haiku high's 25k.",
   "mode": "team",
   "routing": "worker-first",
   "roles": {
@@ -22,14 +22,14 @@
       {
         "backend": "claude",
         "model": "claude-haiku-5-5",
-        "effort": "medium"
+        "effort": "high"
       }
     ],
     "tester": [
       {
         "backend": "claude",
         "model": "claude-sonnet-5-5",
-        "effort": "medium"
+        "effort": "high"
       }
     ]
   },
@@ -51,20 +51,10 @@
     {
       "backend": "claude",
       "model": "claude-haiku-5-5",
-      "effort": "medium"
-    },
-    {
-      "backend": "claude",
-      "model": "claude-haiku-5-5",
       "effort": "high"
     }
   ],
   "seniorLadder": [
-    {
-      "backend": "claude",
-      "model": "claude-sonnet-5-5",
-      "effort": "medium"
-    },
     {
       "backend": "claude",
       "model": "claude-sonnet-5-5",
@@ -73,7 +63,7 @@
   ],
   "cascade": {
     "thresholds": {
-      "worker": 0.55,
+      "worker": 0.4,
       "senior": 0.55
     },
     "blueprint": true,

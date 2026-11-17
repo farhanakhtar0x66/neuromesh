@@ -1088,6 +1088,24 @@ export const FEATURES: Feature[] = [
     what: "A turn that cannot reach its service (connection refused, DNS failure, no route, connection reset, a firewall or proxy) is tried once more, as a dropped connection always was (ECONNREFUSED and the DNS errors joined that list); if it fails the same way again, the run pauses with \"check the network, then resume\" instead of failing the task, climbing the ladder or calling the expert, since no model can get past it. A stall or a 5xx is left as it was: those can be the model's own trouble. Seen 2026-11-17: overnight, the network dropped during rt2-haiku-1 and eight tasks were recorded as failed with 0 tokens after 18 to 24 minutes each; the fault harness then showed the cascade sending a task to the expert on a dead network. Same shape as F64 auth-pause.",
     optional: true,
   },
+  {
+    id: "F117",
+    key: "empty-done",
+    name: "Done with no change: asked once",
+    added: "2026-11-17",
+    files: ["src/engine/run.ts (EMPTY_DONE, the checks step)", "src/engine/types.ts (emptyAsked)", "test/support/chaos.ts (rule: a task passed with no change after one turn)"],
+    what: "When a build turn ends (done, blocked or with no answer; not a split), the workspace has no change at all, no check is failing and no other task of the run changed anything, a failing 'empty-done' result is added once, so the task gets a repair turn telling it that its edits did not land and to check git status. A second done with no change is accepted (the request may need none); a second blocked with no change fails the task instead of passing it empty (the fault harness found blocked-and-empty tasks passing in runs with no checks). Seen 2026-11-17 in rt3-cascade-1 (an-com-demand): Sonnet's patch command began with a cat waiting on stdin, hung, was moved to the background and never ran; the turn reported done, described a test it had not written, the visible checks passed on the unchanged seed and the engine accepted a 0-byte diff.",
+    optional: true,
+  },
+  {
+    id: "F118",
+    key: "keep-checks",
+    name: "A check that ran at the start is never dropped",
+    added: "2026-11-17",
+    files: ["src/engine/run.ts (LOST_CHECK, keepLostChecks, checksPass)", "test/support/chaos.ts (lostTool damage, rule: no checks left after the baseline ran one)"],
+    what: "A check that ran at the baseline (passed or failed) and is 'unavailable' later (exit 127, command not found) is a failure of the work, not a check that cannot run here: it is kept and counted as failed, with a note that the work removed or broke what the check needs, so the task is repaired (or treated as an environment problem by F56). Before, it was dropped for the rest of the run and the task and run finished with no checks. Also: a task that never reached its checks (latest unset) no longer counts as passing them, so the escalation breaker (F86) and the budget rules stop keeping failed, unchecked work as \"the checks pass\" (found by the harness rule). Seen 2026-11-17 in rt3-cascade-1 (an-leaf-effects): a worker left .venv without pytest, the check exited 127, both tasks and the final step ran no check (outcome 'none') and a hidden test failed.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

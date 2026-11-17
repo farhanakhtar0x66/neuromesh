@@ -200,6 +200,8 @@ export interface TaskState extends PlannedTask {
   directOff?: boolean;
   /** [F68 split-ask] Nobody can divide this task now (no lead engineer, or no budget for one): the worker is not offered a split. */
   noSplit?: boolean;
+  /** [F117 empty-done] The task was told once that it said done and changed nothing. */
+  emptyAsked?: boolean;
   /** [F56 env-blocked] Turns spent on environment problems (not counted as repair rounds). */
   envRepairs?: number;
   /** [F56 env-blocked] What the environment problem was, for the next worker turn. */

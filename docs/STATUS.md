@@ -817,6 +817,25 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     a turn that still cannot reach its service pauses the run ("check the network, then resume"), as F64 does for a lost login; all
     twelve stop checks go through `held()`. A stall or a 5xx is unchanged. npm test 361/361; 1000 seeds (26 paused) and kill 400 clean.
 
+63. **Batch 3 baselines, why the cascade lost, F117 and F118 (2026-11-17).** `rt3-haiku-1`: 8 of 10, est. $1.40, 4 five-hour
+    points, 64 minutes; it failed `em-hospital-lan` (0/1) and `em-unix-targets` (7/8). `rt3-cascade-1` (cascade-claude as it was): 7 of
+    10, est. $2.86, 37 points (inflated: the advisor and four task-building sessions shared the window), 39 minutes; it rescued
+    `em-unix-targets` and lost two tasks Haiku alone passed. Read from the runs' events: (1) **an-com-demand**: Haiku at medium gave
+    confidence 0.45 and the F83 gate sent the task a whole tier up, past Haiku high, to Sonnet medium; Sonnet's patch command began
+    with `cat > /tmp/p.py` waiting on stdin, hung, went to the background and never ran; the turn reported done (describing a test it had
+    not written) and the engine accepted a 0-byte diff (14/15 is the seed's own score). (2) **an-leaf-effects**: Opus planned two tasks;
+    the worker left `.venv` without pytest, the check exited 127, the engine dropped it as "cannot run here", both tasks and the final
+    step ran no check and the Sonnet-medium part failed a hidden test. (3) Every cascade model ran at medium: Sonnet thought about 1k
+    reasoning tokens a turn against solo Haiku high's 25k. Fixes, harness first: a `lostTool` damage (the work breaks the tool a
+    check runs through) and two rules (no run passes with its checks dropped; no task passes with no change after one turn); both broke
+    on today's engine (6 and 7 of 1000 seeds). **F117 `empty-done`**: a turn that ends with no change at all is asked once whether its
+    edits landed; still blocked and empty, the task fails. **F118 `keep-checks`**: a check that ran at the baseline and is unavailable
+    later counts as failed with a note, not dropped; and a task that never reached its checks no longer counts as passing them (the
+    harness found F86 keeping a failed, unchecked task as "the checks pass"). **Preset**: cascade-claude's worker is Haiku high (one
+    rung), senior Sonnet high (one rung), tester Sonnet high, worker gate 0.4 (was medium then high, medium then high, medium, 0.55);
+    Opus stays medium and plans only. Batches 2 and 3 cannot measure this (Haiku passes them): the measure is the hard set
+    (`evals/hard-tasks/DESIGN.md`): 12 tasks built by four Sonnet sessions and merged, all valid in this checkout. npm test 361/361; 1000 seeds and kill 400 clean.
+
 ## Next steps
 
 0a. F100 to F104 are on `neuromesh-research`. F100 and F101 have one live

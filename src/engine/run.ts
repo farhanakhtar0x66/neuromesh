@@ -825,6 +825,23 @@ function environmentProblem(task: TaskState, results: CheckResult[], installFail
   return undefined;
 }
 
+/** [F118 keep-checks] What a check that ran before the work and cannot run now is told as. */
+const LOST_CHECK =
+  "This check ran before the work started; now its command cannot run (command or file not found). The work removed or broke something the check needs (for example a virtual environment, an installed tool or a script). Restore it so the check runs again; do not change the check.";
+
+/** [F118 keep-checks] A check that ran at the baseline and is unavailable now failed: the work broke what it needs. */
+function keepLostChecks(run: RunCtx, results: CheckResult[]): CheckResult[] {
+  if (!isOn("keep-checks")) return results;
+  const ran = new Set((run.state.baseline ?? []).filter((b) => b.status === "passed" || b.status === "failed").map((b) => b.name));
+  return optional(run, "keep-checks", results, () =>
+    results.map((r) => (r.status === "unavailable" && ran.has(r.name) ? { ...r, status: "failed" as const, tail: `${LOST_CHECK}\n${r.tail}` } : r)),
+  );
+}
+
+/** [F117 empty-done] What a task that said it was done and changed nothing is told, once. */
+const EMPTY_DONE =
+  "Your turn ended, but the workspace has no change at all: git shows no edited, added or deleted file. If you made edits, they did not land (a command that hung or went to the background, a script whose search text matched nothing, a write to another folder). Check with `git status` and `git diff`, make the change, and confirm it is there before reporting. If the request really needs no change, report done again and say why in your notes.";
+
 function brief(results: CheckResult[]): { name: string; status: string; durationMs: number }[] {
   return results.map((r) => ({ name: r.name, status: r.status, durationMs: r.durationMs }));
 }
@@ -1627,6 +1644,8 @@ function featureFailed(run: RunCtx, error: unknown, key: string): void {
 
 /** The task's latest checks all passed (or the project has none). */
 function checksPass(task: TaskState): boolean {
+  // [F118 keep-checks] Work that never reached its checks has not passed them (a failed turn kept as "the checks pass").
+  if (task.latest === undefined && isOn("keep-checks")) return false;
   return (task.latest ?? []).every((r) => r.status !== "failed" && r.status !== "timeout");
 }
 
@@ -2751,7 +2770,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const testedAt = state.tasks.length > 1 ? headCommit(state.worktree) : undefined;
       // [F54 work-env] Install what the work declares now, before its checks.
       const installFailed = await prepareEnv(run, task.worktree, task.prepared, task.id);
-      let results = await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`);
+      let results = keepLostChecks(run, await check(run, task.worktree, `${task.id}-${task.escalated ? "x" : ""}${task.round}`));
       const cannotRun = results.filter((r) => r.status === "unavailable").map((r) => r.name);
       if (cannotRun.length > 0) {
         state.checks = state.checks.filter((c) => !cannotRun.includes(c.name));
@@ -2765,6 +2784,19 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         if (stubs.length > 0) {
           results = [...results, { name: "stub-gate", command: "neuromesh stub gate (F95)", status: "failed", exitCode: 1, durationMs: 0, tail: describeStubs(stubs), logPath: "" }];
           log.emit("note", { feature: "F95", message: `Task ${task.id} left ${stubs.length} stand-in(s) for an implementation: ${stubs.slice(0, 3).map((x) => `${x.file}:${x.line}`).join(", ")}` });
+        }
+      }
+      // [F117 empty-done] Done (or blocked, or no answer) with no change at all, and nothing else failing: asked once
+      // whether the edits landed. Still blocked with no change after that: the task fails rather than passing empty.
+      const status = task.report?.status;
+      if (isOn("empty-done") && diff.trim() === "" && status !== "split" && state.tasks.every((t) => t === task || (t.files ?? []).length === 0)) {
+        const failingNow = results.some((r) => r.status === "failed" || r.status === "timeout");
+        if (!failingNow && !task.emptyAsked && optional(run, "empty-done", false, () => true)) {
+          task.emptyAsked = true;
+          results = [...results, { name: "empty-done", command: "neuromesh empty-change gate (F117)", status: "failed", exitCode: 1, durationMs: 0, tail: EMPTY_DONE, logPath: "" }];
+          log.emit("note", { feature: "F117", message: `Task ${task.id} reported ${status ?? "nothing"} but changed nothing; it is asked once whether its edits landed.` });
+        } else if (!failingNow && task.emptyAsked && status === "blocked") {
+          return failTask(run, task, `blocked with no change: ${task.report?.summary ?? ""} ${task.report?.notes ?? ""}`.trim().slice(0, 400));
         }
       }
       task.latest = results;
@@ -3235,7 +3267,7 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
   }
   // [F54 work-env] The merged work needs its environment too.
   await prepareEnv(run, state.worktree, state.prepared);
-  let results = await check(run, state.worktree, "final");
+  let results = keepLostChecks(run, await check(run, state.worktree, "final"));
   if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
   log.emit("checks.finished", { phase: "final", results: brief(results) });
   const failing = (): CheckResult[] => results.filter((r) => r.status === "failed" || r.status === "timeout");
@@ -3261,7 +3293,7 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
       if (healed && healed.fixed.length > 0) log.emit("worktree.healed", { feature: "F73", restored: healed.restored, fixed: healed.fixed });
     }
     commitAll(state.worktree, "neuromesh: integration fix", state.prepared);
-    results = await check(run, state.worktree, "final-fixed");
+    results = keepLostChecks(run, await check(run, state.worktree, "final-fixed"));
     if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
     log.emit("checks.finished", { phase: "final", results: brief(results) });
   }

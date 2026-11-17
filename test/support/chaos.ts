@@ -470,7 +470,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       return report("done", "did everything, and more");
     }
     // Damage an agent can really do to its work folder.
-    const damage = d.weighted({ commit: 3, branch: 2, deleteChecks: 2, deleteFolder: 1.5, lock: 1, junk: 2 });
+    const damage = d.weighted({ commit: 3, branch: 2, deleteChecks: 2, deleteFolder: 1.5, lock: 1, junk: 2, lostTool: 2 });
     try {
       if (damage === "commit") {
         for (const f of own) put(req.cwd, f, "ok");
@@ -482,6 +482,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       } else if (damage === "deleteChecks") {
         rmSync(join(req.cwd, "check.js"), { force: true });
         rmSync(join(req.cwd, "package.json"), { force: true });
+      } else if (damage === "lostTool") {
+        // [F118 keep-checks] The work is done, but the tool the check runs through is gone (seen 2026-11-17: a worker
+        // recreated .venv without pytest, the check exited 127 and the engine dropped it, finishing with no checks).
+        for (const f of own) put(req.cwd, f, d.chance(0.5) ? "ok" : "not ok");
+        writeFileSync(join(req.cwd, "package.json"), JSON.stringify({ name: "chaos", private: true, scripts: { test: "./.venv/bin/runner check.js" } }));
       } else if (damage === "deleteFolder") {
         rmSync(req.cwd, { recursive: true, force: true });
       } else if (damage === "lock") {
@@ -624,6 +629,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         } catch {
           broke("the run says its checks passed, but the check fails on the result");
         }
+      }
+      // [F118 keep-checks] A check that ran before the work started is never quietly dropped.
+      if (withChecks && state.baseline?.some((b) => b.status === "passed" || b.status === "failed") && state.outcome?.checks === "none" && state.tasks.some((t) => t.status === "passed")) broke("a check that ran at the start was dropped: the run finished with no checks");
+      // [F117 empty-done] A task that passed with no change was asked once whether its edits landed.
+      for (const t of state.tasks) {
+        const builds = state.attempts.filter((a) => a.task === t.id && a.role !== "tester" && a.kind !== "blind" && a.kind !== "reproduce" && a.kind !== "plan");
+        if (t.status === "passed" && (t.files ?? []).length === 0 && builds.length === 1 && state.tasks.length === 1) broke(`task ${t.id} passed with no change after one turn that said it was done`);
       }
       if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && withChecks && state.outcome?.checks !== "passed") broke(`every agent did its work, yet the checks ${state.outcome?.checks}`);
       if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && state.tasks.some((t) => t.status === "failed")) broke(`every agent did its work, yet task ${state.tasks.find((t) => t.status === "failed")!.id} failed: ${state.tasks.find((t) => t.status === "failed")!.error}`);
