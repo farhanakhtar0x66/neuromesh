@@ -1,0 +1,14 @@
+[package]
+name = "linre"
+version = "0.1.0"
+edition = "2021"
+description = "A small regular expression engine that runs in time linear in the text"
+
+[dependencies]
+
+# Tests and the dev profile are optimised: some tests measure time.
+[profile.dev]
+opt-level = 3
+
+[profile.test]
+opt-level = 3

@@ -11,8 +11,8 @@ subcommand with git-style exit codes. The prompt is the spec; it carries all rul
    touch" (`<=`) makes 91 hidden tests fail. This is the rule a small model most likely gets wrong, and it is stated
    in prompt rule 2 (fairness) as a rule, not as a warning.
 3. Chains: a touches b touches c is one region (the base section and the conflict text cover all of it).
-4. Identical changes on both sides are written once, also when each side made them as one hunk and the region also
-   has other changes only if the region texts are equal (prompt rule 3).
+4. Identical changes on both sides are written once, also when the region has more than one hunk, as long as the
+   two sides' texts for the whole region are equal (prompt rule 3); a change that differs even a little is a conflict.
 5. Insertions: two insertions at the same place conflict unless equal; an insertion next to a change touches it; the
    diff3 base section of an insertion conflict is empty but the `||||||| base` line stays.
 6. The diff3 base section is the whole region's base lines, not only the hunk that started it (27 tests).
