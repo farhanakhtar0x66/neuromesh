@@ -1,0 +1,7 @@
+[package]
+name = "calsched"
+version = "0.3.1"
+edition = "2021"
+description = "Find common free time for several people from their weekly hours, exceptions and meetings"
+
+[dependencies]

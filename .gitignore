@@ -9,3 +9,6 @@ __pycache__/
 
 # Real-task terse variants are made by evals/make-batch.ts --prompts terse.
 evals/real-tasks-terse/
+
+# Cargo build output of task seeds (hard set)
+evals/hard-tasks/**/target/
