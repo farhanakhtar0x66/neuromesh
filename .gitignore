@@ -12,3 +12,8 @@ evals/real-tasks-terse/
 
 # Cargo build output of task seeds (hard set)
 evals/hard-tasks/**/target/
+
+# SWE-bench-Live tasks are rebuilt from the dataset by evals/swe-live/import.ts.
+evals/swe-live/tasks/
+evals/swe-live/tasks-rejected/
+evals/swe-live/import.log

@@ -55,13 +55,14 @@ export const RUNS: RunSpec[] = [
 
 /**
  * The runs for a suite: the same four, named after a real-tasks-<n> folder (real-tasks-3 gives rt3-haiku-1, ...), so
- * two real suites never continue each other's run; evals/hard-tasks gives hd-haiku-1, .... Any other folder keeps the
+ * two real suites never continue each other's run; evals/hard-tasks gives hd-haiku-1, evals/swe-live/tasks swl-haiku-1, .... Any other folder keeps the
  * names in RUNS (rt2-...).
  */
 export function runsFor(suite: string): RunSpec[] {
   const folder = suite.replace(/\/+$/, "").replace(/^.*\//, "");
   const n = /^real-tasks-(\d+)$/.exec(folder)?.[1];
-  const prefix = n !== undefined ? `rt${n}` : folder === "hard-tasks" ? "hd" : "rt2";
+  const swe = /(^|\/)swe-live\/tasks\/*$/.test(suite);
+  const prefix = n !== undefined ? `rt${n}` : folder === "hard-tasks" ? "hd" : swe ? "swl" : "rt2";
   return RUNS.map((r) => ({ ...r, name: r.name.replace(/^rt2/, prefix) }));
 }
 
