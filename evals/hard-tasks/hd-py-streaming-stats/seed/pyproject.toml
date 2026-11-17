@@ -1,0 +1,9 @@
+[project]
+name = "logstats"
+version = "0.2.0"
+description = "A report on web access logs"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
