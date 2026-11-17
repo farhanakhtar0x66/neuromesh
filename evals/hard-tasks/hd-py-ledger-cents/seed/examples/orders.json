@@ -1,0 +1,29 @@
+[
+  {
+    "number": "INV-1001",
+    "customer": {"id": "C001", "name": "Acme Print"},
+    "issued_on": "2026-03-03",
+    "items": [
+      {"sku": "PAPER-A4", "qty": 10, "unit_price": 4.50, "jurisdiction": "CA"},
+      {"sku": "TONER", "qty": 2, "unit_price": 59.90, "jurisdiction": "CA", "discount_pct": 10}
+    ]
+  },
+  {
+    "number": "INV-1002",
+    "customer": {"id": "C002", "name": "Birch & Co", "loyalty_pct": 5},
+    "issued_on": "2026-03-09",
+    "items": [
+      {"sku": "CONSULT", "qty": 1.5, "unit_price": 120.00, "jurisdiction": "NY"},
+      {"sku": "TRAVEL", "qty": 1, "unit_price": 80.00, "jurisdiction": "NY"}
+    ],
+    "coupon": 20
+  },
+  {
+    "number": "INV-1003",
+    "customer": {"id": "C001", "name": "Acme Print"},
+    "issued_on": "2026-04-01",
+    "items": [
+      {"sku": "PAPER-A4", "qty": 4, "unit_price": 4.50, "jurisdiction": "TX"}
+    ]
+  }
+]
