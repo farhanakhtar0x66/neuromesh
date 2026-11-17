@@ -1,0 +1,8 @@
+{
+  "_about": "Names, signatures or messages the hidden tests need that the issue never states, so an agent cannot know them (as in SWE-bench Pro's interface field). Added to the prompt after the issue. Found by comparing the identifiers in the test patch with the seed, the issue and the gold patch; see README.",
+  "awslabs__mcp-1154": "A command whose output-file argument is a relative path must raise `ValueError` from `interpret_command`, with a message ending in `should be an aboslute path` (spelled exactly so).",
+  "certtools__intelmq-2632": "Add an upgrade function `v341_blueliv_removal(configuration, harmonization, dry_run, **kwargs)` in `intelmq/lib/upgrades.py`, listed for version 3.4.1, as the other upgrade functions there are.",
+  "lastmile-ai__mcp-agent-367": "`ServerConnection` in `src/mcp_agent/mcp/mcp_connection_manager.py` gets a method `_is_shutdown_requested_flag(self) -> bool`, true once a shutdown of that connection has been requested.",
+  "python-attrs__attrs-1457": "The new option is a keyword argument `force_kw_only` of the class decorators: `attr.s(..., force_kw_only=True)` (keeps today's behaviour by default) and `attrs.define` / `attr.define(..., force_kw_only=False)`.",
+  "spesmilo__electrum-10172": "`Daemon.load_wallet` (in `electrum/daemon.py`) gets a keyword argument `force_check_password: bool = False`; when it is true the password argument is always validated, also for a wallet that is already loaded or whose storage is not encrypted."
+}

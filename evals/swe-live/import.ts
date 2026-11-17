@@ -73,9 +73,13 @@ function wrapper(row: Instance): string {
   ].join("\n");
 }
 
-function prompt(row: Instance, runner: string): string {
-  return `${row.problem_statement.trim()}
+// Names the hidden tests need that the issue does not state (interfaces.json): without them a right fix fails on a guessed name.
+const INTERFACES: Record<string, string> = JSON.parse(readFileSync(new URL("./interfaces.json", import.meta.url), "utf8"));
 
+function prompt(row: Instance, runner: string): string {
+  const iface = INTERFACES[row.instance_id];
+  return `${row.problem_statement.trim()}
+${iface ? `\n---\n\nInterface the maintainers expect (the tests use these names): ${iface}\n` : ""}
 ---
 
 Fix this in the repository in the current folder (${row.repo}). The project's Python environment, with its dependencies
