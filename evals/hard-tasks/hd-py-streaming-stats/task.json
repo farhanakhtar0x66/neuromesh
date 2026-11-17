@@ -1,0 +1,15 @@
+{
+  "kind": "refactor",
+  "language": "python",
+  "hiddenCheck": "node hidden/grade.ts",
+  "synthetic": true,
+  "runner": "pytest",
+  "testCommand": ".venv/bin/pytest --continue-on-collection-errors tests",
+  "setup": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest || uv pip install -q --python .venv/bin/python pytest)",
+  "checks": [
+    {
+      "name": "tests",
+      "command": "(uv venv -q .venv && uv pip install -q --offline --python .venv/bin/python pytest) >/dev/null 2>&1; .venv/bin/pytest -q -p no:cacheprovider tests"
+    }
+  ]
+}
