@@ -122,5 +122,6 @@ test("each real-tasks suite gets its own run names, so suites never continue eac
   assert.deepEqual(runsFor("evals/real-tasks-2").map((r) => r.name), RUNS.map((r) => r.name));
   assert.deepEqual(runsFor("evals/real-tasks-3/").map((r) => r.name), ["rt3-haiku-1", "rt3-cascade-1", "rt3-cascade-2", "rt3-opus-1"]);
   assert.equal(runsFor("/tmp/x/suite-4")[0]!.name, "rt2-haiku-1");
+  assert.deepEqual(runsFor("evals/hard-tasks").map((r) => r.name), ["hd-haiku-1", "hd-cascade-1", "hd-cascade-2", "hd-opus-1"]);
   assert.equal(runsFor("evals/real-tasks-3").find((r) => r.opus)?.preset, "solo-opus");
 });
