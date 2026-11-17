@@ -1,0 +1,15 @@
+{
+  "kind": "bug",
+  "language": "javascript",
+  "hiddenCheck": "node hidden/grade.ts",
+  "synthetic": true,
+  "hardSet": true,
+  "runner": "node",
+  "testCommand": "node --test",
+  "checks": [
+    {
+      "name": "tests",
+      "command": "node --test"
+    }
+  ]
+}

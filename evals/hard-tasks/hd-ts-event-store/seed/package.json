@@ -1,0 +1,13 @@
+{
+  "name": "stockroom",
+  "version": "1.3.0",
+  "description": "Multi-warehouse stock, reservations, transfers and returns.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

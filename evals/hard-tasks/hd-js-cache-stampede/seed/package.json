@@ -1,0 +1,14 @@
+{
+  "name": "memo-cache",
+  "version": "0.4.2",
+  "description": "A small memo cache for API clients: TTL, stale-while-revalidate, bounded size.",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
