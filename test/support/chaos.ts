@@ -145,6 +145,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   // feature on (it is off by default). Its own dice again, so a seed's scenario otherwise stays what it was.
   const reproDice = dice(seed + 3_333_331);
   const withRepro = reproDice.chance(0.2);
+  // [F119 green-checks] A fifth of the runs with checks start green: the project's tests already pass and test nothing the
+  // request asks for (a real repository's suite, as in SWE-bench-Live). Its own dice, so a seed's scenario otherwise stays.
+  const greenStart = dice(seed + 6_666_661).chance(0.2) && !withRepro && !withBlind;
   const quotaShift = phaseDice.chance(0.33) ? { backend: "fake", window: "five_hour", above: phaseDice.pick([0.05, 0.22, 0.9]), to: [{ backend: "other", model: "shift-1", tier: "worker" as const }] } : undefined;
   // ---- The repository: its check passes when every listed file says "ok".
   const repo = join(options.scratch, `repo-${seed}`);
@@ -160,8 +163,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     writeFileSync(join(repo, "package.json"), JSON.stringify({ name: "chaos", private: true, scripts: { test: "node check.js" } }));
     writeFileSync(
       join(repo, "check.js"),
-      `const fs=require('fs');${slowCheck ? "const t=Date.now();while(Date.now()-t<400){}" : ""}for(const f of ${JSON.stringify(files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='ok'){console.error('expected '+f+' to say ok');process.exit(1)}}for(const f of fs.readdirSync('.')){if(/^blind-fail/.test(f)){console.error('AssertionError: the blind test '+f+' fails');process.exit(1)}}`,
+      `const fs=require('fs');${slowCheck ? "const t=Date.now();while(Date.now()-t<400){}" : ""}for(const f of ${JSON.stringify(greenStart ? ["suite.txt"] : files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='ok'){console.error('expected '+f+' to say ok');process.exit(1)}}for(const f of fs.readdirSync('.')){if(/^blind-fail/.test(f)){console.error('AssertionError: the blind test '+f+' fails');process.exit(1)}}`,
     );
+    if (greenStart) writeFileSync(join(repo, "suite.txt"), "ok\n");
   } else {
     writeFileSync(join(repo, "README.md"), "a project without checks\n");
   }
@@ -257,7 +261,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calm = trouble === "none" && outageFrom < 0 && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? "" : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt}${outageFrom >= 0 ? ` offline>${outageFrom}` : ""} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? (greenStart ? " green" : "") : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt}${outageFrom >= 0 ? ` offline>${outageFrom}` : ""} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
@@ -636,6 +640,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       for (const t of state.tasks) {
         const builds = state.attempts.filter((a) => a.task === t.id && a.role !== "tester" && a.kind !== "blind" && a.kind !== "reproduce" && a.kind !== "plan");
         if (t.status === "passed" && (t.files ?? []).length === 0 && builds.length === 1 && state.tasks.length === 1) broke(`task ${t.id} passed with no change after one turn that said it was done`);
+      }
+      // [F119 green-checks] Checks that all passed before the work cannot tell whether a fix or feature was done: a tester reviews.
+      if (greenStart && withChecks && roles.tester && preset.test === "no-checks" && !off.includes("green-checks") && state.brief && !["trivial", "refactor"].includes(state.brief.kind) && trouble === "none" && outageFrom < 0 && interruptAt < 0) {
+        if (state.tasks.some((t) => t.status === "passed" && !t.escalated) && !state.attempts.some((a) => a.role === "tester")) broke("work that no check could verify (every check passed before it started) was accepted without a review");
       }
       if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && withChecks && state.outcome?.checks !== "passed") broke(`every agent did its work, yet the checks ${state.outcome?.checks}`);
       if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && state.tasks.some((t) => t.status === "failed")) broke(`every agent did its work, yet task ${state.tasks.find((t) => t.status === "failed")!.id} failed: ${state.tasks.find((t) => t.status === "failed")!.error}`);

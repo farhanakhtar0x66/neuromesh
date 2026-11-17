@@ -1561,7 +1561,8 @@ function isLastOpen(state: RunState, task: TaskState): boolean {
 }
 
 /** The tester costs a full agent session; with test "no-checks" it only runs where nothing else verifies the work. */
-function wantsTester(state: RunState, task: TaskState): boolean {
+function wantsTester(run: RunCtx, task: TaskState): boolean {
+  const { state } = run;
   if (!state.roles.tester || task.escalated) return false;
   // [F82 grunt-tier] A grunt's work that no check verifies is reviewed, whatever the staffing says.
   const uncheckedGrunt = state.checks.length === 0 && isOn("grunt-tier") && state.workerRung !== undefined && tierAtRung(state, task.rung) === "grunt";
@@ -1569,7 +1570,24 @@ function wantsTester(state: RunState, task: TaskState): boolean {
   // [F71 one-review] A new program built in parts is reviewed once, when it is whole.
   if (reviewsWhole(state) && task !== state.tasks.at(-1) && !isLastOpen(state, task)) return false;
   if (uncheckedGrunt) return true;
-  return state.test !== "no-checks" || state.checks.length === 0;
+  return state.test !== "no-checks" || state.checks.length === 0 || greenChecks(run, task);
+}
+
+/**
+ * [F119 green-checks] Every check passed before the work started, and no reproduction of the request joined them: they
+ * cannot tell whether a fix or a feature was done (a real repository's suite, green at the start). A refactor is the
+ * exception: green checks that stay green are its proof. Read only; a failure inside is treated as "not green".
+ */
+function greenChecks(run: RunCtx, task: TaskState): boolean {
+  const { state } = run;
+  if (!isOn("green-checks") || state.checks.length === 0) return false;
+  if (state.brief?.kind === "refactor" || state.brief?.kind === "trivial") return false;
+  if (task.reproduce?.stage === "accepted") return false;
+  const test = (): boolean => {
+    const base = state.baseline ?? [];
+    return base.length > 0 && base.every((b) => b.status === "passed");
+  };
+  return optional(run, "green-checks", false, test);
 }
 
 /** [F71 one-review] The spec split a new program into parts: one review, of the whole, at the end. */
@@ -2408,7 +2426,7 @@ async function blindStep(run: RunCtx, task: TaskState): Promise<Stop | undefined
   const next = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
     task.blindDone = true;
     task.blindAnswer = undefined;
-    task.step = wantsTester(state, task) ? "test" : "merge";
+    task.step = wantsTester(run, task) ? "test" : "merge";
     saveState(state);
     log.emit("blind.tests", { feature: "F101", task: task.id, outcome, ...extra });
     return undefined;
@@ -2849,7 +2867,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const decision = observe(task.progress, attemptFrom(failing, diff), ok);
       if (ok) {
         // [F101 blind-tests] Work on state, parsing, limits or an algorithm is first probed by tests written without seeing it.
-        task.step = blindApplies(run, task, files.map((f) => f.path)) ? "blind" : wantsTester(state, task) ? "test" : "merge";
+        task.step = blindApplies(run, task, files.map((f) => f.path)) ? "blind" : wantsTester(run, task) ? "test" : "merge";
         saveState(state);
         continue;
       }

@@ -1106,6 +1106,15 @@ export const FEATURES: Feature[] = [
     what: "A check that ran at the baseline (passed or failed) and is 'unavailable' later (exit 127, command not found) is a failure of the work, not a check that cannot run here: it is kept and counted as failed, with a note that the work removed or broke what the check needs, so the task is repaired (or treated as an environment problem by F56). Before, it was dropped for the rest of the run and the task and run finished with no checks. Also: a task that never reached its checks (latest unset) no longer counts as passing them, so the escalation breaker (F86) and the budget rules stop keeping failed, unchecked work as \"the checks pass\" (found by the harness rule). Seen 2026-11-17 in rt3-cascade-1 (an-leaf-effects): a worker left .venv without pytest, the check exited 127, both tasks and the final step ran no check (outcome 'none') and a hidden test failed.",
     optional: true,
   },
+  {
+    id: "F119",
+    key: "green-checks",
+    name: "Checks green at the start do not replace the review",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (wantsTester, greenChecks)", "test/support/chaos.ts (green start, rule: unverifiable work accepted without review)"],
+    what: "With test \"no-checks\" (the tester only where nothing else verifies the work), checks that ALL passed before the work started now count as verifying nothing, so the tester reviews: they are the project's existing suite and cannot tell whether a bug was fixed or a feature added. Not for a refactor (green checks that stay green are its proof) or a trivial request, and not when an accepted reproduction (F115) joined the checks. Seen 2026-11-18 in swl-cascade-1 (SWE-bench-Live): on all 6 issues before it was stopped, the existing tests passed at the baseline, no tester ran, and the cascade did what Haiku alone did (one turn, 'tests passed', hidden tests failed); cascade-claude's staffing said 'a tester reviews the work'.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
