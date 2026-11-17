@@ -23,7 +23,7 @@ patterns and error positions the stand-in happens to give).
    fail, none hangs).
 5. Details a reader of the README must get: `$` is only the end of the text, `.` excludes only `\n`, `\w \d \s` are
    ASCII only, positions are bytes while matching is by chars, a group keeps its last span even if a later iteration
-   of an enclosing repetition does not use it, the exact error position of 11 kinds of mistake (53 tests).
+   of an enclosing repetition does not use it, the exact error position of 11 kinds of mistake (51 tests).
 6. Recursion depth and stack: a 300-deep nested group, a 1000-long `(?:a?){1000}` chain, a 4,000-character literal
    pattern and 1,000,000-character texts.
 
@@ -46,7 +46,7 @@ escapes, anchors, groups, alternation, all quantifiers incl. lazy and counted; e
 130 curated patterns (dates, IPs, quoted strings, `a|ab|abc`, lazy vs greedy, anchors in odd places, captures in
 repetitions), 32 nullable-body cases, 20 `find_iter` empty-match cases, 10 non-ASCII cases. Each case checks
 `is_match`, `find`, `captures` (all groups, except nullable-body cases) and `find_iter`. Texts include `\n`.
-Errors (53) come from the README table, not from Python (Python is more lenient or uses other positions).
+Errors (51) come from the README table, not from Python (Python is more lenient or uses other positions).
 While building, 2 candidates disagreed between Python and the reference (`(|a)+`, `(a??)*`, both nullable-body
 corners): they were dropped and the README sentence on this corner was widened. No other candidate disagreed.
 
@@ -69,5 +69,5 @@ corners): they were dropped and the README sentence on this corner was widened. 
 
 ## Sizes
 
-Reference 723 lines in 4 files (`lib.rs` 130, `parse.rs` 310, `compile.rs` 130, `vm.rs` 150): slightly above the
+Reference 723 lines in 4 files (`lib.rs` 131, `parse.rs` 319, `compile.rs` 133, `vm.rs` 140): slightly above the
 design's 150 to 700, which is natural for a new program.
