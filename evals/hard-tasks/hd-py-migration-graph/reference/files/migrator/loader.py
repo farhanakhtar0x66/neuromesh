@@ -1,0 +1,50 @@
+"""Reads the migration files of a directory."""
+
+from __future__ import annotations
+
+import importlib.util
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable
+
+from .errors import MigrationError
+
+
+@dataclass(frozen=True)
+class Migration:
+    id: str
+    up: Callable
+    down: Callable | None
+    path: str
+    depends_on: tuple[str, ...] | None = None  # None: the file does not declare DEPENDS_ON
+
+
+def _load_module(path: Path):
+    spec = importlib.util.spec_from_file_location(f"_migration_{abs(hash(str(path)))}", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_migrations(directory: str) -> list[Migration]:
+    """Every migration in `directory`, sorted by id."""
+    folder = Path(directory)
+    if not folder.is_dir():
+        raise MigrationError(f"migrations directory not found: {directory}")
+    found = []
+    for file in folder.glob("*.py"):
+        if file.name.startswith("_"):
+            continue
+        module = _load_module(file)
+        up = getattr(module, "up", None)
+        if not callable(up):
+            raise MigrationError(f"{file.stem} has no up()")
+        down = getattr(module, "down", None)
+        declared = getattr(module, "DEPENDS_ON", None)
+        if declared is not None and (isinstance(declared, str) or not all(isinstance(d, str) for d in declared)):
+            raise MigrationError(f"{file.stem}: DEPENDS_ON must be a list of migration ids")
+        found.append(
+            Migration(file.stem, up, down if callable(down) else None, str(file), None if declared is None else tuple(declared))
+        )
+    return sorted(found, key=lambda m: m.id)
