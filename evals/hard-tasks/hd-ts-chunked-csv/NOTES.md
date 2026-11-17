@@ -42,6 +42,6 @@ The reference reproduces the oracle on all 50 x 200 chunkings, invalid UTF-8 inc
 Passing on the seed (43 tests): the 33 visible ones, the streaming guard (the seed already streams), and fixtures 1, 11, 13, 16, 21.
 
 ## Numbers
-Reference: parser.ts and reader.ts rewritten (about 200 lines of the two files; ~95 changed lines). 3 fresh-copy validation runs: ok.
-The check (111 tests) takes about 3.8 s on the reference on the owner's Mac (seed 2.8 s); `validate-task.ts` about 17 s. No time limit is
-used, so none is set.
+Reference: `parser.ts` (102 lines) and `reader.ts` (82), 149 changed lines against the seed (the bar is 150). Seed: 618 lines (src 285, tests 213,
+docs and README the rest). 111 tests in the check: 33 visible, 78 hidden (68 fail-to-pass, 43 pass-to-pass in all). 3 fresh-copy validation
+runs: ok. The check takes about 3.8 s on the reference on the owner's Mac (seed 2.8 s); `validate-task.ts` about 17 s. No time limit is used.

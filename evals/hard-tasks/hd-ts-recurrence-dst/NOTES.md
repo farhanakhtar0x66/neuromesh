@@ -40,7 +40,7 @@ start, `until`, `count`, window `from`/`to`/`limit`); 3 CLI tests on the printed
 - No assertion depends on tz data newer than Node 26's ICU: windows are 2025 to 2027 plus random windows up to 2029-02.
 
 ## Numbers
-Seed 508 lines (src 346 + tests), reference touches two files (`schedule.ts` 45 lines, `zone.ts` +20): about 52 changed lines, which is
-UNDER the 150 to 700 DESIGN asks for. It is a small fix to a small project; the discrimination comes from the three causes, not size.
-Hidden check: 73 tests (40 fail-to-pass, 33 pass-to-pass), about 4.3 s on the reference, 1.4 s on the seed on the owner's Mac;
-`validate-task.ts` about 16 s. No time limit used.
+Seed 508 lines (src 281, tests 124, the rest docs and README). The reference touches two files, `schedule.ts` and `zone.ts` (100 lines in
+all): 52 changed lines, which is UNDER the 150 to 700 that DESIGN asks for. It is a small fix to a small project; the difficulty comes from
+the three causes, not from size. Hidden check: 73 tests (48 hidden, 25 visible; 40 fail-to-pass, 33 pass-to-pass), about 4.3 s on the
+reference and 1.4 s on the seed on the owner's Mac; `validate-task.ts` about 16 s. No time limit is used.
