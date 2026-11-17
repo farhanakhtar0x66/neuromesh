@@ -2,8 +2,8 @@
 
 Kind: new program, JavaScript (ESM, Node 26, no dependencies). Seed: a skeleton with the public API declared, the
 specification as `README.md` (200 lines), two finished helper modules (`src/address.js`, `src/values.js`), a `Sheet`
-that stores numbers and text but reports `#VALUE!` for every formula (133 lines of source), and 17 visible tests
-(10 pass on the seed: constants, addresses, `CellError`; 7 describe easy formulas and fail, which is the point: they
+that stores numbers and text but reports `#VALUE!` for every formula (133 lines of source), and 16 visible tests
+(10 pass on the seed: constants, addresses, `CellError`; 6 describe easy formulas and fail, which is the point: they
 are what a model can run to see progress). Reference: `parser.js`, `evaluate.js`, `sheet.js`, 660 lines.
 
 The `checks` entry in task.json is only the 10 foundation tests (so it passes on the seed, as the validator needs).
@@ -55,7 +55,7 @@ the chain and the evaluation counts.
 
 ## The oracle (all in `hidden/tests/test/`)
 
-- `cases.test.js`: 262 formula cases, one test each, in a fixed 30-cell fixture. **Expected values were written by
+- `cases.test.js`: 262 formula cases, one test each, in a fixed fixture of about 25 cells. **Expected values were written by
   hand from the README**, then run against the reference: all 262 agreed on the first run (no case was adjusted to the
   reference). Groups: precedence, zero and overflow, text, comparison, conversions, invalid names and syntax,
   SUM/AVERAGE/MIN/MAX/COUNT, IF, ROUND, COUNTIF.
@@ -63,7 +63,7 @@ the chain and the evaluation counts.
 - `recalc.test.js` (27): evaluation counts and order through the `onEvaluate` hook (diamond, dependents only, no
   cut-off, empty cells, dropped and changed dependencies, ranges both ways round, IF branches, unknown functions,
   unparsable formulas), and cycles made, broken and made again.
-- `props.test.js` (2): 150 + 150 seeded random 30-cell sheets (60 sets each; the second family allows arbitrary
+- `props.test.js` (2): 150 + 150 seeded random 30-cell sheets (5 columns by 6 rows) (60 sets each; the second family allows arbitrary
   references, so cycles appear and disappear). After every set the oracle (plain JavaScript over the generator's own
   description: reachability by brute force, cycle members = cells that reach themselves) must match every cell's
   value, the exact set of formulas evaluated, and the dependency order of the evaluations.
