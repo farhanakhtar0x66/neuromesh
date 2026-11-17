@@ -1,0 +1,14 @@
+{
+  "name": "minicalc",
+  "version": "0.1.0",
+  "description": "A spreadsheet engine as a library: cells, formulas, errors, incremental recalculation.",
+  "type": "module",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
