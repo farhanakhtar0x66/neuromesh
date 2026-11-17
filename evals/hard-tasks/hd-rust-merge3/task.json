@@ -1,0 +1,9 @@
+{
+  "kind": "feature",
+  "language": "rust",
+  "synthetic": true,
+  "hiddenCheck": "node hidden/grade.ts",
+  "runner": "cargo",
+  "testCommand": "cargo test --offline --no-fail-fast",
+  "checks": [{ "name": "tests", "command": "cargo test --offline" }]
+}

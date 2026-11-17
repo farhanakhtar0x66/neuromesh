@@ -1,0 +1,15 @@
+[package]
+name = "textdiff"
+version = "0.2.0"
+edition = "2021"
+description = "Line diffs: Myers shortest edit script, hunks and unified diff output"
+
+[lib]
+name = "textdiff"
+path = "src/lib.rs"
+
+[[bin]]
+name = "textdiff"
+path = "src/main.rs"
+
+[dependencies]
