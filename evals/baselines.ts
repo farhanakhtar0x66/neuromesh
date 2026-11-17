@@ -444,7 +444,16 @@ async function main(): Promise<number> {
       return 2;
     }
     const allowOpus = flag("allow-opus");
-    const wanted = runsFor(suiteArg).filter((r) => !keys || keys.includes(r.key));
+    let wanted = runsFor(suiteArg).filter((r) => !keys || keys.includes(r.key));
+    // --name: one run under a chosen name, for a subset of a suite (a folder of links to some of its tasks).
+    const named = option("name");
+    if (named !== undefined) {
+      if (wanted.length !== 1) {
+        process.stderr.write("--name needs exactly one run: pick it with --only\n");
+        return 2;
+      }
+      wanted = [{ ...wanted[0]!, name: named }];
+    }
     note(`baselines: ${tasks.length} tasks in ${suiteArg}${fake ? " (--fake, home " + home + ")" : ""}; runs: ${wanted.map((r) => r.key).join(", ")}${allowOpus ? "; Opus allowed" : ""}`);
     let stoppedEarly = false;
     for (const run of wanted) {
