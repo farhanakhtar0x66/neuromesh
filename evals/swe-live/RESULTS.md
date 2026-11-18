@@ -68,3 +68,14 @@ more, mostly in recovery paths since removed: expert takeovers ($1.94 dbbackup-6
 change (a2a-443), a 30-minute evidence turn (mcp-1154). On the issues both resolve, v4 and v5 cost 20 to 35 percent less
 than Opus alone (a2a-443 $0.36 against $0.48; pint $0.66 and $0.83 against $1.08). The lead was tuned on the 5 fixable
 misses; the next run measures the final version on all 20 unchanged.
+
+## K1, patch-lead (F127), 2026-11-19
+
+`swl-k1-a` and `swl-k1-b`, preset `patch-claude`, on the 21 issues with Opus-alone results: **2 of 21** (dbbackup-601,
+electrum-10172) at est. $5.74, against Opus alone 8 of 21 at $9.40 and Haiku alone 3. K1 lost six of Opus's wins
+(a2a-414, a2a-443, intelmq, openai-1633, pint, black). On most issues Opus's first one-call patch passed every check
+there was (the existing tests and the scout's reproduction, kept on 16 of 21) and was accepted after one call; the
+hidden tests then failed. The scout's reproduction tests what Haiku understood of the issue, so it is a weak oracle;
+an Opus call with no tools cannot run the tests or read further, where Opus alone does both (a2a-443: all 25 target
+tests pass, other tests broken). The published hybrids this followed used a cheap fixer nearly as strong as the
+frontier model (Scrouting) or many rollouts and a trained context extractor (AI21).

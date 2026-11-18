@@ -893,6 +893,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     7 such "fails" resolved when re-graded alone). Scoreboard on 20 issues: Opus alone 8 at $9.40, lead v3 7 at $15.22,
     Haiku alone 3. v4 and v5 on the issues both resolve cost 20 to 35 percent less than Opus alone, on 3 issues the
     lead was tuned on. Next: the final version on all 20, unchanged, once the five-hour window resets (95 percent).
+68. **Research, K1 and K5 built, K1 measured (2026-11-18 and 19; docs/25, F127, F128).** The research (doc 25: the
+    record since the first commit, the v1 to v5 cost spikes, Scrouting, AI21, routing and cascading, JevCoder,
+    SWE-Verifier, CodeRescue) led to K1: Haiku scouts with a verified reproduction, Opus writes the patch in one call
+    with no tools. Built harness first; the harness also gained a rule that every event prints (a K1 event crashed the
+    CLI printer and failed both issues of the first probe as engine failures), and engine errors now log their stack.
+    Measured on 21 issues: **2 of 21 at est. $5.74, against Opus alone 8 at $9.40**: cheaper per issue, far worse. Most
+    first patches passed every visible check (existing tests, the scout's reproduction) and were accepted; the hidden
+    tests failed. One-call patching without tools is not Opus's quality on real repositories; a cheap model's
+    reproduction is not an oracle for implied cases. K5 (auto) routes repository changes to K1, so it is not run.
 
 ## Next steps
 
