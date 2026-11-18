@@ -849,6 +849,23 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     Docker image (a colima profile `swe` with Rosetta), the agent working on the host with a runner that executes commands in
     the image, the official harness as the hidden check, validated with the gold patch (seed fails, gold passes twice).
     31 instances from 25 repositories are being imported; the first 8 are all valid, grading in 26 to 153 s.
+65. **SWE-bench-Live measured; F119 green-checks (2026-11-18).** 27 valid issues (4 of 31 rejected: two privacyidea, whose
+    gradings outrun the eval's 10-minute hidden check or whose gold fails; pyinstaller, gold fails; braindecode, image pull
+    failed). Five issues need a name the issue never states; they got an interface note (`interfaces.json`, as SWE-bench Pro
+    does). `swl-haiku-1`: **8 of 27** (9 with the notes), est. $1.61, every attempt one turn. The first cascade run had **no
+    tester on any issue**: the repositories' own tests pass before any change, and with `test: "no-checks"` they counted as
+    verification. **F119 green-checks** (harness first: a green-start scenario, seed 387): checks that all passed at the
+    baseline no longer stand in for the review, except for a refactor or a trivial request. `swl-cascade-1` with F119, on
+    Haiku's 19 failures plus 2 of its passes: **5 of 21** (2 rescues: PyPSA, openai-agents-1633; both Haiku passes kept),
+    est. $5.13, 0 engine failures, no escalation anywhere: the tester passed each final fix. Its 16 failures, read from the
+    harness's own test logs: 4 need details the issue never gives (a deprecation message, an argument, an internal call, a
+    migration name), 3 look environmental, 9 are wrong or incomplete fixes. On 5 of those 9, Opus alone (`swl-opus-1`)
+    resolved **3** (est. $3.36) and Sonnet alone (`swl-sonnet-1`) **1** (est. $1.10). The tester did catch gaps (pint's
+    second example, a2a's boolean id) and the worker fixed them; the hidden tests failed on cases the issue only implies.
+    One run each on 5 issues, so a lead, not a finding: the gap is in reading what the issue implies, not in the builder's
+    rung. Proposal for the owner: an expert step for bug and feature requests in an existing repository that lists the
+    cases the request implies (acceptance cases), for the worker to build and the tester to check, at one short Opus turn
+    per request. Results: `evals/swe-live/RESULTS.md`. Weekly window at 75 percent after these runs.
 
 ## Next steps
 
