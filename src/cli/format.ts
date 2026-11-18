@@ -234,7 +234,7 @@ export function formatEvalReport(report: EvalReport): string {
   const lines = [`${bold(`Eval ${report.name}`)} · preset ${report.preset}`];
   lines.push(dim("task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)"));
   for (const r of Object.values(report.results).sort((a, b) => a.task.localeCompare(b.task))) {
-    const hidden = r.hidden === "pass" ? green("pass".padEnd(6)) : r.hidden === "fail" ? red("fail".padEnd(6)) : yellow("—".padEnd(6));
+    const hidden = r.hidden === "pass" ? green("pass".padEnd(6)) : r.hidden === "fail" ? red("fail".padEnd(6)) : r.hidden === "error" ? yellow("error".padEnd(6)) : yellow("—".padEnd(6));
     lines.push(
       `${r.task.padEnd(21)} ${r.kind.padEnd(11)} ${(r.mode ?? "solo").padEnd(5)} ${r.status.padEnd(11)} ${r.checks.padEnd(7)} ${hidden}  ${String(r.turns).padEnd(6)} ${duration(r.wallMs).padEnd(8)} ${k(r.expertTokens)} / ${k(r.workerTokens)}` +
         (r.escalations ? magenta(` esc ${r.escalations}`) : "") +

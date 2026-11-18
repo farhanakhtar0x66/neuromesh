@@ -70,7 +70,8 @@ export interface TaskResult {
   mode: "solo" | "team";
   status: RunState["status"];
   checks: "passed" | "failed" | "none" | "-";
-  hidden: "pass" | "fail" | "not run";
+  /** "error": the hidden check itself did not finish (timed out) or printed nothing: the grader broke, not the work. */
+  hidden: "pass" | "fail" | "error" | "not run";
   hiddenTail?: string;
   /** Cases the hidden check counted, when it prints a line "SCORE passed/total". */
   score?: { passed: number; total: number };
@@ -122,6 +123,12 @@ function tierTokens(attempts: AttemptRecord[]): { expert: number; worker: number
     else worker += t;
   }
   return { expert, worker, incomplete };
+}
+
+/** A hidden check's verdict: a check that timed out or said nothing failed to grade; that is not the work failing. */
+export function hiddenVerdict(check: { code: number | null; output: string }): "pass" | "fail" | "error" {
+  if (check.code === 0) return "pass";
+  return check.code === null || check.output.trim() === "" ? "error" : "fail";
 }
 
 function sh(cwd: string, command: string): { code: number | null; output: string } {
@@ -223,8 +230,8 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
       applyRun(state, { force: true });
       cpSync(join(task.dir, "hidden"), join(repo, "hidden"), { recursive: true });
       const check = sh(repo, task.hiddenCheck);
-      hidden = check.code === 0 ? "pass" : "fail";
-      if (hidden === "fail") hiddenTail = check.output.split("\n").slice(-20).join("\n");
+      hidden = hiddenVerdict(check);
+      if (hidden !== "pass") hiddenTail = check.output.split("\n").slice(-20).join("\n") || (check.code === null ? "the hidden check timed out" : "the hidden check printed nothing");
       score = scoreOf(check.output);
     }
 
@@ -383,11 +390,11 @@ export function recheckEval(home: string, name: string, tasks: EvalTask[]): { ta
     rmSync(join(repo, "hidden"), { recursive: true, force: true });
     cpSync(join(task.dir, "hidden"), join(repo, "hidden"), { recursive: true });
     const check = sh(repo, task.hiddenCheck);
-    const hidden = check.code === 0 ? "pass" : "fail";
+    const hidden = hiddenVerdict(check);
     changes.push({ task: task.name, before: result.hidden, after: hidden });
     result.hidden = hidden;
     result.score = scoreOf(check.output);
-    result.hiddenTail = hidden === "fail" ? check.output.split("\n").slice(-20).join("\n") : undefined;
+    result.hiddenTail = hidden !== "pass" ? check.output.split("\n").slice(-20).join("\n") || (check.code === null ? "the hidden check timed out" : "the hidden check printed nothing") : undefined;
   }
   saveReport(home, report);
   return changes;

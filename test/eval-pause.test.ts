@@ -9,3 +9,12 @@ test("an eval summary names what a paused task paused for", () => {
   assert.equal(pauseCause("stopped by hand"), "other");
   assert.equal(pauseCause(undefined), "unknown");
 });
+
+import { hiddenVerdict } from "../src/eval/eval.ts";
+
+test("a hidden check that timed out or said nothing is a grading error, not a failed task", () => {
+  assert.equal(hiddenVerdict({ code: 0, output: "PASS" }), "pass");
+  assert.equal(hiddenVerdict({ code: 1, output: "FAIL fail-to-pass: t\nSCORE 0/1" }), "fail");
+  assert.equal(hiddenVerdict({ code: null, output: "" }), "error");
+  assert.equal(hiddenVerdict({ code: 1, output: "   " }), "error");
+});
