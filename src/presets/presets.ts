@@ -77,6 +77,12 @@ export interface Preset {
    * (another plan); senior and expert turns stay.
    */
   quotaShift?: QuotaShift;
+  /**
+   * [F120 lead] Team mode with the expert as lead: its plan lists the request's acceptance cases and picks a developer per
+   * task; after the tasks it reviews the merged work (running commands in a copy) and accepts or adds follow-up tasks,
+   * at most `reviews` times (default 2).
+   */
+  lead?: { reviews?: number };
 }
 
 export interface CascadeConfig {
@@ -159,10 +165,18 @@ export function validatePreset(raw: unknown, file: string): Preset {
     gruntLadder: p.gruntLadder === undefined ? undefined : chain(p.gruntLadder, "worker", file),
     cascade: cascadeConfig(p.cascade, file),
     quotaShift: quotaShift(p.quotaShift, file),
+    lead: p.lead === undefined ? undefined : leadConfig(p.lead, file),
   };
 }
 
 /** [F104 quota-shift] */
+function leadConfig(raw: unknown, file: string): { reviews?: number } {
+  if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: lead must be an object`);
+  const reviews = (raw as { reviews?: unknown }).reviews;
+  if (reviews !== undefined && !(typeof reviews === "number" && Number.isInteger(reviews) && reviews >= 1 && reviews <= 4)) throw new Error(`Preset ${file}: lead reviews must be a whole number from 1 to 4`);
+  return reviews === undefined ? {} : { reviews };
+}
+
 function quotaShift(raw: unknown, file: string): QuotaShift | undefined {
   if (raw === undefined) return undefined;
   if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: quotaShift must be an object`);

@@ -1115,6 +1115,15 @@ export const FEATURES: Feature[] = [
     what: "With test \"no-checks\" (the tester only where nothing else verifies the work), checks that ALL passed before the work started now count as verifying nothing, so the tester reviews: they are the project's existing suite and cannot tell whether a bug was fixed or a feature added. Not for a refactor (green checks that stay green are its proof) or a trivial request, and not when an accepted reproduction (F115) joined the checks. Seen 2026-11-18 in swl-cascade-1 (SWE-bench-Live): on all 6 issues before it was stopped, the existing tests passed at the baseline, no tester ran, and the cascade did what Haiku alone did (one turn, 'tests passed', hidden tests failed); cascade-claude's staffing said 'a tester reviews the work'.",
     optional: true,
   },
+  {
+    id: "F120",
+    key: "lead",
+    name: "The expert leads: plans with cases, assigns, reviews",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (leadStep, the lead step)", "src/engine/prompts.ts (leadPlanLines, leadReviewPrompt, LEAD_SCHEMA, parseLead)", "src/presets/presets.ts (lead)", "presets/lead-claude.json", "test/support/chaos.ts (lead dice, rules: review limit, review copy, calm work reviewed)"],
+    what: "A preset with \"lead\" (team mode) makes the expert the team's lead. Its plan first lists the request's acceptance cases (concrete inputs and results, including the cases the request implies but does not spell out) and puts each in the brief of the task that covers it, and it picks a developer per task: grunt, worker, senior, or itself. After the tasks are merged it reviews the whole change in a disposable copy where it may run commands, against those cases, and either accepts or adds 1 to 3 follow-up tasks, each with the developer it chose (itself included); the scheduler runs them like any task, one after another, and the lead reviews again, at most `reviews` times (default 2). A failed task, a spent expert budget, a preset with no orchestrator or an unusable answer ends the reviews and the run goes on to its final step as it stands. The owner's idea (2026-11-18): a weak model deciding first on a hard task decides badly; on SWE-bench-Live the cascade's Haiku fixed only the examples an issue gave, where Opus alone covered the implied cases on 3 of 5.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

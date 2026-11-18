@@ -99,7 +99,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "lead" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -113,6 +113,8 @@ function callKind(r: AgentRequest): Call {
   if ("tests" in p) return "blind";
   // [F115 reproduce-first]
   if ("path" in p && "command" in p) return "reproduce";
+  // [F120 lead]
+  if ("decision" in p) return "lead";
   return "build";
 }
 
@@ -145,6 +147,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   // feature on (it is off by default). Its own dice again, so a seed's scenario otherwise stays what it was.
   const reproDice = dice(seed + 3_333_331);
   const withRepro = reproDice.chance(0.2);
+  // [F120 lead] A quarter of the runs have the expert lead: team mode, its plan and up to two reviews (own dice).
+  const leadDice = dice(seed + 7_777_771);
+  const withLead = leadDice.chance(0.25);
+  const leadReviews = leadDice.int(1, 2);
   // [F119 green-checks] A fifth of the runs with checks start green: the project's tests already pass and test nothing the
   // request asks for (a real repository's suite, as in SWE-bench-Live). Its own dice, so a seed's scenario otherwise stays.
   const greenStart = dice(seed + 6_666_661).chance(0.2) && !withRepro && !withBlind;
@@ -200,7 +206,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const preset: Preset = {
     name: "chaos",
     description: "",
-    mode: d.pick(["solo", "team", "team"] as const),
+    mode: ((m: "solo" | "team") => (withLead ? "team" : m))(d.pick(["solo", "team", "team"] as const)),
     roles,
     repairs: d.int(0, 2),
     maxTasks: d.int(2, 5),
@@ -211,6 +217,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     routing: d.pick(["rules", "worker-first"] as const),
     advise: d.chance(0.6),
     test: d.pick(["always", "always", "no-checks"] as const),
+    lead: withLead ? { reviews: leadReviews } : undefined,
     workerLadder: rungs > 0 ? ladder : undefined,
     // [F78 three-tier] Senior rungs in a third of the runs (their own dice, so older seeds keep their scenario).
     seniorLadder: seniorRungs > 0 ? Array.from({ length: seniorRungs }, (_, i) => ({ backend: "fake", model: `senior-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -261,7 +268,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const calm = trouble === "none" && outageFrom < 0 && interruptAt < 0 && options.killAt === undefined && !options.resume;
   // After a kill the agents draw from a new sequence; the scenario above is the same one.
   if (options.resume) d = dice(seed + 7_777_777);
-  const scenario = `files=${fileCount}${withChecks ? (greenStart ? " green" : "") : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt}${outageFrom >= 0 ? ` offline>${outageFrom}` : ""} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
+  const scenario = `files=${fileCount}${withChecks ? (greenStart ? " green" : "") : " no-checks"} mode=${preset.mode} ladder=${rungs}${seniorRungs > 0 ? `+${seniorRungs}` : ""} tester=${roles.tester ? "y" : "n"}${withLead ? ` lead=${leadReviews}` : ""} expert=${expertShape}${pricedExpert ? "$" : ""} briefer=${briefer} brief=${preset.brief} repairs=${preset.repairs} par=${preset.maxParallel} budget=${preset.expertBudgetUsd ?? "-"}${withCascade ? ` cascade(grunt=${gruntRungs},bp=${preset.cascade?.blueprint ? "y" : "n"},max=${preset.cascade?.maxEscalations})` : ""}${quotaShift ? ` shift>${quotaShift.above}` : ""} trouble=${trouble} interrupt=${interruptAt}${outageFrom >= 0 ? ` offline>${outageFrom}` : ""} off=[${off.slice(1).join(",")}] "${prompt.slice(0, 28)}"`;
 
   // ---- The world the agents act in: which task builds which files.
   const owners = new Map<string, string[]>();
@@ -409,6 +416,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (view === "pass" || view === "vandal") return { ...extra, structured: { verdict: "pass", summary: "fine", findings: [] } };
       const check = view === "blocker" ? "false" : view === "phantom" ? d.pick(["true", "definitely-not-a-command"]) : "";
       return { ...extra, structured: { verdict: "fail", summary: "a problem", findings: [{ problem: "it is wrong", file: files[0], reproduce: "run it", severity: view === "minor" ? "minor" : "blocker", check }] } };
+    }
+    // [F120 lead] The lead accepts, or asks for a follow-up; a troubled one asks with nothing usable.
+    if (kind === "lead") {
+      const view = d.weighted({ accept: 5, more: 4, empty: p * 4, garbage: p * 3 });
+      if (view === "accept") return { ...extra, structured: { decision: "accept", summary: "it does what was asked", followups: [] } };
+      if (view === "empty") return { ...extra, structured: { decision: "more", summary: "something is off", followups: [] } };
+      if (view === "garbage") return { ...extra, structured: { decision: "maybe" } };
+      return { ...extra, structured: { decision: "more", summary: "a case is missing", followups: [{ id: "fix", title: "the missing case", brief: `Write ok into ${files[0]}`, owner: d.pick(["grunt", "worker", "senior", "expert"]) }] } };
     }
     // [F83 early-exit] Asked for a preamble: a good developer is confident; a troubled one may escalate or garble it.
     if (req.onText) {
@@ -657,6 +672,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     // Finished or failed for good: nothing of the tasks is left behind.
     const trees = sh(repo, "worktree", "list", "--porcelain").split("\n").filter((l) => l.startsWith("worktree ")).map((l) => l.slice(9));
     if (trees.some((t) => /[\\/]tester$/.test(t))) broke("a reviewer's copy was left behind");
+    if (trees.some((t) => /[\\/]lead$/.test(t))) broke("the lead's review copy was left behind");
+    // [F120 lead] The lead reviews at most as often as the preset allows, and does review calm, finished work.
+    // A review retried (a dropped connection, a pause) is the same review: rounds are counted, not turns.
+    const leadTurns = new Set(state.attempts.filter((a) => a.kind === "lead-review").map((a) => a.round)).size;
+    if (leadTurns > (state.lead?.reviews ?? 0)) broke(`the lead reviewed ${leadTurns} times; the preset allows ${state.lead?.reviews ?? 0}`);
+    if (calm && state.status === "finished" && state.lead && roles.orchestrator && preset.expertBudgetUsd === undefined && preset.expertBudget === undefined && state.tasks.every((t) => t.status === "passed") && leadTurns === 0) broke("the lead never reviewed the team's finished work");
     // [F102 repair-race] Nor a racer's copy, whoever won and however the run ended.
     if (trees.some((t) => /[\\/]race-[ab]$/.test(t))) broke("a race copy was left behind");
     if (state.status === "finished") {
@@ -855,6 +876,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "reproduce.tests") seen.add(`reproduce ${String(e.outcome)}`);
     if (e.type === "reproduce.restored") seen.add("reproduce restored");
     if (e.type === "context.start-here") seen.add("start-here");
+    if (e.type === "lead.review") seen.add(`lead ${e.decision}`);
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
     // [F110 structured-rescue]
     if (e.type === "agent.finished" && String(e.detail ?? "").startsWith("error_max_structured_output_retries")) seen.add("structured exhausted");

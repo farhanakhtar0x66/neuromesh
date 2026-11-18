@@ -684,8 +684,11 @@ How the team works:
 - Give each task the files or folders it owns; tasks that can run side by side must not own the same files. A task that only needs another task's interface still depends on it, unless your brief spells that interface out exactly (names, signatures, return values), in which case both can start at once.
 - A task that needs another task's result lists it in depends_on.
 ${
-    // [F85 blueprint-expert]
-    state.cascade?.blueprint && isOn("blueprint-expert")
+    // [F120 lead] The lead's own lines: acceptance cases, and a developer chosen per task.
+    state.lead && isOn("lead")
+      ? leadPlanLines(state.seniorRung !== undefined, state.workerRung !== undefined)
+      : // [F85 blueprint-expert]
+        state.cascade?.blueprint && isOn("blueprint-expert")
       ? `- ${cascadeOwners(state.seniorRung !== undefined, state.workerRung !== undefined)}`
       : `- Mark a task "expert" only if it needs deep reasoning a cheap model would likely get wrong (subtle concurrency, tricky algorithms, delicate design). You will do those yourself. Everything else is "worker".`
   }
@@ -1042,4 +1045,94 @@ export function parsePlan(result: AgentResult, maxTasks: number, tiers = false, 
     for (const id of ready) remaining.delete(id);
   }
   return { summary: typeof raw.summary === "string" ? raw.summary : "", tasks };
+}
+
+// ---------------------------------------------------------------------------
+// [F120 lead] The expert leads: it plans with acceptance cases, picks a developer per task, and reviews the result.
+
+/** [F120 lead] What the lead decides after reviewing the team's work. */
+export const LEAD_SCHEMA = {
+  type: "object",
+  properties: {
+    decision: { type: "string", enum: ["accept", "more"] },
+    summary: { type: "string" },
+    followups: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          title: { type: "string" },
+          brief: { type: "string" },
+          owner: { type: "string", enum: ["grunt", "worker", "senior", "expert"] },
+        },
+        required: ["id", "title", "brief", "owner"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["decision", "summary", "followups"],
+  additionalProperties: false,
+};
+
+/** [F120 lead] Who can build a task, cheapest first. */
+function leadTeam(senior: boolean, grunt: boolean): string {
+  return [
+    grunt ? `"grunt": the cheapest; mechanical work your brief fully determines (data, renames, docs, boilerplate).` : "",
+    `"worker": cheap and fast; a change your brief specifies well, with its cases spelled out.`,
+    senior ? `"senior": about four times a worker; a change that needs judgement, many interacting rules, or a careful reading of code it did not write.` : "",
+    `"expert": you, about ten times a worker; only where the task needs your judgement, or explaining it would take longer than doing it.`,
+  ].filter(Boolean).join(" ");
+}
+
+/** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
+export function leadPlanLines(senior: boolean, grunt: boolean): string {
+  return `- First work out what the request really asks. Read the code it touches, then list its acceptance cases: concrete inputs and the results they must give, including the cases the request implies but does not spell out (the other members of a family it names, the reverse operation, error cases and edge values, behaviour that must not change). Put each case in the brief of the task that covers it, and ask for a test of each. You review the finished change against these cases yourself before it is delivered.
+- Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} Most requests are one task.`;
+}
+
+/** [F120 lead] The lead reviews the merged work, in a copy where it may run commands. */
+export function leadReviewPrompt(state: RunState, diff: string, latest: CheckResult[] | undefined, round: number, rounds: number, senior: boolean, grunt: boolean): string {
+  const plan = state.tasks.map((t) => `- ${t.id} (${t.owner}, ${t.status}): ${t.title}\n  ${t.brief.slice(0, 1_500).replace(/\n/g, "\n  ")}`).join("\n");
+  const checks = (latest ?? []).map((r) => `${r.name}: ${r.status}`).join(", ") || "none ran";
+  return `You are the lead engineer. Your team has built the tasks you planned; review the result before it is delivered.
+
+The request:
+${state.prompt}
+
+The tasks and their briefs:
+${plan}
+
+The whole change, against the start:
+\`\`\`diff
+${diff.slice(0, 30_000)}
+\`\`\`
+
+The project's checks: ${checks}. They show only what they test; most of the request's cases are not in them.
+
+You are in a disposable copy of the project with the change applied. Run commands the way the checks run them, and write throw-away probes; your edits here are discarded. Go through the acceptance cases you set and the request itself, and probe each case that no test already shows. Keep it short: a few probes, not a test suite.
+
+Then decide:
+- "accept" if the change does what the request asks, the implied cases included. Do not hold it up for style or for things the request does not need.
+- "more" if something is missing or wrong: give 1 to 3 follow-up tasks. Each brief says what is wrong (the input and the result it must give), where, and how to tell it is fixed. Choose who builds each: ${leadTeam(senior, grunt)} A defect a developer made goes to a stronger one unless the fix is mechanical.
+
+This is review ${round} of at most ${rounds}${round >= rounds ? "; it is the last, so ask for more only for a real defect" : ""}.
+
+Give your answer in the required JSON format: decision, summary (one or two sentences) and followups (id, title, brief, owner; an empty list when you accept).`;
+}
+
+/** [F120 lead] The review's answer. Throws when it is unusable. */
+export function parseLead(result: AgentResult, tiers: boolean, grunt: boolean, blueprint = false): { decision: "accept" | "more"; summary: string; followups: PlannedTask[] } {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { decision?: unknown; summary?: unknown; followups?: unknown } | undefined;
+  if (!raw || (raw.decision !== "accept" && raw.decision !== "more")) throw new Error("the review gave no decision");
+  const list = Array.isArray(raw.followups) ? (raw.followups as { id?: unknown; title?: unknown; brief?: unknown; owner?: unknown }[]) : [];
+  const followups: PlannedTask[] = list.slice(0, 3).flatMap((t, i) => {
+    if (typeof t.brief !== "string" || t.brief.trim() === "") return [];
+    // [F85 blueprint-expert] Where the expert builds nothing, its follow-up goes to the strongest tier below it.
+    const owner = t.owner === "expert" ? (blueprint ? (tiers ? "senior" : "worker") : "expert") : t.owner === "senior" && tiers ? "senior" : t.owner === "grunt" && grunt ? "grunt" : "worker";
+    const id = typeof t.id === "string" && /^[A-Za-z0-9_-]{1,24}$/.test(t.id) ? t.id : `f${i + 1}`;
+    return [{ id, title: typeof t.title === "string" && t.title.trim() ? t.title.trim() : id, brief: t.brief.trim(), owned: [], dependsOn: [], owner }];
+  });
+  if (raw.decision === "more" && followups.length === 0) throw new Error("the review asked for more but gave no usable follow-up task");
+  return { decision: raw.decision, summary: typeof raw.summary === "string" ? raw.summary : "", followups };
 }

@@ -36,7 +36,7 @@ export type RoleChain = Partial<Record<Role, RoleConfig[]>>;
  */
 export type RunStatus = "running" | "interrupted" | "paused" | "failed" | "finished" | "applied" | "discarded";
 
-export type RunStep = "setup" | "baseline" | "spec" | "plan" | "tasks" | "final" | "done";
+export type RunStep = "setup" | "baseline" | "spec" | "plan" | "tasks" | "lead" | "final" | "done";
 
 export type AttemptKind =
   | "spec"
@@ -52,6 +52,8 @@ export type AttemptKind =
   | "advised-fix"
   | "climb"
   | "integration"
+  // [F120 lead] The lead reviewing the merged work.
+  | "lead-review"
   | "scout"
   | "split"
   // [F84 bottleneck-diagnostic]
@@ -359,6 +361,10 @@ export interface RunState {
   prepared: string[];
   checks: CheckSpec[];
   baseline?: CheckResult[];
+  /** [F120 lead] The expert leads: plans with acceptance cases and reviews the merged work, at most this many times. */
+  lead?: { reviews: number };
+  /** [F120 lead] Reviews done so far. */
+  leadRounds?: number;
   latest?: CheckResult[];
   plan?: Plan;
   planSession?: string;

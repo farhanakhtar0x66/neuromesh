@@ -100,6 +100,9 @@ import {
   parseVerdict,
   PLAN_SCHEMA,
   plannerPrompt,
+  LEAD_SCHEMA,
+  leadReviewPrompt,
+  parseLead,
   SPEC_SCHEMA,
   specPrompt,
   redoPrompt,
@@ -375,9 +378,14 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   }
   if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
+    // [F120 lead] The lead plans every request, small ones too: a cheap model deciding first is what it replaces.
+    if (preset.lead && isOn("lead") && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0 && !brief.staffing.plan) {
+      brief.staffing.plan = true;
+      brief.staffing.reasons.push("the lead plans it");
+    }
     mode = brief.staffing.plan ? "team" : "solo";
     why = brief.staffing.reasons.join("; ");
-  } else if (!options.mode && preset.mode === "team" && preset.intake) {
+  } else if (!options.mode && preset.mode === "team" && preset.intake && !(preset.lead && isOn("lead"))) {
     const decision = route(options.prompt, preset.routing);
     mode = decision.mode;
     why = decision.reason;
@@ -408,6 +416,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     expertBudget: options.expertBudget ?? preset.expertBudget,
     expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
+    // [F120 lead] Only in team mode: the lead's plan and reviews need the orchestrator.
+    lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2 } : undefined,
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : upper ? [...grunt, ...upper] : undefined,
     seniorRung: senior ? grunt.length + workerRungs.length : undefined,
@@ -685,8 +695,15 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       if (state.step === "tasks") {
         const outcome = await schedule(run);
         if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
-        state.step = "final";
+        // [F120 lead] The lead reviews the merged work before the final step.
+        state.step = state.lead ? "lead" : "final";
         saveState(state);
+        continue;
+      }
+
+      if (state.step === "lead") {
+        const outcome = await leadStep(run);
+        if (outcome) return outcome.status === "interrupted" ? interrupted() : end(outcome);
         continue;
       }
 
@@ -1446,6 +1463,71 @@ async function scoutStep(run: RunCtx): Promise<string[]> {
   const facts = result.stop === "done" ? parseFacts(result) : [];
   log.emit("facts.ready", { feature: "F63", facts });
   return facts;
+}
+
+/**
+ * [F120 lead] The lead reviews the merged work in a copy where it may run commands, against the acceptance cases of its
+ * plan, and accepts it or adds follow-up tasks (each with the developer it chose, itself included), which the scheduler
+ * then runs like any task. At most `lead.reviews` times; a failed task, a spent expert budget or an unusable answer
+ * ends the reviews and the run goes on to its final step as it stands.
+ */
+async function leadStep(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const round = (state.leadRounds ?? 0) + 1;
+  const toFinal = (why?: string): undefined => {
+    if (why) log.emit("note", { feature: "F120", message: why });
+    state.step = "final";
+    saveState(state);
+    return undefined;
+  };
+  if (!state.lead || !isOn("lead") || round > state.lead.reviews) return toFinal();
+  if (roleChain(state, "orchestrator").length === 0) return toFinal("No model leads this preset (no orchestrator), so nobody reviews.");
+  if (state.tasks.some((t) => t.status !== "passed")) return toFinal("A task did not pass, so the lead does not review; the run ends as it stands.");
+  if (!budgetLeft(state)) return toFinal("The expert budget is spent, so the lead does not review.");
+  const head = git(state.worktree, "rev-parse", "HEAD").trim();
+  const diff = git(state.worktree, "diff", "--binary", state.base, head);
+  const latest = [...state.tasks].reverse().find((t) => t.latest)?.latest;
+  const senior = state.seniorRung !== undefined;
+  const grunt = state.workerRung !== undefined;
+  const dir = join(state.dir, "lead");
+  dropCopy(state.repo, dir);
+  let outcome: TurnResult;
+  try {
+    createDetachedWorktree(state.repo, dir, head);
+    const prepared = prepareWorktree(state.repo, dir);
+    await prepareEnv(run, dir, prepared);
+    outcome = await turn(run, {
+      key: `lead-review-${round}`,
+      role: "orchestrator",
+      kind: "lead-review",
+      round,
+      cwd: dir,
+      prompt: leadReviewPrompt(state, diff, latest, round, state.lead.reviews, senior, grunt),
+      access: "write",
+      schema: LEAD_SCHEMA,
+    });
+  } finally {
+    removeDetachedWorktree(state.repo, dir);
+  }
+  const { result } = outcome;
+  if (result.stop === "cancelled" || held(result)) return stopFor(result, "orchestrator");
+  state.leadRounds = round;
+  if (result.stop !== "done") return toFinal(`The lead's review ended without an answer (${result.stop}); the work goes on as the checks left it.`);
+  const review = optional(run, "lead", undefined, () => parseLead(result, senior, grunt, blueprintOn(state)));
+  if (!review) return toFinal("The lead's review was not usable; the work goes on as the checks left it.");
+  log.emit("lead.review", { feature: "F120", round, decision: review.decision, summary: review.summary, followups: review.followups.map((f) => ({ id: f.id, title: f.title, owner: f.owner })) });
+  if (review.decision === "accept") return toFinal();
+  // Follow-ups run one after another: they have no owned files, so side by side they could edit the same ones.
+  let previous: string | undefined;
+  for (const f of review.followups) {
+    let id = `r${round}-${f.id}`;
+    while (state.tasks.some((t) => t.id === id)) id += "x";
+    state.tasks.push(newTask(state, { ...f, id, dependsOn: previous ? [previous] : [] }));
+    previous = id;
+  }
+  state.step = "tasks";
+  saveState(state);
+  return undefined;
 }
 
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
