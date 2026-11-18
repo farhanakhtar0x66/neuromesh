@@ -3429,6 +3429,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         }
         return failTask(run, task, "checks still fail after the expert's attempt");
       }
+      // [F127 patch-lead] The expert's patch calls have their own limit (PATCH_TURNS): the breaker, made for tool
+      // sessions, does not cut them short (swl-k1-probe: it stopped pint one call before a missing import was fixed).
+      if (patchApplies(state, task)) {
+        nextRound(run, task, "repair");
+        continue;
+      }
       if (decision === "oscillated" || decision === "no-progress" || task.round >= repairLimit(state, task)) {
         const why = decision === "oscillated" ? "the worker repeated an earlier failed state" : decision === "no-progress" ? "two attempts without progress" : "out of repair rounds";
         // [F102 repair-race] Before a dearer tier or the expert: two fresh attempts side by side.
