@@ -246,7 +246,7 @@ export function formatEvalReport(report: EvalReport): string {
   lines.push(
     `Passed ${s.passed}/${s.tasks}` +
       ` · engine failures ${s.engineFailures}` +
-      (s.paused ? ` · ${s.paused} paused (quota)` : "") +
+      (s.paused ? ` · ${s.paused} paused (${s.pausedFor.join(", ")})` : "") +
       ` · time ${duration(s.wallMs)}` +
       ` · tokens ${k(s.expertTokens + s.workerTokens)}` +
       ` · expert share ${s.expertShare === undefined ? "unknown" : `${(s.expertShare * 100).toFixed(0)}%`}` +

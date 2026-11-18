@@ -279,6 +279,8 @@ export interface Summary {
   passed: number;
   engineFailures: number;
   paused: number;
+  /** [eval] What the paused tasks paused for: quota, sign-in, network, other or unknown. */
+  pausedFor: string[];
   wallMs: number;
   expertTokens: number;
   workerTokens: number;
@@ -309,6 +311,15 @@ export function costOf(result: TaskResult): { total: number; expert: number; inc
   return { total, expert, incomplete };
 }
 
+/** Why a task paused, from the engine's reason: the summary used to call every pause "quota". */
+export function pauseCause(reason: string | undefined): string {
+  if (!reason) return "unknown";
+  if (/no longer signed in/.test(reason)) return "sign-in";
+  if (/cannot reach its service/.test(reason)) return "network";
+  if (/subscription limits|quota/i.test(reason)) return "quota";
+  return "other";
+}
+
 export function summarize(report: EvalReport, names?: string[]): Summary {
   const rows = Object.values(report.results).filter((r) => !names || names.includes(r.task));
   const expert = rows.reduce((s, r) => s + r.expertTokens, 0);
@@ -318,6 +329,7 @@ export function summarize(report: EvalReport, names?: string[]): Summary {
     passed: rows.filter((r) => r.hidden === "pass").length,
     engineFailures: rows.filter((r) => r.failure === "engine").length,
     paused: rows.filter((r) => r.status === "paused").length,
+    pausedFor: [...new Set(rows.filter((r) => r.status === "paused").map((r) => pauseCause(r.reason)))],
     wallMs: rows.reduce((s, r) => s + r.wallMs, 0),
     expertTokens: expert,
     workerTokens: worker,

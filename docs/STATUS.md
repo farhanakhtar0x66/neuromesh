@@ -865,7 +865,8 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     One run each on 5 issues, so a lead, not a finding: the gap is in reading what the issue implies, not in the builder's
     rung. Proposal for the owner: an expert step for bug and feature requests in an existing repository that lists the
     cases the request implies (acceptance cases), for the worker to build and the tester to check, at one short Opus turn
-    per request. Results: `evals/swe-live/RESULTS.md`. Weekly window at 75 percent after these runs.
+    per request. Results: `evals/swe-live/RESULTS.md`. Weekly window at 75 percent after these runs. Also fixed: the eval
+    summary named every pause "quota"; it now says quota, sign-in or network (STATUS 64).
 
 ## Next steps
 
