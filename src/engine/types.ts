@@ -371,7 +371,7 @@ export interface RunState {
   lead?: {
     reviews: number;
     /** [F127 patch-lead] "patch": the scout explores and reproduces, the expert writes the patch in one call (K1, docs/25). */
-    mode?: "plan" | "patch";
+    mode?: "plan" | "patch" | "dossier";
     /** [F120 lead] The request's acceptance cases, from the plan. */
     cases?: string[];
     /** [F122 lead-scout] A cheap developer's report on a big repository, for the plan. */

@@ -455,7 +455,9 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // [F120 lead] Only in team mode: the lead's plan and reviews need the orchestrator.
-    lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2, ...((preset.lead.mode === "patch" || (preset.lead.mode === "auto" && isOn("lead-auto") && !bigRequest)) && isOn("patch-lead") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "patch" as const } : {}) } : undefined,
+    lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2, ...((preset.lead.mode === "patch" || (preset.lead.mode === "auto" && isOn("lead-auto") && !bigRequest)) && isOn("patch-lead") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "patch" as const } : {}),
+            // [F129 lead-dossier] K6: the scout's dossier, then the expert's own session.
+            ...(preset.lead.mode === "dossier" && isOn("lead-dossier") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "dossier" as const } : {}) } : undefined,
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : upper ? [...grunt, ...upper] : undefined,
     seniorRung: senior ? grunt.length + workerRungs.length : undefined,
@@ -715,7 +717,7 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
 
       if (state.step === "plan") {
         // [F127 patch-lead] K1: no plan. The scout explores and reproduces; the expert's one task is the patch.
-        const patchLead = state.lead?.mode === "patch" && isOn("patch-lead");
+        const patchLead = (state.lead?.mode === "patch" && isOn("patch-lead")) || (state.lead?.mode === "dossier" && isOn("lead-dossier"));
         if (patchLead && !state.lead!.scouted) {
           const stop = await optionalAsync(run, "patch-lead", undefined, () => patchScout(run));
           if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
@@ -3573,7 +3575,7 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     // SWE-bench-Live (swl-lead-3) every takeover cost $0.90 to $1.36 and saved nothing Opus alone could not do either.
     // Work whose project checks pass and that fails only the lead's tests is kept for the lead's review; else the task ends.
     // [F127 patch-lead] Nor does a patch-lead run end in an expert tool session: its expert works only in one-call patches.
-    if (task.step === "escalate" && state.lead && isOn("lead-no-takeover") && (task.owner !== "expert" || state.lead.mode === "patch")) {
+    if (task.step === "escalate" && state.lead && isOn("lead-no-takeover") && (task.owner !== "expert" || state.lead.mode === "patch" || state.lead.mode === "dossier")) {
       const latest = task.latest ?? [];
       const own = latest.filter((r) => r.name !== "lead-tests");
       if (latest.some((r) => r.name === "lead-tests") && own.every((r) => r.status === "passed")) {

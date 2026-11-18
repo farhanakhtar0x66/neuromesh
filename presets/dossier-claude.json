@@ -1,0 +1,47 @@
+{
+  "name": "dossier-claude",
+  "description": "Experimental (2026-11-19, F129; K6): Claude Haiku 5.5 scouts the repository in a disposable copy and writes a dossier (the code the change touches, quoted; how a test file runs; xfail tests and TODOs nearby) and a reproduction, kept only if it fails on the code as it is. Claude Opus 5.5 then fixes the request in its own session with tools, starting from the dossier instead of exploring, with the reproduction as a check. No plan, no takeover. A trivial or small self-contained request goes to Haiku alone (F121).",
+  "mode": "team",
+  "routing": "rules",
+  "brief": true,
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high"
+      }
+    ]
+  },
+  "repairs": 1,
+  "maxTasks": 1,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 30,
+  "expertBudgetUsd": 2,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "high"
+    }
+  ],
+  "lead": {
+    "reviews": 0,
+    "mode": "dossier"
+  }
+}

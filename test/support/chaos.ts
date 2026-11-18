@@ -225,7 +225,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     test: d.pick(["always", "always", "no-checks"] as const),
     // [F127 patch-lead] Two in five of the lead runs are K1 (no plan, the expert patches).
     // [F128 lead-auto] And one in five chooses per request.
-    lead: withLead ? { reviews: leadReviews, mode: leadDice.weighted({ plan: 2, patch: 2, auto: 1 }) as "plan" | "patch" | "auto" } : undefined,
+    lead: withLead ? { reviews: leadReviews, mode: leadDice.weighted({ plan: 2, patch: 2, auto: 1, dossier: 1 }) as "plan" | "patch" | "auto" | "dossier" } : undefined,
     workerLadder: rungs > 0 ? ladder : undefined,
     // [F78 three-tier] Senior rungs in a third of the runs (their own dice, so older seeds keep their scenario).
     seniorLadder: seniorRungs > 0 ? Array.from({ length: seniorRungs }, (_, i) => ({ backend: "fake", model: `senior-${i + 1}`, tier: "worker" as const })) : undefined,

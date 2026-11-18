@@ -174,7 +174,7 @@ by itself; run `backfill` after a bench to pick up its result lines.
     finds what nothing else does. A step that makes a copy removes a
     leftover one on entry; cleanup on the way out does not survive a kill.
   - **Every new behaviour is a feature** in `src/features.ts` with an id, a
-    switch, and its events tagged. Next free id: F129.
+    switch, and its events tagged. Next free id: F130.
   - **A number from one run is a hint.** Write "one run" beside it.
   - **Never tune on what you judge by.** The 15 routing prompts are a
     regression set; the held-out set stays untouched.

@@ -82,7 +82,7 @@ export interface Preset {
    * task; after the tasks it reviews the merged work (running commands in a copy) and accepts or adds follow-up tasks,
    * at most `reviews` times (default 2).
    */
-  lead?: { reviews?: number; mode?: "plan" | "patch" | "auto" };
+  lead?: { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier" };
 }
 
 export interface CascadeConfig {
@@ -170,11 +170,11 @@ export function validatePreset(raw: unknown, file: string): Preset {
 }
 
 /** [F104 quota-shift] */
-function leadConfig(raw: unknown, file: string): { reviews?: number; mode?: "plan" | "patch" | "auto" } {
+function leadConfig(raw: unknown, file: string): { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier" } {
   if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: lead must be an object`);
   const { reviews, mode } = raw as { reviews?: unknown; mode?: unknown };
   if (reviews !== undefined && !(typeof reviews === "number" && Number.isInteger(reviews) && reviews >= 0 && reviews <= 4)) throw new Error(`Preset ${file}: lead reviews must be a whole number from 0 to 4`);
-  if (mode !== undefined && mode !== "plan" && mode !== "patch" && mode !== "auto") throw new Error(`Preset ${file}: lead mode is "plan", "patch" or "auto"`);
+  if (mode !== undefined && mode !== "plan" && mode !== "patch" && mode !== "auto" && mode !== "dossier") throw new Error(`Preset ${file}: lead mode is "plan", "patch", "auto" or "dossier"`);
   return { ...(reviews === undefined ? {} : { reviews }), ...(mode === undefined ? {} : { mode }) };
 }
 

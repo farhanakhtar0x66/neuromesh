@@ -346,7 +346,7 @@ export function taskPrompt(state: RunState, task: TaskState): string {
     return `You are working on a software project. Complete the request below by editing the files in the current directory.
 
 Request:
-${state.prompt}${contextSection(state)}${startSection(task)}${reproduceLine(task)}${toolsNote()}
+${state.prompt}${dossierSection(state)}${contextSection(state)}${startSection(task)}${reproduceLine(task)}${toolsNote()}
 
 ${checkList(state.checks)}
 
@@ -1261,6 +1261,12 @@ export function parseLead(result: AgentResult, tiers: boolean, grunt: boolean, b
 
 // ---------------------------------------------------------------------------
 // [F127 patch-lead] K1 (docs/25): a cheap scout explores and reproduces; the expert writes the patch in one call.
+
+/** [F129 lead-dossier] K6: the scout's dossier at the head of the expert's own session, so it reads less. */
+export function dossierSection(state: RunState): string {
+  if (state.lead?.mode !== "dossier" || !state.lead.report || !isOn("lead-dossier")) return "";
+  return `\n\nA developer has read the repository for this request. Their dossier (what the code does now, not what it should do; check anything your fix depends on):\n${state.lead.report}\nStart from the code it quotes rather than exploring the repository again. Then fix the request fully, including the cases it implies but does not spell out, and run the tests that cover your change.`;
+}
 
 /** [F127 patch-lead] The scout's answer: the dossier, and the reproducing test it wrote (if any). */
 export const SCOUT_SCHEMA = {

@@ -1196,6 +1196,15 @@ export const FEATURES: Feature[] = [
     what: "A lead preset with mode \"auto\" picks one of three paths per request, with no model call: a trivial or small self-contained request goes to a worker alone (F121); a request the brief would plan anyway (a new program, numbered parts, a long or many-file request) gets the lead's plan with a test file and cheap builders (F120, F124: K2); anything else, a bug or a change in an existing repository, goes to the scout and the expert's one-call patch (F127: K1). Scrouting (2026) found no learned router beating simple choices once the handoff is good, so the rule is kept simple; K3 (cheap first with an expert judge) waits for the run record to say where the cheap model usually succeeds.",
     optional: true,
   },
+  {
+    id: "F129",
+    key: "lead-dossier",
+    name: "The scout's dossier, then the expert's own session (K6)",
+    added: "2026-11-19",
+    files: ["src/engine/run.ts (the lead's mode, the plan step)", "src/engine/prompts.ts (dossierSection, taskPrompt)", "presets/dossier-claude.json"],
+    what: "A lead preset with mode \"dossier\": K1's scout (F127) writes the dossier and a reproduction, kept only if it fails on the code as it is (F124); then the expert's one task runs as a normal session with tools, its prompt opening with the dossier and the instruction to start from the code it quotes rather than exploring again, and the kept reproduction as a check. No plan, no patch mode, no takeover. From K1 (2 of 21 against Opus alone's 8): one-call patching without tools lost Opus's quality, because Opus alone reads further, runs the tests and repairs what it broke; the handoff (Scrouting) is kept, the iteration restored.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

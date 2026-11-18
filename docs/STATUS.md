@@ -902,6 +902,11 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     first patches passed every visible check (existing tests, the scout's reproduction) and were accepted; the hidden
     tests failed. One-call patching without tools is not Opus's quality on real repositories; a cheap model's
     reproduction is not an oracle for implied cases. K5 (auto) routes repository changes to K1, so it is not run.
+69. **K6, the dossier then Opus's own session (2026-11-19; F129, preset `dossier-claude`).** K1's scout writes the dossier
+    and a kept reproduction; Opus then fixes the request in a normal tool session that opens with the dossier. On the two
+    issues where K1 failed hardest and Opus alone passed: **2 of 2**, est. $1.57 against Opus alone's $1.69. black $0.88
+    against $1.21 (Opus re-read 861k tokens instead of 1.51M); a2a-443 $0.69 against $0.48 (Opus read more than alone).
+    Quality held; the saving is within the noise of one run on two issues.
 
 ## Next steps
 
