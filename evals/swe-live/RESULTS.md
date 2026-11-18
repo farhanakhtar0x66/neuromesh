@@ -50,3 +50,21 @@ them, plus PyPSA-1310 and openai-agents-1633).
   (pint). One run each on 5 issues: it suggests the gap is in reading what the issue implies, not in the builder's rung.
 - 4 of the 16 cascade failures cannot be fixed from the issue text alone (an unstated message, argument or migration
   name). Absolute rates on this set are low for every configuration for that reason too.
+
+## The lead (F120 to F126), 2026-11-18
+
+One run each; costs are estimates; "error" grades (the grader broke under five parallel runs) were re-graded alone.
+
+| Run | Version | Issues | Resolved | Est. cost |
+| --- | --- | --- | --- | --- |
+| swl-lead-2 | v2: plan with cases, Haiku probes, review on doubt | the 5 fixable misses | 2 | $2.72 |
+| swl-lead-3, -3b, -3c | v3: plus the lead's test file as the oracle (F124) | 21 | 7 of the 20 Opus also finished (Opus alone 8, $9.40) | $15.22 on those 20 |
+| swl-opus-2 | Opus alone | the other 16 | (with swl-opus-1) 8 of 20 | $9.40 |
+| swl-lead-4pair | v4: no takeover (F125), report quotes code, prefer Haiku, one task | a2a-443, pint | 2 | $1.17 |
+| swl-lead-5trio | v5: one-call plan and review (F126) | a2a-414, a2a-443, pint | 2 (a2a-414 failed: a rule let existing tests freeze the bug; fixed after) | $1.47 |
+
+Lead v3 against Opus alone on the 20: it won dag-factory-519 (Opus failed), lost intelmq-2632 and pint-2194, and cost
+more, mostly in recovery paths since removed: expert takeovers ($1.94 dbbackup-604, $2.12 authlib-802), a split of one
+change (a2a-443), a 30-minute evidence turn (mcp-1154). On the issues both resolve, v4 and v5 cost 20 to 35 percent less
+than Opus alone (a2a-443 $0.36 against $0.48; pint $0.66 and $0.83 against $1.08). The lead was tuned on the 5 fixable
+misses; the next run measures the final version on all 20 unchanged.

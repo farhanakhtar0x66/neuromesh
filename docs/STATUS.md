@@ -882,6 +882,17 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     chaos 1000 and kill 400 keep every rule; 366 of 366 tests. Sandboxed probes reach the Docker runner (checked offline:
     exit codes pass through). The first live attempt (before F121 to F123) paused on a revoked Claude login after one
     issue's plan and build. Test plan in doc 24, waiting for the owner's go.
+67. **The lead measured and repaired, v2 to v5 (2026-11-18; F124 to F126; `evals/swe-live/RESULTS.md`).** Each live run
+    found a crack, fixed harness first: the plan froze current behaviour as a case (a2a: -32600 for an unknown method,
+    twice: once from a report on the code as it is, once because existing tests asserted it); F124 the lead writes its
+    cases as a test file, kept only if it fails on the old code, which gates the build so the cascade climbs against a
+    real oracle; F125 no expert takeover (they cost $0.90 to $2.12 an issue and saved nothing Opus alone did not); one
+    change is one task (a split made a 4-cent Haiku pass cost $1.03); F126 one-call plan and review from a report that
+    quotes the code (plan $0.35 to $0.52 down to $0.23 to $0.33); the evidence turn capped at 8 minutes. Eval: a hidden
+    check that times out or prints nothing is now "error", not a failed task (five parallel runs broke the grader; 4 of
+    7 such "fails" resolved when re-graded alone). Scoreboard on 20 issues: Opus alone 8 at $9.40, lead v3 7 at $15.22,
+    Haiku alone 3. v4 and v5 on the issues both resolve cost 20 to 35 percent less than Opus alone, on 3 issues the
+    lead was tuned on. Next: the final version on all 20, unchanged, once the five-hour window resets (95 percent).
 
 ## Next steps
 
