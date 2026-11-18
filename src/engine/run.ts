@@ -457,7 +457,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     // [F120 lead] Only in team mode: the lead's plan and reviews need the orchestrator.
     lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2, ...((preset.lead.mode === "patch" || (preset.lead.mode === "auto" && isOn("lead-auto") && !bigRequest)) && isOn("patch-lead") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "patch" as const } : {}),
             // [F129 lead-dossier] K6: the scout's dossier, then the expert's own session.
-            ...(preset.lead.mode === "dossier" && isOn("lead-dossier") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "dossier" as const } : {}) } : undefined,
+            ...(preset.lead.mode === "dossier" && isOn("lead-dossier") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "dossier" as const, ...(preset.lead.dossierMinFiles !== undefined ? { dossierMinFiles: preset.lead.dossierMinFiles } : {}) } : {}) } : undefined,
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : upper ? [...grunt, ...upper] : undefined,
     seniorRung: senior ? grunt.length + workerRungs.length : undefined,
@@ -718,6 +718,15 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       if (state.step === "plan") {
         // [F127 patch-lead] K1: no plan. The scout explores and reproduces; the expert's one task is the patch.
         const patchLead = (state.lead?.mode === "patch" && isOn("patch-lead")) || (state.lead?.mode === "dossier" && isOn("lead-dossier"));
+        // [F130 dossier-gate] K6: the dossier only where there is a search to save.
+        if (patchLead && !state.lead!.scouted && state.lead!.mode === "dossier" && isOn("dossier-gate")) {
+          const why = optional(run, "dossier-gate", undefined, () => dossierSkip(state));
+          if (why) {
+            state.lead!.scouted = true;
+            saveState(state);
+            log.emit("note", { feature: "F130", message: `No dossier: ${why}. The expert works from the request.` });
+          }
+        }
         if (patchLead && !state.lead!.scouted) {
           const stop = await optionalAsync(run, "patch-lead", undefined, () => patchScout(run));
           if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
@@ -1581,6 +1590,51 @@ async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
   }
   log.emit("lead.tests", { feature: "F124", outcome: "accepted", path: t.path, command, tasks: state.tasks.length });
   saveState(state);
+  return undefined;
+}
+
+/** [F130 dossier-gate] Names in a request that may point at code: backticked, paths, dotted, CamelCase, snake_case. */
+export function requestNames(request: string): string[] {
+  const found = new Set<string>();
+  for (const m of request.matchAll(/`([^`\n]{3,80})`/g)) found.add(m[1]!.trim());
+  for (const m of request.matchAll(/\b[\w-]+(?:\/[\w.-]+)+\.\w{1,5}\b/g)) found.add(m[0]);
+  for (const m of request.matchAll(/\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*){1,4}\b/g)) if (/[A-Z_]/.test(m[0]) || m[0].split(".").length > 2) found.add(m[0]);
+  for (const m of request.matchAll(/\b[A-Z][a-z]+(?:[A-Z][a-z0-9]+)+\b/g)) found.add(m[0]);
+  for (const m of request.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)) if (m[0].length >= 6) found.add(m[0]);
+  return [...found].filter((n) => /^[\w./()-]+$/.test(n)).slice(0, 20);
+}
+
+/**
+ * [F130 dossier-gate] Why K6 needs no dossier here, or undefined when it does. No model call. The dossier saves the
+ * expert a search: a small repository, or a request whose names already lead to two files or fewer, has none to save
+ * (swl-k6-pair: on a2a-443 the dossier added cost; on black, a large formatter, it cut Opus's re-reading by 43%).
+ */
+export function dossierSkip(state: Pick<RunState, "worktree" | "prompt" | "lead">): string | undefined {
+  const files = git(state.worktree, "ls-files").split("\n").filter(Boolean);
+  const min = state.lead?.dossierMinFiles ?? SCOUT_FILES;
+  if (files.length <= min) return `a repository of ${files.length} files`;
+  const hits = new Set<string>();
+  let specific = 0;
+  for (const name of requestNames(state.prompt)) {
+    const bare = name.replace(/\(\)$/, "");
+    if (files.includes(bare) && /\.(py|pyi|js|mjs|cjs|ts|tsx|jsx|rs|go|java|kt|rb|php|c|h|cc|cpp|hpp|cs|swift|scala)$/.test(bare)) {
+      hits.add(bare);
+      specific += 1;
+      continue;
+    }
+    const last = bare.split(".").pop()!;
+    if (!/^[A-Za-z_]\w*$/.test(last)) continue;
+    // Where the name is defined, not merely used: a builtin or a common word is defined nowhere in the project.
+    const defined = `(def|class|function|fn|const|let|var|struct|enum|interface|type|trait)[[:space:]]+${last}([^A-Za-z0-9_]|$)|^[[:space:]]*${last}[[:space:]]*(:[^=]*)?=[^=]`;
+    const r = spawnSync("git", ["grep", "-l", "-E", "-e", defined], { cwd: state.worktree, encoding: "utf8", timeout: 10_000 });
+    // Source files only: a name in a test, a data file or the docs says nothing about where the change goes.
+    const where = (r.stdout ?? "").split("\n").filter((f) => f && /\.(py|pyi|js|mjs|cjs|ts|tsx|jsx|rs|go|java|kt|rb|php|c|h|cc|cpp|hpp|cs|swift|scala)$/.test(f) && !/(^|\/)(tests?|testing|hidden)\/|test_|_test\.|\.test\./.test(f));
+    // A name found in many files says nothing about where the change goes.
+    if (where.length === 0 || where.length > 3) continue;
+    specific += 1;
+    for (const f of where) hits.add(f);
+  }
+  if (specific > 0 && hits.size <= 2) return `the request names code in ${[...hits].join(", ")}`;
   return undefined;
 }
 

@@ -42,3 +42,10 @@ test("the patch answer is read defensively", () => {
   assert.equal(parsePatch(answer({ need: [], edits: [{ path: "a.py", search: "x", replace: "y" }, { path: "", search: "", replace: "" }], summary: "s" })).edits.length, 1);
   assert.throws(() => parsePatch(answer({ need: [], edits: [], summary: "" })));
 });
+
+import { requestNames } from "../src/engine/run.ts";
+
+test("names a request may point at code with", () => {
+  const n = requestNames("`Response.unset_cookie` takes samesite; see falcon/response.py and the same_site argument of MediaRestore, not ValueError.");
+  for (const x of ["Response.unset_cookie", "falcon/response.py", "same_site", "MediaRestore"]) assert.ok(n.includes(x), x);
+});

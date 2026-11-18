@@ -376,6 +376,8 @@ export interface RunState {
     cases?: string[];
     /** [F122 lead-scout] A cheap developer's report on a big repository, for the plan. */
     report?: string;
+    /** [F130 dossier-gate] Repositories up to this many files get no dossier (default 150). */
+    dossierMinFiles?: number;
     /** [F122 lead-scout] The report was asked for (once per run, whatever came of it). */
     scouted?: boolean;
     /** [F124 lead-tests] The lead's test file: written by the plan, kept when it fails on the code as it was. */

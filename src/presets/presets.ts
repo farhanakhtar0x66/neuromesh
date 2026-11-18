@@ -82,7 +82,7 @@ export interface Preset {
    * task; after the tasks it reviews the merged work (running commands in a copy) and accepts or adds follow-up tasks,
    * at most `reviews` times (default 2).
    */
-  lead?: { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier" };
+  lead?: { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier"; dossierMinFiles?: number };
 }
 
 export interface CascadeConfig {
@@ -170,12 +170,13 @@ export function validatePreset(raw: unknown, file: string): Preset {
 }
 
 /** [F104 quota-shift] */
-function leadConfig(raw: unknown, file: string): { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier" } {
+function leadConfig(raw: unknown, file: string): { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier"; dossierMinFiles?: number } {
   if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: lead must be an object`);
-  const { reviews, mode } = raw as { reviews?: unknown; mode?: unknown };
+  const { reviews, mode, dossierMinFiles } = raw as { reviews?: unknown; mode?: unknown; dossierMinFiles?: unknown };
+  if (dossierMinFiles !== undefined && !(typeof dossierMinFiles === "number" && Number.isInteger(dossierMinFiles) && dossierMinFiles >= 0)) throw new Error(`Preset ${file}: lead dossierMinFiles must be a whole number`);
   if (reviews !== undefined && !(typeof reviews === "number" && Number.isInteger(reviews) && reviews >= 0 && reviews <= 4)) throw new Error(`Preset ${file}: lead reviews must be a whole number from 0 to 4`);
   if (mode !== undefined && mode !== "plan" && mode !== "patch" && mode !== "auto" && mode !== "dossier") throw new Error(`Preset ${file}: lead mode is "plan", "patch", "auto" or "dossier"`);
-  return { ...(reviews === undefined ? {} : { reviews }), ...(mode === undefined ? {} : { mode }) };
+  return { ...(reviews === undefined ? {} : { reviews }), ...(mode === undefined ? {} : { mode }), ...(dossierMinFiles === undefined ? {} : { dossierMinFiles: dossierMinFiles as number }) };
 }
 
 function quotaShift(raw: unknown, file: string): QuotaShift | undefined {

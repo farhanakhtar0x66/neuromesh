@@ -1205,6 +1205,15 @@ export const FEATURES: Feature[] = [
     what: "A lead preset with mode \"dossier\": K1's scout (F127) writes the dossier and a reproduction, kept only if it fails on the code as it is (F124); then the expert's one task runs as a normal session with tools, its prompt opening with the dossier and the instruction to start from the code it quotes rather than exploring again, and the kept reproduction as a check. No plan, no patch mode, no takeover. From K1 (2 of 21 against Opus alone's 8): one-call patching without tools lost Opus's quality, because Opus alone reads further, runs the tests and repairs what it broke; the handoff (Scrouting) is kept, the iteration restored.",
     optional: true,
   },
+  {
+    id: "F130",
+    key: "dossier-gate",
+    name: "The dossier only where there is a search to save",
+    added: "2026-11-19",
+    files: ["src/engine/run.ts (dossierSkip, requestNames, the plan step)", "src/engine/prompts.ts (dossierSection, scoutPromptK1)"],
+    what: "With K6 (F129), decided with no model call before the scout: no dossier for a repository of at most 150 files (the preset's lead.dossierMinFiles), nor for a request whose names (backticked, paths, dotted names, CamelCase, snake_case) that occur outside the tests in at most three files each lead to two files or fewer; the expert then works from the request itself. Both ways the expert is asked to run only the tests that cover its change, since Neuromesh runs the project's checks after its turn and sends any failure back; with a dossier, the scout has already run the reproduction and the nearest test file and put the commands and outputs in it. From swl-k6-pair: on a2a-443 the dossier added cost (Opus read more than alone); on black, a large formatter, it cut Opus's re-reading from 1.51M to 861k tokens.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

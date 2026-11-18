@@ -225,7 +225,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     test: d.pick(["always", "always", "no-checks"] as const),
     // [F127 patch-lead] Two in five of the lead runs are K1 (no plan, the expert patches).
     // [F128 lead-auto] And one in five chooses per request.
-    lead: withLead ? { reviews: leadReviews, mode: leadDice.weighted({ plan: 2, patch: 2, auto: 1, dossier: 1 }) as "plan" | "patch" | "auto" | "dossier" } : undefined,
+    lead: withLead ? { reviews: leadReviews, mode: leadDice.weighted({ plan: 2, patch: 2, auto: 1, dossier: 1 }) as "plan" | "patch" | "auto" | "dossier", dossierMinFiles: leadDice.pick([0, 0, 150]) } : undefined,
     workerLadder: rungs > 0 ? ladder : undefined,
     // [F78 three-tier] Senior rungs in a third of the runs (their own dice, so older seeds keep their scenario).
     seniorLadder: seniorRungs > 0 ? Array.from({ length: seniorRungs }, (_, i) => ({ backend: "fake", model: `senior-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -753,6 +753,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         break;
       }
     }
+    // [F130 dossier-gate] A skipped dossier means no scout turn.
+    if (state.lead?.mode === "dossier" && events.some((e) => e.type === "note" && e.feature === "F130") && state.attempts.some((a) => a.kind === "scout")) broke("the dossier gate skipped the dossier, yet the scout ran");
     // [F121 lead-triage] A trivial request never reaches the lead's plan.
     if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");
     // [F123 lead-evidence] Accepted on the evidence only when every probe held, as Neuromesh ran it.

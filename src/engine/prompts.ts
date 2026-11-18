@@ -1264,8 +1264,10 @@ export function parseLead(result: AgentResult, tiers: boolean, grunt: boolean, b
 
 /** [F129 lead-dossier] K6: the scout's dossier at the head of the expert's own session, so it reads less. */
 export function dossierSection(state: RunState): string {
-  if (state.lead?.mode !== "dossier" || !state.lead.report || !isOn("lead-dossier")) return "";
-  return `\n\nA developer has read the repository for this request. Their dossier (what the code does now, not what it should do; check anything your fix depends on):\n${state.lead.report}\nStart from the code it quotes rather than exploring the repository again. Then fix the request fully, including the cases it implies but does not spell out, and run the tests that cover your change.`;
+  if (state.lead?.mode !== "dossier" || !isOn("lead-dossier")) return "";
+  // [F130 dossier-gate] No dossier (the gate skipped it): the expert explores itself, and still checks narrowly.
+  if (!state.lead.report) return `\n\nTo check your work, run only the tests that cover what you changed, not the whole suite: Neuromesh runs the project's checks after your turn and sends you any failure.`;
+  return `\n\nA developer has read the repository for this request. Their dossier (what the code does now, not what it should do; check anything your fix depends on):\n${state.lead.report}\nStart from the code it quotes rather than exploring the repository again; the dossier already shows how the tests run and what they print now. Then fix the request fully, including the cases it implies but does not spell out. To check your work, run only the tests that cover what you changed (the reproduction and the test files you edit), not the whole suite: Neuromesh runs the project's checks after your turn and sends you any failure.`;
 }
 
 /** [F127 patch-lead] The scout's answer: the dossier, and the reproducing test it wrote (if any). */
@@ -1290,8 +1292,8 @@ ${checks.length > 0 ? `The project's checks run like this: ${checks.map((c) => `
 
 Do three things, in this order, quickly:
 1. Find the code the change touches. Quote verbatim, with file paths and line numbers, every function and class the fix will change or call, and the existing tests closest to it (up to about 300 lines of code in all). Quote in full any nearby test marked xfail, skip or todo, and any TODO or FIXME comment in that code: they record behaviour the project knows is missing, often exactly what the request implies. Note the conventions nearby (naming, registries, error types and messages, imports at the top of the test files, where tests go).
-2. Find out how a single test file is run in this environment (the exact command, the same way the checks run), and confirm it by running an existing test file.
-3. Write ONE new test file that reproduces what the request reports or asks for, through the public interface, in the project's test framework: it must fail on the code as it is now with a failed assertion (import anything the change will add inside the test that uses it, never at the top). Run it and confirm it fails for that reason. If you cannot make such a test in a few tries, give an empty test_path.
+2. Find out how a single test file is run in this environment (the exact command, the same way the checks run), and confirm it by running the existing test file closest to the change. Record the command and the last lines of its output in the dossier, so the engineer does not have to run it again.
+3. Write ONE new test file that reproduces what the request reports or asks for, through the public interface, in the project's test framework: it must fail on the code as it is now with a failed assertion (import anything the change will add inside the test that uses it, never at the top). Run it and confirm it fails for that reason; put the command and the failure (the assertion and the values) in the dossier. If you cannot make such a test in a few tries, give an empty test_path.
 
 Do not write the fix. Do not guess: say what you did not find.
 
