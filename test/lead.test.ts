@@ -26,3 +26,14 @@ test("an unusable review throws", () => {
   assert.throws(() => parseLead(answer({ decision: "maybe" }), true, true));
   assert.throws(() => parseLead(answer({ decision: "more", summary: "", followups: [] }), true, true));
 });
+
+import { parseCases, parseEvidence, parseRepoReport } from "../src/engine/prompts.ts";
+
+test("the plan's cases, the report and the probes are read defensively", () => {
+  assert.deepEqual(parseCases(answer({ summary: "", tasks: [], cases: ["3 dB + 3 dB gives 6.0103 dB", "", 4] })), ["3 dB + 3 dB gives 6.0103 dB"]);
+  assert.deepEqual(parseCases(answer({ summary: "", tasks: [] })), []);
+  assert.equal(parseRepoReport(answer({ report: "short" })), undefined);
+  assert.ok(parseRepoReport(answer({ report: "The code is in pint/facets/plain/quantity.py, _add_sub at line 1100." })));
+  assert.deepEqual(parseEvidence(answer({ evidence: [{ case: "a", command: " pytest -q t.py ", holds: true }, { case: "b", holds: false }] })), [{ case: "a", command: "pytest -q t.py" }, { case: "b", command: "" }]);
+  assert.throws(() => parseEvidence(answer({ nothing: true })));
+});

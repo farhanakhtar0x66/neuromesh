@@ -99,7 +99,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "lead" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "lead" | "report" | "evidence" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -115,6 +115,9 @@ function callKind(r: AgentRequest): Call {
   if ("path" in p && "command" in p) return "reproduce";
   // [F120 lead]
   if ("decision" in p) return "lead";
+  // [F122 lead-scout] [F123 lead-evidence]
+  if ("report" in p) return "report";
+  if ("evidence" in p) return "evidence";
   return "build";
 }
 
@@ -406,7 +409,10 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     }
     if (kind === "plan") {
       const id = taskOf(req.cwd);
-      return { ...extra, structured: id ? planFor(owners.get(id) ?? files, `${id}.`, "p") : planFor(files, "", "t") };
+      const plan = (id ? planFor(owners.get(id) ?? files, `${id}.`, "p") : planFor(files, "", "t")) as Record<string, unknown>;
+      // [F120 lead] The lead's plan lists acceptance cases (sometimes none).
+      if ("cases" in props(req)) plan.cases = d.chance(0.8) ? files.slice(0, 3).map((f) => `${f} says ok`) : [];
+      return { ...extra, structured: plan };
     }
     if (kind === "advice") return { ...extra, structured: { diagnosis: "the file is wrong", steps: ["write ok into it"] } };
     if (kind === "diagnose") return { ...extra, structured: { bottleneck: "the file says the wrong thing" } };
@@ -424,6 +430,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (view === "empty") return { ...extra, structured: { decision: "more", summary: "something is off", followups: [] } };
       if (view === "garbage") return { ...extra, structured: { decision: "maybe" } };
       return { ...extra, structured: { decision: "more", summary: "a case is missing", followups: [{ id: "fix", title: "the missing case", brief: `Write ok into ${files[0]}`, owner: d.pick(["grunt", "worker", "senior", "expert"]) }] } };
+    }
+    // [F122 lead-scout] A report; a troubled helper's is too short to use.
+    if (kind === "report") return { ...extra, structured: { report: d.chance(p) ? "nothing" : `The request concerns ${files.join(", ")}; the check reads them and wants each to say ok.` } };
+    // [F123 lead-evidence] One probe per case: a good helper's shows the truth, a troubled one's may be wrong, missing or unrunnable.
+    if (kind === "evidence") {
+      const truth = files.map((f) => `test "$(cat '${f}' 2>/dev/null)" = ok`);
+      const probes = truth.map((t) => (d.chance(p) ? d.pick(["true", "false", "", "definitely-not-a-command"]) : t));
+      return { ...extra, structured: { evidence: probes.slice(0, d.chance(p) ? 1 : 3).map((command, i) => ({ case: `case ${i + 1}`, command, holds: true })) } };
     }
     // [F83 early-exit] Asked for a preamble: a good developer is confident; a troubled one may escalate or garble it.
     if (req.onText) {
@@ -677,7 +691,17 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     // A review retried (a dropped connection, a pause) is the same review: rounds are counted, not turns.
     const leadTurns = new Set(state.attempts.filter((a) => a.kind === "lead-review").map((a) => a.round)).size;
     if (leadTurns > (state.lead?.reviews ?? 0)) broke(`the lead reviewed ${leadTurns} times; the preset allows ${state.lead?.reviews ?? 0}`);
-    if (calm && state.status === "finished" && state.lead && roles.orchestrator && preset.expertBudgetUsd === undefined && preset.expertBudget === undefined && state.tasks.every((t) => t.status === "passed") && leadTurns === 0) broke("the lead never reviewed the team's finished work");
+    // [F121 lead-triage] A trivial request never reaches the lead's plan.
+    if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");
+    // [F123 lead-evidence] Accepted on the evidence only when every probe held, as Neuromesh ran it.
+    for (const e of events.filter((x) => x.type === "lead.review" && x.by === "evidence")) {
+      const ev = events.filter((x) => x.type === "lead.evidence" && x.round === e.round).at(-1);
+      if (!ev || ev.fails !== 0 || ev.unconfirmed !== 0 || ev.holds !== ev.cases) broke(`round ${String(e.round)} was accepted on evidence that did not all hold`);
+      if (state.attempts.some((a) => a.kind === "lead-review" && a.round === e.round)) broke(`round ${String(e.round)} was accepted on the evidence, yet the lead was asked too`);
+    }
+    // Calm, finished work is checked: by the evidence or by the lead.
+    const checkedRounds = new Set([...state.attempts.filter((a) => a.kind === "lead-review" || a.kind === "evidence").map((a) => a.round)]).size;
+    if (calm && state.status === "finished" && state.lead && roles.orchestrator && preset.expertBudgetUsd === undefined && preset.expertBudget === undefined && state.tasks.every((t) => t.status === "passed") && checkedRounds === 0) broke("nobody checked the team's finished work: no evidence and no review");
     // [F102 repair-race] Nor a racer's copy, whoever won and however the run ended.
     if (trees.some((t) => /[\\/]race-[ab]$/.test(t))) broke("a race copy was left behind");
     if (state.status === "finished") {

@@ -6,6 +6,7 @@ import type { Brief } from "../intake/brief.ts";
 import type { CascadeTier, TierRoute } from "../routing/router.ts";
 import type { QuotaShift } from "./quota.ts";
 import type { Reproduction } from "./reproduce.ts";
+import type { CaseResult } from "./prompts.ts";
 
 /**
  * "expert" is the heavy, expensive model (the factory's expert); "worker" is a
@@ -54,6 +55,8 @@ export type AttemptKind =
   | "integration"
   // [F120 lead] The lead reviewing the merged work.
   | "lead-review"
+  // [F123 lead-evidence] A cheap developer probing the lead's acceptance cases.
+  | "evidence"
   | "scout"
   | "split"
   // [F84 bottleneck-diagnostic]
@@ -362,7 +365,17 @@ export interface RunState {
   checks: CheckSpec[];
   baseline?: CheckResult[];
   /** [F120 lead] The expert leads: plans with acceptance cases and reviews the merged work, at most this many times. */
-  lead?: { reviews: number };
+  lead?: {
+    reviews: number;
+    /** [F120 lead] The request's acceptance cases, from the plan. */
+    cases?: string[];
+    /** [F122 lead-scout] A cheap developer's report on a big repository, for the plan. */
+    report?: string;
+    /** [F122 lead-scout] The report was asked for (once per run, whatever came of it). */
+    scouted?: boolean;
+    /** [F123 lead-evidence] This round's evidence, kept so a pause before the lead's review does not probe again. */
+    evidence?: { round: number; results: CaseResult[] };
+  };
   /** [F120 lead] Reviews done so far. */
   leadRounds?: number;
   latest?: CheckResult[];

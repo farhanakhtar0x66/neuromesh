@@ -675,7 +675,7 @@ Request:
 ${state.prompt}
 
 ${state.contextPacket && isOn("context-packet") ? `The project, mapped by Neuromesh:\n${state.contextPacket}` : `Project files:\n${listing.join("\n")}`}
-
+${state.lead?.report ? `\nA report on the repository for this request, written for you by a developer who read the code:\n${state.lead.report}\n` : ""}
 ${state.checks.length > 0 ? `The project's checks: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}` : "The project has no automatic checks."}
 
 How the team works:
@@ -1085,17 +1085,103 @@ function leadTeam(senior: boolean, grunt: boolean): string {
   ].filter(Boolean).join(" ");
 }
 
+/** [F120 lead] The lead's plan: the usual plan, and the request's acceptance cases. */
+export const LEAD_PLAN_SCHEMA = {
+  ...PLAN_SCHEMA,
+  properties: { ...PLAN_SCHEMA.properties, cases: { type: "array", items: { type: "string" } } },
+  required: ["summary", "cases", "tasks"],
+};
+
 /** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
 export function leadPlanLines(senior: boolean, grunt: boolean): string {
-  return `- First work out what the request really asks. Read the code it touches, then list its acceptance cases: concrete inputs and the results they must give, including the cases the request implies but does not spell out (the other members of a family it names, the reverse operation, error cases and edge values, behaviour that must not change). Put each case in the brief of the task that covers it, and ask for a test of each. You review the finished change against these cases yourself before it is delivered.
-- Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} Most requests are one task.`;
+  return `- First work out what the request really asks, then list its acceptance cases in "cases": each one concrete input and the result it must give, including the cases the request implies but does not spell out (the other members of a family it names, the reverse operation, error cases and edge values, behaviour that must not change). Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
+- Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} Most requests are one task; a small, clear one gets a short brief.
+- Your whole answer stays under about 700 words. Read only what you need: where a report on the repository is given, trust it and open a file only to confirm a detail the plan depends on.`;
 }
 
-/** [F120 lead] The lead reviews the merged work, in a copy where it may run commands. */
-export function leadReviewPrompt(state: RunState, diff: string, latest: CheckResult[] | undefined, round: number, rounds: number, senior: boolean, grunt: boolean): string {
-  const plan = state.tasks.map((t) => `- ${t.id} (${t.owner}, ${t.status}): ${t.title}\n  ${t.brief.slice(0, 1_500).replace(/\n/g, "\n  ")}`).join("\n");
+/** [F122 lead-scout] A cheap developer reads a big repository for the lead and reports on it. */
+export const REPORT_SCHEMA = {
+  type: "object",
+  properties: { report: { type: "string" } },
+  required: ["report"],
+  additionalProperties: false,
+};
+
+export function leadReportPrompt(state: RunState): string {
+  return `You are helping a lead engineer who will plan the request below. Read the repository in the current folder (you cannot change files) and write a report for this request, so the lead does not have to read the code itself.
+
+The request:
+${state.prompt}
+
+The report, at most about 800 words, plain and specific:
+- Where the code for this request is: files, functions and classes, with line numbers.
+- How that code works now, for the paths the request touches; quote the few lines that matter most.
+- The conventions nearby that a change must follow (naming, registries, error types and messages, where tests go).
+- Which existing tests cover it, and how the project's tests are run.
+- What the request implies beyond what it states, as far as the code shows it (other cases of the same kind, callers that depend on the behaviour).
+Do not propose a fix. Do not guess: say what you did not find.
+
+Give your answer in the required JSON format: report.`;
+}
+
+/** [F123 lead-evidence] A cheap developer checks each acceptance case on the finished work. */
+export const EVIDENCE_SCHEMA = {
+  type: "object",
+  properties: {
+    evidence: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { case: { type: "string" }, command: { type: "string" }, holds: { type: "boolean" }, output: { type: "string" } },
+        required: ["case", "command", "holds"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["evidence"],
+  additionalProperties: false,
+};
+
+export function leadEvidencePrompt(state: RunState, cases: string[]): string {
+  const checks = state.checks.length > 0 ? `The project's checks run like this: ${state.checks.map((c) => `\`${c.command}\``).join(", ")}. Run your probes the same way.` : "";
+  return `You are checking finished work. The current folder is a copy of the project with the change applied; nothing you change here is kept.
+
+The request:
+${state.prompt}
+
+The acceptance cases the lead engineer set:
+${cases.map((c, i) => `${i + 1}. ${c}`).join("\n")}
+
+${checks}
+
+For each case, write the shortest probe that shows whether it holds: one command that exits 0 when the case holds and non-zero when it does not (a small script or a one-test file in a temporary folder or a new file here, then the command that runs it). Run it and record what happened. Do not fix anything, and do not change the project's own files. Neuromesh runs every command again itself, so give each as one command that works from this folder.
+
+Give your answer in the required JSON format: evidence (one entry per case, in order: case, command, holds, output with the last lines it printed).`;
+}
+
+/** [F123 lead-evidence] What the engine found when it ran each probe again. */
+export interface CaseResult {
+  case: string;
+  command: string;
+  /** "holds" and "fails" are the engine's own result; "unconfirmed" when the probe could not run (or none was given). */
+  result: "holds" | "fails" | "unconfirmed";
+  output: string;
+}
+
+export function parseEvidence(result: AgentResult): { case: string; command: string }[] {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { evidence?: unknown } | undefined;
+  if (!raw || !Array.isArray(raw.evidence)) throw new Error("the evidence has no list of cases");
+  return (raw.evidence as { case?: unknown; command?: unknown }[]).map((e) => ({ case: typeof e.case === "string" ? e.case : "", command: typeof e.command === "string" ? e.command.trim() : "" }));
+}
+
+/** [F120 lead] The lead reviews from the evidence, read-only. */
+export function leadReviewPrompt(state: RunState, diff: string, latest: CheckResult[] | undefined, evidence: CaseResult[] | undefined, round: number, rounds: number, senior: boolean, grunt: boolean): string {
+  const plan = state.tasks.map((t) => `- ${t.id} (${t.owner}, ${t.status}): ${t.title}\n  ${t.brief.slice(0, 1_200).replace(/\n/g, "\n  ")}`).join("\n");
   const checks = (latest ?? []).map((r) => `${r.name}: ${r.status}`).join(", ") || "none ran";
-  return `You are the lead engineer. Your team has built the tasks you planned; review the result before it is delivered.
+  const cases = evidence?.length
+    ? `Your acceptance cases, each probed by a cheap developer and the probe run again by Neuromesh:\n${evidence.map((e, i) => `${i + 1}. ${e.result.toUpperCase()}: ${e.case}\n   probe: ${e.command || "(none given)"}\n   output: ${e.output.slice(-600).replace(/\n/g, "\n   ")}`).join("\n")}`
+    : "No case could be probed; judge from the change.";
+  return `You are the lead engineer. Your team built the tasks you planned, and not everything checks out. Decide what happens next.
 
 The request:
 ${state.prompt}
@@ -1103,22 +1189,37 @@ ${state.prompt}
 The tasks and their briefs:
 ${plan}
 
+${cases}
+
+The project's checks: ${checks}.
+
 The whole change, against the start:
 \`\`\`diff
-${diff.slice(0, 30_000)}
+${diff.slice(0, 24_000)}
 \`\`\`
 
-The project's checks: ${checks}. They show only what they test; most of the request's cases are not in them.
-
-You are in a disposable copy of the project with the change applied. Run commands the way the checks run them, and write throw-away probes; your edits here are discarded. Go through the acceptance cases you set and the request itself, and probe each case that no test already shows. Keep it short: a few probes, not a test suite.
+You may read files (the change is applied in the current folder); you cannot run anything. A FAILS line is the strongest evidence, but a probe can be wrong too: if it tests something the request does not need, or tests it wrongly, say so and accept.
 
 Then decide:
-- "accept" if the change does what the request asks, the implied cases included. Do not hold it up for style or for things the request does not need.
+- "accept" if the change does what the request asks, the implied cases included.
 - "more" if something is missing or wrong: give 1 to 3 follow-up tasks. Each brief says what is wrong (the input and the result it must give), where, and how to tell it is fixed. Choose who builds each: ${leadTeam(senior, grunt)} A defect a developer made goes to a stronger one unless the fix is mechanical.
 
 This is review ${round} of at most ${rounds}${round >= rounds ? "; it is the last, so ask for more only for a real defect" : ""}.
 
 Give your answer in the required JSON format: decision, summary (one or two sentences) and followups (id, title, brief, owner; an empty list when you accept).`;
+}
+
+/** [F120 lead] The plan's acceptance cases (at most 12; an empty list when it gave none). */
+export function parseCases(result: AgentResult): string[] {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { cases?: unknown } | undefined;
+  return Array.isArray(raw?.cases) ? raw.cases.filter((c): c is string => typeof c === "string" && c.trim() !== "").map((c) => c.trim().slice(0, 600)).slice(0, 12) : [];
+}
+
+/** [F122 lead-scout] The report, or undefined when there is none. */
+export function parseRepoReport(result: AgentResult): string | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { report?: unknown } | undefined;
+  const text = typeof raw?.report === "string" ? raw.report.trim() : "";
+  return text.length >= 40 ? text.slice(0, 8_000) : undefined;
 }
 
 /** [F120 lead] The review's answer. Throws when it is unusable. */

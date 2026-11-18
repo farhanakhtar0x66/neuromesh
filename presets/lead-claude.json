@@ -1,13 +1,31 @@
 {
   "name": "lead-claude",
-  "description": "Experimental (2026-11-18, F120): Claude Opus 5.5 medium leads. It plans every request first, listing its acceptance cases (the implied ones too), and picks per task: grunt (Claude Haiku 5.5 low), worker (Haiku 5.5 high), senior (Claude Sonnet 5.5 high) or itself. While they build it waits; then it reviews the merged change in a copy where it runs commands, and accepts or adds follow-up tasks for whichever developer it chooses, itself included, at most twice. No separate tester: the lead's review is the review. The owner's idea: a cheap model deciding first on a hard task decides badly.",
+  "description": "Experimental (2026-11-18, F120 to F123; docs/24-lead.md): Claude Opus 5.5 medium leads, and works only where it decides. A trivial or small self-contained request goes to Claude Haiku 5.5 alone (no Opus turn). Otherwise, on a big repository Haiku first writes a report for the request; Opus plans from it (under about 700 words): the acceptance cases, the implied ones too, and per task a developer: grunt (Haiku low), worker (Haiku high), senior (Claude Sonnet 5.5 high) or itself. After the build, Haiku probes every case and Neuromesh re-runs each probe: all hold and the checks pass, accepted with no Opus turn; otherwise Opus reviews read-only from the evidence and adds follow-ups for whom it chooses, at most twice. No separate tester.",
   "mode": "team",
   "routing": "rules",
   "brief": true,
   "roles": {
-    "orchestrator": [{ "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }],
-    "escalation": [{ "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }],
-    "worker": [{ "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }]
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-opus-5-5",
+        "effort": "medium"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high"
+      }
+    ]
   },
   "repairs": 1,
   "maxTasks": 4,
@@ -15,8 +33,28 @@
   "turnTimeoutMinutes": 30,
   "expertBudgetUsd": 3,
   "test": "always",
-  "gruntLadder": [{ "backend": "claude", "model": "claude-haiku-5-5", "effort": "low" }],
-  "workerLadder": [{ "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }],
-  "seniorLadder": [{ "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" }],
-  "lead": { "reviews": 2 }
+  "gruntLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "low"
+    }
+  ],
+  "workerLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "high"
+    }
+  ],
+  "seniorLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-sonnet-5-5",
+      "effort": "high"
+    }
+  ],
+  "lead": {
+    "reviews": 2
+  }
 }

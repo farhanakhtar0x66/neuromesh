@@ -25,7 +25,7 @@ import type { AgentBackend, AgentResult, Usage } from "../backends/types.ts";
 import { addUsage, usageSince } from "../backends/types.ts";
 import { detectChecks, runChecks } from "../checks/checks.ts";
 import { hasTmux, screenCheck, screenText } from "../checks/screen.ts";
-import { runAcceptance, verifyFindings } from "../checks/acceptance.ts";
+import { runAcceptance, runCommand, verifyFindings } from "../checks/acceptance.ts";
 import { BYTECODE, ensureEnv, envNote, envVars, environmentTrouble, missingModule } from "./env.ts";
 import { observedText } from "./observed.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
@@ -101,8 +101,17 @@ import {
   PLAN_SCHEMA,
   plannerPrompt,
   LEAD_SCHEMA,
+  LEAD_PLAN_SCHEMA,
+  REPORT_SCHEMA,
+  EVIDENCE_SCHEMA,
   leadReviewPrompt,
+  leadReportPrompt,
+  leadEvidencePrompt,
   parseLead,
+  parseCases,
+  parseRepoReport,
+  parseEvidence,
+  type CaseResult,
   SPEC_SCHEMA,
   specPrompt,
   redoPrompt,
@@ -378,10 +387,29 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
   }
   if (brief) {
     if (options.mode === "team") brief.staffing.plan = true;
-    // [F120 lead] The lead plans every request, small ones too: a cheap model deciding first is what it replaces.
+    // [F120 lead] The lead plans every request but the small ones: a cheap model deciding first on a hard one is what it replaces.
     if (preset.lead && isOn("lead") && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0 && !brief.staffing.plan) {
-      brief.staffing.plan = true;
-      brief.staffing.reasons.push("the lead plans it");
+      // [F121 lead-triage] A trivial or small self-contained request goes to a worker alone, with no model call to decide.
+      let small: string | undefined;
+      if (isOn("lead-triage")) {
+        try {
+          small = inFeature("lead-triage", () => {
+            if (brief!.kind === "trivial") return "a small change: a worker does it alone";
+            const count = git(repo.root, "ls-files").split("\n").filter(Boolean).length;
+            return count <= 60 && selfContained(options.prompt, projectFiles(repo.root, [])).ok ? "small and self-contained: a worker does it alone" : undefined;
+          });
+        } catch (error) {
+          featureErrors.push(failure(error, "lead-triage"));
+          disable("lead-triage");
+        }
+      }
+      if (small) brief.staffing.reasons.push(small);
+      else {
+        brief.staffing.plan = true;
+        // The brief's wording was for a worker-first team; with the lead, the lead plans and reviews instead.
+        brief.staffing.reasons = brief.staffing.reasons.filter((r) => !/^one worker starts|^the cheapest worker rung starts|^a tester reviews/.test(r));
+        brief.staffing.reasons.push("the lead plans it, picks a developer per task and checks the result");
+      }
     }
     mode = brief.staffing.plan ? "team" : "solo";
     why = brief.staffing.reasons.join("; ");
@@ -676,6 +704,11 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       }
 
       if (state.step === "plan") {
+        // [F122 lead-scout] On a big repository a cheap developer reads it first, so the lead plans from a report.
+        if (state.lead && !state.lead.scouted && isOn("lead-scout")) {
+          const stop = await optionalAsync(run, "lead-scout", undefined, () => leadScout(run));
+          if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
+        }
         const outcome = await planStep(run);
         if (outcome?.status === "failed" && outcome.failure === "agent") {
           // Planning is a help, not a requirement: a worker takes the whole request,
@@ -1465,11 +1498,99 @@ async function scoutStep(run: RunCtx): Promise<string[]> {
   return facts;
 }
 
+/** [F122 lead-scout] A repository with more files than this gets a cheap developer's report before the lead plans. */
+const SCOUT_FILES = 150;
+
+/** [F122 lead-scout] [F123 lead-evidence] The cheap developer who reads and probes for the lead: the first worker rung. */
+function leadHelper(state: RunState): RoleConfig[] {
+  const first = state.workerLadder?.[state.workerRung ?? 0] ?? state.roles.worker?.[0];
+  return first && !state.exhausted.includes(modelKey(first)) ? [first] : [];
+}
+
 /**
- * [F120 lead] The lead reviews the merged work in a copy where it may run commands, against the acceptance cases of its
- * plan, and accepts it or adds follow-up tasks (each with the developer it chose, itself included), which the scheduler
- * then runs like any task. At most `lead.reviews` times; a failed task, a spent expert budget or an unusable answer
- * ends the reviews and the run goes on to its final step as it stands.
+ * [F122 lead-scout] On a big repository, a cheap developer reads it first and writes a report for this request, so the
+ * lead plans from the report and opens files only to confirm a detail. Asked once per run; no report, no harm.
+ */
+async function leadScout(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  state.lead!.scouted = true;
+  saveState(state);
+  const files = git(state.worktree, "ls-files").split("\n").filter(Boolean).length;
+  const chain = leadHelper(state);
+  if (files <= SCOUT_FILES || chain.length === 0) return undefined;
+  const { result } = await turn(run, {
+    key: "lead-report",
+    role: "worker",
+    kind: "scout",
+    round: 0,
+    cwd: state.worktree,
+    prompt: leadReportPrompt(state),
+    access: "read-only",
+    schema: REPORT_SCHEMA,
+    chain,
+    timeoutMs: SCOUT_MS * 2,
+  });
+  if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
+  const report = result.stop === "done" ? parseRepoReport(result) : undefined;
+  if (report) state.lead!.report = report;
+  log.emit("lead.report", { feature: "F122", files, chars: report?.length ?? 0, ok: report !== undefined });
+  saveState(state);
+  return undefined;
+}
+
+/**
+ * [F123 lead-evidence] A cheap developer writes a probe for each acceptance case in a disposable copy of the merged work
+ * and runs it; then Neuromesh runs every probe again in its sandbox, and its exit status is the result. A probe that
+ * cannot run (no command, not found, timed out) is "unconfirmed".
+ */
+async function leadEvidence(run: RunCtx, round: number, head: string, cases: string[]): Promise<CaseResult[] | Stop | undefined> {
+  const { state, log } = run;
+  const chain = leadHelper(state);
+  if (chain.length === 0) return undefined;
+  const dir = join(state.dir, "lead");
+  dropCopy(state.repo, dir);
+  const found: CaseResult[] = [];
+  try {
+    createDetachedWorktree(state.repo, dir, head);
+    const prepared = prepareWorktree(state.repo, dir);
+    await prepareEnv(run, dir, prepared);
+    const { result } = await turn(run, {
+      key: `lead-evidence-${round}`,
+      role: "worker",
+      kind: "evidence",
+      round,
+      cwd: dir,
+      prompt: leadEvidencePrompt(state, cases),
+      access: "write",
+      schema: EVIDENCE_SCHEMA,
+      chain,
+    });
+    if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
+    const probes = result.stop === "done" ? parseEvidence(result) : [];
+    for (let i = 0; i < cases.length; i++) {
+      const probe = probes[i];
+      if (!probe?.command || run.signal.aborted) {
+        found.push({ case: cases[i]!, command: probe?.command ?? "", result: "unconfirmed", output: "no probe was given" });
+        continue;
+      }
+      const r = await runCommand(dir, probe.command, { timeoutMs: 120_000, env: isOn("work-env") ? envVars(dir) : undefined, signal: run.signal });
+      const outcome = r.timedOut || r.exitCode === null || r.exitCode === 126 || r.exitCode === 127 ? "unconfirmed" : r.exitCode === 0 ? "holds" : "fails";
+      found.push({ case: cases[i]!, command: probe.command, result: outcome, output: r.output.slice(-1_500) });
+    }
+  } finally {
+    removeDetachedWorktree(state.repo, dir);
+  }
+  const count = (k: CaseResult["result"]): number => found.filter((f) => f.result === k).length;
+  log.emit("lead.evidence", { feature: "F123", round, cases: cases.length, holds: count("holds"), fails: count("fails"), unconfirmed: count("unconfirmed") });
+  return found;
+}
+
+/**
+ * [F120 lead] After the tasks: the evidence first (F123), and only when a case fails or cannot be shown, the lead's own
+ * review, read-only, from that evidence and the change: it accepts or adds follow-up tasks (each with the developer it
+ * chose, itself included), which the scheduler runs like any task, and the next round checks again. At most
+ * `lead.reviews` rounds; a failed task, a spent expert budget, a preset with no orchestrator or an unusable answer ends
+ * them and the run goes on to its final step as it stands.
  */
 async function leadStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
@@ -1483,39 +1604,49 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
   if (!state.lead || !isOn("lead") || round > state.lead.reviews) return toFinal();
   if (roleChain(state, "orchestrator").length === 0) return toFinal("No model leads this preset (no orchestrator), so nobody reviews.");
   if (state.tasks.some((t) => t.status !== "passed")) return toFinal("A task did not pass, so the lead does not review; the run ends as it stands.");
-  if (!budgetLeft(state)) return toFinal("The expert budget is spent, so the lead does not review.");
   const head = git(state.worktree, "rev-parse", "HEAD").trim();
-  const diff = git(state.worktree, "diff", "--binary", state.base, head);
   const latest = [...state.tasks].reverse().find((t) => t.latest)?.latest;
+  const checksOk = !(latest ?? []).some((r) => r.status === "failed" || r.status === "timeout");
+  const cases = state.lead.cases ?? [];
+  // [F123 lead-evidence]
+  let evidence: CaseResult[] | undefined;
+  if (cases.length > 0 && isOn("lead-evidence")) {
+    if (state.lead.evidence?.round === round) evidence = state.lead.evidence.results;
+    else {
+      const got = await optionalAsync(run, "lead-evidence", undefined, () => leadEvidence(run, round, head, cases));
+      if (got && !Array.isArray(got)) return got;
+      evidence = got;
+      if (evidence) {
+        state.lead.evidence = { round, results: evidence };
+        saveState(state);
+      }
+    }
+    if (evidence && evidence.every((e) => e.result === "holds") && checksOk) {
+      state.leadRounds = round;
+      log.emit("lead.review", { feature: "F123", round, decision: "accept", by: "evidence", summary: `all ${cases.length} acceptance cases hold`, followups: [] });
+      return toFinal();
+    }
+  }
+  if (!budgetLeft(state)) return toFinal("The expert budget is spent, so the lead does not review.");
+  const diff = git(state.worktree, "diff", "--binary", state.base, head);
   const senior = state.seniorRung !== undefined;
   const grunt = state.workerRung !== undefined;
-  const dir = join(state.dir, "lead");
-  dropCopy(state.repo, dir);
-  let outcome: TurnResult;
-  try {
-    createDetachedWorktree(state.repo, dir, head);
-    const prepared = prepareWorktree(state.repo, dir);
-    await prepareEnv(run, dir, prepared);
-    outcome = await turn(run, {
-      key: `lead-review-${round}`,
-      role: "orchestrator",
-      kind: "lead-review",
-      round,
-      cwd: dir,
-      prompt: leadReviewPrompt(state, diff, latest, round, state.lead.reviews, senior, grunt),
-      access: "write",
-      schema: LEAD_SCHEMA,
-    });
-  } finally {
-    removeDetachedWorktree(state.repo, dir);
-  }
-  const { result } = outcome;
+  const { result } = await turn(run, {
+    key: `lead-review-${round}`,
+    role: "orchestrator",
+    kind: "lead-review",
+    round,
+    cwd: state.worktree,
+    prompt: leadReviewPrompt(state, diff, latest, evidence, round, state.lead.reviews, senior, grunt),
+    access: "read-only",
+    schema: LEAD_SCHEMA,
+  });
   if (result.stop === "cancelled" || held(result)) return stopFor(result, "orchestrator");
   state.leadRounds = round;
   if (result.stop !== "done") return toFinal(`The lead's review ended without an answer (${result.stop}); the work goes on as the checks left it.`);
   const review = optional(run, "lead", undefined, () => parseLead(result, senior, grunt, blueprintOn(state)));
   if (!review) return toFinal("The lead's review was not usable; the work goes on as the checks left it.");
-  log.emit("lead.review", { feature: "F120", round, decision: review.decision, summary: review.summary, followups: review.followups.map((f) => ({ id: f.id, title: f.title, owner: f.owner })) });
+  log.emit("lead.review", { feature: "F120", round, decision: review.decision, by: "lead", summary: review.summary, followups: review.followups.map((f) => ({ id: f.id, title: f.title, owner: f.owner })) });
   if (review.decision === "accept") return toFinal();
   // Follow-ups run one after another: they have no owned files, so side by side they could edit the same ones.
   let previous: string | undefined;
@@ -1547,7 +1678,8 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
       prompt,
       freshPrompt: first,
       access: "read-only",
-      schema: PLAN_SCHEMA,
+      // [F120 lead] The lead's plan also lists the request's acceptance cases.
+      schema: state.lead && isOn("lead") ? LEAD_PLAN_SCHEMA : PLAN_SCHEMA,
       resume,
     });
     if (result.stop !== "done") return stopFor(result, "orchestrator");
@@ -1555,6 +1687,7 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
     try {
       const plan = parsePlan(result, state.maxTasks, state.seniorRung !== undefined, { grunt: state.workerRung !== undefined, blueprint: blueprintOn(state) });
       state.plan = plan;
+      if (state.lead && isOn("lead")) state.lead.cases = optional(run, "lead", [], () => parseCases(result));
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
       log.emit("plan.ready", { summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });

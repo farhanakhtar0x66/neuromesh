@@ -867,6 +867,21 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     cases the request implies (acceptance cases), for the worker to build and the tester to check, at one short Opus turn
     per request. Results: `evals/swe-live/RESULTS.md`. Weekly window at 75 percent after these runs. Also fixed: the eval
     summary named every pause "quota"; it now says quota, sign-in or network (STATUS 64).
+66. **The lead, built and not yet measured (2026-11-18; F120 to F123, preset `lead-claude`, `docs/24-lead.md`).** The
+    owner's idea: a cheap model deciding first on a hard task decides badly. Opus leads and works only where it decides:
+    a trivial or small self-contained request goes to Haiku alone with no model call to decide (F121); on a repository
+    of more than 150 files Haiku first writes a report for the request (F122); Opus plans from it under about 700 words,
+    with the acceptance cases (implied ones too) and a developer per task, grunt, worker, senior or itself (F120); after
+    the build Haiku writes a probe per case and Neuromesh runs every probe again in its sandbox, so all holding plus
+    passing checks accepts with no Opus turn, and anything else gets Opus's read-only review from that evidence, with
+    follow-ups for whom it chooses, at most two rounds (F123). No Opus session is kept open while the team works; no
+    separate tester. The lessons it applies are tabled in doc 24 (STATUS 3, 20, 23, 47, 53, 63, 65; docs 00 and 15).
+    Harness first: a quarter of the scenarios lead; rules for review rounds, the review copy, calm work being checked,
+    triage, and evidence acceptance; it found a review counted twice across a retry (rule), an Opus follow-up in
+    blueprint mode (now the senior's), and a pause before the review re-running the evidence (now kept per round).
+    chaos 1000 and kill 400 keep every rule; 366 of 366 tests. Sandboxed probes reach the Docker runner (checked offline:
+    exit codes pass through). The first live attempt (before F121 to F123) paused on a revoked Claude login after one
+    issue's plan and build. Test plan in doc 24, waiting for the owner's go.
 
 ## Next steps
 
