@@ -1,0 +1,20 @@
+{
+  "name": "patch-claude",
+  "description": "Experimental (2026-11-18, F127; K1 in docs/25-cascade-research.md): cheap models explore, the frontier model patches. A trivial or small self-contained request goes to Claude Haiku 5.5 alone (F121). Otherwise Haiku, with tools in a disposable copy, writes a dossier (the code the change touches, quoted; how a test file runs here) and a test that reproduces the request, kept only if it fails on the code as it is (F124's rule). Claude Opus 5.5 then writes the patch in one call with no tools, as search-and-replace edits, from the request, the dossier and the reproduction; it may ask once to read up to four files, which Neuromesh reads. Neuromesh applies the edits and runs the checks and the reproduction; a failure goes back to Opus as a repair call, at most three calls. Opus never runs a tool session. From Scrouting and AI21 (2026): the handoff carries the result, and the frontier model's tokens go to the fix, not to exploring.",
+  "mode": "team",
+  "routing": "rules",
+  "brief": true,
+  "roles": {
+    "orchestrator": [{ "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }],
+    "escalation": [{ "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" }],
+    "worker": [{ "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }]
+  },
+  "repairs": 2,
+  "maxTasks": 1,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 30,
+  "expertBudgetUsd": 2,
+  "test": "always",
+  "workerLadder": [{ "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" }],
+  "lead": { "reviews": 0, "mode": "patch" }
+}

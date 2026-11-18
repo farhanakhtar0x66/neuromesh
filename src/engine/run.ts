@@ -110,6 +110,12 @@ import {
   parseLead,
   parseCases,
   parseLeadTest,
+  SCOUT_SCHEMA,
+  PATCH_SCHEMA,
+  scoutPromptK1,
+  leadPatchPrompt,
+  parsePatch,
+  type Edit,
   parseRepoReport,
   parseEvidence,
   type CaseResult,
@@ -386,7 +392,10 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
       }
     }
   }
+  // [F128 lead-auto] Whether the brief itself wanted a plan (a large or many-part request), before the lead's own rule.
+  let bigRequest = false;
   if (brief) {
+    bigRequest = brief.staffing.plan || brief.kind === "greenfield";
     if (options.mode === "team") brief.staffing.plan = true;
     // [F120 lead] The lead plans every request but the small ones: a cheap model deciding first on a hard one is what it replaces.
     if (preset.lead && isOn("lead") && preset.mode === "team" && options.mode !== "solo" && (roles.orchestrator?.length ?? 0) > 0 && !brief.staffing.plan) {
@@ -446,7 +455,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     expertBudgetUsd: preset.expertBudgetUsd,
     test: preset.test ?? "always",
     // [F120 lead] Only in team mode: the lead's plan and reviews need the orchestrator.
-    lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2 } : undefined,
+    lead: preset.lead && isOn("lead") && mode === "team" ? { reviews: preset.lead.reviews ?? 2, ...((preset.lead.mode === "patch" || (preset.lead.mode === "auto" && isOn("lead-auto") && !bigRequest)) && isOn("patch-lead") && !(cascade?.blueprint && isOn("blueprint-expert")) ? { mode: "patch" as const } : {}) } : undefined,
     // An explicitly chosen worker model replaces the ladder.
     workerLadder: Object.keys(override).length > 0 ? undefined : upper ? [...grunt, ...upper] : undefined,
     seniorRung: senior ? grunt.length + workerRungs.length : undefined,
@@ -705,12 +714,23 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       }
 
       if (state.step === "plan") {
+        // [F127 patch-lead] K1: no plan. The scout explores and reproduces; the expert's one task is the patch.
+        const patchLead = state.lead?.mode === "patch" && isOn("patch-lead");
+        if (patchLead && !state.lead!.scouted) {
+          const stop = await optionalAsync(run, "patch-lead", undefined, () => patchScout(run));
+          if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
+        }
+        if (patchLead && state.tasks.length === 0) {
+          state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "expert" })];
+          saveState(state);
+          log.emit("plan.ready", { feature: "F127", summary: "the expert writes the patch in one call", tasks: [{ id: "main", title: "the request", owner: "expert" }] });
+        }
         // [F122 lead-scout] On a big repository a cheap developer reads it first, so the lead plans from a report.
-        if (state.lead && !state.lead.scouted && isOn("lead-scout")) {
+        if (!patchLead && state.lead && !state.lead.scouted && isOn("lead-scout")) {
           const stop = await optionalAsync(run, "lead-scout", undefined, () => leadScout(run));
           if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
         }
-        const outcome = await planStep(run);
+        const outcome = patchLead ? undefined : await planStep(run);
         if (outcome?.status === "failed" && outcome.failure === "agent") {
           // Planning is a help, not a requirement: a worker takes the whole request,
           // and the expert is still there if it gets stuck.
@@ -1550,6 +1570,7 @@ async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
   t.stage = "accepted";
   t.command = command;
   t.outcome = "fails on the code as it was";
+  t.tail = first?.tail.slice(-3_000);
   if (state.tasks.length === 1) {
     state.checks = [...state.checks.filter((c) => c.name !== "lead-tests"), { name: "lead-tests", command }];
     state.tasks[0]!.reproduce = { stage: "accepted", path: t.path, content: t.content, command, outcome: LEAD_TESTS };
@@ -1557,6 +1578,185 @@ async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
   log.emit("lead.tests", { feature: "F124", outcome: "accepted", path: t.path, command, tasks: state.tasks.length });
   saveState(state);
   return undefined;
+}
+
+/** [F127 patch-lead] Most patch calls per task: the first and two repairs. */
+const PATCH_TURNS = 3;
+
+/**
+ * [F127 patch-lead] K1's scout: on the first worker rung, with tools, in a disposable copy of the repository. It
+ * writes the dossier (the code the change touches, quoted; how a test file is run here) and one test that reproduces
+ * the request. The test is then judged like the lead's test file (F124): kept only if it fails on the code as it is.
+ */
+async function patchScout(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  state.lead!.scouted = true;
+  saveState(state);
+  const chain = leadHelper(state);
+  if (chain.length === 0) return undefined;
+  const dir = join(state.dir, "scout");
+  dropCopy(state.repo, dir);
+  try {
+    createDetachedWorktree(state.repo, dir, headCommit(state.worktree));
+    const prepared = prepareWorktree(state.repo, dir);
+    await prepareEnv(run, dir, prepared);
+    const { result } = await turn(run, {
+      key: "patch-scout",
+      role: "worker",
+      kind: "scout",
+      round: 0,
+      cwd: dir,
+      prompt: scoutPromptK1(state, state.checks.map((c) => c.command)),
+      access: "write",
+      schema: SCOUT_SCHEMA,
+      chain,
+      timeoutMs: Math.min(state.turnTimeoutMs, 12 * 60_000),
+    });
+    if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
+    const raw = (result.stop === "done" ? (result.structured ?? {}) : {}) as { test_path?: unknown; test_command?: unknown };
+    const report = result.stop === "done" ? parseRepoReport(result) : undefined;
+    if (report) state.lead!.report = report;
+    const path = typeof raw.test_path === "string" ? raw.test_path.trim().replace(/^\.\//, "") : "";
+    let test = false;
+    if (path && isOn("lead-tests") && reproducePathOk(path) && existsSync(join(dir, path)) && !existsSync(join(state.worktree, path))) {
+      const content = readFileSync(join(dir, path), "utf8");
+      if (content.trim().length >= 20) {
+        state.lead!.test = { path, content, command: typeof raw.test_command === "string" ? raw.test_command.trim() : "", stage: "judging" };
+        test = true;
+      }
+    }
+    log.emit("lead.report", { feature: "F127", chars: report?.length ?? 0, ok: report !== undefined, test });
+    saveState(state);
+    return undefined;
+  } finally {
+    removeDetachedWorktree(state.repo, dir);
+  }
+}
+
+/** [F127 patch-lead] The expert's task on a patch-lead run, while it has patch calls left, writes its work in one call. */
+function patchApplies(state: RunState, task: TaskState): boolean {
+  return state.lead?.mode === "patch" && isOn("patch-lead") && task.owner === "expert" && !task.escalated && (task.patchTurns ?? 0) < PATCH_TURNS && ["initial", "repair", "review-fix"].includes(task.next);
+}
+
+/** [F127 patch-lead] Files the expert asked to see: inside the repository, at most 40,000 characters each. */
+function neededFiles(dir: string, paths: string[]): { path: string; content: string }[] {
+  return paths.flatMap((p) => {
+    if (isAbsolute(p) || p.split("/").includes("..") || p.startsWith(".git")) return [];
+    try {
+      const text = readFileSync(join(dir, p), "utf8");
+      return [{ path: p, content: text.length > 40_000 ? `${text.slice(0, 40_000)}\n[... cut at 40,000 characters]` : text }];
+    } catch {
+      return [{ path: p, content: "(no such file)" }];
+    }
+  });
+}
+
+/**
+ * [F127 patch-lead] Apply search-and-replace edits in order. A search must occur exactly once in its file; an empty
+ * search creates a new file. Paths outside the repository, into git or a prepared folder are refused.
+ */
+export function applyEdits(dir: string, edits: Edit[], exclude: string[]): { applied: string[]; errors: string[] } {
+  const applied: string[] = [];
+  const errors: string[] = [];
+  for (const e of edits) {
+    if (isAbsolute(e.path) || e.path.split("/").includes("..") || e.path.startsWith(".git") || exclude.some((x) => e.path === x || e.path.startsWith(`${x}/`))) {
+      errors.push(`${e.path}: not a path in the repository that may be edited`);
+      continue;
+    }
+    const full = join(dir, e.path);
+    if (e.search === "") {
+      if (existsSync(full)) {
+        errors.push(`${e.path}: the file exists; an edit to it needs a search text`);
+        continue;
+      }
+      mkdirSync(dirname(full), { recursive: true });
+      writeFileSync(full, e.replace);
+      applied.push(e.path);
+      continue;
+    }
+    let text: string;
+    try {
+      text = readFileSync(full, "utf8");
+    } catch {
+      errors.push(`${e.path}: no such file`);
+      continue;
+    }
+    const count = text.split(e.search).length - 1;
+    if (count !== 1) {
+      errors.push(`${e.path}: the search text occurs ${count} times (it must occur exactly once): ${JSON.stringify(e.search.slice(0, 120))}`);
+      continue;
+    }
+    const at = text.indexOf(e.search);
+    writeFileSync(full, text.slice(0, at) + e.replace + text.slice(at + e.search.length));
+    applied.push(e.path);
+  }
+  return { applied, errors };
+}
+
+/**
+ * [F127 patch-lead] One patch round: the expert, in one call with no tools, from the request, the scout's dossier, the
+ * kept reproduction and (on a repair) the failing checks and the change so far, gives search-and-replace edits; it may
+ * ask once to read up to four files, which Neuromesh reads for it. Neuromesh applies the edits and hands over to the
+ * checks; a failing check comes back here as a repair, at most PATCH_TURNS calls in all.
+ */
+async function patchTurn(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const mode = task.next;
+  const t = state.lead?.test?.stage === "accepted" ? state.lead.test : undefined;
+  const repro = t ? { path: t.path, content: t.content, command: t.command, tail: t.tail ?? "" } : undefined;
+  const failing = (task.latest ?? []).filter((r) => r.status !== "passed");
+  let failures = mode === "initial" ? undefined : failing.map((r) => `${r.name} (\`${r.command}\`) ${r.status}:\n${r.tail.slice(-2_500)}`).join("\n\n") || "The checks did not pass.";
+  let applyErrors: string[] | undefined;
+  let files: { path: string; content: string }[] | undefined;
+  // A small project with no dossier is shown whole, as F77 shows it.
+  if (!state.lead?.report) files = projectFiles(task.worktree, task.prepared);
+  for (let call = 0; call < 3; call++) {
+    const diff = mode === "initial" && !applyErrors ? undefined : git(task.worktree, "diff", task.base!);
+    const { result } = await turn(run, {
+      key: `${task.id}-patch`,
+      role: roleFor(state, task),
+      kind: mode,
+      task: task.id,
+      round: task.round,
+      cwd: task.worktree,
+      prompt: leadPatchPrompt(state, { dossier: state.lead?.report, repro, files, failures, diff, applyErrors, canAsk: !task.patchAsked }),
+      access: "read-only",
+      schema: PATCH_SCHEMA,
+      direct: true,
+    });
+    if (result.stop === "cancelled" || result.stop === "quota" || held(result)) {
+      saveState(state);
+      return stopFor(result, roleFor(state, task) === "worker" ? "worker" : "expert");
+    }
+    const answer = result.stop === "done" ? optional(run, "patch-lead", undefined, () => parsePatch(result)) : undefined;
+    if (answer && answer.need.length > 0 && !task.patchAsked) {
+      task.patchAsked = true;
+      files = [...(files ?? []), ...neededFiles(task.worktree, answer.need.slice(0, 4))];
+      log.emit("note", { feature: "F127", message: `Task ${task.id}: the expert asked to read ${answer.need.slice(0, 4).join(", ")}; Neuromesh reads them for it.` });
+      saveState(state);
+      continue;
+    }
+    task.patchTurns = (task.patchTurns ?? 0) + 1;
+    if (!answer || answer.edits.length === 0) {
+      saveState(state);
+      return failTask(run, task, `the expert's patch call gave no usable edits (${result.stop}${result.detail ? `: ${result.detail.slice(0, 120)}` : ""})`);
+    }
+    const outcome = applyEdits(task.worktree, answer.edits, task.prepared);
+    log.emit("task.patch", { feature: "F127", task: task.id, mode, applied: outcome.applied, errors: outcome.errors.slice(0, 8), call: task.patchTurns });
+    if (outcome.applied.length === 0) {
+      if (task.patchTurns >= PATCH_TURNS) return failTask(run, task, `none of the expert's edits could be applied: ${outcome.errors.slice(0, 3).join("; ")}`);
+      applyErrors = outcome.errors;
+      failures = failures ?? "None of the edits could be applied.";
+      continue;
+    }
+    task.report = { status: "done", summary: answer.summary || "the expert's patch", notes: outcome.errors.length > 0 ? `Edits not applied: ${outcome.errors.join("; ")}` : undefined };
+    task.sessionId = undefined;
+    task.sessionModel = undefined;
+    task.step = "checks";
+    saveState(state);
+    return undefined;
+  }
+  return failTask(run, task, "the expert's patch calls ran out");
 }
 
 /** [F126 lead-direct] The lead's tool can answer in one call with no tools. */
@@ -2973,6 +3173,12 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       // [F73 heal-worktree] An interrupted turn may have left the folder unusable for the next one.
       healTask(run, task);
       const role = roleFor(state, task);
+      // [F127 patch-lead] The expert's patch, in one call with no tools; the checks run by the engine.
+      if (patchApplies(state, task)) {
+        const stop = await patchTurn(run, task);
+        if (stop) return stop;
+        continue;
+      }
       // [F77 direct-build] A planned part in one answer, the checks run by the engine.
       if (directApplies(run, task)) {
         const stop = await directTurn(run, task);
@@ -3358,7 +3564,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     // [F125 lead-no-takeover] Under the lead the expert advises a stuck developer's task but never builds it: on
     // SWE-bench-Live (swl-lead-3) every takeover cost $0.90 to $1.36 and saved nothing Opus alone could not do either.
     // Work whose project checks pass and that fails only the lead's tests is kept for the lead's review; else the task ends.
-    if (task.step === "escalate" && state.lead && isOn("lead-no-takeover") && task.owner !== "expert") {
+    // [F127 patch-lead] Nor does a patch-lead run end in an expert tool session: its expert works only in one-call patches.
+    if (task.step === "escalate" && state.lead && isOn("lead-no-takeover") && (task.owner !== "expert" || state.lead.mode === "patch")) {
       const latest = task.latest ?? [];
       const own = latest.filter((r) => r.name !== "lead-tests");
       if (latest.some((r) => r.name === "lead-tests") && own.every((r) => r.status === "passed")) {

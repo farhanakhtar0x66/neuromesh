@@ -226,6 +226,9 @@ export interface TaskState extends PlannedTask {
   raced?: boolean;
   /** [F115 reproduce-first] The test that reproduces the bug, asked for once per task, and what became of it. */
   reproduce?: Reproduction;
+  /** [F127 patch-lead] The expert's patch calls so far, and whether it has asked to read files. */
+  patchTurns?: number;
+  patchAsked?: boolean;
   /** [F101 blind-tests] The blind tests were asked for (once per task). */
   blindDone?: boolean;
   /**
@@ -367,6 +370,8 @@ export interface RunState {
   /** [F120 lead] The expert leads: plans with acceptance cases and reviews the merged work, at most this many times. */
   lead?: {
     reviews: number;
+    /** [F127 patch-lead] "patch": the scout explores and reproduces, the expert writes the patch in one call (K1, docs/25). */
+    mode?: "plan" | "patch";
     /** [F120 lead] The request's acceptance cases, from the plan. */
     cases?: string[];
     /** [F122 lead-scout] A cheap developer's report on a big repository, for the plan. */
@@ -374,7 +379,7 @@ export interface RunState {
     /** [F122 lead-scout] The report was asked for (once per run, whatever came of it). */
     scouted?: boolean;
     /** [F124 lead-tests] The lead's test file: written by the plan, kept when it fails on the code as it was. */
-    test?: { path: string; content: string; command: string; stage: "judging" | "accepted" | "rejected"; outcome?: string };
+    test?: { path: string; content: string; command: string; stage: "judging" | "accepted" | "rejected"; outcome?: string; tail?: string };
     /** [F123 lead-evidence] This round's evidence, kept so a pause before the lead's review does not probe again. */
     evidence?: { round: number; results: CaseResult[] };
   };

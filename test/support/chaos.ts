@@ -99,7 +99,7 @@ function dice(seed: number): Dice {
 const sh = (cwd: string, ...args: string[]): string => git(cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args);
 
 const props = (r: AgentRequest): Record<string, unknown> => (r.outputSchema?.properties as Record<string, unknown> | undefined) ?? {};
-type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "lead" | "report" | "evidence" | "build";
+type Call = "scout" | "spec" | "plan" | "review" | "advice" | "diagnose" | "blind" | "reproduce" | "lead" | "report" | "evidence" | "patch" | "build";
 function callKind(r: AgentRequest): Call {
   const p = props(r);
   if ("facts" in p) return "scout";
@@ -118,6 +118,8 @@ function callKind(r: AgentRequest): Call {
   // [F122 lead-scout] [F123 lead-evidence]
   if ("report" in p) return "report";
   if ("evidence" in p) return "evidence";
+  // [F127 patch-lead]
+  if ("edits" in p) return "patch";
   return "build";
 }
 
@@ -220,7 +222,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     routing: d.pick(["rules", "worker-first"] as const),
     advise: d.chance(0.6),
     test: d.pick(["always", "always", "no-checks"] as const),
-    lead: withLead ? { reviews: leadReviews } : undefined,
+    // [F127 patch-lead] Two in five of the lead runs are K1 (no plan, the expert patches).
+    // [F128 lead-auto] And one in five chooses per request.
+    lead: withLead ? { reviews: leadReviews, mode: leadDice.weighted({ plan: 2, patch: 2, auto: 1 }) as "plan" | "patch" | "auto" } : undefined,
     workerLadder: rungs > 0 ? ladder : undefined,
     // [F78 three-tier] Senior rungs in a third of the runs (their own dice, so older seeds keep their scenario).
     seniorLadder: seniorRungs > 0 ? Array.from({ length: seniorRungs }, (_, i) => ({ backend: "fake", model: `senior-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -439,7 +443,31 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       return { ...extra, structured: { decision: "more", summary: "a case is missing", followups: [{ id: "fix", title: "the missing case", brief: `Write ok into ${files[0]}`, owner: d.pick(["grunt", "worker", "senior", "expert"]) }] } };
     }
     // [F122 lead-scout] A report; a troubled helper's is too short to use.
-    if (kind === "report") return { ...extra, structured: { report: d.chance(p) ? "nothing" : `The request concerns ${files.join(", ")}; the check reads them and wants each to say ok.` } };
+    if (kind === "report") {
+      const report = d.chance(p) ? "nothing" : `The request concerns ${files.join(", ")}; the check reads them and wants each to say ok.`;
+      // [F127 patch-lead] The K1 scout also writes a reproducing test in its copy: right, already passing, broken, or none.
+      if ("test_path" in props(req)) {
+        const view = d.weighted({ right: 6, none: 1, passes: p * 2, broken: p * 2 });
+        if (view === "none") return { ...extra, structured: { report, test_path: "", test_command: "" } };
+        const body = view === "passes" ? "console.log('fine')" : view === "broken" ? "this is ( not javascript" : `const fs=require('fs');for(const f of ${JSON.stringify(files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='ok'){console.error('AssertionError: expected '+f+' to say ok');process.exit(1)}}console.log('reproduced fixed')`;
+        put(req.cwd, "test/repro.test.js", body);
+        return { ...extra, structured: { report, test_path: "test/repro.test.js", test_command: "node test/repro.test.js" } };
+      }
+      return { ...extra, structured: { report } };
+    }
+    // [F127 patch-lead] The expert's patch: good edits, a request for files, edits that do not match, or nothing usable.
+    if (kind === "patch") {
+      const view = d.weighted({ good: 6, need: 1, miss: p * 3, empty: p * 2 });
+      if (view === "need") return { ...extra, structured: { need: [files[0]], edits: [], summary: "" } };
+      if (view === "empty") return { ...extra, structured: { need: [], edits: [], summary: "nothing" } };
+      const edits = files.map((f) => {
+        const full = join(req.cwd, f);
+        const now = existsSync(full) ? readFileSync(full, "utf8") : undefined;
+        if (view === "miss") return { path: f, search: "text that is not there", replace: "ok\n" };
+        return now === undefined ? { path: f, search: "", replace: "ok\n" } : now.length > 0 ? { path: f, search: now, replace: "ok\n" } : { path: f, search: "", replace: "ok\n" };
+      });
+      return { ...extra, structured: { need: [], edits, summary: "wrote ok into the files" } };
+    }
     // [F123 lead-evidence] One probe per case: a good helper's shows the truth, a troubled one's may be wrong, missing or unrunnable.
     if (kind === "evidence") {
       const truth = files.map((f) => `test "$(cat '${f}' 2>/dev/null)" = ok`);
@@ -710,6 +738,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (state.tasks.some((t) => t.escalated && t.owner !== "expert")) broke("under the lead the expert took over a developer's task");
       if (state.attempts.some((a) => a.kind === "integration")) broke("under the lead the expert built the integration fix");
     }
+    // [F127 patch-lead] On a K1 run the expert works only in patch calls: never a takeover, at most three patches a task.
+    if (state.lead?.mode === "patch" && !off.includes("patch-lead") && !off.includes("lead-no-takeover")) {
+      if (state.tasks.some((t) => t.escalated)) broke("on a patch-lead run a task was taken over");
+      if (state.tasks.some((t) => (t.patchTurns ?? 0) > 3)) broke("on a patch-lead run the expert made more than three patch calls on a task");
+    }
     // [F121 lead-triage] A trivial request never reaches the lead's plan.
     if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");
     // [F123 lead-evidence] Accepted on the evidence only when every probe held, as Neuromesh ran it.
@@ -922,6 +955,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "context.start-here") seen.add("start-here");
     if (e.type === "lead.review") seen.add(`lead ${e.decision}${e.by === "evidence" ? " (evidence)" : ""}`);
     if (e.type === "lead.tests") seen.add(`lead tests ${String(e.outcome).split(" ")[0]}`);
+    if (e.type === "task.patch") seen.add(`patch ${(e.applied as unknown[]).length > 0 ? "applied" : "missed"}`);
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
     // [F110 structured-rescue]
     if (e.type === "agent.finished" && String(e.detail ?? "").startsWith("error_max_structured_output_retries")) seen.add("structured exhausted");

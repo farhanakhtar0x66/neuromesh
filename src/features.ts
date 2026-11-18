@@ -1178,6 +1178,24 @@ export const FEATURES: Feature[] = [
     what: "With the lead (F120): when the cheap report (F122) exists, the plan is one model call with no tools (F77's one-answer mode), from the request, the repository map and the report, which now quotes up to about 250 lines of the code the change touches and the nearest tests; a plan that is unusable or does not finish is asked for again as a normal turn with tools. The lead's review is always one call: its prompt already holds the change and the evidence. Only where the lead's tool can answer with no tools (Claude Code). From F109 (STATUS 52): a no-tools call used 94 percent fewer tokens than a tool session; in swl-lead-3 and swl-lead-4pair the lead's tool-using plan cost $0.35 to $0.79, about what Opus alone spends on the whole issue.",
     optional: true,
   },
+  {
+    id: "F127",
+    key: "patch-lead",
+    name: "Cheap models explore, the expert writes the patch in one call (K1)",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (patchScout, patchApplies, patchTurn, applyEdits, neededFiles, the plan step)", "src/engine/prompts.ts (SCOUT_SCHEMA, scoutPromptK1, PATCH_SCHEMA, parsePatch, leadPatchPrompt)", "presets/patch-claude.json", "docs/25-cascade-research.md (K1)"],
+    what: "A lead preset with mode \"patch\": no plan. The first worker rung, with tools in a disposable copy, writes a dossier (the code the change touches, quoted, with lines; how a single test file runs here) and one test that reproduces the request; the test is judged as the lead's test file (F124): kept, committed and made a check only if it fails on the code as it is with a failed assertion. The expert's one task is the patch: one call with no tools, from the request, the dossier and the kept reproduction with its failing output, answered as search-and-replace edits (a search must occur exactly once; an empty search creates a file); it may ask once to read up to four files, which Neuromesh reads with no model turn. Neuromesh applies the edits and runs the checks; a failure (or edits that did not apply) goes back as a repair call with the output and the change so far, at most three patch calls in all; the expert never runs a tool session on such a run (F125's guard covers its task too). A trivial or small request still goes to a worker alone (F121). From Scrouting (arXiv 2608.04804) and AI21 (2026): a cheap scout's verified handoff let the cheapest fixer match a frontier model, and a frontier model patching once from a prepared brief cost a third of a frontier agent; in this project's runs the expert's reading and planning cost about what Opus alone spends on the whole issue.",
+    optional: true,
+  },
+  {
+    id: "F128",
+    key: "lead-auto",
+    name: "The lead chooses its path per request (K5)",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (bigRequest, the lead's mode)", "src/presets/presets.ts (lead mode auto)", "presets/auto-claude.json", "docs/25-cascade-research.md (K5)"],
+    what: "A lead preset with mode \"auto\" picks one of three paths per request, with no model call: a trivial or small self-contained request goes to a worker alone (F121); a request the brief would plan anyway (a new program, numbered parts, a long or many-file request) gets the lead's plan with a test file and cheap builders (F120, F124: K2); anything else, a bug or a change in an existing repository, goes to the scout and the expert's one-call patch (F127: K1). Scrouting (2026) found no learned router beating simple choices once the handoff is good, so the rule is kept simple; K3 (cheap first with an expert judge) waits for the run record to say where the cheap model usually succeeds.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

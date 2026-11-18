@@ -1258,3 +1258,102 @@ export function parseLead(result: AgentResult, tiers: boolean, grunt: boolean, b
   if (raw.decision === "more" && followups.length === 0) throw new Error("the review asked for more but gave no usable follow-up task");
   return { decision: raw.decision, summary: typeof raw.summary === "string" ? raw.summary : "", followups };
 }
+
+// ---------------------------------------------------------------------------
+// [F127 patch-lead] K1 (docs/25): a cheap scout explores and reproduces; the expert writes the patch in one call.
+
+/** [F127 patch-lead] The scout's answer: the dossier, and the reproducing test it wrote (if any). */
+export const SCOUT_SCHEMA = {
+  type: "object",
+  properties: {
+    report: { type: "string" },
+    test_path: { type: "string" },
+    test_command: { type: "string" },
+  },
+  required: ["report", "test_path", "test_command"],
+  additionalProperties: false,
+};
+
+export function scoutPromptK1(state: RunState, checks: string[]): string {
+  return `You are preparing a dossier for a senior engineer who will write the fix for the request below in one go, without browsing the code. The current folder is a disposable copy of the repository: nothing you change here is kept except the one test file you name.
+
+The request:
+${state.prompt}
+
+${checks.length > 0 ? `The project's checks run like this: ${checks.map((c) => `\`${c}\``).join(", ")}.` : ""}
+
+Do three things, in this order, quickly:
+1. Find the code the change touches. Quote verbatim, with file paths and line numbers, every function and class the fix will change or call, and the existing tests closest to it (up to about 300 lines of code in all). Note the conventions nearby (naming, registries, error types and messages, where tests go).
+2. Find out how a single test file is run in this environment (the exact command, the same way the checks run), and confirm it by running an existing test file.
+3. Write ONE new test file that reproduces what the request reports or asks for, through the public interface, in the project's test framework: it must fail on the code as it is now with a failed assertion (import anything the change will add inside the test that uses it, never at the top). Run it and confirm it fails for that reason. If you cannot make such a test in a few tries, give an empty test_path.
+
+Do not write the fix. Do not guess: say what you did not find.
+
+Give your answer in the required JSON format: report (the dossier: steps 1 and 2, plain and specific, at most about 600 words of prose plus the quoted code), test_path (the new test file, relative to the repository root, or empty) and test_command (the command that runs only that file, or empty).`;
+}
+
+/** [F127 patch-lead] The expert's patch: edits to apply, optional tests for the implied cases, or a request to read files. */
+export const PATCH_SCHEMA = {
+  type: "object",
+  properties: {
+    need: { type: "array", items: { type: "string" } },
+    edits: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { path: { type: "string" }, search: { type: "string" }, replace: { type: "string" } },
+        required: ["path", "search", "replace"],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: "string" },
+  },
+  required: ["need", "edits", "summary"],
+  additionalProperties: false,
+};
+
+export interface Edit {
+  path: string;
+  search: string;
+  replace: string;
+}
+
+/** [F127 patch-lead] The expert's patch, or a request for files; throws when it is unusable. */
+export function parsePatch(result: AgentResult): { need: string[]; edits: Edit[]; summary: string } {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { need?: unknown; edits?: unknown; summary?: unknown } | undefined;
+  if (!raw) throw new Error("the answer is not in the required format");
+  const need = Array.isArray(raw.need) ? raw.need.filter((p): p is string => typeof p === "string" && p.trim() !== "").map((p) => p.trim().replace(/^\.\//, "")).slice(0, 6) : [];
+  const edits = Array.isArray(raw.edits)
+    ? (raw.edits as { path?: unknown; search?: unknown; replace?: unknown }[]).flatMap((e) =>
+        typeof e.path === "string" && e.path.trim() !== "" && typeof e.search === "string" && typeof e.replace === "string" ? [{ path: e.path.trim().replace(/^\.\//, ""), search: e.search, replace: e.replace }] : [],
+      )
+    : [];
+  if (need.length === 0 && edits.length === 0) throw new Error("the answer has neither edits nor files to read");
+  return { need, edits, summary: typeof raw.summary === "string" ? raw.summary : "" };
+}
+
+/** [F127 patch-lead] The expert writes (or repairs) the patch in one call, from the dossier and the evidence. */
+export function leadPatchPrompt(
+  state: RunState,
+  opts: { dossier?: string; repro?: { path: string; content: string; command: string; tail: string }; files?: { path: string; content: string }[]; failures?: string; diff?: string; applyErrors?: string[]; canAsk: boolean },
+): string {
+  const files = (opts.files ?? []).map((f) => `--- ${f.path} ---\n${f.content}`).join("\n\n");
+  const repro = opts.repro
+    ? `\nA developer wrote this test, which reproduces the request; Neuromesh ran it on the code as it is and it fails as shown. Your fix must make it pass; you may not change it.\n--- ${opts.repro.path} (run with: ${opts.repro.command}) ---\n${opts.repro.content.slice(0, 8_000)}\n--- its output on the current code (end) ---\n${opts.repro.tail.slice(-2_000)}\n`
+    : "";
+  const repair = opts.failures
+    ? `\nYour earlier patch is applied. It does not pass yet:\n${opts.applyErrors?.length ? `Edits that could not be applied:\n${opts.applyErrors.join("\n")}\n` : ""}${opts.failures.slice(-6_000)}\n\nThe change so far:\n\`\`\`diff\n${(opts.diff ?? "").slice(0, 16_000)}\n\`\`\`\nGive the further edits that fix it (they apply on top of the change so far).\n`
+    : "";
+  return `You are a senior engineer fixing the request below in an existing repository. You have no tools in this turn: you write the change as exact edits, and Neuromesh applies them and runs the tests.
+
+The request:
+${state.prompt}
+
+${opts.dossier ? `A developer read the repository for you. Their dossier (what the code does now, not what it should do):\n${opts.dossier}\n` : ""}${files ? `\nFiles from the repository:\n${files}\n` : ""}${repro}${repair}
+How to fix it:
+- Work out what the request really asks, including what it implies but does not spell out: the other members of a family it names (every error code, every operator, every unit of the kind), the reverse operation, error cases and edge values. Where it says the code breaks a standard or specification, follow the standard for every behaviour of that kind, also where existing tests assert the old behaviour (change those tests too). Follow the conventions the dossier shows.
+- Give the change as edits: each edit names a file, an exact piece of its current text to find ("search", copied character for character, including indentation, long enough to occur only once in the file) and the text to put in its place ("replace"). To create a new file, give an empty search. Keep each search short but unique.
+- Add or update tests for the cases the request implies, in the project's test files, as part of the edits.
+${opts.canAsk ? '- If you cannot write a correct edit without seeing a file the dossier does not quote, list its path in "need" (at most 4) and give no edits; you get the files and answer again. Ask only when you must.\n' : '- You cannot ask for more files now: give the edits.\n'}
+Give your answer in the required JSON format: need (paths, usually empty), edits (path, search, replace) and summary (two sentences on what you changed).`;
+}
