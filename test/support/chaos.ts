@@ -23,6 +23,7 @@ import type { RoleChain, RoleConfig, RunState } from "../../src/engine/types.ts"
 import { FEATURES } from "../../src/features.ts";
 import type { Preset } from "../../src/presets/presets.ts";
 import { estimateCost } from "../../src/usage/prices.ts";
+import { formatEvent } from "../../src/cli/format.ts";
 import { git } from "../../src/workspace/git.ts";
 
 export interface ChaosOptions {
@@ -742,6 +743,15 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (state.lead?.mode === "patch" && !off.includes("patch-lead") && !off.includes("lead-no-takeover")) {
       if (state.tasks.some((t) => t.escalated)) broke("on a patch-lead run a task was taken over");
       if (state.tasks.some((t) => (t.patchTurns ?? 0) > 3)) broke("on a patch-lead run the expert made more than three patch calls on a task");
+    }
+    // Every event the engine emits prints: a printer that throws ends a live run as an engine failure (swl-k1-probe).
+    for (const e of events) {
+      try {
+        formatEvent(e);
+      } catch (error) {
+        broke(`the event ${e.type} cannot be printed: ${error instanceof Error ? error.message : String(error)}`);
+        break;
+      }
     }
     // [F121 lead-triage] A trivial request never reaches the lead's plan.
     if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");

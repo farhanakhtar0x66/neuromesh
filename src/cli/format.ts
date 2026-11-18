@@ -108,8 +108,8 @@ export function formatEvent(event: NeuromeshEvent): string | undefined {
       return `${label}: ${results.map((r) => `${r.name} ${statusColor(r.status)(r.status)}`).join(", ")}`;
     }
     case "plan.ready": {
-      const tasks = event.tasks as { id: string; title: string; owner: string; dependsOn: string[] }[];
-      const lines = tasks.map((t) => `   ${t.id}: ${t.title}${t.owner === "expert" ? magenta(" (expert)") : ""}${t.dependsOn.length ? dim(` after ${t.dependsOn.join(", ")}`) : ""}`);
+      const tasks = (event.tasks as { id: string; title: string; owner: string; dependsOn?: string[] }[] | undefined) ?? [];
+      const lines = tasks.map((t) => `   ${t.id}: ${t.title}${t.owner === "expert" ? magenta(" (expert)") : ""}${t.dependsOn?.length ? dim(` after ${t.dependsOn.join(", ")}`) : ""}`);
       return `${magenta("Plan")}: ${oneLine(String(event.summary), 120)}\n${lines.join("\n")}`;
     }
     case "task.started":

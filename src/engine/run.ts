@@ -723,7 +723,7 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
         if (patchLead && state.tasks.length === 0) {
           state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "expert" })];
           saveState(state);
-          log.emit("plan.ready", { feature: "F127", summary: "the expert writes the patch in one call", tasks: [{ id: "main", title: "the request", owner: "expert" }] });
+          log.emit("plan.ready", { feature: "F127", summary: "the expert writes the patch in one call", tasks: [{ id: "main", title: "the request", brief: state.prompt.slice(0, 400), owned: [], dependsOn: [], owner: "expert" }] });
         }
         // [F122 lead-scout] On a big repository a cheap developer reads it first, so the lead plans from a report.
         if (!patchLead && state.lead && !state.lead.scouted && isOn("lead-scout")) {
@@ -818,6 +818,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       log.emit("feature.failed", { feature: error.feature.id, key: error.feature.key, message, hint: hint(error.feature) });
       return end({ status: "failed", reason: `engine error in ${error.feature.id} ${error.feature.key}: ${message}. ${hint(error.feature)}`, failure: "engine" });
     }
+    // Where it happened, for whoever reads the log (swl-k1-probe failed with only a message).
+    log.emit("engine.error", { message, stack: error instanceof Error ? (error.stack ?? "").split("\n").slice(0, 12).join("\n") : undefined });
     return end({ status: "failed", reason: `engine error: ${message}`, failure: "engine" });
   } finally {
     ctx.signal?.removeEventListener("abort", onOuterAbort);
