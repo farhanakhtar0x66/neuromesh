@@ -1721,7 +1721,8 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
   if (result.stop === "cancelled" || held(result)) return stopFor(result, "orchestrator");
   state.leadRounds = round;
   if (result.stop !== "done") return toFinal(`The lead's review ended without an answer (${result.stop}); the work goes on as the checks left it.`);
-  const review = optional(run, "lead", undefined, () => parseLead(result, senior, grunt, blueprintOn(state)));
+  // [F125 lead-no-takeover] A follow-up is a takeover too: it goes to the strongest developer below the expert.
+  const review = optional(run, "lead", undefined, () => parseLead(result, senior, grunt, blueprintOn(state) || isOn("lead-no-takeover")));
   if (!review) return toFinal("The lead's review was not usable; the work goes on as the checks left it.");
   log.emit("lead.review", { feature: "F120", round, decision: review.decision, by: "lead", summary: review.summary, followups: review.followups.map((f) => ({ id: f.id, title: f.title, owner: f.owner })) });
   if (review.decision === "accept") return toFinal();
@@ -3322,6 +3323,22 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     // [F86 escalation-breaker]
+    // [F125 lead-no-takeover] Under the lead the expert advises a stuck developer's task but never builds it: on
+    // SWE-bench-Live (swl-lead-3) every takeover cost $0.90 to $1.36 and saved nothing Opus alone could not do either.
+    // Work whose project checks pass and that fails only the lead's tests is kept for the lead's review; else the task ends.
+    if (task.step === "escalate" && state.lead && isOn("lead-no-takeover") && task.owner !== "expert") {
+      const latest = task.latest ?? [];
+      const own = latest.filter((r) => r.name !== "lead-tests");
+      if (latest.some((r) => r.name === "lead-tests") && own.every((r) => r.status === "passed")) {
+        log.emit("note", { feature: "F125", message: `Task ${task.id}: the project's checks pass and only the lead's tests fail; the work is kept for the lead's review instead of an expert takeover.` });
+        task.step = "merge";
+        saveState(state);
+        continue;
+      }
+      log.emit("note", { feature: "F125", message: `Task ${task.id}: under the lead the expert advises but does not take over a developer's task; it ends here.` });
+      return failTask(run, task, `${task.escalationReason ?? "the developers are stuck"}, and under the lead the expert does not take over a developer's task`);
+    }
+
     if ((task.step === "advise" || task.step === "escalate") && breakerTripped(state, task)) {
       const max = state.cascade!.maxEscalations!;
       if (state.checks.length > 0 && checksPass(task)) {
@@ -3594,7 +3611,8 @@ async function finalStep(run: RunCtx): Promise<Stop | undefined> {
   log.emit("checks.finished", { phase: "final", results: brief(results) });
   const failing = (): CheckResult[] => results.filter((r) => r.status === "failed" || r.status === "timeout");
   const allPassed = state.tasks.every((t) => t.status === "passed");
-  if (failing().length > 0 && allPassed && state.integrationFixes < 1 && canEscalate(state)) {
+  // [F125 lead-no-takeover] Nor does it build the integration fix: under the lead, failing final checks end the run as they stand.
+  if (failing().length > 0 && allPassed && state.integrationFixes < 1 && canEscalate(state) && !(state.lead && isOn("lead-no-takeover"))) {
     state.integrationFixes += 1;
     saveState(state);
     log.emit("integration.fix", { failing: failing().map((r) => r.name) });

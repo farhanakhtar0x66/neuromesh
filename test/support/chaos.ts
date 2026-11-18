@@ -705,6 +705,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (now === undefined) broke("the lead's test file was deleted");
       else if (now !== state.lead.test.content && !state.tasks.some((t) => t.escalated || t.owner === "expert")) broke("the lead's test file was changed by a developer who may not change it");
     }
+    // [F125 lead-no-takeover] Under the lead the expert builds only what its plan gave it.
+    if (state.lead && !off.includes("lead-no-takeover")) {
+      if (state.tasks.some((t) => t.escalated && t.owner !== "expert")) broke("under the lead the expert took over a developer's task");
+      if (state.attempts.some((a) => a.kind === "integration")) broke("under the lead the expert built the integration fix");
+    }
     // [F121 lead-triage] A trivial request never reaches the lead's plan.
     if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");
     // [F123 lead-evidence] Accepted on the evidence only when every probe held, as Neuromesh ran it.

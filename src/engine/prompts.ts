@@ -1112,10 +1112,10 @@ export function parseLeadTest(result: AgentResult): { path: string; content: str
 
 /** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
 export function leadPlanLines(senior: boolean, grunt: boolean): string {
-  return `- First work out what the request really asks. Read the code the change touches yourself: a report on the repository, where one is given, is a map of what the code does now, not of what it should do.
+  return `- First work out what the request really asks. Where a report on the repository is given, it quotes the code the change touches: read those quotes yourself, and open a file only for code the report does not show. The report says what the code does now, not what it should do.
 - Then list the acceptance cases in "cases": each one concrete input and the result it must give. Take them from the request and from the standard or specification it names or implies (a protocol, a file format, a language rule, the library's own documented behaviour), including the cases it implies but does not spell out: the other members of a family it names (every error code, every operator, every unit of the kind), the reverse operation, error cases and edge values. Where the current code disagrees with that standard, the case says what is right, not what the code does now. List current behaviour as a case only when the request asks to keep it or the project's tests already require it. Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
 - Then write the cases as one new test file in "test": a path in the project's test folder with a new name starting "test_lead_" (or "lead_" where the project names tests otherwise), its full content in the project's own test framework and style, one test per case, through the public interface, and the command that runs only that file the way the project's checks run (the same runner and prefix). The tests of a case the request changes must fail on the code as it is now (with a failed assertion, not an error loading the file: import anything the change will add inside the test that uses it, never at the top); the tests of unchanged behaviour pass. This file is the developers' target: they must make it pass and may not change it, so get each expected value right. If the project has no way to run a test, give an empty content.
-- Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} Most requests are one task; a small, clear one gets a short brief.
+- Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} With the cases in your test file, a worker can usually build it, and one that cannot pass them climbs to the senior on its own; so choose the senior only for a change that needs judgement your tests cannot pin down. A fix or a feature in an existing project is one task, built by one developer who sees the whole change: split only parts that touch separate files and do not need each other's changes, since developers on parts of one change work against each other. A small, clear request gets a short brief.
 - Your whole answer stays under about 700 words, the test file not counted.`;
 }
 
@@ -1133,9 +1133,10 @@ export function leadReportPrompt(state: RunState): string {
 The request:
 ${state.prompt}
 
-The report, at most about 800 words, plain and specific:
+The report, plain and specific, at most about 600 words of prose plus the code you quote:
 - Where the code for this request is: files, functions and classes, with line numbers.
-- How that code works now, for the paths the request touches; quote the few lines that matter most.
+- The code itself: quote verbatim, with file and line numbers, every function the change will touch or call (up to about 150 lines in all), so the lead can plan without opening the files.
+- How that code works now, for the paths the request touches.
 - The conventions nearby that a change must follow (naming, registries, error types and messages, where tests go).
 - Which existing tests cover it, and how the project's tests are run.
 - What the request implies beyond what it states, as far as the code shows it (other cases of the same kind, callers that depend on the behaviour).

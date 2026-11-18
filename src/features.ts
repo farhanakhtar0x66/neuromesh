@@ -1160,6 +1160,15 @@ export const FEATURES: Feature[] = [
     what: "With the lead (F120), its plan also gives the acceptance cases as one new test file (path, content, the command that runs it the way the project's checks run). Before anyone builds, Neuromesh writes it and runs it on the code as it is; it is kept only if it fails there with a failed test or assertion, not a load error (F115's rule). Kept, it is committed so every task starts with it; a one-task plan gets it as a check (so a worker that does not pass it is repaired, climbs to the senior, then goes to the expert, as any failing check does) and it is guarded like a reproduction: a worker's edit is put back, an expert's correction is kept. After the tasks the lead step runs it once more instead of the cheap probes (F123): passing, with the checks, accepts with no model turn; failing, the lead reviews with its output. The command is the lead's own when it starts with the same runner as one of the project's checks (a container runner), else F115's. Not kept, the file is deleted and the run goes on with the prose cases. From swl-lead-2 (2026-11-18): every setup missed implied cases (a2a's -32601, pint's dB + dB, authlib's alg none on the implicit flow, simplejwt's sliding serializer) that the cheap builders never think of; the expert that does think of them now hands them over as an oracle the cascade can climb against.",
     optional: true,
   },
+  {
+    id: "F125",
+    key: "lead-no-takeover",
+    name: "Under the lead the expert advises a stuck task but never builds it",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (the escalate step, leadStep)"],
+    what: "With the lead (F120), a developer's task that the senior could not finish gets the expert's advice (a read-only turn) as before, but no takeover: when its project checks pass and only the lead's tests (F124) fail, the work is kept and the lead's review decides; otherwise the task ends. A follow-up the review gives the expert goes to the senior instead. Tasks the lead's plan gives the expert are still the expert's. Seen 2026-11-18 in swl-lead-3: takeovers cost $0.90 to $1.36 an issue (authlib-802, dbbackup-604) and resolved nothing Opus alone resolved, which made the lead dearer than Opus alone.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
