@@ -37,3 +37,11 @@ test("the plan's cases, the report and the probes are read defensively", () => {
   assert.deepEqual(parseEvidence(answer({ evidence: [{ case: "a", command: " pytest -q t.py ", holds: true }, { case: "b", holds: false }] })), [{ case: "a", command: "pytest -q t.py" }, { case: "b", command: "" }]);
   assert.throws(() => parseEvidence(answer({ nothing: true })));
 });
+
+import { parseLeadTest } from "../src/engine/prompts.ts";
+
+test("the lead's test file is read with its command, or dropped when empty", () => {
+  assert.deepEqual(parseLeadTest(answer({ test: { path: "./tests/test_lead_db.py", content: "def test_a():\n    assert 1 == 1", command: "pytest -q tests/test_lead_db.py" } })), { path: "tests/test_lead_db.py", content: "def test_a():\n    assert 1 == 1\n", command: "pytest -q tests/test_lead_db.py" });
+  assert.equal(parseLeadTest(answer({ test: { path: "", content: "", command: "" } })), undefined);
+  assert.equal(parseLeadTest(answer({ cases: [] })), undefined);
+});

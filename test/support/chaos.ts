@@ -412,6 +412,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       const plan = (id ? planFor(owners.get(id) ?? files, `${id}.`, "p") : planFor(files, "", "t")) as Record<string, unknown>;
       // [F120 lead] The lead's plan lists acceptance cases (sometimes none).
       if ("cases" in props(req)) plan.cases = d.chance(0.8) ? files.slice(0, 3).map((f) => `${f} says ok`) : [];
+      // [F124 lead-tests] The cases as a test file: right, impossible, passing already, broken, or none.
+      if ("test" in props(req)) {
+        const kind = d.weighted({ right: 6, none: 1, impossible: p * 3, passes: p * 2, broken: p * 2 });
+        const want = kind === "impossible" ? "never" : "ok";
+        const body = kind === "passes" ? "console.log('fine')" : kind === "broken" ? "this is ( not javascript" : `const fs=require('fs');for(const f of ${JSON.stringify(files)}){if(!fs.existsSync(f)||fs.readFileSync(f,'utf8').trim()!=='${want}'){console.error('AssertionError: expected '+f+' to say ${want}');process.exit(1)}}console.log('all cases hold')`;
+        plan.test = kind === "none" ? { path: "", content: "", command: "" } : { path: "test/lead_cases.test.js", content: body, command: "node test/lead_cases.test.js" };
+      }
       return { ...extra, structured: plan };
     }
     if (kind === "advice") return { ...extra, structured: { diagnosis: "the file is wrong", steps: ["write ok into it"] } };
@@ -691,6 +698,13 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     // A review retried (a dropped connection, a pause) is the same review: rounds are counted, not turns.
     const leadTurns = new Set(state.attempts.filter((a) => a.kind === "lead-review").map((a) => a.round)).size;
     if (leadTurns > (state.lead?.reviews ?? 0)) broke(`the lead reviewed ${leadTurns} times; the preset allows ${state.lead?.reviews ?? 0}`);
+    // [F124 lead-tests] A kept lead test is never weakened: the file in the run's folder is the kept (or expert-corrected) one.
+    if (state.status === "finished" && state.lead?.test?.stage === "accepted") {
+      const path = join(state.worktree, state.lead.test.path);
+      const now = existsSync(path) ? readFileSync(path, "utf8") : undefined;
+      if (now === undefined) broke("the lead's test file was deleted");
+      else if (now !== state.lead.test.content && !state.tasks.some((t) => t.escalated || t.owner === "expert")) broke("the lead's test file was changed by a developer who may not change it");
+    }
     // [F121 lead-triage] A trivial request never reaches the lead's plan.
     if (withLead && state.brief?.kind === "trivial" && !off.includes("lead-triage") && state.attempts.some((a) => a.kind === "plan" && a.role === "orchestrator")) broke("a trivial request went to the lead's plan");
     // [F123 lead-evidence] Accepted on the evidence only when every probe held, as Neuromesh ran it.
@@ -700,7 +714,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       if (state.attempts.some((a) => a.kind === "lead-review" && a.round === e.round)) broke(`round ${String(e.round)} was accepted on the evidence, yet the lead was asked too`);
     }
     // Calm, finished work is checked: by the evidence or by the lead.
-    const checkedRounds = new Set([...state.attempts.filter((a) => a.kind === "lead-review" || a.kind === "evidence").map((a) => a.round)]).size;
+    // [F124 lead-tests] A round the lead's test file decided uses no model turn: its evidence event counts.
+    const checkedRounds = new Set([...state.attempts.filter((a) => a.kind === "lead-review" || a.kind === "evidence").map((a) => a.round), ...events.filter((e) => e.type === "lead.evidence").map((e) => e.round as number)]).size;
     if (calm && state.status === "finished" && state.lead && roles.orchestrator && preset.expertBudgetUsd === undefined && preset.expertBudget === undefined && state.tasks.every((t) => t.status === "passed") && checkedRounds === 0) broke("nobody checked the team's finished work: no evidence and no review");
     // [F102 repair-race] Nor a racer's copy, whoever won and however the run ended.
     if (trees.some((t) => /[\\/]race-[ab]$/.test(t))) broke("a race copy was left behind");
@@ -900,7 +915,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "reproduce.tests") seen.add(`reproduce ${String(e.outcome)}`);
     if (e.type === "reproduce.restored") seen.add("reproduce restored");
     if (e.type === "context.start-here") seen.add("start-here");
-    if (e.type === "lead.review") seen.add(`lead ${e.decision}`);
+    if (e.type === "lead.review") seen.add(`lead ${e.decision}${e.by === "evidence" ? " (evidence)" : ""}`);
+    if (e.type === "lead.tests") seen.add(`lead tests ${String(e.outcome).split(" ")[0]}`);
     if (e.type === "route.evidence") seen.add(e.probe ? "probe" : "evidence");
     // [F110 structured-rescue]
     if (e.type === "agent.finished" && String(e.detail ?? "").startsWith("error_max_structured_output_retries")) seen.add("structured exhausted");

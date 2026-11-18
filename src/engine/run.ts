@@ -109,6 +109,7 @@ import {
   leadEvidencePrompt,
   parseLead,
   parseCases,
+  parseLeadTest,
   parseRepoReport,
   parseEvidence,
   type CaseResult,
@@ -719,6 +720,11 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
         } else if (outcome) {
           // [F39 ask-first] A stop at the plan keeps its own reason.
           return end(outcome);
+        }
+        // [F124 lead-tests] The lead's test file is run on the code as it is before anyone builds against it.
+        if (state.lead?.test?.stage === "judging") {
+          const stop = await optionalAsync(run, "lead-tests", undefined, () => leadTestStep(run));
+          if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
         }
         state.step = "tasks";
         saveState(state);
@@ -1498,6 +1504,61 @@ async function scoutStep(run: RunCtx): Promise<string[]> {
   return facts;
 }
 
+/** [F124 lead-tests] Marks the reproduction that is the lead's test file, so an expert may correct it. */
+const LEAD_TESTS = "the lead's acceptance tests";
+
+/**
+ * [F124 lead-tests] The command for the lead's test file: the lead's own when it runs through the same runner as one of the
+ * project's checks (a container runner, a virtual environment), else the one F115 picks from the project's files.
+ */
+function leadTestCommand(state: RunState, path: string, offered: string): string | undefined {
+  if (!reproducePathOk(path)) return undefined;
+  const prefixes = state.checks.map((c) => c.command.trim().split(/\s+/)[0]!).filter((p) => p.length > 0);
+  if (offered && offered.includes(path) && !/[;&|`$<>(){}\n\\]/.test(offered) && prefixes.some((p) => offered === p || offered.startsWith(`${p} `))) return offered;
+  return reproduceCommand(state.worktree, path, offered);
+}
+
+/**
+ * [F124 lead-tests] The lead's plan came with its cases as a test file. It is written into the run's folder and run on the
+ * code as it is: it is kept only if it fails there with a failed test or assertion (not a load error), as F115 keeps a
+ * reproduction. Kept, it is committed, so every task starts with it; a one-task plan gets it as a check, guarded like a
+ * reproduction (put back if a worker edits it; an expert may correct it). A larger plan's tasks build parts, so there the
+ * file is run once all of them are merged (leadStep). Not kept, it is deleted and the run goes on with the prose cases.
+ */
+async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const t = state.lead!.test!;
+  const full = join(state.worktree, t.path);
+  const reject = (outcome: string, extra: Record<string, unknown> = {}): undefined => {
+    t.stage = "rejected";
+    t.outcome = outcome;
+    if (extra.written) rmSync(full, { force: true });
+    log.emit("lead.tests", { feature: "F124", outcome, path: t.path.slice(0, 200), ...extra, written: undefined });
+    saveState(state);
+    return undefined;
+  };
+  if (!reproducePathOk(t.path) || existsSync(full)) return reject("bad path");
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, t.content);
+  const command = leadTestCommand(state, t.path, t.command);
+  if (!command) return reject("no way to run it", { written: true });
+  const [first] = await check(run, state.worktree, "lead-tests", [{ name: "lead-tests", command }]);
+  if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+  const verdict = first ? failedForTheBug(first) : { ok: false as const, why: "the run gave no result" };
+  if (!verdict.ok) return reject(verdict.why, { written: true, tail: first?.tail.slice(-400) });
+  commitAll(state.worktree, "neuromesh: the lead's acceptance tests", state.prepared);
+  t.stage = "accepted";
+  t.command = command;
+  t.outcome = "fails on the code as it was";
+  if (state.tasks.length === 1) {
+    state.checks = [...state.checks.filter((c) => c.name !== "lead-tests"), { name: "lead-tests", command }];
+    state.tasks[0]!.reproduce = { stage: "accepted", path: t.path, content: t.content, command, outcome: LEAD_TESTS };
+  }
+  log.emit("lead.tests", { feature: "F124", outcome: "accepted", path: t.path, command, tasks: state.tasks.length });
+  saveState(state);
+  return undefined;
+}
+
 /** [F122 lead-scout] A repository with more files than this gets a cheap developer's report before the lead plans. */
 const SCOUT_FILES = 150;
 
@@ -1608,9 +1669,25 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
   const latest = [...state.tasks].reverse().find((t) => t.latest)?.latest;
   const checksOk = !(latest ?? []).some((r) => r.status === "failed" || r.status === "timeout");
   const cases = state.lead.cases ?? [];
-  // [F123 lead-evidence]
   let evidence: CaseResult[] | undefined;
-  if (cases.length > 0 && isOn("lead-evidence")) {
+  // [F124 lead-tests] With the lead's test file kept, it is the evidence: run once more on the merged work, no model turn.
+  const test = state.lead.test?.stage === "accepted" && isOn("lead-tests") ? state.lead.test : undefined;
+  if (test) {
+    const own = state.tasks.find((t) => t.reproduce?.outcome === LEAD_TESTS && t.reproduce.content !== undefined);
+    if (own && own.reproduce!.content !== test.content) test.content = own.reproduce!.content!;
+    const [r] = await check(run, state.worktree, `lead-tests-${round}`, [{ name: "lead-tests", command: test.command }]);
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+    const passed = r?.status === "passed";
+    log.emit("lead.evidence", { feature: "F124", round, cases: 1, holds: passed ? 1 : 0, fails: passed ? 0 : 1, unconfirmed: 0, by: "tests" });
+    if (passed && checksOk) {
+      state.leadRounds = round;
+      log.emit("lead.review", { feature: "F124", round, decision: "accept", by: "evidence", summary: "the lead's acceptance tests pass", followups: [] });
+      return toFinal();
+    }
+    evidence = [{ case: `the lead's acceptance tests (${test.path})`, command: test.command, result: passed ? "holds" : "fails", output: r?.tail.slice(-3_000) ?? "" }];
+  }
+  // [F123 lead-evidence]
+  if (!test && cases.length > 0 && isOn("lead-evidence")) {
     if (state.lead.evidence?.round === round) evidence = state.lead.evidence.results;
     else {
       const got = await optionalAsync(run, "lead-evidence", undefined, () => leadEvidence(run, round, head, cases));
@@ -1687,7 +1764,12 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
     try {
       const plan = parsePlan(result, state.maxTasks, state.seniorRung !== undefined, { grunt: state.workerRung !== undefined, blueprint: blueprintOn(state) });
       state.plan = plan;
-      if (state.lead && isOn("lead")) state.lead.cases = optional(run, "lead", [], () => parseCases(result));
+      if (state.lead && isOn("lead")) {
+        state.lead.cases = optional(run, "lead", [], () => parseCases(result));
+        // [F124 lead-tests]
+        const test = isOn("lead-tests") ? optional(run, "lead-tests", undefined, () => parseLeadTest(result)) : undefined;
+        state.lead.test = test ? { ...test, stage: "judging" } : undefined;
+      }
       state.tasks = plan.tasks.map((t) => newTask(state, t));
       saveState(state);
       log.emit("plan.ready", { summary: plan.summary, model: config ? modelKey(config) : undefined, tasks: plan.tasks });
@@ -2584,6 +2666,13 @@ function reproduceGuard(run: RunCtx, task: TaskState): void {
         now = undefined;
       }
       if (now === r.content) return;
+      // [F124 lead-tests] The lead's own test may be wrong; an expert working on the task may correct it, not delete it.
+      if (r.outcome === LEAD_TESTS && now !== undefined && (task.escalated || task.owner === "expert")) {
+        r.content = now;
+        saveState(run.state);
+        run.log.emit("note", { feature: "F124", message: `Task ${task.id}: the expert changed the lead's test file (${r.path}); the new version is kept.` });
+        return;
+      }
       mkdirSync(dirname(full), { recursive: true });
       writeFileSync(full, r.content!);
       r.restored = (r.restored ?? 0) + 1;

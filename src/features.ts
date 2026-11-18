@@ -1151,6 +1151,15 @@ export const FEATURES: Feature[] = [
     what: "With the lead (F120) and a plan that listed acceptance cases: after the tasks, one turn on the first worker rung, in a disposable copy of the merged work, writes one probe command per case and runs it; then Neuromesh runs every probe again in its write sandbox (2 minutes each), and the exit status is the result: holds, fails, or unconfirmed (no command, 126, 127, timed out). Every case holds and the checks pass: accepted, no expert turn (lead.review by evidence). Otherwise the lead's review sees each case with its probe and output. The factory picture (2026-11-10): the expert fixes problems when there are any and otherwise conserves his energy.",
     optional: true,
   },
+  {
+    id: "F124",
+    key: "lead-tests",
+    name: "The lead writes its cases as a test file: the build's oracle",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (leadTestStep, leadTestCommand, LEAD_TESTS, reproduceGuard, leadStep)", "src/engine/prompts.ts (LEAD_PLAN_SCHEMA test, parseLeadTest, leadPlanLines)"],
+    what: "With the lead (F120), its plan also gives the acceptance cases as one new test file (path, content, the command that runs it the way the project's checks run). Before anyone builds, Neuromesh writes it and runs it on the code as it is; it is kept only if it fails there with a failed test or assertion, not a load error (F115's rule). Kept, it is committed so every task starts with it; a one-task plan gets it as a check (so a worker that does not pass it is repaired, climbs to the senior, then goes to the expert, as any failing check does) and it is guarded like a reproduction: a worker's edit is put back, an expert's correction is kept. After the tasks the lead step runs it once more instead of the cheap probes (F123): passing, with the checks, accepts with no model turn; failing, the lead reviews with its output. The command is the lead's own when it starts with the same runner as one of the project's checks (a container runner), else F115's. Not kept, the file is deleted and the run goes on with the prose cases. From swl-lead-2 (2026-11-18): every setup missed implied cases (a2a's -32601, pint's dB + dB, authlib's alg none on the implicit flow, simplejwt's sliding serializer) that the cheap builders never think of; the expert that does think of them now hands them over as an oracle the cascade can climb against.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

@@ -1088,15 +1088,35 @@ function leadTeam(senior: boolean, grunt: boolean): string {
 /** [F120 lead] The lead's plan: the usual plan, and the request's acceptance cases. */
 export const LEAD_PLAN_SCHEMA = {
   ...PLAN_SCHEMA,
-  properties: { ...PLAN_SCHEMA.properties, cases: { type: "array", items: { type: "string" } } },
-  required: ["summary", "cases", "tasks"],
+  properties: {
+    ...PLAN_SCHEMA.properties,
+    cases: { type: "array", items: { type: "string" } },
+    // [F124 lead-tests] The cases as one runnable test file: the build's oracle.
+    test: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" }, command: { type: "string" } },
+      required: ["path", "content", "command"],
+      additionalProperties: false,
+    },
+  },
+  required: ["summary", "cases", "test", "tasks"],
 };
+
+/** [F124 lead-tests] The lead's test file, or undefined when it gave none. */
+export function parseLeadTest(result: AgentResult): { path: string; content: string; command: string } | undefined {
+  const raw = (result.structured ?? parseStructured(result.finalText)) as { test?: { path?: unknown; content?: unknown; command?: unknown } } | undefined;
+  const t = raw?.test;
+  if (!t || typeof t.path !== "string" || typeof t.content !== "string" || t.content.trim().length < 20) return undefined;
+  return { path: t.path.trim().replace(/^\.\//, ""), content: t.content.endsWith("\n") ? t.content : `${t.content}\n`, command: typeof t.command === "string" ? t.command.trim() : "" };
+}
 
 /** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
 export function leadPlanLines(senior: boolean, grunt: boolean): string {
-  return `- First work out what the request really asks, then list its acceptance cases in "cases": each one concrete input and the result it must give, including the cases the request implies but does not spell out (the other members of a family it names, the reverse operation, error cases and edge values, behaviour that must not change). Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
+  return `- First work out what the request really asks. Read the code the change touches yourself: a report on the repository, where one is given, is a map of what the code does now, not of what it should do.
+- Then list the acceptance cases in "cases": each one concrete input and the result it must give. Take them from the request and from the standard or specification it names or implies (a protocol, a file format, a language rule, the library's own documented behaviour), including the cases it implies but does not spell out: the other members of a family it names (every error code, every operator, every unit of the kind), the reverse operation, error cases and edge values. Where the current code disagrees with that standard, the case says what is right, not what the code does now. List current behaviour as a case only when the request asks to keep it or the project's tests already require it. Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
+- Then write the cases as one new test file in "test": a path in the project's test folder with a new name starting "test_lead_" (or "lead_" where the project names tests otherwise), its full content in the project's own test framework and style, one test per case, through the public interface, and the command that runs only that file the way the project's checks run (the same runner and prefix). The tests of a case the request changes must fail on the code as it is now (with a failed assertion, not an error loading the file: import anything the change will add inside the test that uses it, never at the top); the tests of unchanged behaviour pass. This file is the developers' target: they must make it pass and may not change it, so get each expected value right. If the project has no way to run a test, give an empty content.
 - Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} Most requests are one task; a small, clear one gets a short brief.
-- Your whole answer stays under about 700 words. Read only what you need: where a report on the repository is given, trust it and open a file only to confirm a detail the plan depends on.`;
+- Your whole answer stays under about 700 words, the test file not counted.`;
 }
 
 /** [F122 lead-scout] A cheap developer reads a big repository for the lead and reports on it. */
@@ -1108,7 +1128,7 @@ export const REPORT_SCHEMA = {
 };
 
 export function leadReportPrompt(state: RunState): string {
-  return `You are helping a lead engineer who will plan the request below. Read the repository in the current folder (you cannot change files) and write a report for this request, so the lead does not have to read the code itself.
+  return `You are helping a lead engineer who will plan the request below. Read the repository in the current folder (you cannot change files) and write a report for this request, so the lead finds the right code quickly. Describe what the code does now; do not judge whether that is right.
 
 The request:
 ${state.prompt}
@@ -1198,7 +1218,7 @@ The whole change, against the start:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-You may read files (the change is applied in the current folder); you cannot run anything. A FAILS line is the strongest evidence, but a probe can be wrong too: if it tests something the request does not need, or tests it wrongly, say so and accept.
+You may read files (the change is applied in the current folder); you cannot run anything. A FAILS line is the strongest evidence, but a probe can be wrong too: if it tests something the request does not need, or tests it wrongly, say so. Look past the cases as well: a case you set can itself be wrong (current behaviour kept where the request or its standard wants a change), and the change can miss a case you did not list; read the code and judge against the request, not only the list.
 
 Then decide:
 - "accept" if the change does what the request asks, the implied cases included.

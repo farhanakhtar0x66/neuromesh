@@ -373,6 +373,8 @@ export interface RunState {
     report?: string;
     /** [F122 lead-scout] The report was asked for (once per run, whatever came of it). */
     scouted?: boolean;
+    /** [F124 lead-tests] The lead's test file: written by the plan, kept when it fails on the code as it was. */
+    test?: { path: string; content: string; command: string; stage: "judging" | "accepted" | "rejected"; outcome?: string };
     /** [F123 lead-evidence] This round's evidence, kept so a pause before the lead's review does not probe again. */
     evidence?: { round: number; results: CaseResult[] };
   };
