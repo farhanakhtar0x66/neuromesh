@@ -753,7 +753,8 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
           return end(outcome);
         }
         // [F124 lead-tests] The lead's test file is run on the code as it is before anyone builds against it.
-        if (state.lead?.test?.stage === "judging") {
+        // [F131 advisory-repro] Not on K6: there the scout's reproduction is advice in the expert's prompt, never a check.
+        if (state.lead?.test?.stage === "judging" && !(state.lead.mode === "dossier" && isOn("advisory-repro"))) {
           const stop = await optionalAsync(run, "lead-tests", undefined, () => leadTestStep(run));
           if (stop) return stop.status === "interrupted" ? interrupted() : end(stop);
         }
@@ -1681,6 +1682,12 @@ async function patchScout(run: RunCtx): Promise<Stop | undefined> {
       if (content.trim().length >= 20) {
         state.lead!.test = { path, content, command: typeof raw.test_command === "string" ? raw.test_command.trim() : "", stage: "judging" };
         test = true;
+        // [F131 advisory-repro] On K6 the file is committed as advice: the expert reads, runs, changes or deletes it.
+        if (state.lead!.mode === "dossier" && isOn("advisory-repro")) {
+          mkdirSync(dirname(join(state.worktree, path)), { recursive: true });
+          writeFileSync(join(state.worktree, path), content);
+          commitAll(state.worktree, "neuromesh: the scout's reproduction (advice)", state.prepared);
+        }
       }
     }
     log.emit("lead.report", { feature: "F127", chars: report?.length ?? 0, ok: report !== undefined, test });

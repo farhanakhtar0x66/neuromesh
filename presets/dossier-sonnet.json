@@ -1,0 +1,49 @@
+{
+  "name": "dossier-sonnet",
+  "description": "Experimental (2026-11-19; trial B of docs/26): K6 with Claude Sonnet 5.5 high as the solver. Claude Haiku 5.5 scouts a big repository into a facts-only dossier when the gate says there is a search to save (F130), then Sonnet fixes the request in its own session from the dossier. Measures whether Sonnet with a dossier keeps Opus's wins.",
+  "mode": "team",
+  "routing": "rules",
+  "brief": true,
+  "roles": {
+    "orchestrator": [
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high",
+        "tier": "expert"
+      }
+    ],
+    "escalation": [
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high",
+        "tier": "expert"
+      }
+    ],
+    "worker": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high"
+      }
+    ]
+  },
+  "repairs": 1,
+  "maxTasks": 1,
+  "maxParallel": 1,
+  "turnTimeoutMinutes": 30,
+  "expertBudgetUsd": 2,
+  "test": "always",
+  "workerLadder": [
+    {
+      "backend": "claude",
+      "model": "claude-haiku-5-5",
+      "effort": "high"
+    }
+  ],
+  "lead": {
+    "reviews": 0,
+    "mode": "dossier"
+  }
+}

@@ -907,6 +907,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     issues where K1 failed hardest and Opus alone passed: **2 of 2**, est. $1.57 against Opus alone's $1.69. black $0.88
     against $1.21 (Opus re-read 861k tokens instead of 1.51M); a2a-443 $0.69 against $0.48 (Opus read more than alone).
     Quality held; the saving is within the noise of one run on two issues.
+70. **K6 helpers and the final design (2026-11-19; F130, F131, docs/26).** The gate (F130, no model call) gives a dossier
+    only to a big repository whose request does not name code it defines; the scout pre-runs the reproduction and
+    nearest tests; the expert checks only what it changed. On 4 issues Opus alone passed: 3 of 4 at est. $2.07 against
+    $2.29; black down to $0.79 (Opus re-read 792k tokens against 1.51M alone). The loss (openai-1633) was the dossier's
+    "root cause" and a mandatory reproduction steering Opus to the scout's reading; F131 makes the dossier facts only
+    and the reproduction advice, and the rerun passes ($0.49). Opus's sessions never used the nm tool and their outputs
+    were already short: its cost is the number of calls (24 on black), each re-reading the whole session. Final design
+    in docs/26; trials A (Opus with the dossier) and B (Sonnet with the dossier) on the 21 issues decide Sonnet's place.
 
 ## Next steps
 

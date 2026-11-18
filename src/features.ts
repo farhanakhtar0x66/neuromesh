@@ -1214,6 +1214,15 @@ export const FEATURES: Feature[] = [
     what: "With K6 (F129), decided with no model call before the scout: no dossier for a repository of at most 150 files (the preset's lead.dossierMinFiles), nor for a request whose names (backticked, paths, dotted names, CamelCase, snake_case) that occur outside the tests in at most three files each lead to two files or fewer; the expert then works from the request itself. Both ways the expert is asked to run only the tests that cover its change, since Neuromesh runs the project's checks after its turn and sends any failure back; with a dossier, the scout has already run the reproduction and the nearest test file and put the commands and outputs in it. From swl-k6-pair: on a2a-443 the dossier added cost (Opus read more than alone); on black, a large formatter, it cut Opus's re-reading from 1.51M to 861k tokens.",
     optional: true,
   },
+  {
+    id: "F131",
+    key: "advisory-repro",
+    name: "On K6 the scout reports facts and its reproduction is advice, not a check",
+    added: "2026-11-19",
+    files: ["src/engine/run.ts (patchScout, the plan step)", "src/engine/prompts.ts (scoutPromptK1, dossierSection)"],
+    what: "With K6 (F129): the scout's dossier gives facts only (code, conventions, how tests run and what they print), no root cause and no suggested approach; its reproduction is committed into the run's folder and named in the expert's prompt as one developer's attempt that may test the wrong thing, which the expert may use, change or drop, and is not made a check (F124 is not applied on K6). Seen in swl-k6-helpers (openai-agents-1633): the dossier's 'root cause' and a reproduction made mandatory steered Opus to the scout's reading of the issue (reading a default client) where the fix the tests check was custom headers; Opus alone, reasoning from the issue, found it. AI21 (2026) notes the same: irrelevant context can steer the frontier model away from the right solution.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

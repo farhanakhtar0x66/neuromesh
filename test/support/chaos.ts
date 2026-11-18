@@ -753,6 +753,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
         break;
       }
     }
+    // [F131 advisory-repro] On K6 the scout's reproduction is advice: never one of the checks.
+    if (state.lead?.mode === "dossier" && !off.includes("advisory-repro") && state.checks.some((c) => c.name === "lead-tests")) broke("on K6 the scout's reproduction was made a check");
     // [F130 dossier-gate] A skipped dossier means no scout turn.
     if (state.lead?.mode === "dossier" && events.some((e) => e.type === "note" && e.feature === "F130") && state.attempts.some((a) => a.kind === "scout")) broke("the dossier gate skipped the dossier, yet the scout ran");
     // [F121 lead-triage] A trivial request never reaches the lead's plan.

@@ -1267,7 +1267,10 @@ export function dossierSection(state: RunState): string {
   if (state.lead?.mode !== "dossier" || !isOn("lead-dossier")) return "";
   // [F130 dossier-gate] No dossier (the gate skipped it): the expert explores itself, and still checks narrowly.
   if (!state.lead.report) return `\n\nTo check your work, run only the tests that cover what you changed, not the whole suite: Neuromesh runs the project's checks after your turn and sends you any failure.`;
-  return `\n\nA developer has read the repository for this request. Their dossier (what the code does now, not what it should do; check anything your fix depends on):\n${state.lead.report}\nStart from the code it quotes rather than exploring the repository again; the dossier already shows how the tests run and what they print now. Then fix the request fully, including the cases it implies but does not spell out. To check your work, run only the tests that cover what you changed (the reproduction and the test files you edit), not the whole suite: Neuromesh runs the project's checks after your turn and sends you any failure.`;
+  // [F131 advisory-repro] The scout's reproduction is shown, not imposed: it tests the scout's reading of the request.
+  const t = state.lead.test;
+  const repro = t && t.stage !== "rejected" && t.path ? `\n\nThe same developer wrote ${t.path} as an attempt to reproduce the request (run with: ${t.command || "see the dossier"}). It reflects their reading of the request and may test the wrong thing: use it if it fits your own reading, change or drop it if not.` : "";
+  return `\n\nA developer has read the repository for this request. Their dossier (what the code does now, not what it should do; check anything your fix depends on):\n${state.lead.report}${repro}\nStart from the code it quotes rather than exploring the repository again; the dossier already shows how the tests run and what they print now. Then fix the request fully, including the cases it implies but does not spell out. To check your work, run only the tests that cover what you changed (the reproduction and the test files you edit), not the whole suite: Neuromesh runs the project's checks after your turn and sends you any failure.`;
 }
 
 /** [F127 patch-lead] The scout's answer: the dossier, and the reproducing test it wrote (if any). */
@@ -1295,7 +1298,7 @@ Do three things, in this order, quickly:
 2. Find out how a single test file is run in this environment (the exact command, the same way the checks run), and confirm it by running the existing test file closest to the change. Record the command and the last lines of its output in the dossier, so the engineer does not have to run it again.
 3. Write ONE new test file that reproduces what the request reports or asks for, through the public interface, in the project's test framework: it must fail on the code as it is now with a failed assertion (import anything the change will add inside the test that uses it, never at the top). Run it and confirm it fails for that reason; put the command and the failure (the assertion and the values) in the dossier. If you cannot make such a test in a few tries, give an empty test_path.
 
-Do not write the fix. Do not guess: say what you did not find.
+Do not write the fix, and do not diagnose: no "root cause", no suggested approach or workaround. Report what the code does and where; the engineer decides what is wrong and how to fix it, and a wrong diagnosis here would steer them wrong. Do not guess: say what you did not find.
 
 Give your answer in the required JSON format: report (the dossier: steps 1 and 2, plain and specific, at most about 600 words of prose plus the quoted code), test_path (the new test file, relative to the repository root, or empty) and test_command (the command that runs only that file, or empty).`;
 }
