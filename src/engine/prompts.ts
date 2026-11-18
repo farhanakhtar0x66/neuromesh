@@ -667,7 +667,7 @@ ${(task.previousDiff ?? "").slice(0, 12_000)}
 \`\`\``;
 }
 
-export function plannerPrompt(state: RunState, files: string[]): string {
+export function plannerPrompt(state: RunState, files: string[], direct = false): string {
   const listing = files.length > 300 ? [...files.slice(0, 300), `… and ${files.length - 300} more files`] : files;
   return `You are the lead engineer of a small team. Your job right now is to plan, not to code. Read the project as much as you need (you cannot change files), then split the request below into tasks for the team.
 
@@ -686,7 +686,7 @@ How the team works:
 ${
     // [F120 lead] The lead's own lines: acceptance cases, and a developer chosen per task.
     state.lead && isOn("lead")
-      ? leadPlanLines(state.seniorRung !== undefined, state.workerRung !== undefined)
+      ? leadPlanLines(state.seniorRung !== undefined, state.workerRung !== undefined, direct)
       : // [F85 blueprint-expert]
         state.cascade?.blueprint && isOn("blueprint-expert")
       ? `- ${cascadeOwners(state.seniorRung !== undefined, state.workerRung !== undefined)}`
@@ -1111,8 +1111,8 @@ export function parseLeadTest(result: AgentResult): { path: string; content: str
 }
 
 /** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
-export function leadPlanLines(senior: boolean, grunt: boolean): string {
-  return `- First work out what the request really asks. Where a report on the repository is given, it quotes the code the change touches: read those quotes yourself, and open a file only for code the report does not show. The report says what the code does now, not what it should do.
+export function leadPlanLines(senior: boolean, grunt: boolean, direct = false): string {
+  return `- First work out what the request really asks. ${direct ? "You have no tools in this turn: the report below quotes the code the change touches, and you plan from it. Where it does not show something the plan depends on, say in the brief what the developer must read first." : "Where a report on the repository is given, it quotes the code the change touches: read those quotes yourself, and open a file only for code the report does not show."} The report says what the code does now, not what it should do.
 - Then list the acceptance cases in "cases": each one concrete input and the result it must give. Take them from the request and from the standard or specification it names or implies (a protocol, a file format, a language rule, the library's own documented behaviour), including the cases it implies but does not spell out: the other members of a family it names (every error code, every operator, every unit of the kind), the reverse operation, error cases and edge values. Where the current code disagrees with that standard, the case says what is right, not what the code does now. List current behaviour as a case only when the request asks to keep it or the project's tests already require it. Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
 - Then write the cases as one new test file in "test": a path in the project's test folder with a new name starting "test_lead_" (or "lead_" where the project names tests otherwise), its full content in the project's own test framework and style, one test per case, through the public interface, and the command that runs only that file the way the project's checks run (the same runner and prefix). The tests of a case the request changes must fail on the code as it is now (with a failed assertion, not an error loading the file: import anything the change will add inside the test that uses it, never at the top); the tests of unchanged behaviour pass. This file is the developers' target: they must make it pass and may not change it, so get each expected value right. If the project has no way to run a test, give an empty content.
 - Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} With the cases in your test file, a worker can usually build it, and one that cannot pass them climbs to the senior on its own; so choose the senior only for a change that needs judgement your tests cannot pin down. A fix or a feature in an existing project is one task, built by one developer who sees the whole change: split only parts that touch separate files and do not need each other's changes, since developers on parts of one change work against each other. A small, clear request gets a short brief.
@@ -1135,7 +1135,7 @@ ${state.prompt}
 
 The report, plain and specific, at most about 600 words of prose plus the code you quote:
 - Where the code for this request is: files, functions and classes, with line numbers.
-- The code itself: quote verbatim, with file and line numbers, every function the change will touch or call (up to about 150 lines in all), so the lead can plan without opening the files.
+- The code itself: quote verbatim, with file and line numbers, every function the change will touch or call, and the existing tests closest to it (up to about 250 lines in all), so the lead can plan without opening the files.
 - How that code works now, for the paths the request touches.
 - The conventions nearby that a change must follow (naming, registries, error types and messages, where tests go).
 - Which existing tests cover it, and how the project's tests are run.
@@ -1196,7 +1196,7 @@ export function parseEvidence(result: AgentResult): { case: string; command: str
 }
 
 /** [F120 lead] The lead reviews from the evidence, read-only. */
-export function leadReviewPrompt(state: RunState, diff: string, latest: CheckResult[] | undefined, evidence: CaseResult[] | undefined, round: number, rounds: number, senior: boolean, grunt: boolean): string {
+export function leadReviewPrompt(state: RunState, diff: string, latest: CheckResult[] | undefined, evidence: CaseResult[] | undefined, round: number, rounds: number, senior: boolean, grunt: boolean, direct = false): string {
   const plan = state.tasks.map((t) => `- ${t.id} (${t.owner}, ${t.status}): ${t.title}\n  ${t.brief.slice(0, 1_200).replace(/\n/g, "\n  ")}`).join("\n");
   const checks = (latest ?? []).map((r) => `${r.name}: ${r.status}`).join(", ") || "none ran";
   const cases = evidence?.length
@@ -1219,7 +1219,7 @@ The whole change, against the start:
 ${diff.slice(0, 24_000)}
 \`\`\`
 
-You may read files (the change is applied in the current folder); you cannot run anything. A FAILS line is the strongest evidence, but a probe can be wrong too: if it tests something the request does not need, or tests it wrongly, say so. Look past the cases as well: a case you set can itself be wrong (current behaviour kept where the request or its standard wants a change), and the change can miss a case you did not list; read the code and judge against the request, not only the list.
+${direct ? "You have no tools in this turn: judge from the evidence and the change below." : "You may read files (the change is applied in the current folder); you cannot run anything."} A FAILS line is the strongest evidence, but a probe can be wrong too: if it tests something the request does not need, or tests it wrongly, say so. Look past the cases as well: a case you set can itself be wrong (current behaviour kept where the request or its standard wants a change), and the change can miss a case you did not list; read the code and judge against the request, not only the list.
 
 Then decide:
 - "accept" if the change does what the request asks, the implied cases included.
@@ -1240,7 +1240,7 @@ export function parseCases(result: AgentResult): string[] {
 export function parseRepoReport(result: AgentResult): string | undefined {
   const raw = (result.structured ?? parseStructured(result.finalText)) as { report?: unknown } | undefined;
   const text = typeof raw?.report === "string" ? raw.report.trim() : "";
-  return text.length >= 40 ? text.slice(0, 8_000) : undefined;
+  return text.length >= 40 ? text.slice(0, 24_000) : undefined;
 }
 
 /** [F120 lead] The review's answer. Throws when it is unusable. */

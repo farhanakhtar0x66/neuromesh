@@ -1169,6 +1169,15 @@ export const FEATURES: Feature[] = [
     what: "With the lead (F120), a developer's task that the senior could not finish gets the expert's advice (a read-only turn) as before, but no takeover: when its project checks pass and only the lead's tests (F124) fail, the work is kept and the lead's review decides; otherwise the task ends. A follow-up the review gives the expert goes to the senior instead. Tasks the lead's plan gives the expert are still the expert's. Seen 2026-11-18 in swl-lead-3: takeovers cost $0.90 to $1.36 an issue (authlib-802, dbbackup-604) and resolved nothing Opus alone resolved, which made the lead dearer than Opus alone.",
     optional: true,
   },
+  {
+    id: "F126",
+    key: "lead-direct",
+    name: "The lead plans and reviews in one call with no tools",
+    added: "2026-11-18",
+    files: ["src/engine/run.ts (planStep, leadStep, leadCanDirect)", "src/engine/prompts.ts (leadPlanLines, leadReviewPrompt, leadReportPrompt)"],
+    what: "With the lead (F120): when the cheap report (F122) exists, the plan is one model call with no tools (F77's one-answer mode), from the request, the repository map and the report, which now quotes up to about 250 lines of the code the change touches and the nearest tests; a plan that is unusable or does not finish is asked for again as a normal turn with tools. The lead's review is always one call: its prompt already holds the change and the evidence. Only where the lead's tool can answer with no tools (Claude Code). From F109 (STATUS 52): a no-tools call used 94 percent fewer tokens than a tool session; in swl-lead-3 and swl-lead-4pair the lead's tool-using plan cost $0.35 to $0.79, about what Opus alone spends on the whole issue.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

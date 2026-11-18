@@ -1559,6 +1559,12 @@ async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
   return undefined;
 }
 
+/** [F126 lead-direct] The lead's tool can answer in one call with no tools. */
+function leadCanDirect(run: RunCtx): boolean {
+  const first = roleChain(run.state, "orchestrator")[0];
+  return first !== undefined && run.ctx.backends[first.backend]?.direct === true;
+}
+
 /** [F122 lead-scout] A repository with more files than this gets a cheap developer's report before the lead plans. */
 const SCOUT_FILES = 150;
 
@@ -1625,6 +1631,8 @@ async function leadEvidence(run: RunCtx, round: number, head: string, cases: str
       access: "write",
       schema: EVIDENCE_SCHEMA,
       chain,
+      // A few short probes, not a session: one ran to the 30-minute turn limit in swl-lead-3c (mcp-1154).
+      timeoutMs: Math.min(state.turnTimeoutMs, 8 * 60_000),
     });
     if (result.stop === "cancelled" || held(result)) return stopFor(result, "worker");
     const probes = result.stop === "done" ? parseEvidence(result) : [];
@@ -1706,6 +1714,7 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
   }
   if (!budgetLeft(state)) return toFinal("The expert budget is spent, so the lead does not review.");
   const diff = git(state.worktree, "diff", "--binary", state.base, head);
+  const directReview = isOn("lead-direct") && leadCanDirect(run);
   const senior = state.seniorRung !== undefined;
   const grunt = state.workerRung !== undefined;
   const { result } = await turn(run, {
@@ -1714,9 +1723,11 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
     kind: "lead-review",
     round,
     cwd: state.worktree,
-    prompt: leadReviewPrompt(state, diff, latest, evidence, round, state.lead.reviews, senior, grunt),
+    // [F126 lead-direct] The review's prompt holds the change and the evidence: one call, no tools.
+    prompt: leadReviewPrompt(state, diff, latest, evidence, round, state.lead.reviews, senior, grunt, directReview),
     access: "read-only",
     schema: LEAD_SCHEMA,
+    direct: directReview || undefined,
   });
   if (result.stop === "cancelled" || held(result)) return stopFor(result, "orchestrator");
   state.leadRounds = round;
@@ -1742,7 +1753,10 @@ async function leadStep(run: RunCtx): Promise<Stop | undefined> {
 async function planStep(run: RunCtx): Promise<Stop | undefined> {
   const { state, log } = run;
   const files = git(state.worktree, "ls-files").split("\n").filter(Boolean);
-  const first = plannerPrompt(state, files);
+  // [F126 lead-direct] With a report that quotes the code, the lead plans in one call with no tools; a plan that is not
+  // usable is asked for again as a normal turn with tools.
+  let directPlan = Boolean(state.lead && isOn("lead") && isOn("lead-direct") && state.lead.report) && leadCanDirect(run);
+  let first = plannerPrompt(state, files, directPlan);
   let prompt = first;
   let resume: TurnRequest["resume"];
   let revisions = 0;
@@ -1759,7 +1773,17 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
       // [F120 lead] The lead's plan also lists the request's acceptance cases.
       schema: state.lead && isOn("lead") ? LEAD_PLAN_SCHEMA : PLAN_SCHEMA,
       resume,
+      direct: directPlan || undefined,
     });
+    // [F126 lead-direct] A one-call plan that did not finish is asked for again with tools (not for a stop the person must see to).
+    if (directPlan && result.stop !== "done" && result.stop !== "cancelled" && result.stop !== "quota" && !held(result)) {
+      log.emit("note", { feature: "F126", message: `The lead's one-call plan ended ${result.stop}; it plans again with tools.` });
+      directPlan = false;
+      first = plannerPrompt(state, files, false);
+      prompt = first;
+      resume = undefined;
+      continue;
+    }
     if (result.stop !== "done") return stopFor(result, "orchestrator");
     state.planSession = result.sessionId;
     try {
@@ -1786,6 +1810,14 @@ async function planStep(run: RunCtx): Promise<Stop | undefined> {
     } catch (error) {
       const problem = error instanceof Error ? error.message : String(error);
       log.emit("note", { message: `The plan was not usable (${problem}); asking for a corrected one.` });
+      // [F126 lead-direct] The corrected plan comes from a normal turn with tools.
+      if (directPlan) {
+        directPlan = false;
+        first = plannerPrompt(state, files, false);
+        prompt = first;
+        resume = undefined;
+        continue;
+      }
       prompt = `Your plan could not be used: ${problem}. Give a corrected plan in the same JSON format.`;
       resume = { sessionId: result.sessionId, model: config ? modelKey(config) : undefined };
     }
