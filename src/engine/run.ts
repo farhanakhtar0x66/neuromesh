@@ -37,7 +37,7 @@ import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
 import { estimateCost } from "../usage/prices.ts";
 import { splitFromLog } from "../usage/split.ts";
 import type { InputSplit } from "../usage/split.ts";
-import { buildBrief, detectRuntimes, renderBrief, repoFacts } from "../intake/brief.ts";
+import { buildBrief, detectRuntimes, renderBrief, repoFacts, standardsBlock } from "../intake/brief.ts";
 import type { Brief, Spec } from "../intake/brief.ts";
 import { route } from "../intake/intake.ts";
 import type { Preset } from "../presets/presets.ts";
@@ -718,6 +718,13 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
       if (state.step === "plan") {
         // [F127 patch-lead] K1: no plan. The scout explores and reproduces; the expert's one task is the patch.
         const patchLead = (state.lead?.mode === "patch" && isOn("patch-lead")) || (state.lead?.mode === "dossier" && isOn("lead-dossier"));
+        // [F132 solver-own-judgement] K6: the solver reasons from the request itself, not from rules written for workers.
+        if (state.lead?.mode === "dossier" && isOn("lead-dossier") && isOn("solver-own-judgement") && state.brief && state.brief.standards.length > 0) {
+          state.prompt = state.prompt.replace(`\n\n${standardsBlock(state.brief)}`, "");
+          state.brief.standards = [];
+          saveState(state);
+          log.emit("note", { feature: "F132", message: "The solver works from the request as typed, without the brief's working standards." });
+        }
         // [F130 dossier-gate] K6: the dossier only where there is a search to save.
         if (patchLead && !state.lead!.scouted && state.lead!.mode === "dossier" && isOn("dossier-gate")) {
           const why = optional(run, "dossier-gate", undefined, () => dossierSkip(state));
@@ -734,7 +741,7 @@ async function drive(state: RunState, ctx: EngineContext, log: EventLog): Promis
         if (patchLead && state.tasks.length === 0) {
           state.tasks = [newTask(state, { id: "main", title: "the request", brief: state.prompt, owned: [], dependsOn: [], owner: "expert" })];
           saveState(state);
-          log.emit("plan.ready", { feature: "F127", summary: "the expert writes the patch in one call", tasks: [{ id: "main", title: "the request", brief: state.prompt.slice(0, 400), owned: [], dependsOn: [], owner: "expert" }] });
+          log.emit("plan.ready", { feature: state.lead!.mode === "dossier" ? "F129" : "F127", summary: state.lead!.mode === "dossier" ? "the expert solves it in its own session" : "the expert writes the patch in one call", tasks: [{ id: "main", title: "the request", brief: state.prompt.slice(0, 400), owned: [], dependsOn: [], owner: "expert" }] });
         }
         // [F122 lead-scout] On a big repository a cheap developer reads it first, so the lead plans from a report.
         if (!patchLead && state.lead && !state.lead.scouted && isOn("lead-scout")) {

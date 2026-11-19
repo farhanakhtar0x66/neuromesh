@@ -1223,6 +1223,15 @@ export const FEATURES: Feature[] = [
     what: "With K6 (F129): the scout's dossier gives facts only (code, conventions, how tests run and what they print), no root cause and no suggested approach; its reproduction is committed into the run's folder and named in the expert's prompt as one developer's attempt that may test the wrong thing, which the expert may use, change or drop, and is not made a check (F124 is not applied on K6). Seen in swl-k6-helpers (openai-agents-1633): the dossier's 'root cause' and a reproduction made mandatory steered Opus to the scout's reading of the issue (reading a default client) where the fix the tests check was custom headers; Opus alone, reasoning from the issue, found it. AI21 (2026) notes the same: irrelevant context can steer the frontier model away from the right solution.",
     optional: true,
   },
+  {
+    id: "F132",
+    key: "solver-own-judgement",
+    name: "On K6 the solver gets the request without the brief's working standards",
+    added: "2026-11-19",
+    files: ["src/engine/run.ts (the plan step)"],
+    what: "With K6 (F129): the solver works in its own session from the request as typed (attachments kept), without the brief's working standards. The bug standards ('keep the change small; behaviour the request does not mention must stay as it is', 'add a test', 'find the cause first') are rules written for cheap workers; for the solver they are judgement handed in from outside. Seen in swl-trialA and swl-trialB (21 issues each): Opus and Sonnet with the dossier and the standards resolved the same 5 of the 20 that Opus alone (no brief) resolved 8 of; the three lost (a2a-414, pint-2194, openai-1633) are the issues whose hidden tests check cases the issue only implies, which 'behaviour the request does not mention must stay as it is' tells the solver to leave alone.",
+    optional: false,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

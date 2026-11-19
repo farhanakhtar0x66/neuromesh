@@ -299,6 +299,11 @@ export function buildBrief(prompt: string, facts: RepoFacts, policy: BriefPolicy
   };
 }
 
+/** The brief's working standards as they appear in the rendered brief. */
+export function standardsBlock(brief: Brief): string {
+  return `Working standards (part of the job; the request wins wherever it says otherwise):\n${brief.standards.map((s) => `- ${s}`).join("\n")}`;
+}
+
 /** The instruction every agent of the run works from. */
 export function renderBrief(brief: Brief): string {
   const parts: string[] = [brief.request];
@@ -330,9 +335,7 @@ export function renderBrief(brief: Brief): string {
         .join("\n\n"),
     );
   }
-  if (brief.standards.length > 0) {
-    parts.push(`Working standards (part of the job; the request wins wherever it says otherwise):\n${brief.standards.map((s) => `- ${s}`).join("\n")}`);
-  }
+  if (brief.standards.length > 0) parts.push(standardsBlock(brief));
   return parts.join("\n\n");
 }
 

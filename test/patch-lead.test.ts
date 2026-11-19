@@ -49,3 +49,21 @@ test("names a request may point at code with", () => {
   const n = requestNames("`Response.unset_cookie` takes samesite; see falcon/response.py and the same_site argument of MediaRestore, not ValueError.");
   for (const x of ["Response.unset_cookie", "falcon/response.py", "same_site", "MediaRestore"]) assert.ok(n.includes(x), x);
 });
+
+// [F132 solver-own-judgement] The standards come out of the rendered brief and nothing else does.
+test("the brief's standards block can be removed from the rendered prompt", async () => {
+  const { renderBrief, standardsBlock } = await import("../src/intake/brief.ts");
+  const brief = {
+    kind: "bug",
+    request: "Fix the parser.\n\nIt fails on `a, b`.",
+    attached: [{ path: "notes.txt", text: "x" }],
+    standards: ["Keep the change small.", "Add a test."],
+    staffing: { plan: true, agents: 1, rung: "first", tester: false, spec: false, reasons: [] },
+  } as unknown as Parameters<typeof renderBrief>[0];
+  const prompt = `${renderBrief(brief)}\n\nfollow-up context`;
+  const stripped = prompt.replace(`\n\n${standardsBlock(brief)}`, "");
+  assert.ok(!stripped.includes("Working standards"));
+  assert.ok(stripped.startsWith("Fix the parser.\n\nIt fails on `a, b`."));
+  assert.ok(stripped.includes("--- notes.txt ---"));
+  assert.ok(stripped.endsWith("follow-up context"));
+});

@@ -79,3 +79,34 @@ hidden tests then failed. The scout's reproduction tests what Haiku understood o
 an Opus call with no tools cannot run the tests or read further, where Opus alone does both (a2a-443: all 25 target
 tests pass, other tests broken). The published hybrids this followed used a cheap fixer nearly as strong as the
 frontier model (Scrouting) or many rollouts and a trained context extractor (AI21).
+
+## The final trial: K6 with Opus (A) and with Sonnet (B), 2026-11-19
+
+`swl-trialA` (`dossier-claude`, F121 to F131) and `swl-trialB` (`dossier-sonnet`, the same with Sonnet as the solver), on
+the 21 issues, run side by side. No engine failures and no broken grades. Opus alone (`swl-opus-1`, `swl-opus-2`, with
+intelmq and electrum re-graded) did not finish PyPSA-1310, so the comparison is on the other 20; PyPSA passed in both
+trials (Sonnet $1.08; Opus's cost there is unknown, 3.9M tokens re-read in 63 calls).
+
+| Issue | Opus alone | A: Opus + dossier | B: Sonnet + dossier | Dossier |
+| --- | --- | --- | --- | --- |
+| dbbackup-601 | pass $0.26 | pass $0.28 | pass $0.12 | skipped (small) |
+| a2a-443 | pass $0.48 | pass $0.66 | pass $0.28 | yes |
+| intelmq-2632 | pass $0.69 | pass $0.81 | pass $0.29 | skipped (named) |
+| black-4720 | pass $1.21 | pass $0.90 | pass $0.41 | yes |
+| electrum-10172 | pass $0.26 | pass $0.44 | pass $0.15 | yes |
+| a2a-414 | pass $0.54 | fail $0.50 | fail $0.18 | yes |
+| pint-2194 | pass $1.08 | fail $0.89 | fail $0.41 | yes |
+| openai-1633 | pass $0.34 | fail $0.43 | fail $0.17 | yes |
+| the other 12 | fail $4.54 | fail $4.87 | fail $2.17 | |
+| **20 issues** | **8, $9.40** | **5, $9.78** | **5, $4.18** | |
+
+- **A does not beat Opus alone**: three fewer issues at slightly more cost. The dossier still cut Opus's work where the
+  search is big (black: 821k tokens re-read in 22 calls against 1.51M in 36; pint 679k against 1.11M), but on issues
+  without a dossier Opus inside Neuromesh made more calls than alone (dbbackup-601 11 against 7, lastmile 21 against 16,
+  electrum 10 against 7).
+- **B resolved exactly what A resolved, at 43% of A's cost.** Inside this pipeline the solver's model made no difference
+  on these 20; something both share held them back.
+- **What both share and Opus alone did not have: the brief's working standards.** Opus alone ran with no brief; A and B
+  received three bug standards, one of them "keep the change small; behaviour the request does not mention must stay as
+  it is". The three issues lost (a2a-414, pint, openai-1633) are the ones whose hidden tests check cases the issue only
+  implies (see the cascade section). F132 removes the standards from the solver's prompt on K6.
