@@ -1,0 +1,557 @@
+{
+  "name": "e1-final-1",
+  "preset": "factory-wf",
+  "presetDetail": {
+    "name": "factory-wf",
+    "description": "The factory floor: every request starts with a Gemini 3.8 Flash worker at low effort. A stuck worker climbs to high effort with its work kept; only a stuck high-effort worker gets the expert (GPT-6.1 Sol through Codex), first as advice and only then as a takeover. The expert plans clearly large requests. Claude Opus 5.5 medium is the last expert fallback.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-low",
+        "tier": "worker"
+      },
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-11T05:16:53.007Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 310,
+      "deletions": 2,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 966455,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 2,
+          "durationMs": 120587,
+          "usage": {
+            "input": 107201,
+            "output": 8833,
+            "reasoning": 0,
+            "cacheRead": 589953
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 843559,
+          "usage": {
+            "input": 185048,
+            "output": 92190,
+            "reasoning": 88542,
+            "cacheRead": 1474463
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2457688,
+      "usageIncomplete": false,
+      "runId": "20261111-104653-70f7",
+      "finishedAt": "2026-11-11T05:32:59.951Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 258,
+      "deletions": 2,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 1215888,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 2,
+          "durationMs": 177858,
+          "usage": {
+            "input": 136245,
+            "output": 11852,
+            "reasoning": 0,
+            "cacheRead": 953844
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 1036806,
+          "usage": {
+            "input": 235953,
+            "output": 123304,
+            "reasoning": 116631,
+            "cacheRead": 2525065
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 3986263,
+      "usageIncomplete": false,
+      "runId": "20261111-110300-f6b9",
+      "finishedAt": "2026-11-11T05:53:16.088Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 535,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 719531,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 187913,
+          "usage": {
+            "input": 61750,
+            "output": 10909,
+            "reasoning": 0,
+            "cacheRead": 206312
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 528693,
+          "usage": {
+            "input": 197146,
+            "output": 58043,
+            "reasoning": 55004,
+            "cacheRead": 1170597
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1704757,
+      "usageIncomplete": false,
+      "runId": "20261111-112316-fefd",
+      "finishedAt": "2026-11-11T06:05:17.569Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 272,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 1203327,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 111911,
+          "usage": {
+            "input": 60831,
+            "output": 4191,
+            "reasoning": 0,
+            "cacheRead": 196024
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 1089016,
+          "usage": {
+            "input": 242958,
+            "output": 114527,
+            "reasoning": 104517,
+            "cacheRead": 3098317
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 3716848,
+      "usageIncomplete": false,
+      "runId": "20261111-113517-d6b1",
+      "finishedAt": "2026-11-11T06:25:21.486Z"
+    },
+    "js-cart-bug": {
+      "task": "js-cart-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 3,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 296018,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 81567,
+          "usage": {
+            "input": 64455,
+            "output": 641,
+            "reasoning": 0,
+            "cacheRead": 89940
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 212861,
+          "usage": {
+            "input": 83371,
+            "output": 15894,
+            "reasoning": 13133,
+            "cacheRead": 397996
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 652297,
+      "usageIncomplete": false,
+      "runId": "20261111-134800-28bc",
+      "finishedAt": "2026-11-11T08:22:56.806Z"
+    },
+    "js-config-env": {
+      "task": "js-config-env",
+      "kind": "feature",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 116,
+      "deletions": 4,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 463736,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 93419,
+          "usage": {
+            "input": 64000,
+            "output": 2556,
+            "reasoning": 0,
+            "cacheRead": 216495
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 368776,
+          "usage": {
+            "input": 73977,
+            "output": 28070,
+            "reasoning": 26251,
+            "cacheRead": 459609
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 844707,
+      "usageIncomplete": false,
+      "runId": "20261111-135256-f273",
+      "finishedAt": "2026-11-11T08:30:40.831Z"
+    },
+    "js-default-port": {
+      "task": "js-default-port",
+      "kind": "trivial",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 3,
+      "deletions": 3,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 224357,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 87201,
+          "usage": {
+            "input": 67262,
+            "output": 894,
+            "reasoning": 0,
+            "cacheRead": 119857
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 136884,
+          "usage": {
+            "input": 44522,
+            "output": 3792,
+            "reasoning": 3010,
+            "cacheRead": 209482
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 445809,
+      "usageIncomplete": false,
+      "runId": "20261111-140040-04d1",
+      "finishedAt": "2026-11-11T08:34:25.302Z"
+    },
+    "js-markdown": {
+      "task": "js-markdown",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 145,
+      "deletions": 5,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 464310,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 112966,
+          "usage": {
+            "input": 57288,
+            "output": 2970,
+            "reasoning": 0,
+            "cacheRead": 165308
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 350458,
+          "usage": {
+            "input": 83778,
+            "output": 32689,
+            "reasoning": 31265,
+            "cacheRead": 732144
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1074177,
+      "usageIncomplete": false,
+      "runId": "20261111-140425-7450",
+      "finishedAt": "2026-11-11T08:42:09.877Z"
+    },
+    "js-rename-refactor": {
+      "task": "js-rename-refactor",
+      "kind": "refactor",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "interrupted",
+      "checks": "-",
+      "hidden": "not run",
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 93300,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 92932,
+          "usage": {
+            "input": 76677,
+            "output": 1327,
+            "reasoning": 0,
+            "cacheRead": 188984
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 266988,
+      "usageIncomplete": false,
+      "reason": "stopped by the user",
+      "runId": "20261111-141209-71ce",
+      "finishedAt": "2026-11-11T08:43:43.211Z"
+    }
+  }
+}

@@ -1,0 +1,361 @@
+{
+  "name": "swl-haiku-notes",
+  "preset": "solo-haiku",
+  "presetDetail": {
+    "name": "solo-haiku",
+    "description": "One Claude Haiku 5.5 agent at high effort through Claude Code, given the request exactly as typed. The cheap floor the benchmark compares against (docs/17-benchmark.md).",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 40,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-17T18:58:50.803Z",
+  "results": {
+    "awslabs__mcp-1154": {
+      "task": "awslabs__mcp-1154",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/aws/test_service.py::test_interpret_command_creates_output_file_for_streaming_operations[aws\nPASS fail-to-pass: tests/aws/test_service.py::test_validate_output_file_raises_error_for_relative_paths[aws\nFAIL fail-to-pass: tests/parser/test_parser_customizations.py::test_local_file_uri\nFAIL fail-to-pass: tests/parser/test_parser_customizations.py::test_http_uri_validation_error\nSCORE 1/4",
+      "score": {
+        "passed": 1,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.1,
+          "seven_day": 0.69
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        }
+      },
+      "files": 5,
+      "insertions": 103,
+      "deletions": 11,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 341604,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 335787,
+          "usage": {
+            "input": 94,
+            "output": 33584,
+            "reasoning": 14686,
+            "cacheRead": 2365491,
+            "cacheWrite": 77891,
+            "split": {
+              "files": 12959,
+              "commands": 581551,
+              "earlier": 1132263,
+              "calls": 47,
+              "estimated": true,
+              "startup": 549642,
+              "prompt": 167062
+            }
+          },
+          "costUsdEquivalent": 0.05603450999999999
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2477060,
+      "usageIncomplete": false,
+      "runId": "20261118-002906-54fb",
+      "finishedAt": "2026-11-17T19:05:43.964Z"
+    },
+    "certtools__intelmq-2632": {
+      "task": "certtools__intelmq-2632",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: intelmq/tests/lib/test_upgrades.py::TestUpgradeLib::test_v341_blueliv_removal\nSCORE 0/1",
+      "score": {
+        "passed": 0,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        }
+      },
+      "files": 10,
+      "insertions": 60,
+      "deletions": 119,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 168758,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 157080,
+          "usage": {
+            "input": 42,
+            "output": 29083,
+            "reasoning": 18539,
+            "cacheRead": 910464,
+            "cacheWrite": 56470,
+            "split": {
+              "files": 30752,
+              "commands": 119455,
+              "earlier": 479425,
+              "calls": 21,
+              "estimated": true,
+              "startup": 256783,
+              "prompt": 80561
+            }
+          },
+          "costUsdEquivalent": 0.034944340000000004
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 996059,
+      "usageIncomplete": false,
+      "runId": "20261118-003544-81c2",
+      "finishedAt": "2026-11-17T19:10:20.054Z"
+    },
+    "lastmile-ai__mcp-agent-367": {
+      "task": "lastmile-ai__mcp-agent-367",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/agents/test_agent_tasks_isolation.py::test_agent_tasks_instance_scoped_state_isolation[asyncio]\nFAIL fail-to-pass: tests/agents/test_agent_tasks_isolation.py::test_agent_tasks_instance_scoped_state_isolation[trio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_server[asyncio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_all[asyncio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_server[trio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_all[trio]\nSCORE 4/6",
+      "score": {
+        "passed": 4,
+        "total": 6
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        }
+      },
+      "files": 1,
+      "insertions": 7,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 47581,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 34942,
+          "usage": {
+            "input": 16,
+            "output": 5798,
+            "reasoning": 2576,
+            "cacheRead": 224973,
+            "cacheWrite": 31038,
+            "split": {
+              "files": 42107,
+              "commands": 2750,
+              "earlier": 32986,
+              "calls": 8,
+              "estimated": true,
+              "startup": 124346,
+              "prompt": 53838
+            }
+          },
+          "costUsdEquivalent": 0.011357929999999999
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 261825,
+      "usageIncomplete": false,
+      "runId": "20261118-004027-5014",
+      "finishedAt": "2026-11-17T19:12:28.321Z"
+    },
+    "python-attrs__attrs-1457": {
+      "task": "python-attrs__attrs-1457",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_no_modifications\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_normal\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_empty\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_transforms_to_attribute\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_conflicting_defaults\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_kw_only\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_these\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_keyword_only_class_level_subclassing\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_attr_level_kw_only_and_class_level_kw_only\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_kw_only_inheritance\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_kw_only_inheritance_force_kw_only\nFAIL fail-to-pass: tests/test_make.py::TestClassBuilder::test_repr\nFAIL fail-to-pass: tests/test_make.py::TestClassBuilder::test_returns_self\nPASS fail-to-pass: tests/test_make.py::TestClassBuilder::test_handles_missing_meta_on_class\nSCORE 5/14",
+      "score": {
+        "passed": 5,
+        "total": 14
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        }
+      },
+      "files": 9,
+      "insertions": 257,
+      "deletions": 15,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 227466,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 226330,
+          "usage": {
+            "input": 70,
+            "output": 43981,
+            "reasoning": 22780,
+            "cacheRead": 2429224,
+            "cacheWrite": 97454,
+            "long": {
+              "input": 8,
+              "output": 5026,
+              "cacheRead": 400927,
+              "cacheWrite": 4327
+            },
+            "split": {
+              "files": 380858,
+              "commands": 281934,
+              "earlier": 1325376,
+              "calls": 35,
+              "estimated": true,
+              "startup": 408660,
+              "prompt": 129920
+            }
+          },
+          "costUsdEquivalent": 0.09165242
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2570729,
+      "usageIncomplete": false,
+      "runId": "20261118-004228-9991",
+      "finishedAt": "2026-11-17T19:16:50.821Z"
+    },
+    "spesmilo__electrum-10172": {
+      "task": "spesmilo__electrum-10172",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 3,
+        "total": 3
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.69
+        }
+      },
+      "files": 3,
+      "insertions": 56,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 69304,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 64225,
+          "usage": {
+            "input": 28,
+            "output": 10089,
+            "reasoning": 4576,
+            "cacheRead": 379035,
+            "cacheWrite": 30328,
+            "split": {
+              "files": 0,
+              "commands": 67460,
+              "earlier": 110945,
+              "calls": 14,
+              "estimated": true,
+              "startup": 172970,
+              "prompt": 58016
+            }
+          },
+          "costUsdEquivalent": 0.014903250000000002
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 419480,
+      "usageIncomplete": false,
+      "runId": "20261118-004651-1cc2",
+      "finishedAt": "2026-11-17T19:21:34.019Z"
+    }
+  }
+}

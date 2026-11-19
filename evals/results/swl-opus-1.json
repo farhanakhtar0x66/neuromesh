@@ -1,0 +1,353 @@
+{
+  "name": "swl-opus-1",
+  "preset": "solo-opus",
+  "presetDetail": {
+    "name": "solo-opus",
+    "description": "One Claude Opus 5.5 agent at medium effort through Claude Code, given the request exactly as typed. The single frontier agent the build test compares against; uses the scarce Claude subscription.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 40,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-17T23:30:23.988Z",
+  "results": {
+    "a2aproject__a2a-python-414": {
+      "task": "a2aproject__a2a-python-414",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.18,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.19,
+          "seven_day": 0.74
+        }
+      },
+      "files": 3,
+      "insertions": 200,
+      "deletions": 11,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 103110,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 101435,
+          "usage": {
+            "input": 24,
+            "output": 8877,
+            "reasoning": 2190,
+            "cacheRead": 313015,
+            "cacheWrite": 36863,
+            "split": {
+              "files": 0,
+              "commands": 88153,
+              "earlier": 90497,
+              "calls": 12,
+              "estimated": true,
+              "startup": 131466,
+              "prompt": 39786
+            }
+          },
+          "costUsdEquivalent": 0.535143
+        }
+      ],
+      "expertTokens": 358779,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261118-050027-f0af",
+      "finishedAt": "2026-11-17T23:32:39.416Z"
+    },
+    "authlib__authlib-802": {
+      "task": "authlib__authlib-802",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "PASS fail-to-pass: tests/flask/test_oauth2/test_openid_code_grant.py::OpenIDCodeTest::test_client_metadata_alg_none\nPASS fail-to-pass: tests/flask/test_oauth2/test_openid_code_grant.py::OpenIDCodeTest::test_client_metadata_custom_alg\nFAIL fail-to-pass: tests/flask/test_oauth2/test_openid_implict_grant.py::ImplicitTest::test_client_metadata_alg_none\nPASS fail-to-pass: tests/flask/test_oauth2/test_openid_implict_grant.py::ImplicitTest::test_client_metadata_custom_alg\nSCORE 3/4",
+      "score": {
+        "passed": 3,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.19,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.2,
+          "seven_day": 0.74
+        }
+      },
+      "files": 6,
+      "insertions": 138,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 74668,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 70980,
+          "usage": {
+            "input": 20,
+            "output": 5766,
+            "reasoning": 1123,
+            "cacheRead": 215125,
+            "cacheWrite": 24584,
+            "split": {
+              "files": 0,
+              "commands": 44279,
+              "earlier": 46541,
+              "calls": 10,
+              "estimated": true,
+              "startup": 109683,
+              "prompt": 39228
+            }
+          },
+          "costUsdEquivalent": 0.35509700000000005
+        }
+      ],
+      "expertTokens": 245495,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261118-050239-c376",
+      "finishedAt": "2026-11-17T23:34:34.295Z"
+    },
+    "hgrecco__pint-2194": {
+      "task": "hgrecco__pint-2194",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.2,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.22,
+          "seven_day": 0.74
+        }
+      },
+      "files": 5,
+      "insertions": 275,
+      "deletions": 6,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 958575,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 951234,
+          "usage": {
+            "input": 52,
+            "output": 21786,
+            "reasoning": 7483,
+            "cacheRead": 1106561,
+            "cacheWrite": 53399,
+            "split": {
+              "files": 348,
+              "commands": 288750,
+              "earlier": 488220,
+              "calls": 26,
+              "estimated": true,
+              "startup": 287521,
+              "prompt": 95173
+            }
+          },
+          "costUsdEquivalent": 1.0844322
+        }
+      ],
+      "expertTokens": 1181798,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261118-050434-e6ce",
+      "finishedAt": "2026-11-17T23:53:40.692Z"
+    },
+    "jazzband__djangorestframework-simplejwt-928": {
+      "task": "jazzband__djangorestframework-simplejwt-928",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_it_should_raise_error_for_deleted_users\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_it_should_raise_error_for_inactive_users\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_sliding_token_should_blacklist_after_password_change\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_sliding_token_should_fail_after_password_change\nPASS fail-to-pass: tests/test_serializers.py::TestTokenRefreshSerializer::test_refresh_token_should_blacklist_after_password_change\nPASS fail-to-pass: tests/test_serializers.py::TestTokenRefreshSerializer::test_refresh_token_should_fail_after_password_change\nSCORE 2/6",
+      "score": {
+        "passed": 2,
+        "total": 6
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.22,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.23,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 46,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 32002,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 29277,
+          "usage": {
+            "input": 10,
+            "output": 2291,
+            "reasoning": 135,
+            "cacheRead": 72495,
+            "cacheWrite": 14763,
+            "split": {
+              "files": 0,
+              "commands": 8388,
+              "earlier": 7480,
+              "calls": 5,
+              "estimated": true,
+              "startup": 54644,
+              "prompt": 16756
+            }
+          },
+          "costUsdEquivalent": 0.17846299999999998
+        }
+      ],
+      "expertTokens": 89559,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261118-052340-1956",
+      "finishedAt": "2026-11-17T23:54:41.540Z"
+    },
+    "psf__black-4720": {
+      "task": "psf__black-4720",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.23,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.26,
+          "seven_day": 0.75
+        }
+      },
+      "files": 11,
+      "insertions": 264,
+      "deletions": 12,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 470706,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 469317,
+          "usage": {
+            "input": 72,
+            "output": 21534,
+            "reasoning": 8958,
+            "cacheRead": 1507969,
+            "cacheWrite": 59727,
+            "split": {
+              "files": 0,
+              "commands": 375941,
+              "earlier": 688188,
+              "calls": 36,
+              "estimated": true,
+              "startup": 388764,
+              "prompt": 114876
+            }
+          },
+          "costUsdEquivalent": 1.2103777999999998
+        }
+      ],
+      "expertTokens": 1589302,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261118-052441-b0dd",
+      "finishedAt": "2026-11-18T00:03:44.994Z"
+    }
+  }
+}

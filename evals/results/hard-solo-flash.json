@@ -1,0 +1,182 @@
+{
+  "name": "hard-solo-flash",
+  "preset": "solo-flash",
+  "presetDetail": {
+    "name": "solo-flash",
+    "description": "One Gemini 3.8 Flash (high) agent through Antigravity. The default while developing: Gemini quota is plentiful.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": false
+  },
+  "startedAt": "2026-11-10T23:55:35.251Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 534,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 458572,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 457056,
+          "usage": {
+            "input": 131936,
+            "output": 46329,
+            "reasoning": 37580,
+            "cacheRead": 1638418
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1816683,
+      "usageIncomplete": false,
+      "runId": "20261111-052535-9133",
+      "finishedAt": "2026-11-11T00:03:14.349Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 467,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 711702,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 710978,
+          "usage": {
+            "input": 154982,
+            "output": 78546,
+            "reasoning": 66543,
+            "cacheRead": 1862260
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2095788,
+      "usageIncomplete": false,
+      "runId": "20261111-053314-becf",
+      "finishedAt": "2026-11-11T00:15:06.326Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 586,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 674751,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 672774,
+          "usage": {
+            "input": 166224,
+            "output": 70231,
+            "reasoning": 58578,
+            "cacheRead": 2283965
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2520420,
+      "usageIncomplete": false,
+      "runId": "20261111-095141-2c82",
+      "finishedAt": "2026-11-11T04:32:57.259Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 603,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 603595,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 602770,
+          "usage": {
+            "input": 187443,
+            "output": 73769,
+            "reasoning": 63431,
+            "cacheRead": 1207999
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1469211,
+      "usageIncomplete": false,
+      "runId": "20261111-100257-27e3",
+      "finishedAt": "2026-11-11T04:43:01.141Z"
+    }
+  }
+}

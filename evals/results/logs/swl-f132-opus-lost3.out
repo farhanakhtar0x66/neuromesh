@@ -1,0 +1,63 @@
+Eval swl-f132-opus-lost3: 3 task(s) on preset dossier-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-f132-opus-lost3
+
+[1/3] a2aproject__a2a-python-414 (issue, python)
+    Run 20261119-060209-ae16 · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    ! The solver works from the request as typed, without the brief's working standards.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 03s · input 42, cache read 618,717, cache write 47,055, output 26,326 · ≈$0.029
+    Plan: the expert solves it in its own session
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 1m 33s · input 22, cache read 304,960, cache write 32,677, output 9,490 · ≈$0.51
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/3] hgrecco__pint-2194 (issue, python)
+    Run 20261119-060616-16db · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    ! The solver works from the request as typed, without the brief's working standards.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 58s · input 40, cache read 893,837, cache write 75,680, output 38,397 · ≈$0.043
+    Plan: the expert solves it in its own session
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 7m 12s · input 42, cache read 1,031,376, cache write 59,784, output 25,389 · ≈$1.19
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[3/3] openai__openai-agents-python-1633 (issue, python)
+    Run 20261119-061956-4f07 · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    ! The solver works from the request as typed, without the brief's working standards.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 31s · input 36, cache read 664,544, cache write 52,459, output 18,091 · ≈$0.026
+    Plan: the expert solves it in its own session
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 2m 08s · input 18, cache read 230,981, cache write 30,697, output 9,757 · ≈$0.49
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-f132-opus-lost3 · preset dossier-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       team  applied     passed  pass    2      3m 38s   347k / 692k
+hgrecco__pint-2194    issue       team  applied     passed  pass    2      10m 22s  1.12M / 1.01M
+openai__openai-agents-python-1633 issue       team  applied     passed  pass    2      3m 54s   271k / 735k
+
+Passed 3/3 · engine failures 0 · time 17m 54s · tokens 4.17M · expert share 42% · API-equivalent ≈ $2.29 (estimate, not spent)

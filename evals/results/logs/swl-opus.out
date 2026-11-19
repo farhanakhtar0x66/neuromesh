@@ -1,0 +1,71 @@
+2026-11-17 23:30:19 UTC  baselines: 5 tasks in /Users/farhanakhtar/.neuromesh/swe-live/subsets/opus; runs: opus; Opus allowed
+2026-11-17 23:30:23 UTC  swl-opus-1  --wait-reset: five-hour window at 18%, already fresh; starting
+2026-11-17 23:30:23 UTC  swl-opus-1  started: try 1 of 12, preset solo-opus, 0 of 5 tasks already final
+Eval swl-opus-1: 5 task(s) on preset solo-opus. Results: /Users/farhanakhtar/.neuromesh/evals/swl-opus-1
+
+[1/5] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-050027-f0af · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 41s · input 24, cache read 313,015, cache write 36,863, output 8,877 · ≈$0.54
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/5] authlib__authlib-802 (issue, python)
+    Run 20261118-050239-c376 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 11s · input 20, cache read 215,125, cache write 24,584, output 5,766 · ≈$0.36
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/5] hgrecco__pint-2194 (issue, python)
+    Run 20261118-050434-e6ce · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 15m 51s · input 52, cache read 1,106,561, cache write 53,399, output 21,786 · ≈$1.08
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[4/5] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261118-052340-1956 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 29s · input 10, cache read 72,495, cache write 14,763, output 2,291 · ≈$0.18
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/5] psf__black-4720 (issue, python)
+    Run 20261118-052441-b0dd · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 7m 49s · input 72, cache read 1,507,969, cache write 59,727, output 21,534 · ≈$1.21
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-opus-1 · preset solo-opus
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       solo  applied     passed  pass    1      1m 43s   359k / 0k
+authlib__authlib-802  issue       solo  applied     passed  fail    1      1m 15s   245k / 0k
+hgrecco__pint-2194    issue       solo  applied     passed  pass    1      15m 59s  1.18M / 0k
+jazzband__djangorestframework-simplejwt-928 issue       solo  applied     passed  fail    1      32s      90k / 0k
+psf__black-4720       issue       solo  applied     passed  pass    1      7m 51s   1.59M / 0k
+
+Passed 3/5 · engine failures 0 · time 27m 19s · tokens 3.46M · expert share 100% · API-equivalent ≈ $3.36 (estimate, not spent)
+2026-11-18 00:03:45 UTC  swl-opus-1  finished: 5 tasks, try 1
+2026-11-18 00:03:45 UTC  wrote /Users/farhanakhtar/.neuromesh/swe-live/subsets/opus.md

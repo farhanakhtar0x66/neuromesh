@@ -1,0 +1,1471 @@
+{
+  "name": "bench-solo-opus-1",
+  "preset": "solo-opus",
+  "presetDetail": {
+    "name": "solo-opus",
+    "description": "One Claude Opus 5.5 agent at medium effort through Claude Code, given the request exactly as typed. The single frontier agent the build test compares against; uses the scarce Claude subscription.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 40,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-12T19:55:36.415Z",
+  "results": {
+    "build-expenses": {
+      "task": "build-expenses",
+      "kind": "build",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 33,
+        "total": 33
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.89,
+          "seven_day": 0.65
+        },
+        "after": {
+          "five_hour": 0.96,
+          "seven_day": 0.66
+        }
+      },
+      "files": 3,
+      "insertions": 636,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 103822,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 101175,
+          "usage": {
+            "input": 12,
+            "output": 12167,
+            "reasoning": 1170,
+            "cacheRead": 80178,
+            "cacheWrite": 22509
+          },
+          "costUsdEquivalent": 0.4394956
+        }
+      ],
+      "expertTokens": 114866,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-012539-847e",
+      "finishedAt": "2026-11-12T19:57:30.181Z"
+    },
+    "build-logstat": {
+      "task": "build-logstat",
+      "kind": "build",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 25,
+        "total": 25
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.43,
+          "seven_day": 0.72
+        },
+        "after": {
+          "five_hour": 0.47,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 419,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 115774,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 113158,
+          "usage": {
+            "input": 18,
+            "output": 11189,
+            "reasoning": 1802,
+            "cacheRead": 129390,
+            "cacheWrite": 22278
+          },
+          "costUsdEquivalent": 0.42795399999999995
+        }
+      ],
+      "expertTokens": 162875,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-102302-5371",
+      "finishedAt": "2026-11-13T04:55:06.084Z"
+    },
+    "build-sitewatch": {
+      "task": "build-sitewatch",
+      "kind": "build",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 22,
+        "total": 22
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.47,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.48,
+          "seven_day": 0.73
+        }
+      },
+      "files": 3,
+      "insertions": 757,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 134160,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 130007,
+          "usage": {
+            "input": 14,
+            "output": 14303,
+            "reasoning": 1859,
+            "cacheRead": 115033,
+            "cacheWrite": 19460
+          },
+          "costUsdEquivalent": 0.4648026
+        }
+      ],
+      "expertTokens": 148810,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-102506-57e9",
+      "finishedAt": "2026-11-13T04:57:52.069Z"
+    },
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.48,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.49,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 201,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 47095,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 45231,
+          "usage": {
+            "input": 10,
+            "output": 4493,
+            "reasoning": 822,
+            "cacheRead": 50319,
+            "cacheWrite": 9221
+          },
+          "costUsdEquivalent": 0.1737318
+        }
+      ],
+      "expertTokens": 64043,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-102752-1b9f",
+      "finishedAt": "2026-11-13T04:58:43.404Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.49,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.49,
+          "seven_day": 0.73
+        }
+      },
+      "files": 1,
+      "insertions": 109,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 40346,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 39117,
+          "usage": {
+            "input": 8,
+            "output": 3262,
+            "reasoning": 590,
+            "cacheRead": 37911,
+            "cacheWrite": 7823
+          },
+          "costUsdEquivalent": 0.1354382
+        }
+      ],
+      "expertTokens": 49004,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-102843-d747",
+      "finishedAt": "2026-11-13T04:59:28.075Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.49,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        }
+      },
+      "files": 1,
+      "insertions": 225,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 62855,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 59725,
+          "usage": {
+            "input": 8,
+            "output": 5776,
+            "reasoning": 1686,
+            "cacheRead": 40621,
+            "cacheWrite": 10209
+          },
+          "costUsdEquivalent": 0.2053482
+        }
+      ],
+      "expertTokens": 56614,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-102928-9a82",
+      "finishedAt": "2026-11-13T05:00:36.576Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 214,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 40666,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 38757,
+          "usage": {
+            "input": 6,
+            "output": 4247,
+            "reasoning": 523,
+            "cacheRead": 25473,
+            "cacheWrite": 8699
+          },
+          "costUsdEquivalent": 0.1596506
+        }
+      ],
+      "expertTokens": 38425,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103036-6cdc",
+      "finishedAt": "2026-11-13T05:01:21.907Z"
+    },
+    "js-cart-bug": {
+      "task": "js-cart-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 43,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 23380,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 21506,
+          "usage": {
+            "input": 6,
+            "output": 1660,
+            "reasoning": 213,
+            "cacheRead": 24846,
+            "cacheWrite": 5983
+          },
+          "costUsdEquivalent": 0.0860572
+        }
+      ],
+      "expertTokens": 32495,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103122-6d12",
+      "finishedAt": "2026-11-13T05:01:50.454Z"
+    },
+    "js-config-env": {
+      "task": "js-config-env",
+      "kind": "feature",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.5,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 80,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 31025,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 29155,
+          "usage": {
+            "input": 6,
+            "output": 2135,
+            "reasoning": 63,
+            "cacheRead": 24883,
+            "cacheWrite": 6415
+          },
+          "costUsdEquivalent": 0.0990206
+        }
+      ],
+      "expertTokens": 33439,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103150-42b6",
+      "finishedAt": "2026-11-13T05:02:25.663Z"
+    },
+    "js-default-port": {
+      "task": "js-default-port",
+      "kind": "trivial",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 3,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 29058,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 28581,
+          "usage": {
+            "input": 8,
+            "output": 1229,
+            "reasoning": 0,
+            "cacheRead": 35595,
+            "cacheWrite": 5705
+          },
+          "costUsdEquivalent": 0.077371
+        }
+      ],
+      "expertTokens": 42537,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103225-acc9",
+      "finishedAt": "2026-11-13T05:02:58.977Z"
+    },
+    "js-markdown": {
+      "task": "js-markdown",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 109,
+      "deletions": 5,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 34627,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 32830,
+          "usage": {
+            "input": 6,
+            "output": 2868,
+            "reasoning": 365,
+            "cacheRead": 24955,
+            "cacheWrite": 7249
+          },
+          "costUsdEquivalent": 0.120367
+        }
+      ],
+      "expertTokens": 35078,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103259-4a20",
+      "finishedAt": "2026-11-13T05:03:38.085Z"
+    },
+    "js-rename-refactor": {
+      "task": "js-rename-refactor",
+      "kind": "refactor",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        }
+      },
+      "files": 3,
+      "insertions": 12,
+      "deletions": 6,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 16160,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 14295,
+          "usage": {
+            "input": 6,
+            "output": 692,
+            "reasoning": 0,
+            "cacheRead": 25117,
+            "cacheWrite": 5499
+          },
+          "costUsdEquivalent": 0.0628794
+        }
+      ],
+      "expertTokens": 31314,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103338-1e8f",
+      "finishedAt": "2026-11-13T05:03:58.660Z"
+    },
+    "js-sales-report": {
+      "task": "js-sales-report",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.51,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        }
+      },
+      "files": 6,
+      "insertions": 144,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 75383,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 73053,
+          "usage": {
+            "input": 18,
+            "output": 6071,
+            "reasoning": 270,
+            "cacheRead": 119852,
+            "cacheWrite": 13135
+          },
+          "costUsdEquivalent": 0.2505424
+        }
+      ],
+      "expertTokens": 139076,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103358-8974",
+      "finishedAt": "2026-11-13T05:05:18.744Z"
+    },
+    "js-slugify-bug": {
+      "task": "js-slugify-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        }
+      },
+      "files": 1,
+      "insertions": 2,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 18960,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 17101,
+          "usage": {
+            "input": 6,
+            "output": 801,
+            "reasoning": 0,
+            "cacheRead": 24739,
+            "cacheWrite": 5199
+          },
+          "costUsdEquivalent": 0.0625838
+        }
+      ],
+      "expertTokens": 30745,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103518-dfff",
+      "finishedAt": "2026-11-13T05:05:41.916Z"
+    },
+    "js-temp-cli": {
+      "task": "js-temp-cli",
+      "kind": "greenfield",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        }
+      },
+      "files": 2,
+      "insertions": 163,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 66783,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 63657,
+          "usage": {
+            "input": 10,
+            "output": 4432,
+            "reasoning": 295,
+            "cacheRead": 51348,
+            "cacheWrite": 8739
+          },
+          "costUsdEquivalent": 0.16886159999999997
+        }
+      ],
+      "expertTokens": 64529,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103542-08ad",
+      "finishedAt": "2026-11-13T05:06:54.677Z"
+    },
+    "js-todo-remove": {
+      "task": "js-todo-remove",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.52,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.53,
+          "seven_day": 0.73
+        }
+      },
+      "files": 3,
+      "insertions": 32,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 25165,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 23372,
+          "usage": {
+            "input": 6,
+            "output": 1119,
+            "reasoning": 0,
+            "cacheRead": 25626,
+            "cacheWrite": 6391
+          },
+          "costUsdEquivalent": 0.0786572
+        }
+      ],
+      "expertTokens": 33142,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103654-230d",
+      "finishedAt": "2026-11-13T05:07:24.744Z"
+    },
+    "large-js-shop": {
+      "task": "large-js-shop",
+      "kind": "large",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.53,
+          "seven_day": 0.73
+        },
+        "after": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        }
+      },
+      "files": 10,
+      "insertions": 489,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 116043,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 113287,
+          "usage": {
+            "input": 14,
+            "output": 12313,
+            "reasoning": 529,
+            "cacheRead": 103868,
+            "cacheWrite": 18638
+          },
+          "costUsdEquivalent": 0.4161936
+        }
+      ],
+      "expertTokens": 134833,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103724-58c5",
+      "finishedAt": "2026-11-13T05:09:26.146Z"
+    },
+    "py-csv-bug": {
+      "task": "py-csv-bug",
+      "kind": "bug",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 44,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 38769,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 37514,
+          "usage": {
+            "input": 8,
+            "output": 1914,
+            "reasoning": 198,
+            "cacheRead": 36172,
+            "cacheWrite": 6683
+          },
+          "costUsdEquivalent": 0.0990104
+        }
+      ],
+      "expertTokens": 44777,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-103926-c660",
+      "finishedAt": "2026-11-13T05:10:09.002Z"
+    },
+    "py-durations-bug": {
+      "task": "py-durations-bug",
+      "kind": "bug",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 20,
+      "deletions": 5,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 25776,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 24474,
+          "usage": {
+            "input": 8,
+            "output": 1693,
+            "reasoning": 89,
+            "cacheRead": 36723,
+            "cacheWrite": 6380
+          },
+          "costUsdEquivalent": 0.09227660000000001
+        }
+      ],
+      "expertTokens": 44804,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104009-edc5",
+      "finishedAt": "2026-11-13T05:10:38.726Z"
+    },
+    "py-inventory-search": {
+      "task": "py-inventory-search",
+      "kind": "feature",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 85,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 27577,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 26368,
+          "usage": {
+            "input": 8,
+            "output": 2475,
+            "reasoning": 62,
+            "cacheRead": 38254,
+            "cacheWrite": 7395
+          },
+          "costUsdEquivalent": 0.1163428
+        }
+      ],
+      "expertTokens": 48132,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104038-a8f8",
+      "finishedAt": "2026-11-13T05:11:10.777Z"
+    },
+    "py-kv-store": {
+      "task": "py-kv-store",
+      "kind": "greenfield",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.54,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.55,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 244,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 40678,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 39226,
+          "usage": {
+            "input": 8,
+            "output": 4255,
+            "reasoning": 113,
+            "cacheRead": 37898,
+            "cacheWrite": 8318
+          },
+          "costUsdEquivalent": 0.15925559999999997
+        }
+      ],
+      "expertTokens": 50479,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104110-934c",
+      "finishedAt": "2026-11-13T05:11:56.264Z"
+    },
+    "py-library-loans": {
+      "task": "py-library-loans",
+      "kind": "multi",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.55,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.55,
+          "seven_day": 0.74
+        }
+      },
+      "files": 4,
+      "insertions": 209,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 42288,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 41034,
+          "usage": {
+            "input": 8,
+            "output": 4497,
+            "reasoning": 124,
+            "cacheRead": 40879,
+            "cacheWrite": 9732
+          },
+          "costUsdEquivalent": 0.1760038
+        }
+      ],
+      "expertTokens": 55116,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104156-40e5",
+      "finishedAt": "2026-11-13T05:12:42.557Z"
+    },
+    "py-report-refactor": {
+      "task": "py-report-refactor",
+      "kind": "refactor",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.55,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 1,
+      "insertions": 14,
+      "deletions": 21,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 33524,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 32229,
+          "usage": {
+            "input": 10,
+            "output": 2187,
+            "reasoning": 50,
+            "cacheRead": 50075,
+            "cacheWrite": 7547
+          },
+          "costUsdEquivalent": 0.11417099999999998
+        }
+      ],
+      "expertTokens": 59819,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104242-58ea",
+      "finishedAt": "2026-11-13T05:13:20.080Z"
+    },
+    "py-wordcount-json": {
+      "task": "py-wordcount-json",
+      "kind": "feature",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 2,
+      "insertions": 33,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 22214,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 20959,
+          "usage": {
+            "input": 8,
+            "output": 1797,
+            "reasoning": 0,
+            "cacheRead": 37287,
+            "cacheWrite": 6886
+          },
+          "costUsdEquivalent": 0.0985174
+        }
+      ],
+      "expertTokens": 45978,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104320-e513",
+      "finishedAt": "2026-11-13T05:13:46.578Z"
+    },
+    "readme-typos": {
+      "task": "readme-typos",
+      "kind": "trivial",
+      "language": "markdown",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 1,
+      "insertions": 2,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 19861,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 19417,
+          "usage": {
+            "input": 6,
+            "output": 570,
+            "reasoning": 29,
+            "cacheRead": 23931,
+            "cacheWrite": 4433
+          },
+          "costUsdEquivalent": 0.051674199999999997
+        }
+      ],
+      "expertTokens": 28940,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104346-10b3",
+      "finishedAt": "2026-11-13T05:14:10.540Z"
+    },
+    "rust-roman": {
+      "task": "rust-roman",
+      "kind": "feature",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 1,
+      "insertions": 45,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 26783,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 24358,
+          "usage": {
+            "input": 8,
+            "output": 1606,
+            "reasoning": 173,
+            "cacheRead": 35525,
+            "cacheWrite": 5859
+          },
+          "costUsdEquivalent": 0.086129
+        }
+      ],
+      "expertTokens": 42998,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104410-f5d4",
+      "finishedAt": "2026-11-13T05:14:42.744Z"
+    },
+    "rust-stack-bug": {
+      "task": "rust-stack-bug",
+      "kind": "bug",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 1,
+      "insertions": 18,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 21432,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 19335,
+          "usage": {
+            "input": 8,
+            "output": 1257,
+            "reasoning": 0,
+            "cacheRead": 36651,
+            "cacheWrite": 6287
+          },
+          "costUsdEquivalent": 0.0827982
+        }
+      ],
+      "expertTokens": 44203,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104442-d01d",
+      "finishedAt": "2026-11-13T05:15:09.469Z"
+    },
+    "ts-retry": {
+      "task": "ts-retry",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "quota": {
+        "before": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        },
+        "after": {
+          "five_hour": 0.56,
+          "seven_day": 0.74
+        }
+      },
+      "files": 1,
+      "insertions": 14,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 23038,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 20918,
+          "usage": {
+            "input": 6,
+            "output": 1553,
+            "reasoning": 74,
+            "cacheRead": 24812,
+            "cacheWrite": 5654
+          },
+          "costUsdEquivalent": 0.0812784
+        }
+      ],
+      "expertTokens": 32025,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261113-104509-2e7a",
+      "finishedAt": "2026-11-13T05:15:37.262Z"
+    }
+  }
+}

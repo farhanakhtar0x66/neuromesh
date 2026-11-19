@@ -1,0 +1,337 @@
+Eval swl-lead-3c: 11 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-3c
+
+[1/11] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261118-140533-823d · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 08s · input 12, cache read 94,888, cache write 20,580, output 6,316 · ≈$0.31
+    Plan: SqliteConnector._write_dump writes every index, trigger and view from inside the per-table loop. So after the first tab…
+   t1: Emit SQLite indexes/triggers/views after all tables in dump
+    Task t1: Emit SQLite indexes/triggers/views after all tables in dump
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 16s · input 28, cache read 361,538, cache write 33,054, output 13,286 · ≈$0.017
+    Checks [t1]: tests passed, lead-tests failed
+    Repair [t1] round 1 (repair)
+    Worker [t1] repair turn · claude claude-haiku-5-5 (same session)
+    Worker [t1] done in 29s · input 10, cache read 208,449, cache write 6,549, output 4,489 · ≈$0.006
+    Checks [t1]: tests passed, lead-tests failed
+    Worker [t1] race turn · claude claude-haiku-5-5
+    Worker [t1] race turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 23s · input 20, cache read 276,318, cache write 32,551, output 15,855 · ≈$0.017
+    Worker [t1] done in 1m 25s · input 16, cache read 199,845, cache write 32,063, output 14,272 · ≈$0.016
+    Climbed [t1] claude/claude-haiku-5-5 → claude/claude-sonnet-5-5: the worker repeated an earlier failed state
+    Worker [t1] climb turn · claude claude-sonnet-5-5
+    Worker [t1] done in 31s · input 10, cache read 88,883, cache write 18,611, output 3,520 · ≈$0.12
+    Checks [t1]: tests passed, lead-tests failed
+    Repair [t1] round 1 (repair)
+    Worker [t1] repair turn · claude claude-sonnet-5-5 (same session)
+    Worker [t1] done in 31s · input 8, cache read 77,290, cache write 5,133, output 3,642 · ≈$0.065
+    Checks [t1]: tests passed, lead-tests failed
+    Expert [t1] advice turn · claude claude-opus-5-5
+    Expert [t1] done in 1m 44s · input 16, cache read 136,629, cache write 24,749, output 9,382 · ≈$0.41
+    Expert advice [t1] (the worker repeated an earlier failed state): The worker's code fix is right, and so is its regression test. In `SqliteConnector._write_dump` (dbbackup/db/sqlite.py) the DUMP_ETC block now sits a…
+   1. Keep the change to dbbackup/db/sqlite.py exactly as it is: the DUMP_ETC loop runs once, after the `for table_name` loop and before `cursor.…
+   2. Keep `test_index_written_once_after_its_table` in tests/test_connectors/test_sqlite.py. It already matches both 'CREATE INDEX' and 'CREATE …
+   3. Run `python -m pytest -q -p no:cacheprovider tests/test_checks.py tests/test_connectors/test_sqlite.py tests/test_connectors/test_lead_sqli…
+   4. Report back as blocked, giving this as the reason: the lead test's `l.startswith("CREATE INDEX")` cannot match Django's `CREATE UNIQUE INDE…
+    Worker [t1] advised-fix turn · claude claude-sonnet-5-5 (same session)
+    Worker [t1] done in 16s · input 6, cache read 60,599, cache write 3,305, output 1,320 · ≈$0.032
+    Checks [t1]: tests passed, lead-tests failed
+    Escalated [t1] to the expert: out of repair rounds
+    Expert [t1] escalation turn · claude claude-opus-5-5
+    Expert [t1] done in 56s · input 12, cache read 113,853, cache write 20,758, output 5,047 · ≈$0.29
+    Checks [t1]: tests passed, lead-tests failed
+    Repair [t1] round 1 (repair)
+    Expert [t1] repair turn · claude claude-opus-5-5 (same session)
+    Expert [t1] done in 15s · input 6, cache read 54,038, cache write 2,254, output 1,113 · ≈$0.051
+    Checks [t1]: tests passed, lead-tests failed
+    Task failed [t1]: checks still fail after the expert's attempt
+    ! A task did not pass, so the lead does not review; the run ends as it stands.
+  -> hidden tests fail · applied
+
+[2/11] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261118-141454-983a · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 37s · input 14, cache read 113,190, cache write 25,062, output 7,274 · ≈$0.010
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 7m 22s · input 8, cache read 36,221, cache write 16,480, output 4,363 · ≈$0.23
+    Plan: Add `verbose` (default True) and `results` (default False) options to `qe.timeit` in quantecon/util/timing.py. With the…
+   t1: Add verbose/results options to timeit with a single printed report
+    Task t1: Add verbose/results options to timeit with a single printed report
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 54s · input 16, cache read 206,410, cache write 30,751, output 11,249 · ≈$0.014
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[3/11] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261118-142702-8192 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 48s · input 58, cache read 1,432,902, cache write 86,508, output 30,605 · ≈$0.047
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 40s · input 6, cache read 35,581, cache write 16,776, output 4,433 · ≈$0.23
+    Plan: Battle-share code deletes bills that have reached 0, so bill_cathedral (set up at amount 0) disappears after the first …
+   t1: Keep paid-off/zero bills when applying battle shares
+    Task t1: Keep paid-off/zero bills when applying battle shares
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 31s · input 18, cache read 197,618, cache write 23,309, output 5,060 · ≈$0.009
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[4/11] ansible__molecule-4534 (issue, python)
+    Run 20261118-143201-8536 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 08s · input 24, cache read 267,350, cache write 38,140, output 13,072 · ≈$0.017
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 54s · input 8, cache read 73,353, cache write 26,143, output 5,851 · ≈$0.34
+    Plan: Make the CLI's click_command_ex wrapper turn an uncaught MoleculeError into a clean exit with its code instead of a tra…
+   t1: Handle MoleculeError in click_command_ex and give MoleculeError a str()
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task t1: Handle MoleculeError in click_command_ex and give MoleculeError a str()
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 20m 35s · input 70, cache read 1,399,086, cache write 54,712, output 25,986 · ≈$0.038
+    Checks [t1]: tests passed, lead-tests failed
+    Repair [t1] round 1 (repair)
+    Worker [t1] repair turn · claude claude-haiku-5-5 (same session)
+    Worker [t1] done in 26s · input 6, cache read 189,516, cache write 6,706, output 4,086 · ≈$0.005
+    Checks [t1]: tests passed, lead-tests failed
+    Worker [t1] race turn · claude claude-haiku-5-5
+    Worker [t1] race turn · claude claude-haiku-5-5
+    Worker [t1] done in 6m 24s · input 32, cache read 549,013, cache write 46,413, output 25,334 · ≈$0.027
+    Worker [t1] done in 14m 33s · input 74, cache read 1,630,208, cache write 58,782, output 28,958 · ≈$0.043
+    ! Task t1 changed files outside what it owns: src/molecule/logger.py
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[5/11] astronomer__dag-factory-519 (issue, python)
+    Run 20261118-151953-0d9b · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 32s · input 16, cache read 192,757, cache write 36,728, output 10,154 · ≈$0.54
+    Plan: Replace the broad `except Exception` handlers in dagbuilder.py, utils.py and dagfactory.py with the specific exceptions…
+   t1: Narrow broad except Exception handlers
+    Task t1: Narrow broad except Exception handlers
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 1m 57s · input 16, cache read 157,444, cache write 20,941, output 4,447 · ≈$0.14
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests pass · applied
+
+[6/11] awslabs__mcp-1154 (issue, python)
+    Run 20261118-152608-04d9 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 40s · input 36, cache read 837,733, cache write 75,520, output 16,937 · ≈$0.032
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 25s · input 8, cache read 64,261, cache write 26,310, output 8,898 · ≈$0.40
+    Plan: Allow AWS CLI commands that take a positional `<outfile>`. An absolute path gets the streamed response member written t…
+   t1: Support <outfile> for streaming-output commands
+    Task t1: Support <outfile> for streaming-output commands
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 8m 10s · input 70, cache read 1,213,130, cache write 44,934, output 14,258 · ≈$0.44
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker timeout in 30m 00s · input 46, cache read 713,794, cache write 55,221, output 26,874 · ≈$0.032 — 
+    Expert (plan) lead-review turn · claude claude-opus-5-5
+    Expert (plan) done in 2m 39s · input 12, cache read 78,036, cache write 20,930, output 3,595 · ≈$0.25
+    Task r1-f1: Make the outfile write robust and test it end to end through interpret_command
+    Worker [r1-f1] initial turn · claude claude-haiku-5-5
+    Worker [r1-f1] done in 13m 25s · input 88, cache read 2,275,940, cache write 73,506, output 34,064 · ≈$0.055
+    Checks [r1-f1]: tests passed
+    Merged task r1-f1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 15m 56s · input 78, cache read 1,641,129, cache write 65,806, output 34,136 · ≈$0.047
+    Checks on the merged result: tests passed
+  -> hidden tests fail · applied
+
+[7/11] certtools__intelmq-2632 (issue, python)
+    Run 20261118-164643-100d · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added · attached intelmq/bots/collectors/blueliv/REQUIREMENTS.txt
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 55s · input 36, cache read 702,236, cache write 65,614, output 22,201 · ≈$0.031
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 52s · input 8, cache read 68,293, cache write 22,738, output 5,744 · ≈$0.31
+    Plan: The CI failure comes from the unmaintained Blueliv SDK: it builds through old distutils, which has no `bdist_wheel` com…
+   t1: Add upgrade function v341_blueliv_removal
+   t2: Remove Blueliv bots, feed, docs; changelog
+    Task t2: Remove Blueliv bots, feed, docs; changelog
+    Worker [t2] initial turn · claude claude-haiku-5-5
+    Task t1: Add upgrade function v341_blueliv_removal
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 10s · input 18, cache read 209,777, cache write 23,138, output 8,290 · ≈$0.011
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker [t2] done in 1m 32s · input 30, cache read 412,325, cache write 31,400, output 8,778 · ≈$0.015
+    Checks [t2]: tests failed
+    Climbed [t2] claude/claude-haiku-5-5 → claude/claude-haiku-5-5: the grunt's work failed the checks (tests)
+    Worker [t2] climb turn · claude claude-haiku-5-5
+    Worker [t2] done in 2m 18s · input 36, cache read 697,951, cache write 48,396, output 21,918 · ≈$0.028
+    ! Task t2 changed files outside what it owns: intelmq/tests/test_blueliv_removal.py
+    Checks [t2]: tests failed
+    Repair [t2] round 1 (repair)
+    Worker [t2] repair turn · claude claude-haiku-5-5 (same session)
+    Worker [t2] done in 15s · input 4, cache read 114,292, cache write 3,329, output 2,228 · ≈$0.003
+    Checks [t2]: tests failed
+    Worker [t2] repair turn · claude claude-haiku-5-5 (same session)
+    Worker [t2] done in 49s · input 14, cache read 453,791, cache write 10,819, output 6,503 · ≈$0.010
+    ! Task t2 changed files outside what it owns: intelmq/tests/test_blueliv_removal.py, requirements.txt
+    Checks [t2]: tests failed
+    Worker [t2] race turn · claude claude-haiku-5-5
+    Worker [t2] race turn · claude claude-haiku-5-5
+    Worker [t2] done in 1m 26s · input 24, cache read 309,782, cache write 27,847, output 10,418 · ≈$0.014
+    Worker [t2] done in 2m 57s · input 44, cache read 813,032, cache write 46,245, output 24,195 · ≈$0.029
+    Climbed [t2] claude/claude-haiku-5-5 → claude/claude-sonnet-5-5: two attempts without progress
+    Worker [t2] climb turn · claude claude-sonnet-5-5
+    Worker [t2] done in 50s · input 18, cache read 176,657, cache write 19,021, output 2,764 · ≈$0.12
+    Checks [t2]: tests failed
+    Repair [t2] round 1 (repair)
+    Worker [t2] repair turn · claude claude-sonnet-5-5 (same session)
+    Worker [t2] done in 16s · input 6, cache read 50,105, cache write 1,789, output 1,009 · ≈$0.022
+    Checks [t2]: tests failed
+    Expert [t2] advice turn · claude claude-opus-5-5
+    Expert [t2] done in 41s · input 12, cache read 101,140, cache write 23,791, output 3,278 · ≈$0.28
+    Expert advice [t2] (the worker repeated an earlier failed state): The removal itself is sound. The Blueliv collector, parser and test folders are gone, feeds.yaml has no Blueliv provider, and the docs, CHANGELOG and…
+   1. Edit neuromesh.json → checks[0].command. Remove the four intelmq/tests/bots/{collectors,parsers}/blueliv/... paths and test the done-criter…
+   2. Delete the new root-level requirements.txt. Nothing refers to it and the request didn't ask for it; dependencies are declared in setup.py. …
+   3. Keep the deletions of intelmq/bots/{collectors,parsers}/blueliv/ and intelmq/tests/bots/{collectors,parsers}/blueliv/ (including the .data …
+   4. Verify: running `grep -ri blueliv intelmq docs` should only find intelmq/lib/upgrades.py, intelmq/tests/lib/test_upgrades.py and intelmq/te…
+    Worker [t2] advised-fix turn · claude claude-sonnet-5-5 (same session)
+    Worker [t2] done in 35s · input 14, cache read 170,138, cache write 4,024, output 1,988 · ≈$0.053
+    ! Task t2 changed files outside what it owns: intelmq/tests/test_blueliv_removal.py, neuromesh.json
+    Checks [t2]: tests failed
+    Escalated [t2] to the expert: out of repair rounds
+    Expert [t2] escalation turn · claude claude-opus-5-5
+    Expert [t2] done in 39s · input 10, cache read 92,758, cache write 17,824, output 1,909 · ≈$0.20
+    Checks [t2]: tests failed
+    Repair [t2] round 1 (repair)
+    Expert [t2] repair turn · claude claude-opus-5-5 (same session)
+    Expert [t2] done in 46s · input 10, cache read 99,848, cache write 5,005, output 3,335 · ≈$0.13
+    ! Task t2 changed files outside what it owns: intelmq/tests/test_blueliv_removal.py
+    Checks [t2]: tests passed
+    Merged task t2 (expert)
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 1m 39s · input 20, cache read 201,448, cache write 26,290, output 17,827 · ≈$0.016
+    Checks on the merged result: tests passed
+  -> hidden tests fail · applied
+
+[8/11] django-guardian__django-guardian-896 (issue, python)
+    Run 20261118-170616-8f5b · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 01s · input 18, cache read 184,626, cache write 34,111, output 11,048 · ≈$0.014
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 10s · input 12, cache read 98,289, cache write 20,672, output 7,122 · ≈$0.33
+    Plan: Remove the three test-suite warnings at their source: rename the pytest-collectable TestView helper, give Project.creat…
+   t1: Fix the three test-suite warnings at their source
+    Task t1: Fix the three test-suite warnings at their source
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 8m 33s · input 74, cache read 1,555,753, cache write 61,642, output 29,018 · ≈$0.042
+    ! Task t1 changed files outside what it owns: guardian/testapp/tests/test_decorators.py, guardian/testapp/tests/test_utils.py, guardian/testapp/testsettings.py
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[9/11] falconry__falcon-2459 (issue, python)
+    Run 20261118-171907-aea1 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 45s · input 16, cache read 155,479, cache write 31,791, output 8,966 · ≈$0.012
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 47s · input 10, cache read 70,371, cache write 18,234, output 5,123 · ≈$0.26
+    Plan: Rename `Response.unset_cookie`'s `samesite` argument to `same_site` so it matches `set_cookie`. It stays the second pos…
+   t1: Rename unset_cookie samesite -> same_site, deprecate the old name
+    Task t1: Rename unset_cookie samesite -> same_site, deprecate the old name
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 37s · input 28, cache read 368,256, cache write 29,962, output 9,843 · ≈$0.015
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[10/11] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261118-172411-3b25 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: a 1212-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work
+    Checks before any change: tests passed
+    Context packet: 8022 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 11s · input 36, cache read 831,656, cache write 74,493, output 21,349 · ≈$0.034
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 55s · input 4, cache read 24,501, cache write 27,934, output 6,412 · ≈$0.36
+    Plan: The library doesn't decide on its own to stop mid-tool-call. The "Shutting down agent finder..." line comes from Agent.…
+   t1: Shutdown-requested flag and cross-thread-safe shutdown on ServerConnection
+    Task t1: Shutdown-requested flag and cross-thread-safe shutdown on ServerConnection
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 47s · input 26, cache read 529,622, cache write 49,796, output 18,438 · ≈$0.024
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 1m 25s · input 24, cache read 389,962, cache write 42,047, output 16,405 · ≈$0.021
+  -> hidden tests fail · applied
+
+[11/11] python-attrs__attrs-1457 (issue, python)
+    Run 20261118-173208-c28a · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 21s · input 12, cache read 98,331, cache write 24,807, output 8,756 · ≈$0.39
+    Plan: Add a `force_kw_only` class option. It defaults to True for `attr.s` (keeps today's behaviour) and to False for `define…
+   t1: Add force_kw_only and let fields override the class kw_only setting
+    Task t1: Add force_kw_only and let fields override the class kw_only setting
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 1m 37s · input 36, cache read 556,078, cache write 37,650, output 9,922 · ≈$0.31
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+Eval swl-lead-3c · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+ansible__molecule-4534 issue       team  applied     passed  fail    6      37m 47s  105k / 4.34M
+Archmonger__django-dbbackup-604 issue       team  applied     failed  fail    11     8m 49s   490k / 1.46M esc 1
+astronomer__dag-factory-519 issue       team  applied     passed  pass    2      4m 45s   240k / 183k
+awslabs__mcp-1154     issue       team  applied     passed  fail    7      1h 19m   202k / 7.12M
+certtools__intelmq-2632 issue       team  applied     passed  fail    16     17m 09s  446k / 4.75M esc 1
+django-guardian__django-guardian-896 issue       team  applied     passed  fail    3      12m 03s  126k / 1.88M
+falconry__falcon-2459 issue       team  applied     passed  fail    3      3m 14s   94k / 604k
+lastmile-ai__mcp-agent-367 issue       team  applied     passed  fail    4      6m 44s   59k / 1.97M
+python-attrs__attrs-1457 issue       team  applied     passed  fail    2      3m 01s   132k / 604k
+QuantEcon__QuantEcon.py-797 issue       team  applied     passed  fail    3      9m 12s   57k / 394k
+Tuxemon__Tuxemon-3068 issue       team  applied     passed  fail    3      4m 13s   57k / 1.78M
+
+Passed 1/11 · engine failures 0 · time 3h 06m · tokens 27.09M · expert share 7% · API-equivalent ≈ $7.36 (estimate, not spent)

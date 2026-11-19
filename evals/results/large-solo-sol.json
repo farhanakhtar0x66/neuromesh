@@ -1,0 +1,69 @@
+{
+  "name": "large-solo-sol",
+  "preset": "solo-sol",
+  "presetDetail": {
+    "name": "solo-sol",
+    "description": "One GPT-6.1 Sol (medium) agent through Codex: the expert alone. The baseline for what the factory must match. Uses ChatGPT quota.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": false,
+    "routing": "rules",
+    "advise": true
+  },
+  "startedAt": "2026-11-11T04:04:05.702Z",
+  "results": {
+    "large-js-shop": {
+      "task": "large-js-shop",
+      "kind": "large",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 10,
+      "insertions": 425,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 137953,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 136283,
+          "usage": {
+            "input": 35698,
+            "output": 5999,
+            "reasoning": 43,
+            "cacheRead": 128896,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 170593,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-093405-8d36",
+      "finishedAt": "2026-11-11T04:06:24.383Z"
+    }
+  }
+}

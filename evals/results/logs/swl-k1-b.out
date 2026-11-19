@@ -1,0 +1,226 @@
+Eval swl-k1-b: 11 task(s) on preset patch-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-k1-b
+
+[1/11] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261119-010139-bf99 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 11s · input 22, cache read 257,592, cache write 31,221, output 14,474 · ≈$0.016
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 39s · input 2, cache read 643, cache write 7,026, output 4,038 · ≈$0.14
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[2/11] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261119-010402-29ea · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 57s · input 18, cache read 183,096, cache write 25,360, output 9,443 · ≈$0.012
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 24s · input 2, cache read 643, cache write 7,148, output 2,021 · ≈$0.098
+    ! Task main: the expert asked to read quantecon/util/tests/test_timing.py, quantecon/util/timing.py; Neuromesh reads them for it.
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 43s · input 2, cache read 643, cache write 15,367, output 4,648 · ≈$0.22
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/11] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261119-010837-42c0 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 38s · input 36, cache read 627,468, cache write 51,501, output 17,551 · ≈$0.025
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 18s · input 2, cache read 643, cache write 7,203, output 1,879 · ≈$0.095
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[4/11] ansible__molecule-4534 (issue, python)
+    Run 20261119-011117-6296 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 33s · input 34, cache read 522,126, cache write 49,074, output 17,393 · ≈$0.024
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 36s · input 4, cache read 10,697, cache write 9,411, output 2,738 · ≈$0.13
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/11] astronomer__dag-factory-519 (issue, python)
+    Run 20261119-011949-5c1b · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 38s · input 28, cache read 532,665, cache write 57,553, output 19,552 · ≈$0.027
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 28s · input 2, cache read 643, cache write 8,333, output 2,521 · ≈$0.12
+    ! Feature F127 patch-lead failed: [F127 patch-lead] the answer has neither edits nor files to read
+   This came from F127 patch-lead (Cheap models explore, the expert writes the patch in one call (K1); src/engine/run.ts (patchScout, patchApplies, patchTurn, applyEdits, neededFiles, the plan step)). To run without it: --disable patch-lead, or NEUROMESH_DISABLE=patch-lead.
+    Task failed [main]: the expert's patch call gave no usable edits (done)
+  -> hidden tests fail · applied
+
+[6/11] awslabs__mcp-1154 (issue, python)
+    Run 20261119-012245-6f57 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 4m 08s · input 64, cache read 1,597,496, cache write 72,904, output 40,426 · ≈$0.051
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 21s · input 2, cache read 643, cache write 6,313, output 1,593 · ≈$0.083
+    ! Task main: the expert asked to read src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/parser/interpretation.py, src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/parser/parser.py, src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/aws/driver.py, src/aws-api-mcp-server/awslabs/aws_api_mcp_server/core/common/models.py; Neuromesh reads them for it.
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 1m 04s · input 2, cache read 643, cache write 21,966, output 6,950 · ≈$0.31
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[7/11] certtools__intelmq-2632 (issue, python)
+    Run 20261119-012918-7e5f · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added · attached intelmq/bots/collectors/blueliv/REQUIREMENTS.txt
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 41s · input 24, cache read 304,364, cache write 38,172, output 18,385 · ≈$0.020
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 33s · input 2, cache read 643, cache write 9,220, output 3,024 · ≈$0.13
+    Checks [main]: tests failed, lead-tests passed
+    Repair [main] round 1 (repair)
+    Expert [main] repair turn · claude claude-opus-5-5
+    Expert [main] done in 10s · input 2, cache read 643, cache write 10,903, output 871 · ≈$0.10
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[8/11] django-guardian__django-guardian-896 (issue, python)
+    Run 20261119-013405-a437 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 21s · input 26, cache read 365,393, cache write 37,929, output 13,706 · ≈$0.018
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 23s · input 2, cache read 643, cache write 6,110, output 2,189 · ≈$0.093
+    ! Feature F127 patch-lead failed: [F127 patch-lead] the answer has neither edits nor files to read
+   This came from F127 patch-lead (Cheap models explore, the expert writes the patch in one call (K1); src/engine/run.ts (patchScout, patchApplies, patchTurn, applyEdits, neededFiles, the plan step)). To run without it: --disable patch-lead, or NEUROMESH_DISABLE=patch-lead.
+    Task failed [main]: the expert's patch call gave no usable edits (done)
+  -> hidden tests fail · applied
+
+[9/11] falconry__falcon-2459 (issue, python)
+    Run 20261119-013603-e78e · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 41s · input 14, cache read 127,506, cache write 27,191, output 8,819 · ≈$0.011
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 30s · input 2, cache read 643, cache write 6,606, output 2,634 · ≈$0.11
+    Checks [main]: tests failed, lead-tests passed
+    Repair [main] round 1 (repair)
+    Expert [main] repair turn · claude claude-opus-5-5
+    Expert [main] done in 30s · input 2, cache read 643, cache write 8,533, output 2,879 · ≈$0.13
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/11] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261119-013937-bca9 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: a 1212-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work
+    Checks before any change: tests passed
+    Context packet: 8022 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 3m 08s · input 52, cache read 1,216,441, cache write 75,831, output 37,918 · ≈$0.046
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 38s · input 2, cache read 643, cache write 15,407, output 3,611 · ≈$0.20
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[11/11] python-attrs__attrs-1457 (issue, python)
+    Run 20261119-014449-3b2b · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 56s · input 32, cache read 527,172, cache write 47,450, output 23,154 · ≈$0.026
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 30s · input 2, cache read 643, cache write 9,031, output 2,712 · ≈$0.13
+    ! Task main: the expert asked to read src/attr/_make.py, src/attr/_next_gen.py, src/attr/__init__.pyi, src/attrs/__init__.pyi; Neuromesh reads them for it.
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 2m 06s · input 2, cache read 643, cache write 40,227, output 14,681 · ≈$0.62
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+Eval swl-k1-b · preset patch-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+ansible__molecule-4534 issue       team  applied     passed  fail    2      2m 13s   23k / 589k
+Archmonger__django-dbbackup-604 issue       team  applied     passed  fail    2      1m 54s   12k / 303k
+astronomer__dag-factory-519 issue       team  applied     none    fail    2      2m 15s   11k / 610k
+awslabs__mcp-1154     issue       team  applied     passed  fail    3      5m 37s   38k / 1.71M
+certtools__intelmq-2632 issue       team  applied     passed  fail    3      2m 53s   25k / 361k
+django-guardian__django-guardian-896 issue       team  applied     none    fail    2      1m 52s   9k / 417k
+falconry__falcon-2459 issue       team  applied     passed  fail    3      1m 45s   22k / 164k
+lastmile-ai__mcp-agent-367 issue       team  applied     passed  fail    2      4m 04s   20k / 1.33M
+python-attrs__attrs-1457 issue       team  applied     passed  fail    3      4m 35s   68k / 598k
+QuantEcon__QuantEcon.py-797 issue       team  applied     passed  fail    3      2m 22s   30k / 218k
+Tuxemon__Tuxemon-3068 issue       team  applied     passed  fail    2      2m 05s   10k / 697k
+
+Passed 0/11 · engine failures 0 · time 31m 35s · tokens 7.26M · expert share 4% · API-equivalent ≈ $2.97 (estimate, not spent)

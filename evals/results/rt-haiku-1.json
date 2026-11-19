@@ -1,0 +1,682 @@
+{
+  "name": "rt-haiku-1",
+  "preset": "solo-haiku",
+  "presetDetail": {
+    "name": "solo-haiku",
+    "description": "One Claude Haiku 5.5 agent at high effort through Claude Code, given the request exactly as typed. The cheap floor the benchmark compares against (docs/17-benchmark.md).",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 40,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-16T01:51:52.374Z",
+  "results": {
+    "nm-dropped-connection": {
+      "task": "nm-dropped-connection",
+      "kind": "bug",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 1,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.1,
+          "seven_day": 0.27
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.27
+        }
+      },
+      "files": 2,
+      "insertions": 44,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 219221,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 113804,
+          "usage": {
+            "input": 26,
+            "output": 15675,
+            "reasoning": 9344,
+            "cacheRead": 315655,
+            "cacheWrite": 42853,
+            "split": {
+              "files": 72085,
+              "commands": 2852,
+              "earlier": 112387,
+              "calls": 13,
+              "estimated": true,
+              "startup": 135505,
+              "prompt": 35705
+            }
+          },
+          "costUsdEquivalent": 0.01956725
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 374209,
+      "usageIncomplete": false,
+      "runId": "20261116-072155-17e3",
+      "finishedAt": "2026-11-16T01:55:39.109Z"
+    },
+    "nm-first-turn-retry": {
+      "task": "nm-first-turn-retry",
+      "kind": "bug",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 4,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.27
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.27
+        }
+      },
+      "files": 3,
+      "insertions": 95,
+      "deletions": 8,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 611051,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 544169,
+          "usage": {
+            "input": 68,
+            "output": 41468,
+            "reasoning": 26031,
+            "cacheRead": 1916463,
+            "cacheWrite": 94366,
+            "split": {
+              "files": 1340,
+              "commands": 592557,
+              "earlier": 956127,
+              "calls": 34,
+              "estimated": true,
+              "startup": 364069,
+              "prompt": 96804
+            }
+          },
+          "costUsdEquivalent": 0.058778630000000005
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2052365,
+      "usageIncomplete": false,
+      "runId": "20261116-072539-1b9e",
+      "finishedAt": "2026-11-16T02:05:56.421Z"
+    },
+    "nm-no-bytecode-in-diff": {
+      "task": "nm-no-bytecode-in-diff",
+      "kind": "bug",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.11,
+          "seven_day": 0.27
+        },
+        "after": {
+          "five_hour": 0.11,
+          "seven_day": 0.27
+        }
+      },
+      "files": 4,
+      "insertions": 31,
+      "deletions": 8,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 352345,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 323785,
+          "usage": {
+            "input": 54,
+            "output": 42022,
+            "reasoning": 25282,
+            "cacheRead": 1524941,
+            "cacheWrite": 100278,
+            "split": {
+              "files": 407013,
+              "commands": 142494,
+              "earlier": 710160,
+              "calls": 27,
+              "estimated": true,
+              "startup": 285264,
+              "prompt": 80342
+            }
+          },
+          "costUsdEquivalent": 0.05632141
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1667295,
+      "usageIncomplete": false,
+      "runId": "20261116-073556-54af",
+      "finishedAt": "2026-11-16T02:11:53.034Z"
+    },
+    "nm-prose-guard": {
+      "task": "nm-prose-guard",
+      "kind": "bug",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 14,
+        "total": 14
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0,
+          "seven_day": 0.28
+        }
+      },
+      "files": 2,
+      "insertions": 36,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 131962,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 126559,
+          "usage": {
+            "input": 18,
+            "output": 27579,
+            "reasoning": 19755,
+            "cacheRead": 247913,
+            "cacheWrite": 51199,
+            "split": {
+              "files": 62069,
+              "commands": 2414,
+              "earlier": 112944,
+              "calls": 9,
+              "estimated": true,
+              "startup": 93025,
+              "prompt": 28678
+            }
+          },
+          "costUsdEquivalent": 0.026510230000000003
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 326709,
+      "usageIncomplete": false,
+      "runId": "20261116-133800-054e",
+      "finishedAt": "2026-11-16T08:10:25.719Z"
+    },
+    "nm-quota-cooldown": {
+      "task": "nm-quota-cooldown",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.01,
+          "seven_day": 0.28
+        }
+      },
+      "files": 3,
+      "insertions": 129,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 426741,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 330082,
+          "usage": {
+            "input": 40,
+            "output": 45245,
+            "reasoning": 29444,
+            "cacheRead": 760922,
+            "cacheWrite": 54406,
+            "split": {
+              "files": 0,
+              "commands": 143627,
+              "earlier": 403483,
+              "calls": 20,
+              "estimated": true,
+              "startup": 211547,
+              "prompt": 56711
+            }
+          },
+          "costUsdEquivalent": 0.041116919999999994
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 860613,
+      "usageIncomplete": false,
+      "runId": "20261116-134026-9974",
+      "finishedAt": "2026-11-16T08:17:40.065Z"
+    },
+    "nm-screen-countdown": {
+      "task": "nm-screen-countdown",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 4,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.01,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.01,
+          "seven_day": 0.28
+        }
+      },
+      "files": 2,
+      "insertions": 35,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 59038,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 56683,
+          "usage": {
+            "input": 22,
+            "output": 7684,
+            "reasoning": 2919,
+            "cacheRead": 213948,
+            "cacheWrite": 19629,
+            "split": {
+              "files": 16848,
+              "commands": 2473,
+              "earlier": 62170,
+              "calls": 11,
+              "estimated": true,
+              "startup": 120018,
+              "prompt": 32090
+            }
+          },
+          "costUsdEquivalent": 0.009909479999999998
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 241283,
+      "usageIncomplete": false,
+      "runId": "20261116-134740-153e",
+      "finishedAt": "2026-11-16T08:18:44.254Z"
+    },
+    "nm-stub-scanner": {
+      "task": "nm-stub-scanner",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 3,
+        "total": 3
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.01,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.02,
+          "seven_day": 0.28
+        }
+      },
+      "files": 2,
+      "insertions": 388,
+      "deletions": 0,
+      "turns": 4,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 459663,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 4,
+          "durationMs": 456109,
+          "usage": {
+            "input": 60,
+            "output": 96670,
+            "reasoning": 69886,
+            "cacheRead": 1072651,
+            "cacheWrite": 89056,
+            "split": {
+              "files": 0,
+              "commands": 67455,
+              "earlier": 414892,
+              "calls": 31,
+              "estimated": true,
+              "startup": 344852,
+              "prompt": 81782,
+              "resumed": 309656
+            }
+          },
+          "costUsdEquivalent": 0.10609398999999999
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1258437,
+      "usageIncomplete": false,
+      "runId": "20261116-134844-23fd",
+      "finishedAt": "2026-11-16T08:26:29.237Z"
+    },
+    "nm-tester-minor-findings": {
+      "task": "nm-tester-minor-findings",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 1,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.02,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.02,
+          "seven_day": 0.28
+        }
+      },
+      "files": 5,
+      "insertions": 43,
+      "deletions": 8,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 329320,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 166926,
+          "usage": {
+            "input": 38,
+            "output": 19293,
+            "reasoning": 12085,
+            "cacheRead": 752159,
+            "cacheWrite": 54166,
+            "split": {
+              "files": 275364,
+              "commands": 8331,
+              "earlier": 265976,
+              "calls": 19,
+              "estimated": true,
+              "startup": 201314,
+              "prompt": 55380
+            }
+          },
+          "costUsdEquivalent": 0.028005090000000003
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 825656,
+      "usageIncomplete": false,
+      "runId": "20261116-135629-9834",
+      "finishedAt": "2026-11-16T08:32:04.258Z"
+    },
+    "ss2-notes-bound": {
+      "task": "ss2-notes-bound",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 132,
+        "total": 132
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.02,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.03,
+          "seven_day": 0.28
+        }
+      },
+      "files": 7,
+      "insertions": 368,
+      "deletions": 4,
+      "turns": 4,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 458754,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 4,
+          "durationMs": 454612,
+          "usage": {
+            "input": 76,
+            "output": 98028,
+            "reasoning": 68476,
+            "cacheRead": 1633862,
+            "cacheWrite": 144088,
+            "split": {
+              "files": 120629,
+              "commands": 55523,
+              "earlier": 742990,
+              "calls": 38,
+              "estimated": true,
+              "startup": 379401,
+              "prompt": 84764,
+              "resumed": 470473
+            }
+          },
+          "costUsdEquivalent": 0.13067274999999998
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1876054,
+      "usageIncomplete": false,
+      "runId": "20261116-140204-c2fc",
+      "finishedAt": "2026-11-16T08:39:46.641Z"
+    },
+    "ss2-notes-fold": {
+      "task": "ss2-notes-fold",
+      "kind": "feature",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 124,
+        "total": 124
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.03,
+          "seven_day": 0.28
+        },
+        "after": {
+          "five_hour": 0.03,
+          "seven_day": 0.28
+        }
+      },
+      "files": 5,
+      "insertions": 108,
+      "deletions": 6,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 272262,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 266791,
+          "usage": {
+            "input": 32,
+            "output": 61175,
+            "reasoning": 47101,
+            "cacheRead": 479032,
+            "cacheWrite": 44978,
+            "split": {
+              "files": 99859,
+              "commands": 13014,
+              "earlier": 223652,
+              "calls": 15,
+              "estimated": true,
+              "startup": 149615,
+              "prompt": 37903
+            }
+          },
+          "costUsdEquivalent": 0.04437662
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 585217,
+      "usageIncomplete": false,
+      "runId": "20261116-140946-cc38",
+      "finishedAt": "2026-11-16T08:44:22.781Z"
+    }
+  }
+}

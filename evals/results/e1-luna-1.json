@@ -1,0 +1,1123 @@
+{
+  "name": "e1-luna-1",
+  "preset": "factory-luna",
+  "presetDetail": {
+    "name": "factory-luna",
+    "description": "The factory floor with the cheapest listed worker: GPT-6 Luna through Codex at low effort, climbing to high effort when stuck, reviewed by a Luna tester. Only a stuck high-effort worker gets the expert (GPT-6.1 Sol), first as advice and then as a takeover. Built to test whether a truly cheap worker beats the expert alone on API cost.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "low",
+        "tier": "worker"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-11T08:44:49.501Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 102,
+      "deletions": 1,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 151651,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 4,
+          "durationMs": 150256,
+          "usage": {
+            "input": 40899,
+            "output": 3376,
+            "reasoning": 1094,
+            "cacheRead": 239360,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 283635,
+      "usageIncomplete": false,
+      "runId": "20261111-141449-f0c1",
+      "finishedAt": "2026-11-11T08:47:21.432Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 121,
+      "deletions": 2,
+      "turns": 6,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 214275,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 6,
+          "durationMs": 213318,
+          "usage": {
+            "input": 106842,
+            "output": 5949,
+            "reasoning": 1574,
+            "cacheRead": 293376,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 406167,
+      "usageIncomplete": false,
+      "runId": "20261111-141721-4363",
+      "finishedAt": "2026-11-11T08:50:55.850Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 102,
+      "deletions": 2,
+      "turns": 6,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 216807,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 6,
+          "durationMs": 213223,
+          "usage": {
+            "input": 120402,
+            "output": 6363,
+            "reasoning": 2578,
+            "cacheRead": 418176,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 544941,
+      "usageIncomplete": false,
+      "runId": "20261111-142055-fc05",
+      "finishedAt": "2026-11-11T08:54:33.915Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 118,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 88006,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 87110,
+          "usage": {
+            "input": 41566,
+            "output": 2419,
+            "reasoning": 610,
+            "cacheRead": 69504,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 113489,
+      "usageIncomplete": false,
+      "runId": "20261111-142433-9f4f",
+      "finishedAt": "2026-11-11T08:56:02.205Z"
+    },
+    "js-cart-bug": {
+      "task": "js-cart-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 6,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 64313,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 63494,
+          "usage": {
+            "input": 53477,
+            "output": 1377,
+            "reasoning": 494,
+            "cacheRead": 66944,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 121798,
+      "usageIncomplete": false,
+      "runId": "20261111-142602-8fc4",
+      "finishedAt": "2026-11-11T08:57:06.780Z"
+    },
+    "js-config-env": {
+      "task": "js-config-env",
+      "kind": "feature",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 63,
+      "deletions": 3,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 72306,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 71462,
+          "usage": {
+            "input": 41086,
+            "output": 1753,
+            "reasoning": 505,
+            "cacheRead": 106880,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 149719,
+      "usageIncomplete": false,
+      "runId": "20261111-142706-1221",
+      "finishedAt": "2026-11-11T08:58:19.346Z"
+    },
+    "js-default-port": {
+      "task": "js-default-port",
+      "kind": "trivial",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 3,
+      "deletions": 3,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 49212,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 48943,
+          "usage": {
+            "input": 35978,
+            "output": 930,
+            "reasoning": 0,
+            "cacheRead": 100480,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 137388,
+      "usageIncomplete": false,
+      "runId": "20261111-142819-ab3c",
+      "finishedAt": "2026-11-11T08:59:08.672Z"
+    },
+    "js-markdown": {
+      "task": "js-markdown",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 69,
+      "deletions": 3,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 164810,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 4,
+          "durationMs": 163469,
+          "usage": {
+            "input": 76959,
+            "output": 4358,
+            "reasoning": 1066,
+            "cacheRead": 299776,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 381093,
+      "usageIncomplete": false,
+      "runId": "20261111-142908-83ae",
+      "finishedAt": "2026-11-11T09:01:53.765Z"
+    },
+    "js-rename-refactor": {
+      "task": "js-rename-refactor",
+      "kind": "refactor",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 3,
+      "insertions": 9,
+      "deletions": 6,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 58775,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 57943,
+          "usage": {
+            "input": 57148,
+            "output": 931,
+            "reasoning": 0,
+            "cacheRead": 95488,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 153567,
+      "usageIncomplete": false,
+      "runId": "20261111-143153-94fd",
+      "finishedAt": "2026-11-11T09:02:52.793Z"
+    },
+    "js-sales-report": {
+      "task": "js-sales-report",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 6,
+      "insertions": 115,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 68186,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 67157,
+          "usage": {
+            "input": 31237,
+            "output": 2548,
+            "reasoning": 233,
+            "cacheRead": 179072,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 212857,
+      "usageIncomplete": false,
+      "runId": "20261111-143252-def4",
+      "finishedAt": "2026-11-11T09:04:01.463Z"
+    },
+    "js-slugify-bug": {
+      "task": "js-slugify-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 2,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 61110,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 60292,
+          "usage": {
+            "input": 34084,
+            "output": 780,
+            "reasoning": 79,
+            "cacheRead": 99072,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 133936,
+      "usageIncomplete": false,
+      "runId": "20261111-143401-cb80",
+      "finishedAt": "2026-11-11T09:05:02.829Z"
+    },
+    "js-temp-cli": {
+      "task": "js-temp-cli",
+      "kind": "greenfield",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 112,
+      "deletions": 0,
+      "turns": 6,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 201889,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 6,
+          "durationMs": 199086,
+          "usage": {
+            "input": 97838,
+            "output": 5168,
+            "reasoning": 1031,
+            "cacheRead": 417536,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 520542,
+      "usageIncomplete": false,
+      "runId": "20261111-143502-d0bd",
+      "finishedAt": "2026-11-11T09:08:25.804Z"
+    },
+    "js-todo-remove": {
+      "task": "js-todo-remove",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 3,
+      "insertions": 30,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 40933,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 40106,
+          "usage": {
+            "input": 41278,
+            "output": 1255,
+            "reasoning": 265,
+            "cacheRead": 117504,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 160037,
+      "usageIncomplete": false,
+      "runId": "20261111-143825-db22",
+      "finishedAt": "2026-11-11T09:09:07.294Z"
+    },
+    "large-js-shop": {
+      "task": "large-js-shop",
+      "kind": "large",
+      "language": "javascript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 10,
+      "insertions": 439,
+      "deletions": 0,
+      "turns": 11,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 323542,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 43458,
+          "usage": {
+            "input": 18291,
+            "output": 1760,
+            "reasoning": 90,
+            "cacheRead": 17792,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 10,
+          "durationMs": 369178,
+          "usage": {
+            "input": 165409,
+            "output": 10236,
+            "reasoning": 933,
+            "cacheRead": 839424,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 37843,
+      "workerTokens": 1015069,
+      "usageIncomplete": false,
+      "runId": "20261111-143907-c69c",
+      "finishedAt": "2026-11-11T09:14:31.572Z"
+    },
+    "py-csv-bug": {
+      "task": "py-csv-bug",
+      "kind": "bug",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 24,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 39695,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 39201,
+          "usage": {
+            "input": 43669,
+            "output": 934,
+            "reasoning": 58,
+            "cacheRead": 110720,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 155323,
+      "usageIncomplete": false,
+      "runId": "20261111-144431-a92b",
+      "finishedAt": "2026-11-11T09:15:11.396Z"
+    },
+    "py-durations-bug": {
+      "task": "py-durations-bug",
+      "kind": "bug",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 6,
+      "deletions": 4,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 55195,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 54769,
+          "usage": {
+            "input": 34543,
+            "output": 1020,
+            "reasoning": 106,
+            "cacheRead": 96384,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 131947,
+      "usageIncomplete": false,
+      "runId": "20261111-144511-59c0",
+      "finishedAt": "2026-11-11T09:16:06.717Z"
+    },
+    "py-inventory-search": {
+      "task": "py-inventory-search",
+      "kind": "feature",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 44,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 53420,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 52975,
+          "usage": {
+            "input": 41725,
+            "output": 1649,
+            "reasoning": 216,
+            "cacheRead": 155648,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 199022,
+      "usageIncomplete": false,
+      "runId": "20261111-144606-129a",
+      "finishedAt": "2026-11-11T09:17:00.267Z"
+    },
+    "py-kv-store": {
+      "task": "py-kv-store",
+      "kind": "greenfield",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 178,
+      "deletions": 0,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 127785,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 4,
+          "durationMs": 127396,
+          "usage": {
+            "input": 93450,
+            "output": 4352,
+            "reasoning": 551,
+            "cacheRead": 350080,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 447882,
+      "usageIncomplete": false,
+      "runId": "20261111-144700-8c14",
+      "finishedAt": "2026-11-11T09:19:08.393Z"
+    },
+    "py-library-loans": {
+      "task": "py-library-loans",
+      "kind": "multi",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 4,
+      "insertions": 116,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 61334,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 60908,
+          "usage": {
+            "input": 31622,
+            "output": 2221,
+            "reasoning": 286,
+            "cacheRead": 112768,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 146611,
+      "usageIncomplete": false,
+      "runId": "20261111-144908-75de",
+      "finishedAt": "2026-11-11T09:20:09.860Z"
+    },
+    "py-report-refactor": {
+      "task": "py-report-refactor",
+      "kind": "refactor",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 9,
+      "deletions": 21,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 58678,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 58276,
+          "usage": {
+            "input": 42764,
+            "output": 1667,
+            "reasoning": 322,
+            "cacheRead": 116608,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 161039,
+      "usageIncomplete": false,
+      "runId": "20261111-145009-e379",
+      "finishedAt": "2026-11-11T09:21:08.662Z"
+    },
+    "py-wordcount-json": {
+      "task": "py-wordcount-json",
+      "kind": "feature",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 22,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 44040,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 43646,
+          "usage": {
+            "input": 23967,
+            "output": 1138,
+            "reasoning": 25,
+            "cacheRead": 114560,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 139665,
+      "usageIncomplete": false,
+      "runId": "20261111-145108-3783",
+      "finishedAt": "2026-11-11T09:21:52.875Z"
+    },
+    "readme-typos": {
+      "task": "readme-typos",
+      "kind": "trivial",
+      "language": "markdown",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 2,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 31671,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 31401,
+          "usage": {
+            "input": 21859,
+            "output": 528,
+            "reasoning": 137,
+            "cacheRead": 78592,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 100979,
+      "usageIncomplete": false,
+      "runId": "20261111-145152-7289",
+      "finishedAt": "2026-11-11T09:22:24.642Z"
+    },
+    "rust-roman": {
+      "task": "rust-roman",
+      "kind": "feature",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 29,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 37168,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 35201,
+          "usage": {
+            "input": 26556,
+            "output": 936,
+            "reasoning": 251,
+            "cacheRead": 75264,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 102756,
+      "usageIncomplete": false,
+      "runId": "20261111-145224-98bf",
+      "finishedAt": "2026-11-11T09:23:03.098Z"
+    },
+    "rust-stack-bug": {
+      "task": "rust-stack-bug",
+      "kind": "bug",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 2,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 36725,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 35393,
+          "usage": {
+            "input": 21369,
+            "output": 753,
+            "reasoning": 291,
+            "cacheRead": 91776,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 113898,
+      "usageIncomplete": false,
+      "runId": "20261111-145303-af5d",
+      "finishedAt": "2026-11-11T09:23:40.923Z"
+    },
+    "ts-retry": {
+      "task": "ts-retry",
+      "kind": "feature",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 26,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 35484,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 34662,
+          "usage": {
+            "input": 40462,
+            "output": 1030,
+            "reasoning": 242,
+            "cacheRead": 79744,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 121236,
+      "usageIncomplete": false,
+      "runId": "20261111-145340-12e8",
+      "finishedAt": "2026-11-11T09:24:16.974Z"
+    }
+  }
+}

@@ -1,0 +1,325 @@
+{
+  "name": "hard-factory-wf",
+  "preset": "factory-wf",
+  "presetDetail": {
+    "name": "factory-wf",
+    "description": "The factory floor taken literally: a Gemini Flash worker starts on every request and the expert steps in only when the worker gets stuck (or plans clearly large requests). Same models as factory.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert"
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert"
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "routing": "worker-first"
+  },
+  "startedAt": "2026-11-11T00:01:08.658Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 337,
+      "deletions": 3,
+      "turns": 5,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 468810,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 8414,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 7466,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator",
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 140202,
+          "usage": {
+            "input": 50819,
+            "output": 5688,
+            "reasoning": 293,
+            "cacheRead": 189312,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 311088,
+          "usage": {
+            "input": 90360,
+            "output": 37110,
+            "reasoning": 34184,
+            "cacheRead": 808597
+          }
+        }
+      ],
+      "expertTokens": 245819,
+      "workerTokens": 936067,
+      "usageIncomplete": false,
+      "runId": "20261111-053108-060b",
+      "finishedAt": "2026-11-11T00:08:58.013Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 525,
+      "deletions": 3,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 3108742,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 3107902,
+          "usage": {
+            "input": 249192,
+            "output": 82442,
+            "reasoning": 68172,
+            "cacheRead": 1568195
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1899829,
+      "usageIncomplete": false,
+      "runId": "20261111-053858-105c",
+      "finishedAt": "2026-11-11T01:00:47.044Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 626,
+      "deletions": 2,
+      "turns": 3,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 862046,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 46639,
+          "usage": {
+            "input": 29707,
+            "output": 1424,
+            "reasoning": 185,
+            "cacheRead": 73216,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 813403,
+          "usage": {
+            "input": 214584,
+            "output": 80821,
+            "reasoning": 69478,
+            "cacheRead": 1994081
+          }
+        }
+      ],
+      "expertTokens": 104347,
+      "workerTokens": 2289486,
+      "usageIncomplete": false,
+      "runId": "20261111-092106-eaae",
+      "finishedAt": "2026-11-11T04:05:30.098Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 552,
+      "deletions": 2,
+      "turns": 3,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 967858,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 39090,
+          "usage": {
+            "input": 29059,
+            "output": 1383,
+            "reasoning": 51,
+            "cacheRead": 44032,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 927834,
+          "usage": {
+            "input": 226359,
+            "output": 116551,
+            "reasoning": 105439,
+            "cacheRead": 1848425
+          }
+        }
+      ],
+      "expertTokens": 74474,
+      "workerTokens": 2191335,
+      "usageIncomplete": false,
+      "runId": "20261111-093530-fa46",
+      "finishedAt": "2026-11-11T04:21:38.239Z"
+    }
+  }
+}

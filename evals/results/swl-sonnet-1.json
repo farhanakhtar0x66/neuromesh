@@ -1,0 +1,355 @@
+{
+  "name": "swl-sonnet-1",
+  "preset": "solo-haiku",
+  "presetDetail": {
+    "name": "solo-haiku",
+    "description": "One Claude Haiku 5.5 agent at high effort through Claude Code, given the request exactly as typed. The cheap floor the benchmark compares against (docs/17-benchmark.md).",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 40,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-18T00:04:32.527Z",
+  "results": {
+    "a2aproject__a2a-python-414": {
+      "task": "a2aproject__a2a-python-414",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/server/test_integration.py::test_unknown_method\nFAIL fail-to-pass: tests/server/test_integration.py::test_validation_error\nSCORE 0/2",
+      "score": {
+        "passed": 0,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.26,
+          "seven_day": 0.75
+        },
+        "after": {
+          "five_hour": 0.27,
+          "seven_day": 0.75
+        }
+      },
+      "files": 1,
+      "insertions": 43,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 45654,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 43914,
+          "usage": {
+            "input": 20,
+            "output": 4330,
+            "reasoning": 1235,
+            "cacheRead": 167568,
+            "cacheWrite": 26476,
+            "split": {
+              "files": 0,
+              "commands": 35483,
+              "earlier": 30683,
+              "calls": 9,
+              "estimated": true,
+              "startup": 98060,
+              "prompt": 29840
+            }
+          },
+          "costUsdEquivalent": 0.1660008
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 198394,
+      "usageIncomplete": false,
+      "runId": "20261118-053436-4a23",
+      "finishedAt": "2026-11-18T00:09:39.402Z"
+    },
+    "authlib__authlib-802": {
+      "task": "authlib__authlib-802",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "PASS fail-to-pass: tests/flask/test_oauth2/test_openid_code_grant.py::OpenIDCodeTest::test_client_metadata_alg_none\nPASS fail-to-pass: tests/flask/test_oauth2/test_openid_code_grant.py::OpenIDCodeTest::test_client_metadata_custom_alg\nFAIL fail-to-pass: tests/flask/test_oauth2/test_openid_implict_grant.py::ImplicitTest::test_client_metadata_alg_none\nPASS fail-to-pass: tests/flask/test_oauth2/test_openid_implict_grant.py::ImplicitTest::test_client_metadata_custom_alg\nSCORE 3/4",
+      "score": {
+        "passed": 3,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.27,
+          "seven_day": 0.75
+        },
+        "after": {
+          "five_hour": 0.28,
+          "seven_day": 0.75
+        }
+      },
+      "files": 4,
+      "insertions": 51,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 46827,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 43102,
+          "usage": {
+            "input": 16,
+            "output": 4369,
+            "reasoning": 745,
+            "cacheRead": 142509,
+            "cacheWrite": 19554,
+            "split": {
+              "files": 0,
+              "commands": 22016,
+              "earlier": 21407,
+              "calls": 8,
+              "estimated": true,
+              "startup": 87274,
+              "prompt": 31382
+            }
+          },
+          "costUsdEquivalent": 0.1361889
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 166448,
+      "usageIncomplete": false,
+      "runId": "20261118-053939-8f96",
+      "finishedAt": "2026-11-18T00:11:06.262Z"
+    },
+    "hgrecco__pint-2194": {
+      "task": "hgrecco__pint-2194",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.28,
+          "seven_day": 0.75
+        },
+        "after": {
+          "five_hour": 0.29,
+          "seven_day": 0.75
+        }
+      },
+      "files": 3,
+      "insertions": 163,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 262698,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 255491,
+          "usage": {
+            "input": 24,
+            "output": 15631,
+            "reasoning": 6253,
+            "cacheRead": 369262,
+            "cacheWrite": 40353,
+            "split": {
+              "files": 0,
+              "commands": 84939,
+              "earlier": 149032,
+              "calls": 12,
+              "estimated": true,
+              "startup": 131742,
+              "prompt": 43926
+            }
+          },
+          "costUsdEquivalent": 0.35469619999999996
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 425270,
+      "usageIncomplete": false,
+      "runId": "20261118-054106-b458",
+      "finishedAt": "2026-11-18T00:18:39.505Z"
+    },
+    "jazzband__djangorestframework-simplejwt-928": {
+      "task": "jazzband__djangorestframework-simplejwt-928",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_it_should_raise_error_for_deleted_users\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_it_should_raise_error_for_inactive_users\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_sliding_token_should_blacklist_after_password_change\nFAIL fail-to-pass: tests/test_serializers.py::TestTokenRefreshSlidingSerializer::test_sliding_token_should_fail_after_password_change\nPASS fail-to-pass: tests/test_serializers.py::TestTokenRefreshSerializer::test_refresh_token_should_blacklist_after_password_change\nPASS fail-to-pass: tests/test_serializers.py::TestTokenRefreshSerializer::test_refresh_token_should_fail_after_password_change\nSCORE 2/6",
+      "score": {
+        "passed": 2,
+        "total": 6
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.29,
+          "seven_day": 0.75
+        },
+        "after": {
+          "five_hour": 0.29,
+          "seven_day": 0.75
+        }
+      },
+      "files": 2,
+      "insertions": 37,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 27441,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 24726,
+          "usage": {
+            "input": 14,
+            "output": 2476,
+            "reasoning": 169,
+            "cacheRead": 115849,
+            "cacheWrite": 17252,
+            "split": {
+              "files": 0,
+              "commands": 18581,
+              "earlier": 14939,
+              "calls": 7,
+              "estimated": true,
+              "startup": 76137,
+              "prompt": 23459
+            }
+          },
+          "costUsdEquivalent": 0.10538089999999999
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 135591,
+      "usageIncomplete": false,
+      "runId": "20261118-054839-1cd6",
+      "finishedAt": "2026-11-18T00:19:35.726Z"
+    },
+    "psf__black-4720": {
+      "task": "psf__black-4720",
+      "kind": "issue",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "PASS fail-to-pass: tests/test_black.py::BlackTestCase::test_infer_target_version\nFAIL fail-to-pass: tests/test_format.py::test_simple_format[remove_except_types_parens]\nSCORE 1/2",
+      "score": {
+        "passed": 1,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.29,
+          "seven_day": 0.75
+        },
+        "after": {
+          "five_hour": 0.3,
+          "seven_day": 0.75
+        }
+      },
+      "files": 8,
+      "insertions": 127,
+      "deletions": 10,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 175810,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 174443,
+          "usage": {
+            "input": 44,
+            "output": 11625,
+            "reasoning": 3221,
+            "cacheRead": 673508,
+            "cacheWrite": 38541,
+            "split": {
+              "files": 0,
+              "commands": 177154,
+              "earlier": 228721,
+              "calls": 22,
+              "estimated": true,
+              "startup": 236016,
+              "prompt": 70202
+            }
+          },
+          "costUsdEquivalent": 0.3378528
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 723718,
+      "usageIncomplete": false,
+      "runId": "20261118-054936-4b46",
+      "finishedAt": "2026-11-18T00:23:44.048Z"
+    }
+  }
+}

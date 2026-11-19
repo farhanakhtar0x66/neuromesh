@@ -1,0 +1,168 @@
+{
+  "name": "hard-opus-haiku-1",
+  "preset": "factory-opus-haiku",
+  "presetDetail": {
+    "name": "factory-opus-haiku",
+    "description": "Untested candidate (from the owner's preset research, 2026-11-11). All-Claude subscription team: Claude Opus 5.5 is lead architect; Claude Haiku 5.5 is worker and tester. Zero OpenAI dependency, fully contained within Claude Code under Claude Pro/Max.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "tier": "expert"
+        }
+      ],
+      "briefer": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "expertBudgetUsd": 0.6,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "medium",
+        "tier": "worker"
+      },
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-13T10:04:23.332Z",
+  "results": {
+    "hard-py-minidb": {
+      "task": "hard-py-minidb",
+      "kind": "build",
+      "language": "python",
+      "mode": "solo",
+      "status": "interrupted",
+      "checks": "-",
+      "hidden": "not run",
+      "quota": {
+        "before": {
+          "five_hour": 0.33,
+          "seven_day": 0.83
+        },
+        "after": {
+          "five_hour": 0.57,
+          "seven_day": 0.86
+        }
+      },
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 4,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 1373672,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 2,
+          "durationMs": 1102902,
+          "usage": {
+            "input": 58,
+            "output": 154238,
+            "reasoning": 1280,
+            "cacheRead": 3437327,
+            "cacheWrite": 237816
+          },
+          "costUsdEquivalent": 0.005642390000000001
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "briefer",
+            "orchestrator"
+          ],
+          "turns": 2,
+          "durationMs": 270361,
+          "usage": {
+            "input": 6,
+            "output": 27001,
+            "reasoning": 11115,
+            "cacheRead": 12841,
+            "cacheWrite": 27345
+          },
+          "costUsdEquivalent": 0.48366020000000004
+        }
+      ],
+      "expertTokens": 67193,
+      "workerTokens": 3829439,
+      "usageIncomplete": false,
+      "reason": "stopped by the user",
+      "runId": "20261113-153429-5ad9",
+      "finishedAt": "2026-11-13T10:27:27.236Z"
+    }
+  }
+}

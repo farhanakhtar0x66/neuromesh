@@ -1,0 +1,194 @@
+{
+  "name": "swl-lead-probe",
+  "preset": "lead-claude",
+  "presetDetail": {
+    "name": "lead-claude",
+    "description": "Experimental (2026-11-18, F120 to F123; docs/24-lead.md): Claude Opus 5.5 medium leads, and works only where it decides. A trivial or small self-contained request goes to Claude Haiku 5.5 alone (no Opus turn). Otherwise, on a big repository Haiku first writes a report for the request; Opus plans from it (under about 700 words): the acceptance cases, the implied ones too, and per task a developer: grunt (Haiku low), worker (Haiku high), senior (Claude Sonnet 5.5 high) or itself. After the build, Haiku probes every case and Neuromesh re-runs each probe: all hold and the checks pass, accepted with no Opus turn; otherwise Opus reviews read-only from the evidence and adds follow-ups for whom it chooses, at most twice. No separate tester.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 3,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "seniorLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "gruntLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "low",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 2
+    }
+  },
+  "startedAt": "2026-11-18T06:36:53.765Z",
+  "results": {
+    "hgrecco__pint-2194": {
+      "task": "hgrecco__pint-2194",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: pint/testsuite/test_log_units.py::test_db_db_addition\nPASS fail-to-pass: pint/testsuite/test_log_units.py::test_dbm_db_addition\nSCORE 1/2",
+      "score": {
+        "passed": 1,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.29,
+          "seven_day": 0.79
+        },
+        "after": {
+          "five_hour": 0.32,
+          "seven_day": 0.8
+        }
+      },
+      "files": 4,
+      "insertions": 216,
+      "deletions": 2,
+      "turns": 4,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 745168,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 2,
+          "durationMs": 243205,
+          "usage": {
+            "input": 54,
+            "output": 50134,
+            "reasoning": 31130,
+            "cacheRead": 942407,
+            "cacheWrite": 115834,
+            "split": {
+              "files": 292591,
+              "commands": 42346,
+              "earlier": 476827,
+              "calls": 27,
+              "estimated": true,
+              "startup": 216788,
+              "prompt": 29744
+            }
+          },
+          "costUsdEquivalent": 0.05766327
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 39537,
+          "usage": {
+            "input": 4,
+            "output": 4200,
+            "reasoning": 1581,
+            "cacheRead": 14073,
+            "cacheWrite": 23131,
+            "split": {
+              "files": 5386,
+              "commands": 0,
+              "earlier": 3672,
+              "calls": 2,
+              "estimated": true,
+              "startup": 18026,
+              "prompt": 10124
+            }
+          },
+          "costUsdEquivalent": 0.27187859999999997
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 442597,
+          "usage": {
+            "input": 48,
+            "output": 20008,
+            "reasoning": 6627,
+            "cacheRead": 1034054,
+            "cacheWrite": 60133,
+            "split": {
+              "files": 118098,
+              "commands": 178203,
+              "earlier": 441019,
+              "calls": 25,
+              "estimated": true,
+              "startup": 295100,
+              "prompt": 124000
+            }
+          },
+          "costUsdEquivalent": 0.5441134000000001
+        }
+      ],
+      "expertTokens": 41408,
+      "workerTokens": 2222672,
+      "usageIncomplete": false,
+      "runId": "20261118-120658-d3f7",
+      "finishedAt": "2026-11-18T06:52:33.577Z"
+    }
+  }
+}

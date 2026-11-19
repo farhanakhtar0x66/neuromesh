@@ -1,0 +1,24 @@
+Eval swl-k6-openai: 1 task(s) on preset dossier-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-k6-openai
+
+[1/1] openai__openai-agents-python-1633 (issue, python)
+    Run 20261119-031732-20f3 · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 53s · input 36, cache read 601,307, cache write 48,973, output 23,665 · ≈$0.028
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 9m 14s · input 24, cache read 294,989, cache write 27,794, output 9,287 · ≈$0.47
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-k6-openai · preset dossier-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+openai__openai-agents-python-1633 issue       team  applied     passed  pass    2      13m 16s  332k / 674k
+
+Passed 1/1 · engine failures 0 · time 13m 16s · tokens 1.01M · expert share 33% · API-equivalent ≈ $0.49 (estimate, not spent)

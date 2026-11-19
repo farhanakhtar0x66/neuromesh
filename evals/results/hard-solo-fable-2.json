@@ -1,0 +1,89 @@
+{
+  "name": "hard-solo-fable-2",
+  "preset": "solo-fable",
+  "presetDetail": {
+    "name": "solo-fable",
+    "description": "One Claude Fable 5.2 agent at high effort through Claude Code, given the request exactly as typed. The strongest single agent; the bar for the hard task (docs/18-hard-task.md). Uses the scarce Claude subscription heavily.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-fable-5-2",
+          "effort": "high",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 90,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-13T14:42:01.126Z",
+  "results": {
+    "hard-py-minidb": {
+      "task": "hard-py-minidb",
+      "kind": "build",
+      "language": "python",
+      "mode": "solo",
+      "status": "paused",
+      "checks": "-",
+      "hidden": "not run",
+      "quota": {
+        "before": {
+          "five_hour": 0,
+          "seven_day": 0.92
+        },
+        "after": {
+          "five_hour": 0.6,
+          "seven_day": 1
+        }
+      },
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 1977572,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-fable-5-2",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 1976954,
+          "usage": {
+            "input": 42,
+            "output": 189634,
+            "reasoning": 164157,
+            "cacheRead": 3452542,
+            "cacheWrite": 247988,
+            "long": {
+              "input": 38,
+              "output": 163775,
+              "cacheRead": 3439641,
+              "cacheWrite": 234581
+            }
+          },
+          "costUsdEquivalent": 12.244012399999997
+        }
+      ],
+      "expertTokens": 3890206,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "reason": "subscription limits reached for every worker model: success You've hit your weekly limit · resets Nov 18 at 2:30pm (Asia/Calcutta) 429 (see \"neuromesh cooldowns\" for when they reset)",
+      "runId": "20261113-201206-be73",
+      "finishedAt": "2026-11-13T15:15:06.222Z"
+    }
+  }
+}

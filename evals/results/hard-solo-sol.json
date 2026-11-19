@@ -1,0 +1,188 @@
+{
+  "name": "hard-solo-sol",
+  "preset": "solo-sol",
+  "presetDetail": {
+    "name": "solo-sol",
+    "description": "One GPT-6.1 Sol (medium) agent through Codex: the expert alone. The baseline for what the factory must match. Uses ChatGPT quota.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": false,
+    "routing": "rules"
+  },
+  "startedAt": "2026-11-11T03:51:06.331Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 199,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 77793,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 77026,
+          "usage": {
+            "input": 35743,
+            "output": 2867,
+            "reasoning": 110,
+            "cacheRead": 145792,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 184402,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-092106-7dcf",
+      "finishedAt": "2026-11-11T03:52:24.384Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 168,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 99571,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 99184,
+          "usage": {
+            "input": 18945,
+            "output": 3284,
+            "reasoning": 305,
+            "cacheRead": 96896,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 119125,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-092224-57d4",
+      "finishedAt": "2026-11-11T03:54:04.088Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 260,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 125233,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 123312,
+          "usage": {
+            "input": 36721,
+            "output": 4438,
+            "reasoning": 871,
+            "cacheRead": 81664,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 122823,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-092404-627b",
+      "finishedAt": "2026-11-11T03:56:10.893Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 180,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 98838,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 97630,
+          "usage": {
+            "input": 21249,
+            "output": 2992,
+            "reasoning": 122,
+            "cacheRead": 155008,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 179249,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-092610-df82",
+      "finishedAt": "2026-11-11T03:57:50.039Z"
+    }
+  }
+}

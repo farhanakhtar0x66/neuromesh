@@ -1,0 +1,121 @@
+{
+  "name": "large-factory-wf-split",
+  "preset": "factory-wf",
+  "presetDetail": {
+    "name": "factory-wf",
+    "description": "The factory floor taken literally: a Gemini 3.8 Flash worker starts on every request and the expert (GPT-6.1 Sol through Codex) steps in only when the worker gets stuck, or plans clearly large requests. Claude Opus 5.5 medium is the last fallback.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000
+  },
+  "startedAt": "2026-11-11T04:13:52.047Z",
+  "results": {
+    "large-js-shop": {
+      "task": "large-js-shop",
+      "kind": "large",
+      "language": "javascript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 10,
+      "insertions": 1519,
+      "deletions": 0,
+      "turns": 9,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 1771937,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 52076,
+          "usage": {
+            "input": 29449,
+            "output": 2115,
+            "reasoning": 147,
+            "cacheRead": 45056,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 8,
+          "durationMs": 2111707,
+          "usage": {
+            "input": 741810,
+            "output": 188137,
+            "reasoning": 153746,
+            "cacheRead": 6934072
+          }
+        }
+      ],
+      "expertTokens": 76620,
+      "workerTokens": 7864019,
+      "usageIncomplete": false,
+      "runId": "20261111-094352-cd48",
+      "finishedAt": "2026-11-11T04:43:24.717Z"
+    }
+  }
+}

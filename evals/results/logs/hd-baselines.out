@@ -1,0 +1,375 @@
+2026-11-17 10:39:42 UTC  baselines: 12 tasks in evals/hard-tasks; runs: haiku, cascade1, opus; Opus allowed
+2026-11-17 10:39:47 UTC  hd-haiku-1  --wait-reset: five-hour window at 4%, already fresh; starting
+2026-11-17 10:39:47 UTC  hd-haiku-1  started: try 1 of 12, preset solo-haiku, 0 of 12 tasks already final
+Eval hd-haiku-1: 12 task(s) on preset solo-haiku. Results: /Users/farhanakhtar/.neuromesh/evals/hd-haiku-1
+
+[1/12] hd-js-cache-stampede (bug, javascript)
+    Run 20261117-160951-22d5 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1258 characters (about 315 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 18s · input 18, cache read 218,670, cache write 39,506, output 18,094 · ≈$0.019
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/12] hd-js-sheet-engine (program, javascript)
+    Run 20261117-161115-8fa0 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 973 characters (about 243 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 15m 09s · input 52, cache read 3,586,796, cache write 180,401, output 157,116 · ≈$0.70
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[3/12] hd-py-ledger-cents (bug, python)
+    Run 20261117-162630-da0c · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 3360 characters (about 840 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 16s · input 22, cache read 281,148, cache write 36,064, output 15,786 · ≈$0.018
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[4/12] hd-py-migration-graph (feature, python)
+    Run 20261117-162753-c76a · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 2381 characters (about 595 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 4m 43s · input 58, cache read 1,804,468, cache write 88,159, output 68,143 · ≈$0.070
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[5/12] hd-py-streaming-stats (refactor, python)
+    Run 20261117-163245-dda8 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1333 characters (about 333 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 5m 18s · input 36, cache read 964,604, cache write 67,272, output 52,399 · ≈$0.049
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[6/12] hd-rust-free-slots (bug, rust)
+    Run 20261117-163915-5c81 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 3387 characters (about 847 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 19s · input 26, cache read 401,688, cache write 39,148, output 16,772 · ≈$0.020
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[7/12] hd-rust-merge3 (feature, rust)
+    Run 20261117-164043-53b9 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 2134 characters (about 534 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 18s · input 24, cache read 431,578, cache write 48,898, output 31,130 · ≈$0.030
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[8/12] hd-rust-regex-linear (program, rust)
+    Run 20261117-164312-3071 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1705 characters (about 426 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 5m 27s · input 28, cache read 977,658, cache write 94,064, output 76,714 · ≈$0.067
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[9/12] hd-ts-chunked-csv (bug, typescript)
+    Run 20261117-164847-4144 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1678 characters (about 420 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 42s · input 38, cache read 781,533, cache write 54,197, output 32,940 · ≈$0.035
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/12] hd-ts-event-store (refactor, typescript)
+    Run 20261117-165137-976a · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1726 characters (about 432 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 48s · input 26, cache read 639,298, cache write 64,229, output 41,164 · ≈$0.040
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[11/12] hd-ts-query-language (feature, typescript)
+    Run 20261117-165430-e8d2 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 1412 characters (about 353 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 5m 25s · input 32, cache read 1,136,282, cache write 96,141, output 78,700 · ≈$0.086
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[12/12] hd-ts-recurrence-dst (bug, typescript)
+    Run 20261117-170000-6e22 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 2394 characters (about 599 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 50s · input 24, cache read 383,417, cache write 45,252, output 25,039 · ≈$0.025
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval hd-haiku-1 · preset solo-haiku
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+hd-js-cache-stampede  bug         solo  applied     passed  pass    1      1m 19s   0k / 276k
+hd-js-sheet-engine    program     solo  applied     passed  pass    1      15m 10s  0k / 3.92M
+hd-py-ledger-cents    bug         solo  applied     passed  pass    1      1m 18s   0k / 333k
+hd-py-migration-graph feature     solo  applied     passed  pass    1      4m 45s   0k / 1.96M
+hd-py-streaming-stats refactor    solo  applied     passed  fail    1      5m 23s   0k / 1.08M
+hd-rust-free-slots    bug         solo  applied     passed  pass    1      1m 22s   0k / 458k
+hd-rust-merge3        feature     solo  applied     passed  pass    1      2m 22s   0k / 512k
+hd-rust-regex-linear  program     solo  applied     passed  fail    1      5m 30s   0k / 1.15M
+hd-ts-chunked-csv     bug         solo  applied     passed  fail    1      2m 44s   0k / 869k
+hd-ts-event-store     refactor    solo  applied     passed  pass    1      2m 48s   0k / 745k
+hd-ts-query-language  feature     solo  applied     passed  pass    1      5m 26s   0k / 1.31M
+hd-ts-recurrence-dst  bug         solo  applied     passed  pass    1      1m 51s   0k / 454k
+
+Passed 9/12 · engine failures 0 · time 49m 58s · tokens 13.07M · expert share 0% · API-equivalent ≈ $1.16 (estimate, not spent)
+2026-11-17 11:31:57 UTC  hd-haiku-1  finished: 12 tasks, try 1
+2026-11-17 11:32:01 UTC  hd-cascade-1  --wait-reset: five-hour window at 8%, already fresh; starting
+2026-11-17 11:32:01 UTC  hd-cascade-1  started: try 1 of 12, preset cascade-claude, 0 of 12 tasks already final
+Eval hd-cascade-1: 12 task(s) on preset cascade-claude. Results: /Users/farhanakhtar/.neuromesh/evals/hd-cascade-1
+
+[1/12] hd-js-cache-stampede (bug, javascript)
+    Run 20261117-170206-d156 · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: other · 3 working standards added · attached docs/CACHE_RULES.md
+   Staffing: a 875-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (a large request (875 words, 2 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 1258 characters (about 315 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 24s · input 4, cache read 9,164, cache write 14,876, output 2,522 · ≈$0.17
+    Plan: I've planned this as one senior task, because every bug is in src/cache.js: it rewrites MemoCache's internals so the ca…
+   t1: Make MemoCache follow docs/CACHE_RULES.md
+    Task t1: Make MemoCache follow docs/CACHE_RULES.md
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 2m 49s · input 16, cache read 151,333, cache write 29,126, output 7,223 · ≈$0.20
+    Checks [t1]: tests passed
+    Merged task t1
+  -> hidden tests pass · applied
+
+[2/12] hd-js-sheet-engine (program, javascript)
+    Run 20261117-170525-ec5a · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: feature, library · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (most like grunt work (100% of the match), but it builds something: worker)
+    Checks before any change: tests passed
+    Context packet: 973 characters (about 243 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 17s · input 4, cache read 16,957, cache write 16,373, output 2,469 · ≈$0.005
+    ! Task main: the worker asks the lead engineer to split it (My first-message judgment said scope false. That was made before I had read the README. Reading it, the work is larger than one sitting. The parts I would divide it into:
+1. Formula lexer and parser i).
+    Expert (plan) [main] split turn · claude claude-opus-5-5
+    Expert (plan) [main] done in 1m 49s · input 8, cache read 40,810, cache write 19,934, output 10,872 · ≈$0.39
+    Task main.a: Formula lexer/parser and reference extraction (src/formula.js)
+    Worker [main.a] initial turn · claude claude-haiku-5-5
+    Worker [main.a] done in 2m 12s · input 28, cache read 524,205, cache write 43,101, output 24,907 · ≈$0.026
+    Checks [main.a]: tests passed
+    Merged task main.a
+    Task main.b: Value conversions, comparison, and built-in functions (src/values.js additions, src/functions.js)
+    Worker [main.b] initial turn · claude claude-haiku-5-5
+    Worker [main.b] done in 3m 11s · input 24, cache read 567,108, cache write 69,146, output 47,038 · ≈$0.043
+    Checks [main.b]: tests passed
+    Merged task main.b
+    Task main.c: Evaluator: operators, propagation, call dispatch (src/evaluate.js)
+    Worker [main.c] initial turn · claude claude-haiku-5-5
+    Worker [main.c] done in 1m 23s · input 20, cache read 362,720, cache write 44,351, output 19,214 · ≈$0.022
+    Checks [main.c]: tests passed
+    Merged task main.c
+    Task main.d: Incremental recalculation in Sheet (src/sheet.js)
+    Worker [main.d] initial turn · claude claude-haiku-5-5
+    Worker [main.d] done in 2m 35s · input 20, cache read 417,989, cache write 60,860, output 36,531 · ≈$0.035
+    Checks [main.d]: tests passed
+    Merged task main.d
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[3/12] hd-py-ledger-cents (bug, python)
+    Run 20261117-171700-6600 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 3360 characters (about 840 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 03s · input 28, cache read 350,019, cache write 30,285, output 12,210 · ≈$0.016
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[4/12] hd-py-migration-graph (feature, python)
+    Run 20261117-171810-17fc · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: feature, cli · 3 working standards added · attached docs/MIGRATIONS.md
+   Staffing: a 1534-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (a large request (1534 words, 1 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 2381 characters (about 595 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 43s · input 4, cache read 14,389, cache write 11,526, output 4,697 · ≈$0.19
+    Plan: Add a dependency graph (DEPENDS_ON, deterministic topological order, heads), then on top of it migrate --to, rollback, …
+   t1: Loader DEPENDS_ON + dependency graph
+   t2: Runner: migrate --to, rollback, plan, lock, transactions after t1
+   t3: CLI: --to, rollback, plan, --lock-max-age after t2
+    Task t1: Loader DEPENDS_ON + dependency graph
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 39s · input 12, cache read 107,811, cache write 18,044, output 5,740 · ≈$0.14
+    Checks [t1]: tests passed
+    Merged task t1
+    Task t2: Runner: migrate --to, rollback, plan, lock, transactions
+    Worker [t2] initial turn · claude claude-sonnet-5-5
+    Worker [t2] done in 1m 26s · input 22, cache read 278,264, cache write 27,354, output 13,202 · ≈$0.27
+    Checks [t2]: tests passed
+    Merged task t2
+    Task t3: CLI: --to, rollback, plan, --lock-max-age
+    Worker [t3] initial turn · claude claude-haiku-5-5
+    Worker [t3] done in 57s · input 28, cache read 352,795, cache write 32,017, output 11,675 · ≈$0.016
+    Checks [t3]: tests passed
+    Merged task t3
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[5/12] hd-py-streaming-stats (refactor, python)
+    Run 20261117-172205-e93e · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: other · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: senior (ambiguous (60% senior); past runs give senior a 81% chance)
+    Checks before any change: tests passed
+    Context packet: 1333 characters (about 333 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 8m 42s · input 8, cache read 60,701, cache write 2,843, output 971 · ≈$0.027
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[6/12] hd-rust-free-slots (bug, rust)
+    Run 20261117-173206-3f49 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 3387 characters (about 847 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 22s · input 18, cache read 277,985, cache write 39,038, output 18,192 · ≈$0.020
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[7/12] hd-rust-merge3 (feature, rust)
+    Run 20261117-173336-11b2 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: refactor, cli · 2 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: grunt (scored the instruction only (517 characters of pasted material left out); most like grunt work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 2134 characters (about 534 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 52s · input 14, cache read 137,709, cache write 24,110, output 11,593 · ≈$0.012
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[8/12] hd-rust-regex-linear (program, rust)
+    Run 20261117-173438-93d4 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: feature, library · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (most like grunt work (100% of the match), but it builds something: worker)
+    Checks before any change: tests passed
+    Context packet: 1705 characters (about 426 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 4m 52s · input 22, cache read 741,962, cache write 89,810, output 69,015 · ≈$0.060
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[9/12] hd-ts-chunked-csv (bug, typescript)
+    Run 20261117-173940-ea23 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: senior (scored the instruction only (47 characters of pasted material left out); ambiguous (60% senior); past runs give senior a 84% chance)
+    Checks before any change: tests passed
+    Context packet: 1678 characters (about 420 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 1m 02s · input 20, cache read 160,748, cache write 18,243, output 7,271 · ≈$0.16
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[10/12] hd-ts-event-store (refactor, typescript)
+    Run 20261117-174052-6659 · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: feature, library · 3 working standards added · attached docs/EVENTS.md
+   Staffing: a 870-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (scored the instruction only (52 characters of pasted material left out); a large request (870 words, 2 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 1726 characters (about 432 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 44s · input 6, cache read 28,880, cache write 14,233, output 4,260 · ≈$0.20
+    Plan: The senior rewrites Inventory so its state comes from an append-only event log and adds events/replay/snapshot/restore/…
+   t1: Event-sourced Inventory core
+   t2: Tests for the event log after t1
+    Task t1: Event-sourced Inventory core
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 3m 55s · input 20, cache read 268,426, cache write 36,612, output 19,158 · ≈$0.36
+    ! Task t1 changed files outside what it owns: test/event-log.test.ts
+    Checks [t1]: tests passed
+    Merged task t1
+    Task t2: Tests for the event log
+    Worker [t2] initial turn · claude claude-haiku-5-5
+    Worker [t2] done in 1m 52s · input 10, cache read 126,386, cache write 50,996, output 28,949 · ≈$0.026
+    Checks [t2]: tests passed
+    Merged task t2
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[11/12] hd-ts-query-language (feature, typescript)
+    Run 20261117-174732-6301 · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added · attached docs/QUERY.md
+   Staffing: a 1772-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (a large request (1772 words, 2 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 1412 characters (about 353 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 48s · input 4, cache read 14,001, cache write 12,390, output 4,660 · ≈$0.20
+    Plan: A senior builds a streaming lexer, parser and evaluator for the docs/QUERY.md language in src/query/ and wires it into …
+   t1: Query language: lexer, parser, evaluator, Store.search
+   t2: CLI: report QueryError with caret, exit 2 after t1
+    Task t1: Query language: lexer, parser, evaluator, Store.search
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] auth in 1m 45s · input 4, cache read 20,868, cache write 14,111, output 13,186 · ≈$0.19 — success Failed to authenticate: OAuth token revoked. Please log in again or contact your administrator. 401
+  -> hidden tests not run · paused · the worker's tool is no longer signed in (Failed to authenticate: OAuth token revoked. Please log in again or contact your administrator. 401). Sign in again (/
+
+Eval hd-cascade-1 · preset cascade-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+hd-js-cache-stampede  bug         team  applied     passed  pass    2      3m 14s   27k / 188k
+hd-js-sheet-engine    program     team  applied     passed  pass    6      11m 30s  72k / 2.25M
+hd-py-ledger-cents    bug         solo  applied     passed  fail    1      1m 05s   0k / 393k
+hd-py-migration-graph feature     team  applied     passed  pass    4      3m 48s   31k / 847k
+hd-py-streaming-stats refactor    solo  applied     passed  pass    1      8m 47s   0k / 65k
+hd-rust-free-slots    bug         solo  applied     passed  pass    1      1m 24s   0k / 335k
+hd-rust-merge3        feature     solo  applied     passed  pass    1      56s      0k / 173k
+hd-rust-regex-linear  program     solo  applied     passed  pass    1      4m 55s   0k / 901k
+hd-ts-chunked-csv     bug         solo  applied     passed  pass    1      1m 03s   0k / 186k
+hd-ts-event-store     refactor    team  applied     passed  pass    3      6m 33s   47k / 531k
+hd-ts-query-language  feature     team  paused      -       —       2      2m 33s   31k / 48k
+
+Passed 9/11 · engine failures 0 · 1 paused (quota) · time 45m 50s · tokens 6.13M · expert share 3% · API-equivalent ≈ $2.78 (estimate, not spent)

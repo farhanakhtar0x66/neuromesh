@@ -1,0 +1,463 @@
+2026-11-17 20:34:49 UTC  baselines: 21 tasks in /Users/farhanakhtar/.neuromesh/swe-live/subsets/cascade; runs: cascade1
+2026-11-17 20:34:54 UTC  swl-cascade-1  --wait-reset: five-hour window at 23%, already fresh; starting
+2026-11-17 20:34:54 UTC  swl-cascade-1  started: try 1 of 12, preset cascade-claude, 0 of 21 tasks already final
+Eval swl-cascade-1: 21 task(s) on preset cascade-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-cascade-1
+
+[1/21] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261118-020458-167a · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (249 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 19s · input 32, cache read 514,394, cache write 38,512, output 11,753 · ≈$0.019
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 17s · input 10, cache read 51,304, cache write 14,394, output 1,279 · ≈$0.076
+    Tester [main]: pass · The change removes the `.replace("media/", "")` call, so paths containing "media" are restored unchanged. mediabackup w…
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/21] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261118-020713-f421 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: grunt (scored the instruction only (196 characters of pasted material left out); most like grunt work (67% of the match))
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 40s · input 16, cache read 161,213, cache write 22,421, output 6,850 · ≈$0.010
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 25s · input 10, cache read 61,854, cache write 10,984, output 3,212 · ≈$0.082
+    Tester [main]: fail · The change rewrites statement-splitting in restore_dump but doesn't fix the cause of "no such table: main.<table>": _wr…
+   - Root cause not fixed. In _write_dump, the DUMP_ETC query (indexes/triggers/views) runs inside the `for table_name ...` loop. Tables are ord…
+    Climbed [main] claude/claude-haiku-5-5 → claude/claude-haiku-5-5: the reviewer rejected the grunt's work
+    Worker [main] climb turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 17s · input 26, cache read 352,725, cache write 29,230, output 13,597 · ≈$0.016
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 13s · input 8, cache read 51,187, cache write 9,215, output 1,338 · ≈$0.055
+    Tester [main]: pass · The root cause is fixed. Indexes, triggers and views are now written once after all tables and rows, so a restore into …
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/21] PyPSA__PyPSA-1310 (issue, python)
+    Run 20261118-021022-45a3 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (168 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8014 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 04s · input 22, cache read 283,848, cache write 31,073, output 10,053 · ≈$0.014
+    ! Task main: the worker asks the lead engineer to split it (Why it is big: inactive components are currently excluded only by masking. Each variable is built on the full component index (`pypsa/optimization/variables.py`: `define_operational_variables`, `defin).
+    Expert (plan) [main] split turn · claude claude-opus-5-5
+    Expert (plan) [main] done in 1m 10s · input 14, cache read 108,291, cache write 26,661, output 5,968 · ≈$0.35
+    Task main.a: Core API: active_assets, filtered index properties, variables and solution assignment
+    Worker [main.a] initial turn · claude claude-haiku-5-5
+    Worker [main.a] done in 4m 28s · input 68, cache read 2,294,348, cache write 95,044, output 49,928 · ≈$0.084
+    Checks [main.a]: tests failed
+    Worker [main.a] repair turn · claude claude-haiku-5-5
+    Worker [main.a] done in 9m 44s · input 62, cache read 1,402,666, cache write 58,692, output 26,456 · ≈$0.039
+    ! Task main.a changed files outside what it owns: pypsa/optimization/constraints.py
+    Checks [main.a]: tests passed
+    Merged task main.a
+    Task main.b: constraints.py: select only active names everywhere
+    Worker [main.b] initial turn · claude claude-haiku-5-5
+    Worker [main.b] done in 7m 47s · input 90, cache read 3,305,532, cache write 108,505, output 45,343 · ≈$0.17
+    ! Task main.b changed files outside what it owns: pypsa/network/power_flow.py, pypsa/networks.py
+    Checks [main.b]: tests passed
+    Merged task main.b
+    Task main.c: Global constraints, abstract optimisation, statistics and end-to-end tests
+    Worker [main.c] initial turn · claude claude-haiku-5-5
+    Worker [main.c] done in 11m 15s · input 76, cache read 2,601,902, cache write 95,698, output 43,060 · ≈$0.097
+    Checks [main.c]: tests passed
+    Tester [main.c] test turn · claude claude-sonnet-5-5
+    Tester [main.c] done in 5m 58s · input 38, cache read 638,783, cache write 38,074, output 7,231 · ≈$0.29
+    Tester [main.c]: pass · Inactive components no longer get variables or constraints. A probe network with inactive generators, links, loads, sto…
+    Merged task main.c
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[4/21] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261118-025710-2145 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (188 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 01s · input 24, cache read 297,727, cache write 26,877, output 9,331 · ≈$0.013
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 19s · input 8, cache read 52,323, cache write 11,199, output 818 · ≈$0.058
+    Tester [main]: pass · `timeit` now has `verbose` (default True) and `results` (default False); the report is built as one string and printed …
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/21] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261118-030115-3f3e · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (348 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 33s · input 38, cache read 628,427, cache write 49,254, output 15,161 · ≈$0.024
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 28s · input 14, cache read 88,466, cache write 12,288, output 1,822 · ≈$0.076
+    Tester [main]: pass · Overpaying a bill now clamps it to 0 instead of deleting it, so the later add_bill on defeat no longer raises "No such …
+    Merged task main
+  -> hidden tests fail · applied
+
+[6/21] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-030401-d812 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (856 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 25s · input 28, cache read 507,812, cache write 47,472, output 15,690 · ≈$0.022
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 38s · input 16, cache read 117,295, cache write 14,014, output 4,597 · ≈$0.11
+    Tester [main]: fail · The missing-jsonrpc, object-id and non-object-params cases are fixed, but a boolean id (also an invalid id type) is sti…
+   - An invalid id type is still accepted when the id is a boolean. `_to_jsonrpc_id` treats bool as invalid, but only uses that to pick the id f…
+    Repair [main] round 1 (review-fix)
+    Worker [main] review-fix turn · claude claude-haiku-5-5 (same session)
+    Worker [main] done in 49s · input 20, cache read 586,769, cache write 11,134, output 7,922 · ≈$0.012
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 14s · input 6, cache read 34,016, cache write 18,518, output 1,700 · ≈$0.094
+    Tester [main]: pass · The boolean-id finding is fixed, and the three cases in the request now return the expected codes (-32600, -32600 inste…
+   - A request with an explicit `id: null` and a valid method still returns -32600 because the request models reject a null id. The request does…
+    Merged task main
+  -> hidden tests fail · applied
+
+[7/21] a2aproject__a2a-python-443 (issue, python)
+    Run 20261118-031120-2f4d · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (254 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 09s · input 48, cache read 1,190,457, cache write 69,858, output 20,400 · ≈$0.036
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 29s · input 16, cache read 178,128, cache write 23,004, output 2,236 · ≈$0.13
+    Tester [main]: pass · The change adds an optional ServerCallContext to TaskStore.get/save/delete and to both built-in stores. It forwards the…
+    Merged task main
+  -> hidden tests pass · applied
+
+[8/21] ansible__molecule-4534 (issue, python)
+    Run 20261118-031436-1bae · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (4521 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 36s · input 46, cache read 655,223, cache write 38,479, output 15,973 · ≈$0.022
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 26s · input 14, cache read 107,786, cache write 16,533, output 2,134 · ≈$0.098
+    Tester [main]: pass · `molecule login` with a bad or ambiguous host now logs the error once and exits with code 1, with no traceback. The new…
+   - `login()` catches every MoleculeError and exits with only the code. `--debug` therefore no longer shows a traceback for login failures. The…
+    Merged task main
+  -> hidden tests fail · applied
+
+[9/21] astronomer__dag-factory-519 (issue, python)
+    Run 20261118-032204-7798 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (782 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 59s · input 36, cache read 728,683, cache write 51,144, output 21,637 · ≈$0.028
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 38s · input 16, cache read 132,653, cache write 17,712, output 4,257 · ≈$0.13
+    Tester [main]: fail · The narrowing mostly works and the new tests cover it, but the `get_datetime` handler now lets a `ValueError` through f…
+   - `get_datetime` now catches only `(InvalidTimezone, AttributeError)`. For an invalid timezone like the empty string, `pendulum.timezone('')`…
+   - `_load_dag_config` now catches only `(OSError, YAMLError, ValueError, TypeError, ImportError)`, but `cast_with_type` calls arbitrary user-s…
+    Repair [main] round 1 (review-fix)
+    Worker [main] review-fix turn · claude claude-haiku-5-5 (same session)
+    Worker [main] done in 56s · input 22, cache read 700,417, cache write 13,468, output 9,506 · ≈$0.014
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 18s · input 6, cache read 38,270, cache write 11,154, output 1,669 · ≈$0.065
+    Tester [main]: pass · The earlier finding is fixed. `get_datetime` now catches `(ValueError, AttributeError)`, and `''`, `None`, `'Bad/Zone'`…
+   - Two tests fail in the three suites I ran: `test_open_and_filter_yaml_config_datasets` fails with a missing `dev/dags/datasets/example_confi…
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/21] authlib__authlib-802 (issue, python)
+    Run 20261118-032642-152d · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (466 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 25s · input 34, cache read 535,470, cache write 40,742, output 13,331 · ≈$0.020
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 33s · input 14, cache read 100,209, cache write 14,415, output 3,540 · ≈$0.10
+    Tester [main]: pass · The client's id_token_signed_response_alg is now used to sign the id_token in the code and implicit/hybrid grants, fall…
+    Merged task main
+  -> hidden tests fail · applied
+
+[11/21] awslabs__mcp-1154 (issue, python)
+    Run 20261118-032933-6158 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (393 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 5m 34s · input 76, cache read 1,532,719, cache write 64,337, output 32,312 · ≈$0.044
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 59s · input 16, cache read 130,731, cache write 15,681, output 2,494 · ≈$0.10
+    Tester [main]: pass · The change removes the parser block, carries `outfile` on the command, streams the body to an absolute path, and raises…
+    Merged task main
+  -> hidden tests fail · applied
+
+[12/21] certtools__intelmq-2632 (issue, python)
+    Run 20261118-033708-4b14 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added · attached intelmq/bots/collectors/blueliv/REQUIREMENTS.txt
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (2665 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 52s · input 40, cache read 673,558, cache write 37,980, output 13,791 · ≈$0.021
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 31s · input 12, cache read 87,645, cache write 15,076, output 2,874 · ≈$0.098
+    Tester [main]: fail · The change deletes only REQUIREMENTS.txt and adds a warning-only upgrade function, but the request says to remove Bluel…
+   - The request says the unmaintained Blueliv SDK means "we probably have to remove it from IntelMQ", and the required upgrade function is name…
+   - `v341_blueliv_removal` only flags the collector module. A configuration with the Blueliv parser (`intelmq.bots.parsers.blueliv.parser_crime…
+    Repair [main] round 1 (review-fix)
+    Worker [main] review-fix turn · claude claude-haiku-5-5 (same session)
+    Worker [main] done in 2m 36s · input 40, cache read 1,186,201, cache write 28,211, output 15,956 · ≈$0.025
+    Checks [main]: tests failed
+    Repair [main] round 2 (repair)
+    Worker [main] repair turn · claude claude-haiku-5-5 (same session)
+    Worker [main] done in 1m 05s · input 20, cache read 778,747, cache write 12,190, output 9,432 · ≈$0.015
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 12s · input 6, cache read 37,373, cache write 9,189, output 1,126 · ≈$0.052
+    Tester [main]: fail · The change deletes only REQUIREMENTS.txt and adds the upgrade function, docs and CHANGELOG entry. The Blueliv collector…
+   - The request says the unmaintained Blueliv SDK means the bot should be removed from IntelMQ, and the upgrade function `v341_blueliv_removal`…
+    Climbed [main] claude/claude-haiku-5-5 → claude/claude-sonnet-5-5: the reviewer still found problems after the repair rounds
+    Worker [main] climb turn · claude claude-sonnet-5-5
+    Worker [main] done in 34s · input 16, cache read 156,772, cache write 26,568, output 2,892 · ≈$0.15
+    Checks [main]: tests failed
+    Repair [main] round 1 (repair)
+    Worker [main] repair turn · claude claude-sonnet-5-5 (same session)
+    Worker [main] done in 31s · input 10, cache read 113,428, cache write 4,419, output 3,084 · ≈$0.060
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 13s · input 6, cache read 50,454, cache write 15,168, output 745 · ≈$0.073
+    Tester [main]: pass · The Blueliv collector and parser, their requirements file, the feeds.yaml entry and the docs are all removed. `v341_blu…
+    Merged task main
+  -> hidden tests fail · applied
+
+[13/21] django-guardian__django-guardian-896 (issue, python)
+    Run 20261118-034640-2518 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: grunt (scored the instruction only (1388 characters of pasted material left out); most like grunt work (67% of the match))
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 00s · input 28, cache read 343,061, cache write 28,683, output 10,658 · ≈$0.014
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 54s · input 14, cache read 103,059, cache write 13,339, output 2,462 · ≈$0.088
+    Tester [main]: pass · All three warnings are addressed: the TestView rename removes the collection warning, `timezone.now` plus a migration r…
+    Merged task main
+  -> hidden tests fail · applied
+
+[14/21] falconry__falcon-2459 (issue, python)
+    Run 20261118-035025-9c8d · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (176 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 17s · input 44, cache read 735,586, cache write 38,431, output 13,897 · ≈$0.022
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 10s · input 6, cache read 30,799, cache write 8,000, output 899 · ≈$0.044
+    Tester [main]: pass · `unset_cookie` now takes `same_site`, matching `set_cookie`. The old `samesite` keyword still works and emits a Depreca…
+   - No newsfragment was added under docs/_newsfragments for this rename and deprecation, which the project normally uses for user-visible chang…
+    Merged task main
+  -> hidden tests fail · applied
+
+[15/21] hgrecco__pint-2194 (issue, python)
+    Run 20261118-035337-9feb · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (494 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 7m 15s · input 66, cache read 1,373,911, cache write 53,748, output 22,659 · ≈$0.036
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 14s · input 6, cache read 32,876, cache write 9,123, output 1,730 · ≈$0.057
+    Tester [main]: fail · The dBm ± dB case (Example 1) works, but Example 2 (dB/km * km → dB) is not implemented and still raises OffsetUnitCalc…
+   - The request's second example, Q(-10, dB/km) * Q(3, km) which should give 1e-3 i.e. Q(-30, dB), is not handled. The change only touches _add…
+   - A stray empty file with a garbled name (leftover from a shell one-liner) was added to the repository.
+    Repair [main] round 1 (review-fix)
+    Worker [main] review-fix turn · claude claude-haiku-5-5 (same session)
+    Worker [main] done in 2m 16s · input 46, cache read 1,678,040, cache write 29,351, output 21,948 · ≈$0.034
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 18s · input 6, cache read 37,599, cache write 8,939, output 1,220 · ≈$0.052
+    Tester [main]: pass · Both request examples now work: dBm − dB gives dBm (10 dBm − 20 dB = −10 dBm), and −10 dB/km × 3 km gives −30 dB (1e-3 …
+    Merged task main
+  -> hidden tests fail · applied
+
+[16/21] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261118-040658-a211 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (220 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 53s · input 20, cache read 273,074, cache write 32,785, output 9,488 · ≈$0.014
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 14s · input 8, cache read 47,008, cache write 10,939, output 1,386 · ≈$0.062
+    Tester [main]: pass · TokenRefreshSerializer now rejects refresh tokens whose password hash no longer matches with a 401 `password_changed`, …
+   - TokenRefreshSlidingSerializer (sliding tokens) has no password-hash check, so a sliding token can still be refreshed after a password chang…
+    Merged task main
+  -> hidden tests fail · applied
+
+[17/21] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261118-040844-9e62 · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: a 1212-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (scored the instruction only (13290 characters of pasted material left out); a large request (1212 words, 2 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 8022 characters (about 2006 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 46s · input 8, cache read 77,035, cache write 31,905, output 4,396 · ≈$0.36
+    Plan: Probable cause: the connection manager's task group is entered by hand inside the caller's task, so a crash in a server…
+   t1: Isolate connection-manager task group and add shutdown-requested flag
+    Task t1: Isolate connection-manager task group and add shutdown-requested flag
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 1m 45s · input 20, cache read 344,649, cache write 40,499, output 12,306 · ≈$0.32
+    Checks [t1]: tests passed
+    Tester [t1] test turn · claude claude-sonnet-5-5
+    Tester [t1] done in 47s · input 16, cache read 193,919, cache write 26,521, output 4,285 · ≈$0.17
+    Tester [t1]: pass · The change meets each stated requirement: the shutdown flag and `_is_shutdown_requested_flag()`, `is_healthy()` returni…
+   - Test (c), `test_lifecycle_failure_does_not_cancel_caller`, probably passes even without the fix. Lifecycle errors are already caught inside…
+    Merged task t1
+  -> hidden tests fail · applied
+
+[18/21] openai__openai-agents-python-1633 (issue, python)
+    Run 20261118-041326-8c05 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: senior (scored the instruction only (2019 characters of pasted material left out); most like senior work (78% of the match))
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 34s · input 12, cache read 113,157, cache write 19,709, output 3,449 · ≈$0.12
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 12s · input 10, cache read 63,454, cache write 10,554, output 829 · ≈$0.057
+    Tester [main]: pass · The change adds a `headers` option to `RealtimeModelConfig`, which `connect()` uses as-is, so no OpenAI API key is need…
+    Merged task main
+  -> hidden tests pass · applied
+
+[19/21] psf__black-4720 (issue, python)
+    Run 20261118-041504-fa23 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (288 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 4m 02s · input 56, cache read 1,285,556, cache write 60,166, output 28,406 · ≈$0.039
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 1m 21s · input 14, cache read 103,027, cache write 13,495, output 3,518 · ≈$0.099
+    Tester [main]: pass · With target py314, `except (A, B):` and `except* (A, B):` become unparenthesized, parentheses stay with `as` or a singl…
+   - The JSON schema `src/black/resources/black.schema.json` still lists target versions only up to py313, although the change adds `TargetVersi…
+    Merged task main
+  -> hidden tests fail · applied
+
+[20/21] python-attrs__attrs-1457 (issue, python)
+    Run 20261118-042142-49ff · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (402 characters of pasted material left out); most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 40s · input 44, cache read 1,030,674, cache write 66,295, output 32,726 · ≈$0.040
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 27s · input 8, cache read 62,709, cache write 17,445, output 2,450 · ≈$0.10
+    Tester [main]: pass · The change adds `force_kw_only` (default True for `attr.s`/`make_class`, False for `define`/`frozen`) and makes `kw_onl…
+    Merged task main
+  -> hidden tests fail · applied
+
+[21/21] spesmilo__electrum-10172 (issue, python)
+    Run 20261118-042523-f5c3 · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (scored the instruction only (2222 characters of pasted material left out); ambiguous (50% worker); past runs give worker a 88% chance)
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 3m 26s · input 32, cache read 566,005, cache write 40,999, output 13,907 · ≈$0.021
+    Checks [main]: tests passed
+    Tester [main] test turn · claude claude-sonnet-5-5
+    Tester [main] done in 16s · input 8, cache read 53,192, cache write 14,751, output 1,412 · ≈$0.078
+    Tester [main]: pass · `load_wallet` now takes `force_check_password`, and the qml GUI uses it for wallets that are not yet open. A wrong or m…
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-cascade-1 · preset cascade-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       solo  applied     passed  fail    4      3m 09s   0k / 1.37M
+a2aproject__a2a-python-443 issue       solo  applied     passed  pass    2      2m 43s   0k / 1.48M
+ansible__molecule-4534 issue       solo  applied     passed  fail    2      2m 04s   0k / 836k
+Archmonger__django-dbbackup-601 issue       solo  applied     passed  pass    2      1m 45s   0k / 632k
+Archmonger__django-dbbackup-604 issue       solo  applied     passed  fail    4      2m 39s   0k / 724k
+astronomer__dag-factory-519 issue       solo  applied     passed  fail    4      4m 07s   0k / 1.73M
+authlib__authlib-802  issue       solo  applied     passed  fail    2      2m 02s   0k / 708k
+awslabs__mcp-1154     issue       solo  applied     passed  fail    2      6m 38s   0k / 1.78M
+certtools__intelmq-2632 issue       solo  applied     passed  fail    8      7m 57s   0k / 3.28M
+django-guardian__django-guardian-896 issue       solo  applied     passed  fail    2      3m 07s   0k / 501k
+falconry__falcon-2459 issue       solo  applied     passed  fail    2      1m 29s   0k / 828k
+hgrecco__pint-2194    issue       solo  applied     passed  fail    4      10m 15s  0k / 3.27M
+jazzband__djangorestframework-simplejwt-928 issue       solo  applied     passed  fail    2      1m 10s   0k / 375k
+lastmile-ai__mcp-agent-367 issue       team  applied     passed  fail    3      3m 35s   113k / 622k
+openai__openai-agents-python-1633 issue       solo  applied     passed  pass    2      59s      0k / 211k
+psf__black-4720       issue       solo  applied     passed  fail    2      5m 25s   0k / 1.49M
+PyPSA__PyPSA-1310     issue       team  applied     passed  pass    7      42m 23s  141k / 11.14M
+python-attrs__attrs-1457 issue       solo  applied     passed  fail    2      3m 09s   0k / 1.21M
+QuantEcon__QuantEcon.py-797 issue       solo  applied     passed  fail    2      1m 36s   0k / 398k
+spesmilo__electrum-10172 issue       solo  applied     passed  pass    2      3m 47s   0k / 690k
+Tuxemon__Tuxemon-3068 issue       solo  applied     passed  fail    2      2m 10s   0k / 795k
+
+Passed 5/21 · engine failures 0 · time 1h 52m · tokens 34.33M · expert share 1% · API-equivalent ≈ $4.83 (estimate, not spent)
+2026-11-17 23:02:49 UTC  swl-cascade-1  finished: 21 tasks, try 1
+2026-11-17 23:02:49 UTC  wrote /Users/farhanakhtar/.neuromesh/swe-live/subsets/cascade.md

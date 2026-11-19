@@ -1,0 +1,47 @@
+Eval swl-k1-probe: 2 task(s) on preset patch-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-k1-probe
+
+[1/2] authlib__authlib-802 (issue, python)
+    Run 20261119-003306-6100 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 39s · input 30, cache read 482,684, cache write 43,084, output 21,522 · ≈$0.024
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 37s · input 2, cache read 0, cache write 9,047, output 3,893 · ≈$0.15
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[2/2] hgrecco__pint-2194 (issue, python)
+    Run 20261119-003611-ccb5 · patch-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 09s · input 34, cache read 606,580, cache write 53,445, output 26,969 · ≈$0.030
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 2m 53s · input 2, cache read 643, cache write 8,612, output 19,216 · ≈$0.45
+    Checks [main]: tests failed, lead-tests failed
+    Repair [main] round 1 (repair)
+    Expert [main] repair turn · claude claude-opus-5-5
+    Expert [main] done in 23s · input 2, cache read 643, cache write 12,895, output 1,793 · ≈$0.14
+    Checks [main]: tests failed, lead-tests passed
+    ! Task main: under the lead the expert advises but does not take over a developer's task; it ends here.
+    Task failed [main]: two attempts without progress, and under the lead the expert does not take over a developer's task
+  -> hidden tests fail · applied
+
+Eval swl-k1-probe · preset patch-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+authlib__authlib-802  issue       team  applied     passed  fail    2      2m 24s   13k / 547k
+hgrecco__pint-2194    issue       team  applied     failed  fail    3      5m 37s   44k / 687k
+
+Passed 0/2 · engine failures 0 · time 8m 00s · tokens 1.29M · expert share 4% · API-equivalent ≈ $0.80 (estimate, not spent)

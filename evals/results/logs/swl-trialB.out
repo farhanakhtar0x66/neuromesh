@@ -1,0 +1,381 @@
+Eval swl-trialB: 21 task(s) on preset dossier-sonnet. Results: /Users/farhanakhtar/.neuromesh/evals/swl-trialB
+
+[1/21] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261119-033841-4b4c · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    ! No dossier: a repository of 93 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 31s · input 12, cache read 89,065, cache write 21,978, output 2,746 · ≈$0.12
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/21] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261119-033949-f0ca · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    ! No dossier: a repository of 93 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 21s · input 8, cache read 58,120, cache write 16,176, output 2,708 · ≈$0.098
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/21] PyPSA__PyPSA-1310 (issue, python)
+    Run 20261119-034041-d0da · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8014 characters (about 2004 tokens) of repository map for the agents
+    ! No dossier: the request names code in pypsa/plot/maps/static.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 7m 22s · input 100, cache read 3,649,431, cache write 105,839, output 29,402 · ≈$1.08
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[4/21] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261119-035414-273b · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    ! No dossier: the request names code in quantecon/util/timing.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 49s · input 16, cache read 129,223, cache write 18,716, output 4,329 · ≈$0.13
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/21] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261119-035753-42f0 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    ! No dossier: the request names code in tuxemon/step_tracker.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 33s · input 18, cache read 173,930, cache write 22,886, output 3,288 · ≈$0.14
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[6/21] a2aproject__a2a-python-414 (issue, python)
+    Run 20261119-040004-7cf9 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 46s · input 60, cache read 1,129,514, cache write 59,763, output 33,895 · ≈$0.040
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 38s · input 12, cache read 125,198, cache write 21,605, output 4,058 · ≈$0.14
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[7/21] a2aproject__a2a-python-443 (issue, python)
+    Run 20261119-040923-555c · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 03s · input 54, cache read 934,076, cache write 60,668, output 25,868 · ≈$0.034
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 1m 09s · input 28, cache read 370,383, cache write 33,956, output 7,366 · ≈$0.25
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[8/21] ansible__molecule-4534 (issue, python)
+    Run 20261119-041312-a8c3 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 37s · input 82, cache read 1,868,081, cache write 68,153, output 29,392 · ≈$0.047
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 21s · input 10, cache read 78,640, cache write 14,829, output 1,867 · ≈$0.086
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[9/21] astronomer__dag-factory-519 (issue, python)
+    Run 20261119-042213-b0e5 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    ! No dossier: a repository of 143 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 1m 05s · input 28, cache read 314,066, cache write 28,422, output 7,833 · ≈$0.22
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/21] authlib__authlib-802 (issue, python)
+    Run 20261119-042358-98c4 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 50s · input 34, cache read 654,896, cache write 57,015, output 24,323 · ≈$0.030
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 35s · input 18, cache read 179,176, cache write 22,778, output 3,729 · ≈$0.15
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[11/21] awslabs__mcp-1154 (issue, python)
+    Run 20261119-042719-c760 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 3m 21s · input 64, cache read 1,427,761, cache write 71,344, output 32,457 · ≈$0.045
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 2m 37s · input 44, cache read 691,258, cache write 36,919, output 9,781 · ≈$0.31
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[12/21] certtools__intelmq-2632 (issue, python)
+    Run 20261119-043433-eb17 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added · attached intelmq/bots/collectors/blueliv/REQUIREMENTS.txt
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    ! No dossier: the request names code in intelmq/lib/upgrades.py, intelmq/bin/intelmqctl.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 31s · input 12, cache read 112,346, cache write 22,156, output 3,336 · ≈$0.13
+    Checks [main]: tests failed
+    Repair [main] round 1 (repair)
+    Expert [main] repair turn · claude claude-sonnet-5-5 (same session)
+    Expert [main] done in 17s · input 6, cache read 55,980, cache write 2,257, output 1,292 · ≈$0.028
+    Checks [main]: tests failed
+    ! Task main: under the lead the expert advises but does not take over a developer's task; it ends here.
+    Task failed [main]: the worker repeated an earlier failed state, and under the lead the expert does not take over a developer's task
+  -> hidden tests pass · applied
+
+[13/21] django-guardian__django-guardian-896 (issue, python)
+    Run 20261119-043705-ceb0 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 00s · input 34, cache read 597,302, cache write 52,518, output 23,474 · ≈$0.028
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 30s · input 8, cache read 64,824, cache write 17,554, output 3,313 · ≈$0.11
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[14/21] falconry__falcon-2459 (issue, python)
+    Run 20261119-044028-fc8e · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    ! No dossier: the request names code in falcon/response.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 30s · input 14, cache read 118,813, cache write 19,005, output 3,661 · ≈$0.12
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[15/21] hgrecco__pint-2194 (issue, python)
+    Run 20261119-044243-c7f2 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 39s · input 40, cache read 679,871, cache write 54,447, output 34,286 · ≈$0.035
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 2m 26s · input 38, cache read 705,140, cache write 41,954, output 13,935 · ≈$0.38
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[16/21] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261119-045102-44ea · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    ! No dossier: a repository of 134 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 19s · input 8, cache read 57,427, cache write 16,653, output 2,401 · ≈$0.096
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[17/21] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261119-045159-b2e4 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: a 1212-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work
+    Checks before any change: tests passed
+    Context packet: 8022 characters (about 2006 tokens) of repository map for the agents
+    ! No dossier: the request names code in src/mcp_agent/mcp/mcp_connection_manager.py, src/mcp_agent/logging/event_progress.py. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 1m 06s · input 16, cache read 230,814, cache write 33,253, output 5,805 · ≈$0.21
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[18/21] openai__openai-agents-python-1633 (issue, python)
+    Run 20261119-045438-002c · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 16s · input 32, cache read 599,825, cache write 52,001, output 14,754 · ≈$0.024
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 1m 13s · input 14, cache read 142,104, cache write 21,287, output 5,130 · ≈$0.15
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[19/21] psf__black-4720 (issue, python)
+    Run 20261119-045802-b2f1 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 12s · input 44, cache read 723,516, cache write 53,746, output 26,785 · ≈$0.031
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 3m 24s · input 32, cache read 513,646, cache write 43,439, output 14,895 · ≈$0.37
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[20/21] python-attrs__attrs-1457 (issue, python)
+    Run 20261119-050456-a581 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    ! No dossier: a repository of 132 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 1m 38s · input 40, cache read 655,096, cache write 38,998, output 9,819 · ≈$0.32
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[21/21] spesmilo__electrum-10172 (issue, python)
+    Run 20261119-050707-bd65 · dossier-sonnet (team) · expert claude claude-sonnet-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 46s · input 38, cache read 636,050, cache write 55,015, output 21,441 · ≈$0.028
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-sonnet-5-5
+    Expert [main] done in 32s · input 10, cache read 90,978, cache write 19,472, output 3,563 · ≈$0.12
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-trialB · preset dossier-sonnet
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       team  applied     passed  fail    2      3m 26s   151k / 1.22M
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    2      3m 18s   412k / 1.02M
+ansible__molecule-4534 issue       team  applied     passed  fail    2      3m 12s   95k / 1.97M
+Archmonger__django-dbbackup-601 issue       team  applied     passed  pass    1      38s      114k / 0k
+Archmonger__django-dbbackup-604 issue       team  applied     passed  fail    1      23s      77k / 0k
+astronomer__dag-factory-519 issue       team  applied     passed  fail    1      1m 13s   350k / 0k
+authlib__authlib-802  issue       team  applied     passed  fail    2      2m 30s   206k / 736k
+awslabs__mcp-1154     issue       team  applied     passed  fail    2      6m 11s   738k / 1.53M
+certtools__intelmq-2632 issue       team  applied     failed  pass    2      59s      197k / 0k
+django-guardian__django-guardian-896 issue       team  applied     passed  fail    2      2m 44s   86k / 673k
+falconry__falcon-2459 issue       team  applied     passed  fail    1      33s      141k / 0k
+hgrecco__pint-2194    issue       team  applied     passed  fail    2      5m 15s   761k / 769k
+jazzband__djangorestframework-simplejwt-928 issue       team  applied     passed  fail    1      22s      76k / 0k
+lastmile-ai__mcp-agent-367 issue       team  applied     passed  fail    1      1m 26s   270k / 0k
+openai__openai-agents-python-1633 issue       team  applied     passed  fail    2      2m 45s   169k / 667k
+psf__black-4720       issue       team  applied     passed  pass    2      5m 38s   572k / 804k
+PyPSA__PyPSA-1310     issue       team  applied     passed  pass    1      7m 44s   3.78M / 0k
+python-attrs__attrs-1457 issue       team  applied     passed  fail    1      1m 39s   704k / 0k
+QuantEcon__QuantEcon.py-797 issue       team  applied     passed  fail    1      1m 06s   152k / 0k
+spesmilo__electrum-10172 issue       team  applied     passed  pass    2      2m 26s   114k / 713k
+Tuxemon__Tuxemon-3068 issue       team  applied     passed  fail    1      1m 32s   200k / 0k
+
+Passed 6/21 · engine failures 0 · time 54m 59s · tokens 19.47M · expert share 48% · API-equivalent ≈ $5.13 (estimate, not spent)

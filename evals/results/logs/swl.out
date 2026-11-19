@@ -1,0 +1,338 @@
+2026-11-17 16:36:12 UTC  baselines: 27 tasks in evals/swe-live/tasks; runs: haiku
+2026-11-17 16:36:17 UTC  swl-haiku-1  --wait-reset: five-hour window at 1%, already fresh; starting
+2026-11-17 16:36:17 UTC  swl-haiku-1  started: try 1 of 12, preset solo-haiku, 0 of 27 tasks already final
+Eval swl-haiku-1: 27 task(s) on preset solo-haiku. Results: /Users/farhanakhtar/.neuromesh/evals/swl-haiku-1
+
+[1/27] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261117-220621-740f · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 37s · input 18, cache read 164,525, cache write 25,254, output 5,290 · ≈$0.009
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/27] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261117-220738-8c50 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 11s · input 24, cache read 284,086, cache write 29,947, output 14,518 · ≈$0.016
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/27] PyPSA__PyPSA-1310 (issue, python)
+    Run 20261117-220922-0353 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8014 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 13m 27s · input 136, cache read 6,938,758, cache write 154,248, output 79,695 · ≈$0.49
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[4/27] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261117-222759-6788 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 29s · input 22, cache read 286,434, cache write 30,769, output 11,932 · ≈$0.015
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/27] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261117-223157-ccdd · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 41s · input 44, cache read 1,196,980, cache write 71,111, output 18,561 · ≈$0.035
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[6/27] a2aproject__a2a-python-414 (issue, python)
+    Run 20261117-223428-0342 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 06s · input 48, cache read 1,008,965, cache write 59,494, output 25,521 · ≈$0.035
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[7/27] a2aproject__a2a-python-443 (issue, python)
+    Run 20261117-224107-e12b · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 15s · input 58, cache read 1,539,273, cache write 71,326, output 24,047 · ≈$0.042
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[8/27] ansible__molecule-4534 (issue, python)
+    Run 20261117-224358-1a66 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 05s · input 34, cache read 404,441, cache write 34,376, output 11,993 · ≈$0.017
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[9/27] astronomer__dag-factory-519 (issue, python)
+    Run 20261117-225109-25e8 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 40s · input 44, cache read 1,091,813, cache write 69,847, output 31,473 · ≈$0.041
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/27] authlib__authlib-802 (issue, python)
+    Run 20261117-225435-dbb9 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 14s · input 28, cache read 517,731, cache write 48,346, output 12,153 · ≈$0.021
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[11/27] awslabs__mcp-1154 (issue, python)
+    Run 20261117-225643-3f75 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8012 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 6m 21s · input 126, cache read 4,160,475, cache write 106,084, output 51,986 · ≈$0.14
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[12/27] bit-team__backintime-2238 (issue, python)
+    Run 20261117-230417-c758 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 32s · input 36, cache read 721,501, cache write 50,923, output 16,129 · ≈$0.025
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[13/27] casbin__pycasbin-392 (issue, python)
+    Run 20261117-230824-b8e1 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 36s · input 32, cache read 543,166, cache write 42,842, output 20,312 · ≈$0.024
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[14/27] certtools__intelmq-2632 (issue, python)
+    Run 20261117-231051-3093 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8011 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 05s · input 28, cache read 415,928, cache write 36,100, output 10,418 · ≈$0.017
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[15/27] django-guardian__django-guardian-896 (issue, python)
+    Run 20261117-231343-6226 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 47s · input 22, cache read 317,190, cache write 37,229, output 14,370 · ≈$0.018
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[16/27] falconry__falcon-2459 (issue, python)
+    Run 20261117-231621-f2cd · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 22s · input 30, cache read 397,672, cache write 31,458, output 9,565 · ≈$0.015
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[17/27] hgrecco__pint-2194 (issue, python)
+    Run 20261117-231928-885d · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 10m 47s · input 106, cache read 4,161,419, cache write 111,560, output 62,404 · ≈$0.22
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[18/27] ipython__ipython-14966 (issue, python)
+    Run 20261117-233405-6b84 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8012 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 47s · input 48, cache read 753,665, cache write 40,163, output 18,004 · ≈$0.025
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[19/27] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261117-233916-3358 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 49s · input 18, cache read 256,577, cache write 36,806, output 9,138 · ≈$0.014
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[20/27] koxudaxi__datamodel-code-generator-2461 (issue, python)
+    Run 20261117-234038-1a7f · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 4m 34s · input 76, cache read 2,094,171, cache write 81,117, output 46,137 · ≈$0.060
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[21/27] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261117-234558-3b5f · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 22s · input 44, cache read 1,109,866, cache write 66,690, output 24,579 · ≈$0.037
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[22/27] openai__openai-agents-python-1619 (issue, python)
+    Run 20261117-234951-ae66 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8017 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 38s · input 30, cache read 424,055, cache write 33,212, output 10,703 · ≈$0.016
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[23/27] openai__openai-agents-python-1633 (issue, python)
+    Run 20261117-235238-220d · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 44s · input 44, cache read 891,245, cache write 54,609, output 21,281 · ≈$0.030
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[24/27] psf__black-4720 (issue, python)
+    Run 20261117-235615-919c · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 6m 59s · input 118, cache read 4,239,293, cache write 109,235, output 61,280 · ≈$0.17
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[25/27] python-attrs__attrs-1457 (issue, python)
+    Run 20261118-000429-327d · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 2m 16s · input 50, cache read 1,003,438, cache write 51,539, output 24,919 · ≈$0.033
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[26/27] spesmilo__electrum-10172 (issue, python)
+    Run 20261118-000718-d847 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 7997 characters (about 1999 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 8m 52s · input 94, cache read 2,542,297, cache write 79,556, output 36,438 · ≈$0.060
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[27/27] trailofbits__algo-14801 (issue, python)
+    Run 20261118-001944-0d48 · solo-haiku (solo) · worker claude claude-haiku-5-5
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 49s · input 16, cache read 178,857, cache write 26,338, output 8,612 · ≈$0.011
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-haiku-1 · preset solo-haiku
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       solo  applied     passed  fail    1      2m 08s   0k / 1.09M
+a2aproject__a2a-python-443 issue       solo  applied     passed  pass    1      2m 18s   0k / 1.63M
+ansible__molecule-4534 issue       solo  applied     passed  fail    1      1m 06s   0k / 451k
+Archmonger__django-dbbackup-601 issue       solo  applied     passed  pass    1      46s      0k / 195k
+Archmonger__django-dbbackup-604 issue       solo  applied     passed  fail    1      1m 14s   0k / 329k
+astronomer__dag-factory-519 issue       solo  applied     passed  fail    1      2m 55s   0k / 1.19M
+authlib__authlib-802  issue       solo  applied     passed  fail    1      1m 18s   0k / 578k
+awslabs__mcp-1154     issue       solo  applied     passed  fail    1      6m 24s   0k / 4.32M
+bit-team__backintime-2238 issue       solo  applied     passed  pass    1      1m 34s   0k / 789k
+casbin__pycasbin-392  issue       solo  applied     passed  pass    1      1m 59s   0k / 606k
+certtools__intelmq-2632 issue       solo  applied     passed  fail    1      1m 17s   0k / 462k
+django-guardian__django-guardian-896 issue       solo  applied     passed  fail    1      1m 59s   0k / 369k
+falconry__falcon-2459 issue       solo  applied     passed  fail    1      1m 24s   0k / 439k
+hgrecco__pint-2194    issue       solo  applied     passed  fail    1      11m 27s  0k / 4.34M
+ipython__ipython-14966 issue       solo  applied     passed  pass    1      2m 53s   0k / 812k
+jazzband__djangorestframework-simplejwt-928 issue       solo  applied     passed  fail    1      52s      0k / 303k
+koxudaxi__datamodel-code-generator-2461 issue       solo  applied     passed  pass    1      4m 35s   0k / 2.22M
+lastmile-ai__mcp-agent-367 issue       solo  applied     passed  fail    1      2m 34s   0k / 1.20M
+openai__openai-agents-python-1619 issue       solo  applied     passed  pass    1      1m 50s   0k / 468k
+openai__openai-agents-python-1633 issue       solo  applied     passed  fail    1      2m 56s   0k / 967k
+psf__black-4720       issue       solo  applied     passed  fail    1      7m 01s   0k / 4.41M
+PyPSA__PyPSA-1310     issue       solo  applied     passed  fail    1      13m 51s  0k / 7.17M
+python-attrs__attrs-1457 issue       solo  applied     passed  fail    1      2m 17s   0k / 1.08M
+QuantEcon__QuantEcon.py-797 issue       solo  applied     passed  fail    1      1m 55s   0k / 329k
+spesmilo__electrum-10172 issue       solo  applied     passed  fail    1      8m 57s   0k / 2.66M
+trailofbits__algo-14801 issue       solo  applied     passed  pass    1      1m 06s   0k / 214k
+Tuxemon__Tuxemon-3068 issue       solo  applied     passed  fail    1      1m 55s   0k / 1.29M
+
+Passed 8/27 · engine failures 0 · time 1h 30m · tokens 39.92M · expert share 0% · API-equivalent ≈ $1.64 (estimate, not spent)
+2026-11-17 18:51:17 UTC  swl-haiku-1  finished: 27 tasks, try 1
+2026-11-17 18:51:17 UTC  wrote /Users/farhanakhtar/Projects/neuromesh/evals/swe-live/tasks/RESULTS.md

@@ -1,0 +1,22 @@
+Eval swl-lead-1: 5 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-1
+
+[1/5] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-095736-7cf3 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; the lead plans it
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 54s · input 10, cache read 70,772, cache write 26,451, output 5,375 · ≈$0.33
+    Plan: A single change to `JSONRPCApplication._handle_requests` in src/a2a/server/apps/jsonrpc/jsonrpc_app.py. Before parsing …
+   t1: Fix JSON-RPC error codes for missing jsonrpc, invalid id type and invalid params type
+    Task t1: Fix JSON-RPC error codes for missing jsonrpc, invalid id type and invalid params type
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] auth in 1m 29s · input 30, cache read 521,993, cache write 48,884, output 16,473 · ≈$0.023 — success Failed to authenticate: OAuth token revoked. Please log in again or contact your administrator. 401
+  -> hidden tests not run · paused · the worker's tool is no longer signed in (Failed to authenticate: OAuth token revoked. Please log in again or contact your administrator. 401). Sign in again (/
+
+Eval swl-lead-1 · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       team  paused      -       —       2      2m 24s   103k / 587k
+
+Passed 0/1 · engine failures 0 · 1 paused (sign-in) · time 2m 24s · tokens 690k · expert share 15% · API-equivalent ≈ $0.36 (estimate, not spent)

@@ -1,0 +1,66 @@
+2026-11-17 12:39:58 UTC  baselines: 12 tasks in evals/hard-tasks; runs: cascade1
+2026-11-17 12:40:02 UTC  hd-cascade-1  --wait-reset: five-hour window at 26%, already fresh; starting
+2026-11-17 12:40:02 UTC  hd-cascade-1  started: try 1 of 12, preset cascade-claude, 10 of 12 tasks already final
+Eval hd-cascade-1: 12 task(s) on preset cascade-claude. Results: /Users/farhanakhtar/.neuromesh/evals/hd-cascade-1
+
+[1/2] hd-ts-query-language (feature, typescript)
+    Run 20261117-181007-d419 · cascade-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, cli · 3 working standards added · attached docs/QUERY.md
+   Staffing: a 1772-word request: the expert plans it; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: expert (a large request (1772 words, 2 files named): the expert blueprints it)
+    Checks before any change: tests passed
+    Context packet: 1412 characters (about 353 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 10s · input 6, cache read 34,863, cache write 7,886, output 6,902 · ≈$0.21
+    Plan: The parser goes to two senior tasks: t1 builds the filter fields and values, then t2 builds the lazy lexer, the recursi…
+   t1: Filter fields and value semantics (src/query/fields.ts)
+   t2: Lexer, parser, Store.search after t1
+   t3: CLI query error output after t2
+    Task t1: Filter fields and value semantics (src/query/fields.ts)
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 1m 15s · input 18, cache read 210,134, cache write 22,649, output 11,231 · ≈$0.22
+    Checks [t1]: tests passed
+    Merged task t1
+    Task t2: Lexer, parser, Store.search
+    Worker [t2] initial turn · claude claude-sonnet-5-5
+    Worker [t2] done in 1m 20s · input 14, cache read 168,717, cache write 29,684, output 11,748 · ≈$0.25
+    Checks [t2]: tests passed
+    Merged task t2
+    Task t3: CLI query error output
+    Worker [t3] initial turn · claude claude-haiku-5-5
+    Worker [t3] done in 25s · input 14, cache read 126,764, cache write 18,837, output 4,544 · ≈$0.007
+    Checks [t3]: tests passed
+    Merged task t3
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[2/2] hd-ts-recurrence-dst (bug, typescript)
+    Run 20261117-181424-be3c · cascade-claude (solo) · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: one worker starts; the expert steps in only if it gets stuck; the cheapest worker rung starts and climbs if it gets stuck; a tester reviews the work; Tier 0: worker (most like worker work (100% of the match))
+    Checks before any change: tests passed
+    Context packet: 2394 characters (about 599 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-haiku-5-5
+    Worker [main] done in 1m 59s · input 22, cache read 378,151, cache write 44,824, output 26,532 · ≈$0.026
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval hd-cascade-1 · preset cascade-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+hd-js-cache-stampede  bug         team  applied     passed  pass    2      3m 14s   27k / 188k
+hd-js-sheet-engine    program     team  applied     passed  pass    6      11m 30s  72k / 2.25M
+hd-py-ledger-cents    bug         solo  applied     passed  fail    1      1m 05s   0k / 393k
+hd-py-migration-graph feature     team  applied     passed  pass    4      3m 48s   31k / 847k
+hd-py-streaming-stats refactor    solo  applied     passed  pass    1      8m 47s   0k / 65k
+hd-rust-free-slots    bug         solo  applied     passed  pass    1      1m 24s   0k / 335k
+hd-rust-merge3        feature     solo  applied     passed  pass    1      56s      0k / 173k
+hd-rust-regex-linear  program     solo  applied     passed  pass    1      4m 55s   0k / 901k
+hd-ts-chunked-csv     bug         solo  applied     passed  pass    1      1m 03s   0k / 186k
+hd-ts-event-store     refactor    team  applied     passed  pass    3      6m 33s   47k / 531k
+hd-ts-query-language  feature     team  applied     passed  pass    4      4m 13s   50k / 604k
+hd-ts-recurrence-dst  bug         solo  applied     passed  pass    1      2m 00s   0k / 450k
+
+Passed 11/12 · engine failures 0 · time 49m 30s · tokens 7.15M · expert share 3% · API-equivalent ≈ $3.12 (estimate, not spent)
+2026-11-17 12:46:33 UTC  hd-cascade-1  finished: 12 tasks, try 1
+2026-11-17 12:46:33 UTC  wrote /Users/farhanakhtar/Projects/neuromesh/evals/hard-tasks/RESULTS.md

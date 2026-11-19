@@ -1,0 +1,1072 @@
+{
+  "name": "swl-k1-b",
+  "preset": "patch-claude",
+  "presetDetail": {
+    "name": "patch-claude",
+    "description": "Experimental (2026-11-18, F127; K1 in docs/25-cascade-research.md): cheap models explore, the frontier model patches. A trivial or small self-contained request goes to Claude Haiku 5.5 alone (F121). Otherwise Haiku, with tools in a disposable copy, writes a dossier (the code the change touches, quoted; how a test file runs here) and a test that reproduces the request, kept only if it fails on the code as it is (F124's rule). Claude Opus 5.5 then writes the patch in one call with no tools, as search-and-replace edits, from the request, the dossier and the reproduction; it may ask once to read up to four files, which Neuromesh reads. Neuromesh applies the edits and runs the checks and the reproduction; a failure goes back to Opus as a repair call, at most three calls. Opus never runs a tool session. From Scrouting and AI21 (2026): the handoff carries the result, and the frontier model's tokens go to the fix, not to exploring.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 1,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 2,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 0,
+      "mode": "patch"
+    }
+  },
+  "startedAt": "2026-11-18T19:31:34.571Z",
+  "results": {
+    "Archmonger__django-dbbackup-604": {
+      "task": "Archmonger__django-dbbackup-604",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_connectors/test_sqlite.py::SqliteConnectorTest::test_restore_dump_unique_conflict_updates_row\nFAIL fail-to-pass: tests/test_connectors/test_sqlite.py::SqliteConnectorTest::test_schema_objects_use_if_not_exists\nSCORE 0/2",
+      "score": {
+        "passed": 0,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.32,
+          "seven_day": 0.13
+        },
+        "after": {
+          "five_hour": 0.33,
+          "seven_day": 0.13
+        }
+      },
+      "files": 3,
+      "insertions": 82,
+      "deletions": 6,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 113926,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 70577,
+          "usage": {
+            "input": 22,
+            "output": 14474,
+            "reasoning": 8262,
+            "cacheRead": 257592,
+            "cacheWrite": 31221,
+            "split": {
+              "files": 28256,
+              "commands": 28211,
+              "earlier": 117583,
+              "calls": 11,
+              "estimated": true,
+              "startup": 106057,
+              "prompt": 8729
+            }
+          },
+          "costUsdEquivalent": 0.01605932
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 38605,
+          "usage": {
+            "input": 2,
+            "output": 4038,
+            "reasoning": 1673,
+            "cacheRead": 643,
+            "cacheWrite": 7026,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 4803,
+              "prompt": 2868
+            }
+          },
+          "costUsdEquivalent": 0.1371046
+        }
+      ],
+      "expertTokens": 11709,
+      "workerTokens": 303309,
+      "usageIncomplete": false,
+      "runId": "20261119-010139-bf99",
+      "finishedAt": "2026-11-18T19:34:02.472Z"
+    },
+    "QuantEcon__QuantEcon.py-797": {
+      "task": "QuantEcon__QuantEcon.py-797",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_basic_timer\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_return_value\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_units\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_precision\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_message\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_verbose_mode\nFAIL fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timer_exception_handling\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_basic\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_lambda_function\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_single_run\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_different_units\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_stats_only\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_verbose_parameter\nPASS fail-to-pass: quantecon/util/tests/test_timing.py::TestTimer::test_timeit_results_parameter\nSCORE 7/14",
+      "score": {
+        "passed": 7,
+        "total": 14
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.33,
+          "seven_day": 0.13
+        },
+        "after": {
+          "five_hour": 0.34,
+          "seven_day": 0.14
+        }
+      },
+      "files": 3,
+      "insertions": 103,
+      "deletions": 14,
+      "turns": 3,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 142220,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 56700,
+          "usage": {
+            "input": 18,
+            "output": 9443,
+            "reasoning": 4897,
+            "cacheRead": 183096,
+            "cacheWrite": 25360,
+            "split": {
+              "files": 49641,
+              "commands": 5971,
+              "earlier": 57732,
+              "calls": 9,
+              "estimated": true,
+              "startup": 87019,
+              "prompt": 8111
+            }
+          },
+          "costUsdEquivalent": 0.011626260000000001
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 66828,
+          "usage": {
+            "input": 4,
+            "output": 6669,
+            "reasoning": 4000,
+            "cacheRead": 1286,
+            "cacheWrite": 22515,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 2,
+              "estimated": true,
+              "startup": 12169,
+              "prompt": 11637
+            }
+          },
+          "costUsdEquivalent": 0.31377320000000003
+        }
+      ],
+      "expertTokens": 30474,
+      "workerTokens": 217917,
+      "usageIncomplete": false,
+      "runId": "20261119-010402-29ea",
+      "finishedAt": "2026-11-18T19:38:28.541Z"
+    },
+    "Tuxemon__Tuxemon-3068": {
+      "task": "Tuxemon__Tuxemon-3068",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/tuxemon/test_money.py::TestMoneyManager::test_get_bill\nSCORE 0/1",
+      "score": {
+        "passed": 0,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.34,
+          "seven_day": 0.14
+        },
+        "after": {
+          "five_hour": 0.34,
+          "seven_day": 0.14
+        }
+      },
+      "files": 3,
+      "insertions": 69,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 124564,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 97787,
+          "usage": {
+            "input": 36,
+            "output": 17551,
+            "reasoning": 10335,
+            "cacheRead": 627468,
+            "cacheWrite": 51501,
+            "split": {
+              "files": 115113,
+              "commands": 104669,
+              "earlier": 267505,
+              "calls": 18,
+              "estimated": true,
+              "startup": 175532,
+              "prompt": 16187
+            }
+          },
+          "costUsdEquivalent": 0.02535398
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 17661,
+          "usage": {
+            "input": 2,
+            "output": 1879,
+            "reasoning": 655,
+            "cacheRead": 643,
+            "cacheWrite": 7203,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 5039,
+              "prompt": 2810
+            }
+          },
+          "costUsdEquivalent": 0.0953406
+        }
+      ],
+      "expertTokens": 9727,
+      "workerTokens": 696556,
+      "usageIncomplete": false,
+      "runId": "20261119-010837-42c0",
+      "finishedAt": "2026-11-18T19:41:17.511Z"
+    },
+    "ansible__molecule-4534": {
+      "task": "ansible__molecule-4534",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/unit/command/init/test_scenario.py::test_execute_scenario_exists\nFAIL fail-to-pass: tests/unit/command/init/test_scenario.py::test_execute_scenario_exists_collection_mode\nFAIL fail-to-pass: tests/unit/command/test_base.py::test_execute_cmdline_scenarios_missing\nFAIL fail-to-pass: tests/unit/command/test_base.py::test_execute_cmdline_scenarios_exit_destroy[always-subcommands0]\nFAIL fail-to-pass: tests/unit/command/test_base.py::test_execute_cmdline_scenarios_exit_destroy[never-subcommands1]\nFAIL fail-to-pass: tests/unit/command/test_login.py::test_get_hostname_does_not_match\nFAIL fail-to-pass: tests/unit/command/test_login.py::test_get_hostname_partial_match_with_multiple_hosts_raises\nFAIL fail-to-pass: tests/unit/command/test_login.py::test_get_hostname_no_host_flag_specified_on_cli_with_multiple_hosts_raises\nFAIL fail-to-pass: tests/unit/test_config.py::test_get_driver_name_from_state_file\nFAIL fail-to-pass: tests/unit/test_config.py::test_get_driver_name_raises_when_different_driver_used\nFAIL fail-to-pass: tests/unit/test_config.py::test_interpolate_raises_on_failed_interpolation\nFAIL fail-to-pass: tests/unit/test_config.py::test_validate_exists_when_validation_fails\nFAIL fail-to-pass: tests/unit/test_scenarios.py::test_verify_raises_when_scenario_not_found\nFAIL fail-to-pass: tests/unit/test_scenarios.py::test_verify_raises_when_multiple_scenarios_not_found\nSCORE 0/14",
+      "score": {
+        "passed": 0,
+        "total": 14
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.34,
+          "seven_day": 0.14
+        },
+        "after": {
+          "five_hour": 0.36,
+          "seven_day": 0.14
+        }
+      },
+      "files": 2,
+      "insertions": 53,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 133386,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 93498,
+          "usage": {
+            "input": 34,
+            "output": 17393,
+            "reasoning": 9255,
+            "cacheRead": 522126,
+            "cacheWrite": 49074,
+            "split": {
+              "files": 44038,
+              "commands": 110572,
+              "earlier": 204056,
+              "calls": 17,
+              "estimated": true,
+              "startup": 179303,
+              "prompt": 33265
+            }
+          },
+          "costUsdEquivalent": 0.023735960000000004
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 36100,
+          "usage": {
+            "input": 4,
+            "output": 2738,
+            "reasoning": 1929,
+            "cacheRead": 10697,
+            "cacheWrite": 9411,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 5855,
+              "prompt": 4202
+            }
+          },
+          "costUsdEquivalent": 0.1322034
+        }
+      ],
+      "expertTokens": 22850,
+      "workerTokens": 588627,
+      "usageIncomplete": false,
+      "runId": "20261119-011117-6296",
+      "finishedAt": "2026-11-18T19:49:48.992Z"
+    },
+    "astronomer__dag-factory-519": {
+      "task": "astronomer__dag-factory-519",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_dagbuilder_httpoperator.py::test_http_operator_with_invalid_json_string[{key:\nFAIL fail-to-pass: tests/test_dagbuilder_httpoperator.py::test_http_operator_with_invalid_json_string[{'key':\nSCORE 0/2",
+      "score": {
+        "passed": 0,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.36,
+          "seven_day": 0.14
+        },
+        "after": {
+          "five_hour": 0.37,
+          "seven_day": 0.14
+        }
+      },
+      "files": 1,
+      "insertions": 15,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 135134,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 97581,
+          "usage": {
+            "input": 28,
+            "output": 19552,
+            "reasoning": 11559,
+            "cacheRead": 532665,
+            "cacheWrite": 57553,
+            "split": {
+              "files": 194169,
+              "commands": 37006,
+              "earlier": 207927,
+              "calls": 14,
+              "estimated": true,
+              "startup": 136847,
+              "prompt": 14298
+            }
+          },
+          "costUsdEquivalent": 0.026616050000000002
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 28442,
+          "usage": {
+            "input": 2,
+            "output": 2521,
+            "reasoning": 994,
+            "cacheRead": 643,
+            "cacheWrite": 8333,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 5401,
+              "prompt": 3577
+            }
+          },
+          "costUsdEquivalent": 0.1172206
+        }
+      ],
+      "expertTokens": 11499,
+      "workerTokens": 609798,
+      "usageIncomplete": false,
+      "runId": "20261119-011949-5c1b",
+      "finishedAt": "2026-11-18T19:52:34.113Z"
+    },
+    "awslabs__mcp-1154": {
+      "task": "awslabs__mcp-1154",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/aws/test_service.py::test_interpret_command_creates_output_file_for_streaming_operations[aws\nPASS fail-to-pass: tests/aws/test_service.py::test_validate_output_file_raises_error_for_relative_paths[aws\nFAIL fail-to-pass: tests/parser/test_parser_customizations.py::test_local_file_uri\nFAIL fail-to-pass: tests/parser/test_parser_customizations.py::test_http_uri_validation_error\nSCORE 1/4",
+      "score": {
+        "passed": 1,
+        "total": 4
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.37,
+          "seven_day": 0.14
+        },
+        "after": {
+          "five_hour": 0.39,
+          "seven_day": 0.14
+        }
+      },
+      "files": 5,
+      "insertions": 85,
+      "deletions": 12,
+      "turns": 3,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 336664,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 247844,
+          "usage": {
+            "input": 64,
+            "output": 40426,
+            "reasoning": 22070,
+            "cacheRead": 1597496,
+            "cacheWrite": 72904,
+            "split": {
+              "files": 431913,
+              "commands": 54913,
+              "earlier": 837239,
+              "calls": 32,
+              "estimated": true,
+              "startup": 311960,
+              "prompt": 34440
+            }
+          },
+          "costUsdEquivalent": 0.05077516
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 85382,
+          "usage": {
+            "input": 4,
+            "output": 8543,
+            "reasoning": 4036,
+            "cacheRead": 1286,
+            "cacheWrite": 28279,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 2,
+              "estimated": true,
+              "startup": 13472,
+              "prompt": 16098
+            }
+          },
+          "costUsdEquivalent": 0.3973652
+        }
+      ],
+      "expertTokens": 38112,
+      "workerTokens": 1710890,
+      "usageIncomplete": false,
+      "runId": "20261119-012245-6f57",
+      "finishedAt": "2026-11-18T19:59:17.281Z"
+    },
+    "certtools__intelmq-2632": {
+      "task": "certtools__intelmq-2632",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: intelmq/tests/lib/test_upgrades.py::TestUpgradeLib::test_v341_blueliv_removal\nSCORE 0/1",
+      "score": {
+        "passed": 0,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.39,
+          "seven_day": 0.14
+        },
+        "after": {
+          "five_hour": 0.41,
+          "seven_day": 0.15
+        }
+      },
+      "files": 3,
+      "insertions": 63,
+      "deletions": 4,
+      "turns": 3,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 172958,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 100568,
+          "usage": {
+            "input": 24,
+            "output": 18385,
+            "reasoning": 11028,
+            "cacheRead": 304364,
+            "cacheWrite": 38172,
+            "split": {
+              "files": 0,
+              "commands": 73324,
+              "earlier": 124408,
+              "calls": 12,
+              "estimated": true,
+              "startup": 125328,
+              "prompt": 19500
+            }
+          },
+          "costUsdEquivalent": 0.01987294
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 43531,
+          "usage": {
+            "input": 4,
+            "output": 3895,
+            "reasoning": 1964,
+            "cacheRead": 1286,
+            "cacheWrite": 20123,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 2,
+              "estimated": true,
+              "startup": 12659,
+              "prompt": 8755
+            }
+          },
+          "costUsdEquivalent": 0.23915720000000001
+        }
+      ],
+      "expertTokens": 25308,
+      "workerTokens": 360945,
+      "usageIncomplete": false,
+      "runId": "20261119-012918-7e5f",
+      "finishedAt": "2026-11-18T20:04:04.856Z"
+    },
+    "django-guardian__django-guardian-896": {
+      "task": "django-guardian__django-guardian-896",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "fail",
+      "hiddenTail": "NO REPORT (empty patch, or the harness failed):\nLoaded 1 predictions.\nMonth filter: 2025-08 to 2025-08 (dataset range: 2025-08 to 2025-08)\nEvaluating ['django-guardian__django-guardian-896'] ......\nEmpty patch... django-guardian__django-guardian-896\nSubmitted: 1\nSuccess: 0\nFailure: 0\nEmpty: 1\nError: 0\nIncomplete: 0\nEvaluation ended successfully.\n\nSCORE 0/2",
+      "score": {
+        "passed": 0,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.41,
+          "seven_day": 0.15
+        },
+        "after": {
+          "five_hour": 0.42,
+          "seven_day": 0.15
+        }
+      },
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 111969,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 81025,
+          "usage": {
+            "input": 26,
+            "output": 13706,
+            "reasoning": 7546,
+            "cacheRead": 365393,
+            "cacheWrite": 37929,
+            "split": {
+              "files": 26082,
+              "commands": 93065,
+              "earlier": 142242,
+              "calls": 13,
+              "estimated": true,
+              "startup": 127771,
+              "prompt": 14190
+            }
+          },
+          "costUsdEquivalent": 0.018095330000000003
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 23252,
+          "usage": {
+            "input": 2,
+            "output": 2189,
+            "reasoning": 1092,
+            "cacheRead": 643,
+            "cacheWrite": 6110,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 4509,
+              "prompt": 2247
+            }
+          },
+          "costUsdEquivalent": 0.0927966
+        }
+      ],
+      "expertTokens": 8944,
+      "workerTokens": 417054,
+      "usageIncomplete": false,
+      "runId": "20261119-013405-a437",
+      "finishedAt": "2026-11-18T20:06:02.638Z"
+    },
+    "falconry__falcon-2459": {
+      "task": "falconry__falcon-2459",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "PASS fail-to-pass: tests/test_cookies.py::test_unset_cookies[asgi]\nPASS fail-to-pass: tests/test_cookies.py::test_unset_cookies[wsgi]\nPASS fail-to-pass: tests/test_cookies.py::test_unset_cookies_samesite[asgi]\nPASS fail-to-pass: tests/test_cookies.py::test_unset_cookies_samesite[wsgi]\nFAIL fail-to-pass: tests/test_cookies.py::test_unset_cookie_deprecation_warning\nSCORE 4/5",
+      "score": {
+        "passed": 4,
+        "total": 5
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.42,
+          "seven_day": 0.15
+        },
+        "after": {
+          "five_hour": 0.43,
+          "seven_day": 0.15
+        }
+      },
+      "files": 3,
+      "insertions": 38,
+      "deletions": 6,
+      "turns": 3,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 105342,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 40807,
+          "usage": {
+            "input": 14,
+            "output": 8819,
+            "reasoning": 3557,
+            "cacheRead": 127506,
+            "cacheWrite": 27191,
+            "split": {
+              "files": 39607,
+              "commands": 811,
+              "earlier": 41794,
+              "calls": 7,
+              "estimated": true,
+              "startup": 67174,
+              "prompt": 5325
+            }
+          },
+          "costUsdEquivalent": 0.01112416
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 59863,
+          "usage": {
+            "input": 4,
+            "output": 5513,
+            "reasoning": 2829,
+            "cacheRead": 1286,
+            "cacheWrite": 15139,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 2,
+              "estimated": true,
+              "startup": 10214,
+              "prompt": 6215
+            }
+          },
+          "costUsdEquivalent": 0.2316452
+        }
+      ],
+      "expertTokens": 21942,
+      "workerTokens": 163530,
+      "usageIncomplete": false,
+      "runId": "20261119-013603-e78e",
+      "finishedAt": "2026-11-18T20:09:29.790Z"
+    },
+    "lastmile-ai__mcp-agent-367": {
+      "task": "lastmile-ai__mcp-agent-367",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/agents/test_agent_tasks_isolation.py::test_agent_tasks_instance_scoped_state_isolation[asyncio]\nFAIL fail-to-pass: tests/agents/test_agent_tasks_isolation.py::test_agent_tasks_instance_scoped_state_isolation[trio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_server[asyncio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_all[asyncio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_server[trio]\nPASS fail-to-pass: tests/mcp/test_mcp_connection_manager.py::test_disconnect_all[trio]\nSCORE 4/6",
+      "score": {
+        "passed": 4,
+        "total": 6
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.43,
+          "seven_day": 0.15
+        },
+        "after": {
+          "five_hour": 0.45,
+          "seven_day": 0.15
+        }
+      },
+      "files": 2,
+      "insertions": 46,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 243659,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 188011,
+          "usage": {
+            "input": 52,
+            "output": 37918,
+            "reasoning": 22146,
+            "cacheRead": 1216441,
+            "cacheWrite": 75831,
+            "split": {
+              "files": 4344,
+              "commands": 352890,
+              "earlier": 480466,
+              "calls": 25,
+              "estimated": true,
+              "startup": 344713,
+              "prompt": 109913
+            }
+          },
+          "costUsdEquivalent": 0.046294810000000006
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 37605,
+          "usage": {
+            "input": 2,
+            "output": 3611,
+            "reasoning": 1819,
+            "cacheRead": 643,
+            "cacheWrite": 15407,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 1,
+              "estimated": true,
+              "startup": 8961,
+              "prompt": 7091
+            }
+          },
+          "costUsdEquivalent": 0.19561260000000003
+        }
+      ],
+      "expertTokens": 19663,
+      "workerTokens": 1330242,
+      "usageIncomplete": false,
+      "runId": "20261119-013937-bca9",
+      "finishedAt": "2026-11-18T20:14:49.358Z"
+    },
+    "python-attrs__attrs-1457": {
+      "task": "python-attrs__attrs-1457",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_no_modifications\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_normal\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_empty\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_transforms_to_attribute\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_conflicting_defaults\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_kw_only\nFAIL fail-to-pass: tests/test_make.py::TestTransformAttrs::test_these\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_keyword_only_class_level_subclassing\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_attr_level_kw_only_and_class_level_kw_only\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_kw_only_inheritance\nPASS fail-to-pass: tests/test_make.py::TestKeywordOnlyAttributes::test_kw_only_inheritance_force_kw_only\nFAIL fail-to-pass: tests/test_make.py::TestClassBuilder::test_repr\nFAIL fail-to-pass: tests/test_make.py::TestClassBuilder::test_returns_self\nPASS fail-to-pass: tests/test_make.py::TestClassBuilder::test_handles_missing_meta_on_class\nSCORE 5/14",
+      "score": {
+        "passed": 5,
+        "total": 14
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.45,
+          "seven_day": 0.15
+        },
+        "after": {
+          "five_hour": 0.48,
+          "seven_day": 0.15
+        }
+      },
+      "files": 7,
+      "insertions": 225,
+      "deletions": 8,
+      "turns": 3,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 275177,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 116370,
+          "usage": {
+            "input": 32,
+            "output": 23154,
+            "reasoning": 14169,
+            "cacheRead": 527172,
+            "cacheWrite": 47450,
+            "split": {
+              "files": 164704,
+              "commands": 4843,
+              "earlier": 221396,
+              "calls": 16,
+              "estimated": true,
+              "startup": 158296,
+              "prompt": 25416
+            }
+          },
+          "costUsdEquivalent": 0.026341919999999998
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 156197,
+          "usage": {
+            "input": 4,
+            "output": 17393,
+            "reasoning": 11049,
+            "cacheRead": 1286,
+            "cacheWrite": 49258,
+            "split": {
+              "files": 0,
+              "commands": 0,
+              "earlier": 0,
+              "calls": 2,
+              "estimated": true,
+              "startup": 21368,
+              "prompt": 29180
+            }
+          },
+          "costUsdEquivalent": 0.7421971999999999
+        }
+      ],
+      "expertTokens": 67941,
+      "workerTokens": 597808,
+      "usageIncomplete": false,
+      "runId": "20261119-014449-3b2b",
+      "finishedAt": "2026-11-18T20:19:56.585Z"
+    }
+  }
+}

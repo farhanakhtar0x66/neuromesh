@@ -1,0 +1,224 @@
+{
+  "name": "base-solo-opus46",
+  "preset": "solo-opus46",
+  "presetDetail": {
+    "name": "solo-opus46",
+    "description": "One Claude Opus 4.6 (thinking) agent through Antigravity, on the Google subscription. Listed until 18 Nov 2026; uses limits faster than Flash.",
+    "mode": "solo",
+    "worker": {
+      "backend": "agy",
+      "model": "claude-opus-4-6-thinking",
+      "tier": "expert"
+    },
+    "repairs": 1,
+    "turnTimeoutMinutes": 30
+  },
+  "startedAt": "2026-11-10T23:01:05.852Z",
+  "results": {
+    "js-cart-bug": {
+      "task": "js-cart-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 3,
+      "deletions": 2,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 43691,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 42192,
+          "usage": {
+            "input": 117914,
+            "output": 1283,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        }
+      ],
+      "expertTokens": 119197,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-043106-6603",
+      "finishedAt": "2026-11-10T23:01:50.095Z"
+    },
+    "js-config-env": {
+      "task": "js-config-env",
+      "kind": "feature",
+      "language": "javascript",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 47,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 49230,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 47793,
+          "usage": {
+            "input": 67878,
+            "output": 1811,
+            "reasoning": 0,
+            "cacheRead": 51606
+          }
+        }
+      ],
+      "expertTokens": 121295,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-043150-fca8",
+      "finishedAt": "2026-11-10T23:02:39.840Z"
+    },
+    "js-default-port": {
+      "task": "js-default-port",
+      "kind": "trivial",
+      "language": "javascript",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 3,
+      "deletions": 3,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 38599,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 38461,
+          "usage": {
+            "input": 59122,
+            "output": 1433,
+            "reasoning": 0,
+            "cacheRead": 37883
+          }
+        }
+      ],
+      "expertTokens": 98438,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-043239-5a32",
+      "finishedAt": "2026-11-10T23:03:18.670Z"
+    },
+    "js-markdown": {
+      "task": "js-markdown",
+      "kind": "multi",
+      "language": "javascript",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 125,
+      "deletions": 1,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 56571,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 55331,
+          "usage": {
+            "input": 32913,
+            "output": 2533,
+            "reasoning": 0,
+            "cacheRead": 87272
+          }
+        }
+      ],
+      "expertTokens": 122718,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-043318-0025",
+      "finishedAt": "2026-11-10T23:04:15.722Z"
+    },
+    "js-rename-refactor": {
+      "task": "js-rename-refactor",
+      "kind": "refactor",
+      "language": "javascript",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 3,
+      "insertions": 9,
+      "deletions": 6,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 42402,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 41211,
+          "usage": {
+            "input": 45908,
+            "output": 1964,
+            "reasoning": 0,
+            "cacheRead": 54600
+          }
+        }
+      ],
+      "expertTokens": 102472,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "runId": "20261111-043415-a63c",
+      "finishedAt": "2026-11-10T23:04:58.634Z"
+    },
+    "js-sales-report": {
+      "task": "js-sales-report",
+      "kind": "multi",
+      "language": "javascript",
+      "status": "paused",
+      "checks": "-",
+      "hidden": "not run",
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 21144,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "turns": 1,
+          "durationMs": 20539,
+          "usage": {
+            "input": 27027,
+            "output": 563,
+            "reasoning": 0,
+            "cacheRead": 10304
+          }
+        }
+      ],
+      "expertTokens": 37894,
+      "workerTokens": 0,
+      "usageIncomplete": false,
+      "reason": "subscription limit reached: Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 4h55m56s.",
+      "runId": "20261111-043458-9cb1",
+      "finishedAt": "2026-11-10T23:05:19.846Z"
+    }
+  }
+}

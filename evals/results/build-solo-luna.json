@@ -1,0 +1,151 @@
+{
+  "name": "build-solo-luna",
+  "preset": "solo-luna",
+  "presetDetail": {
+    "name": "solo-luna",
+    "description": "One GPT-6 Luna agent through Codex: the cheapest listed model (about 20 times cheaper per token than GPT-6.1 Sol). A baseline for how far a truly cheap worker gets alone.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": false,
+    "brief": false,
+    "routing": "rules",
+    "advise": true,
+    "test": "always"
+  },
+  "startedAt": "2026-11-11T09:31:20.657Z",
+  "results": {
+    "typing-detailed": {
+      "task": "typing-detailed",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 4,
+      "insertions": 570,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 234328,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 234013,
+          "usage": {
+            "input": 59183,
+            "output": 12029,
+            "reasoning": 3329,
+            "cacheRead": 314240,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 385452,
+      "usageIncomplete": false,
+      "runId": "20261111-150120-92a2",
+      "finishedAt": "2026-11-11T09:35:15.095Z"
+    },
+    "typing-one-line": {
+      "task": "typing-one-line",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "none",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 298,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 161537,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 161322,
+          "usage": {
+            "input": 50802,
+            "output": 6872,
+            "reasoning": 1253,
+            "cacheRead": 251648,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 309322,
+      "usageIncomplete": false,
+      "runId": "20261111-150515-069a",
+      "finishedAt": "2026-11-11T09:37:56.726Z"
+    },
+    "typing-steps": {
+      "task": "typing-steps",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 4,
+      "insertions": 384,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 151621,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 151296,
+          "usage": {
+            "input": 19073,
+            "output": 7522,
+            "reasoning": 1111,
+            "cacheRead": 242432,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 269027,
+      "usageIncomplete": false,
+      "runId": "20261111-150756-7f17",
+      "finishedAt": "2026-11-11T09:40:28.456Z"
+    }
+  }
+}

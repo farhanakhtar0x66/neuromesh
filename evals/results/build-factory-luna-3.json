@@ -1,0 +1,265 @@
+{
+  "name": "build-factory-luna-3",
+  "preset": "factory-luna",
+  "presetDetail": {
+    "name": "factory-luna",
+    "description": "The factory floor with the cheapest listed worker: GPT-6 Luna through Codex at low effort, climbing to high effort when stuck, reviewed by a Luna tester. Only a stuck high-effort worker gets the expert (GPT-6.1 Sol), first as advice and then as a takeover. Built to test whether a truly cheap worker beats the expert alone on API cost.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "briefer": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "low",
+        "tier": "worker"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-11T09:55:06.581Z",
+  "results": {
+    "typing-detailed": {
+      "task": "typing-detailed",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 14,
+      "insertions": 1275,
+      "deletions": 0,
+      "turns": 10,
+      "repairs": 2,
+      "escalations": 1,
+      "wallMs": 1513134,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 8,
+          "durationMs": 684297,
+          "usage": {
+            "input": 200295,
+            "output": 31133,
+            "reasoning": 14421,
+            "cacheRead": 1990656,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 781926,
+          "usage": {
+            "input": 95329,
+            "output": 31099,
+            "reasoning": 8142,
+            "cacheRead": 1288832,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 1415260,
+      "workerTokens": 2222084,
+      "usageIncomplete": false,
+      "runId": "20261111-152506-3362",
+      "finishedAt": "2026-11-11T10:20:19.893Z"
+    },
+    "typing-one-line": {
+      "task": "typing-one-line",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 14,
+      "insertions": 900,
+      "deletions": 0,
+      "turns": 11,
+      "repairs": 2,
+      "escalations": 1,
+      "wallMs": 1789661,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "briefer",
+            "worker",
+            "tester"
+          ],
+          "turns": 9,
+          "durationMs": 1003231,
+          "usage": {
+            "input": 251591,
+            "output": 45470,
+            "reasoning": 23576,
+            "cacheRead": 4710528,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 743431,
+          "usage": {
+            "input": 118315,
+            "output": 29513,
+            "reasoning": 7732,
+            "cacheRead": 1939328,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 2087156,
+      "workerTokens": 5007589,
+      "usageIncomplete": false,
+      "runId": "20261111-155019-f11f",
+      "finishedAt": "2026-11-11T10:50:09.750Z"
+    },
+    "typing-steps": {
+      "task": "typing-steps",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 15,
+      "insertions": 1492,
+      "deletions": 0,
+      "turns": 10,
+      "repairs": 2,
+      "escalations": 1,
+      "wallMs": 2076326,
+      "usage": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 8,
+          "durationMs": 1005390,
+          "usage": {
+            "input": 237049,
+            "output": 47560,
+            "reasoning": 27062,
+            "cacheRead": 3554432,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 2,
+          "durationMs": 1023682,
+          "usage": {
+            "input": 86291,
+            "output": 42256,
+            "reasoning": 15445,
+            "cacheRead": 1494656,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 1623203,
+      "workerTokens": 3839041,
+      "usageIncomplete": false,
+      "runId": "20261111-162009-9334",
+      "finishedAt": "2026-11-11T11:24:46.341Z"
+    }
+  }
+}

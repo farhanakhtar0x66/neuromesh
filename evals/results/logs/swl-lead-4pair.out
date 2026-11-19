@@ -1,0 +1,53 @@
+Eval swl-lead-4pair: 2 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-4pair
+
+[1/2] a2aproject__a2a-python-443 (issue, python)
+    Run 20261118-152858-3404 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 34s · input 28, cache read 387,194, cache write 48,909, output 19,032 · ≈$0.023
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 12s · input 12, cache read 95,224, cache write 21,453, output 7,864 · ≈$0.35
+    Plan: Add an optional `context: ServerCallContext | None = None` parameter to TaskStore.save/get/delete and their implementat…
+   t1: Thread ServerCallContext through TaskStore, TaskManager, handler and context builder
+    Task t1: Thread ServerCallContext through TaskStore, TaskManager, handler and context builder
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 6m 06s · input 64, cache read 2,205,003, cache write 102,605, output 38,748 · ≈$0.11
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 5m 59s · input 30, cache read 453,705, cache write 53,623, output 30,432 · ≈$0.030
+  -> hidden tests pass · applied
+
+[2/2] hgrecco__pint-2194 (issue, python)
+    Run 20261118-154733-b135 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 32s · input 34, cache read 736,999, cache write 73,198, output 29,356 · ≈$0.037
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 53s · input 12, cache read 138,489, cache write 33,152, output 11,490 · ≈$0.52
+    Plan: Let log quantities be added and subtracted across units (dBm ± dB, dB ± dB, dBm − dBm) and let compound log units multi…
+   t1: Logarithmic-unit arithmetic (dBm±dB, dB/km*km)
+    Task t1: Logarithmic-unit arithmetic (dBm±dB, dB/km*km)
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] error in 15m 00s · input 36, cache read 961,128, cache write 82,503, output 45,926 · ≈$0.049 — success API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)
+    ! The worker's connection failed (success API Error: Can't reach the API server — check your internet or DNS (ENOT); trying once more.
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 14m 33s · input 40, cache read 815,124, cache write 59,642, output 27,674 · ≈$0.034
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 1m 31s · input 14, cache read 130,218, cache write 21,850, output 14,452 · ≈$0.013
+  -> hidden tests fail · applied
+
+Eval swl-lead-4pair · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    4      15m 38s  125k / 3.34M
+hgrecco__pint-2194    issue       team  applied     passed  fail    5      36m 43s  183k / 3.00M
+
+Passed 1/2 · engine failures 0 · time 52m 21s · tokens 6.65M · expert share 5% · API-equivalent ≈ $1.17 (estimate, not spent)

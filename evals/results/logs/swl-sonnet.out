@@ -1,0 +1,66 @@
+Eval swl-sonnet-1: 5 task(s) on preset solo-haiku. Results: /Users/farhanakhtar/.neuromesh/evals/swl-sonnet-1
+
+[1/5] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-053436-4a23 · solo-haiku (solo) · worker claude claude-sonnet-5-5
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 44s · input 20, cache read 167,568, cache write 26,476, output 4,330 · ≈$0.17
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[2/5] authlib__authlib-802 (issue, python)
+    Run 20261118-053939-8f96 · solo-haiku (solo) · worker claude claude-sonnet-5-5
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 43s · input 16, cache read 142,509, cache write 19,554, output 4,369 · ≈$0.14
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/5] hgrecco__pint-2194 (issue, python)
+    Run 20261118-054106-b458 · solo-haiku (solo) · worker claude claude-sonnet-5-5
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 4m 15s · input 24, cache read 369,262, cache write 40,353, output 15,631 · ≈$0.35
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[4/5] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261118-054839-1cd6 · solo-haiku (solo) · worker claude claude-sonnet-5-5
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 25s · input 14, cache read 115,849, cache write 17,252, output 2,476 · ≈$0.11
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/5] psf__black-4720 (issue, python)
+    Run 20261118-054936-4b46 · solo-haiku (solo) · worker claude claude-sonnet-5-5
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-sonnet-5-5
+    Worker [main] done in 2m 54s · input 44, cache read 673,508, cache write 38,541, output 11,625 · ≈$0.34
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+Eval swl-sonnet-1 · preset solo-haiku
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       solo  applied     passed  fail    1      46s      0k / 198k
+authlib__authlib-802  issue       solo  applied     passed  fail    1      47s      0k / 166k
+hgrecco__pint-2194    issue       solo  applied     passed  pass    1      4m 23s   0k / 425k
+jazzband__djangorestframework-simplejwt-928 issue       solo  applied     passed  fail    1      27s      0k / 136k
+psf__black-4720       issue       solo  applied     passed  fail    1      2m 56s   0k / 724k
+
+Passed 1/5 · engine failures 0 · time 9m 18s · tokens 1.65M · expert share 0% · API-equivalent ≈ $1.10 (estimate, not spent)

@@ -1,0 +1,242 @@
+{
+  "name": "swl-k6-pair",
+  "preset": "dossier-claude",
+  "presetDetail": {
+    "name": "dossier-claude",
+    "description": "Experimental (2026-11-19, F129; K6): Claude Haiku 5.5 scouts the repository in a disposable copy and writes a dossier (the code the change touches, quoted; how a test file runs; xfail tests and TODOs nearby) and a reproduction, kept only if it fails on the code as it is. Claude Opus 5.5 then fixes the request in its own session with tools, starting from the dossier instead of exploring, with the reproduction as a check. No plan, no takeover. A trivial or small self-contained request goes to Haiku alone (F121).",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 1,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 2,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 0,
+      "mode": "dossier"
+    }
+  },
+  "startedAt": "2026-11-18T20:46:57.494Z",
+  "results": {
+    "a2aproject__a2a-python-443": {
+      "task": "a2aproject__a2a-python-443",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 25,
+        "total": 25
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.5,
+          "seven_day": 0.16
+        },
+        "after": {
+          "five_hour": 0.53,
+          "seven_day": 0.16
+        }
+      },
+      "files": 12,
+      "insertions": 209,
+      "deletions": 67,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 311972,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 95352,
+          "usage": {
+            "input": 32,
+            "output": 16950,
+            "reasoning": 8410,
+            "cacheRead": 496679,
+            "cacheWrite": 44360,
+            "split": {
+              "files": 122173,
+              "commands": 52452,
+              "earlier": 196510,
+              "calls": 16,
+              "estimated": true,
+              "startup": 154360,
+              "prompt": 15576
+            }
+          },
+          "costUsdEquivalent": 0.022316990000000005
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 190148,
+          "usage": {
+            "input": 38,
+            "output": 9083,
+            "reasoning": 1135,
+            "cacheRead": 604747,
+            "cacheWrite": 45559,
+            "split": {
+              "files": 0,
+              "commands": 163362,
+              "earlier": 165635,
+              "calls": 19,
+              "estimated": true,
+              "startup": 223535,
+              "prompt": 97812
+            }
+          },
+          "costUsdEquivalent": 0.6672334000000001
+        }
+      ],
+      "expertTokens": 659427,
+      "workerTokens": 558021,
+      "usageIncomplete": false,
+      "runId": "20261119-021705-e32f",
+      "finishedAt": "2026-11-18T20:53:09.368Z"
+    },
+    "psf__black-4720": {
+      "task": "psf__black-4720",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 2,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.53,
+          "seven_day": 0.16
+        },
+        "after": {
+          "five_hour": 0.55,
+          "seven_day": 0.16
+        }
+      },
+      "files": 10,
+      "insertions": 171,
+      "deletions": 10,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 473236,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 127822,
+          "usage": {
+            "input": 30,
+            "output": 23572,
+            "reasoning": 16226,
+            "cacheRead": 332229,
+            "cacheWrite": 32125,
+            "split": {
+              "files": 2524,
+              "commands": 59402,
+              "earlier": 145888,
+              "calls": 15,
+              "estimated": true,
+              "startup": 144270,
+              "prompt": 12300
+            }
+          },
+          "costUsdEquivalent": 0.02153629
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 339289,
+          "usage": {
+            "input": 48,
+            "output": 15960,
+            "reasoning": 4264,
+            "cacheRead": 861273,
+            "cacheWrite": 45518,
+            "split": {
+              "files": 0,
+              "commands": 213368,
+              "earlier": 305199,
+              "calls": 24,
+              "estimated": true,
+              "startup": 278508,
+              "prompt": 109764
+            }
+          },
+          "costUsdEquivalent": 0.8557906
+        }
+      ],
+      "expertTokens": 922799,
+      "workerTokens": 387956,
+      "usageIncomplete": false,
+      "runId": "20261119-022310-c754",
+      "finishedAt": "2026-11-18T21:02:17.664Z"
+    }
+  }
+}

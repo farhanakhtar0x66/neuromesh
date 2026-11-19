@@ -1,0 +1,129 @@
+Eval swl-lead-2: 5 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-2
+
+[1/5] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-122316-a3b5 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 35s · input 32, cache read 506,474, cache write 62,031, output 18,237 · ≈$0.027
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 28s · input 4, cache read 16,708, cache write 12,788, output 2,767 · ≈$0.16
+    Plan: Fix how the JSON-RPC server's POST handler maps request-envelope errors: a missing or wrong `jsonrpc` and a badly typed…
+   t1: Correct JSON-RPC envelope error codes in _handle_requests
+    Task t1: Correct JSON-RPC envelope error codes in _handle_requests
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 2m 01s · input 34, cache read 578,889, cache write 47,159, output 13,784 · ≈$0.022
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 2m 14s · input 42, cache read 660,432, cache write 44,771, output 24,235 · ≈$0.028
+    Expert (plan) lead-review turn · claude claude-opus-5-5
+    Expert (plan) done in 21s · input 4, cache read 11,478, cache write 12,384, output 876 · ≈$0.12
+  -> hidden tests fail · applied
+
+[2/5] authlib__authlib-802 (issue, python)
+    Run 20261118-123416-9623 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, web · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 27s · input 34, cache read 806,443, cache write 73,112, output 17,762 · ≈$0.032
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 30s · input 4, cache read 16,649, cache write 12,191, output 2,988 · ≈$0.16
+    Plan: Make the OIDC code, implicit and hybrid grants sign the id_token with the client's registered `id_token_signed_response…
+   t1: Sign id_token with the client's id_token_signed_response_alg
+    Task t1: Sign id_token with the client's id_token_signed_response_alg
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 2m 02s · input 38, cache read 862,126, cache write 60,892, output 22,516 · ≈$0.032
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 2m 47s · input 40, cache read 802,955, cache write 58,292, output 34,637 · ≈$0.037
+  -> hidden tests fail · applied
+
+[3/5] hgrecco__pint-2194 (issue, python)
+    Run 20261118-124259-9092 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 53s · input 32, cache read 699,925, cache write 75,709, output 23,803 · ≈$0.034
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 50s · input 4, cache read 17,369, cache write 15,600, output 5,444 · ≈$0.24
+    Plan: One senior task: in plain Quantity add/sub, a log-unit left operand combined with a dimensionless log unit (dB) is comp…
+   t1: Mixed log/linear add-sub and compound log-unit multiplication
+    Task t1: Mixed log/linear add-sub and compound log-unit multiplication
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 7m 15s · input 52, cache read 1,008,969, cache write 50,724, output 18,615 · ≈$0.49
+    ! Task t1 changed files outside what it owns: pint/facets/plain/registry.py
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 9m 12s · input 40, cache read 1,060,274, cache write 76,225, output 55,875 · ≈$0.054
+    Expert (plan) lead-review turn · claude claude-opus-5-5
+    Expert (plan) done in 24s · input 4, cache read 18,654, cache write 15,165, output 1,955 · ≈$0.16
+  -> hidden tests pass · applied
+
+[4/5] jazzband__djangorestframework-simplejwt-928 (issue, python)
+    Run 20261118-130607-8236 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8003 characters (about 2001 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 28s · input 6, cache read 29,802, cache write 13,662, output 2,696 · ≈$0.17
+    Plan: With CHECK_REVOKE_TOKEN on, TokenRefreshSerializer.validate should compare the refresh token's password-hash claim with…
+   t1: Check password hash on refresh when CHECK_REVOKE_TOKEN is on
+    Task t1: Check password hash on refresh when CHECK_REVOKE_TOKEN is on
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 37s · input 28, cache read 485,407, cache write 45,053, output 18,842 · ≈$0.023
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 2m 02s · input 28, cache read 477,065, cache write 46,048, output 23,039 · ≈$0.026
+  -> hidden tests fail · applied
+
+[5/5] psf__black-4720 (issue, python)
+    Run 20261118-131053-9a47 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 51s · input 38, cache read 933,377, cache write 84,115, output 34,270 · ≈$0.043
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 44s · input 4, cache read 16,103, cache write 16,414, output 4,428 · ≈$0.22
+    Plan: Add a Python 3.14 target (PY314) and a new preview feature that drops the brackets around multiple exception types in `…
+   t1: PY314 target, feature, preview flag and except-paren removal
+   t2: Schema, changelog and docs for PY314 and new preview feature
+    Task t2: Schema, changelog and docs for PY314 and new preview feature
+    Worker [t2] initial turn · claude claude-haiku-5-5
+    Task t1: PY314 target, feature, preview flag and except-paren removal
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t2] done in 19s · input 12, cache read 98,455, cache write 16,286, output 3,130 · ≈$0.006
+    Checks [t2]: tests passed
+    Merged task t2
+    Worker [t1] done in 7m 53s · input 68, cache read 1,181,370, cache write 45,968, output 14,091 · ≈$0.44
+    ! Task t1 changed files outside what it owns: src/blib2to3/Grammar.txt
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 7m 35s · input 62, cache read 1,132,969, cache write 54,878, output 40,388 · ≈$0.043
+    Expert (plan) lead-review turn · claude claude-opus-5-5
+    Expert (plan) done in 19s · input 4, cache read 19,456, cache write 14,661, output 1,347 · ≈$0.15
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+Eval swl-lead-2 · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       team  applied     passed  fail    5      6m 46s   57k / 1.96M
+authlib__authlib-802  issue       team  applied     passed  fail    4      8m 02s   32k / 2.74M
+hgrecco__pint-2194    issue       team  applied     passed  pass    5      20m 02s  74k / 3.07M
+jazzband__djangorestframework-simplejwt-928 issue       team  applied     passed  fail    3      4m 16s   46k / 1.10M
+psf__black-4720       issue       team  applied     passed  pass    6      19m 30s  72k / 3.64M
+
+Passed 2/5 · engine failures 0 · time 58m 36s · tokens 12.78M · expert share 2% · API-equivalent ≈ $2.72 (estimate, not spent)

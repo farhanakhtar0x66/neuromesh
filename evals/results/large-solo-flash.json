@@ -1,0 +1,67 @@
+{
+  "name": "large-solo-flash",
+  "preset": "solo-flash",
+  "presetDetail": {
+    "name": "solo-flash",
+    "description": "One Gemini 3.8 Flash (high) agent through Antigravity. The default while developing: Gemini quota is plentiful.",
+    "mode": "solo",
+    "roles": {
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": false,
+    "routing": "rules",
+    "advise": true
+  },
+  "startedAt": "2026-11-11T04:04:05.702Z",
+  "results": {
+    "large-js-shop": {
+      "task": "large-js-shop",
+      "kind": "large",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 10,
+      "insertions": 692,
+      "deletions": 0,
+      "turns": 1,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 469499,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 468018,
+          "usage": {
+            "input": 130594,
+            "output": 31560,
+            "reasoning": 21353,
+            "cacheRead": 1617211
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1779365,
+      "usageIncomplete": false,
+      "runId": "20261111-093405-c6a3",
+      "finishedAt": "2026-11-11T04:11:55.953Z"
+    }
+  }
+}

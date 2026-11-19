@@ -1,0 +1,28 @@
+Eval swl-lead-probe: 1 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-probe
+
+[1/1] hgrecco__pint-2194 (issue, python)
+    Run 20261118-120658-d3f7 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 05s · input 30, cache read 641,943, cache write 71,940, output 25,963 · ≈$0.034
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 40s · input 4, cache read 14,073, cache write 23,131, output 4,200 · ≈$0.27
+    Plan: One senior task: in PlainQuantity._add_sub and _mul_div, add a log-unit path so that dBm ± dB gives dBm and (dB/km)·km …
+   t1: Mixed log-unit add/sub and dB/length * length
+    Task t1: Mixed log-unit add/sub and dB/length * length
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 7m 23s · input 48, cache read 1,034,054, cache write 60,133, output 20,008 · ≈$0.54
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 1m 58s · input 24, cache read 300,464, cache write 43,894, output 24,171 · ≈$0.024
+  -> hidden tests fail · applied
+
+Eval swl-lead-probe · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+hgrecco__pint-2194    issue       team  applied     passed  fail    4      12m 25s  41k / 2.22M
+
+Passed 0/1 · engine failures 0 · time 12m 25s · tokens 2.26M · expert share 2% · API-equivalent ≈ $0.87 (estimate, not spent)

@@ -1,0 +1,336 @@
+{
+  "name": "swl-f132-lost3",
+  "preset": "dossier-sonnet",
+  "presetDetail": {
+    "name": "dossier-sonnet",
+    "description": "Experimental (2026-11-19; trial B of docs/26): K6 with Claude Sonnet 5.5 high as the solver. Claude Haiku 5.5 scouts a big repository into a facts-only dossier when the gate says there is a search to save (F130), then Sonnet fixes the request in its own session from the dossier. Measures whether Sonnet with a dossier keeps Opus's wins.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 1,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 2,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 0,
+      "mode": "dossier"
+    }
+  },
+  "startedAt": "2026-11-19T00:02:48.029Z",
+  "results": {
+    "a2aproject__a2a-python-414": {
+      "task": "a2aproject__a2a-python-414",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/server/test_integration.py::test_unknown_method\nFAIL fail-to-pass: tests/server/test_integration.py::test_validation_error\nSCORE 0/2",
+      "score": {
+        "passed": 0,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.34,
+          "seven_day": 0.25
+        },
+        "after": {
+          "five_hour": 0.36,
+          "seven_day": 0.25
+        }
+      },
+      "files": 2,
+      "insertions": 163,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 200970,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 151209,
+          "usage": {
+            "input": 38,
+            "output": 30106,
+            "reasoning": 13287,
+            "cacheRead": 641406,
+            "cacheWrite": 50673,
+            "split": {
+              "files": 35537,
+              "commands": 170060,
+              "earlier": 280637,
+              "calls": 19,
+              "estimated": true,
+              "startup": 186922,
+              "prompt": 18962
+            }
+          },
+          "costUsdEquivalent": 0.031605459999999995
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 43921,
+          "usage": {
+            "input": 12,
+            "output": 3407,
+            "reasoning": 543,
+            "cacheRead": 129190,
+            "cacheWrite": 23687,
+            "split": {
+              "files": 20326,
+              "commands": 3263,
+              "earlier": 19926,
+              "calls": 6,
+              "estimated": true,
+              "startup": 74490,
+              "prompt": 34884
+            }
+          },
+          "costUsdEquivalent": 0.141761
+        }
+      ],
+      "expertTokens": 156296,
+      "workerTokens": 722223,
+      "usageIncomplete": false,
+      "runId": "20261119-053253-9692",
+      "finishedAt": "2026-11-19T00:15:41.381Z"
+    },
+    "hgrecco__pint-2194": {
+      "task": "hgrecco__pint-2194",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: pint/testsuite/test_log_units.py::test_db_db_addition\nPASS fail-to-pass: pint/testsuite/test_log_units.py::test_dbm_db_addition\nSCORE 1/2",
+      "score": {
+        "passed": 1,
+        "total": 2
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.36,
+          "seven_day": 0.25
+        },
+        "after": {
+          "five_hour": 0.38,
+          "seven_day": 0.25
+        }
+      },
+      "files": 7,
+      "insertions": 227,
+      "deletions": 5,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 472394,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 140402,
+          "usage": {
+            "input": 34,
+            "output": 30019,
+            "reasoning": 17382,
+            "cacheRead": 725990,
+            "cacheWrite": 60750,
+            "split": {
+              "files": 181042,
+              "commands": 84548,
+              "earlier": 330359,
+              "calls": 17,
+              "estimated": true,
+              "startup": 169486,
+              "prompt": 21339
+            }
+          },
+          "costUsdEquivalent": 0.0344228
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 323193,
+          "usage": {
+            "input": 42,
+            "output": 21864,
+            "reasoning": 9804,
+            "cacheRead": 900005,
+            "cacheWrite": 54911,
+            "split": {
+              "files": 249,
+              "commands": 148105,
+              "earlier": 399465,
+              "calls": 20,
+              "estimated": true,
+              "startup": 266245,
+              "prompt": 140895
+            }
+          },
+          "costUsdEquivalent": 0.5283685000000001
+        }
+      ],
+      "expertTokens": 976822,
+      "workerTokens": 816793,
+      "usageIncomplete": false,
+      "runId": "20261119-054541-c8fd",
+      "finishedAt": "2026-11-19T00:26:46.023Z"
+    },
+    "openai__openai-agents-python-1633": {
+      "task": "openai__openai-agents-python-1633",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "FAIL fail-to-pass: tests/realtime/test_openai_realtime.py::TestConnectionLifecycle::test_connect_with_custom_headers_overrides_defaults\nSCORE 0/1",
+      "score": {
+        "passed": 0,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.38,
+          "seven_day": 0.25
+        },
+        "after": {
+          "five_hour": 0.38,
+          "seven_day": 0.26
+        }
+      },
+      "files": 3,
+      "insertions": 203,
+      "deletions": 22,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 234641,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 114960,
+          "usage": {
+            "input": 38,
+            "output": 23315,
+            "reasoning": 12085,
+            "cacheRead": 563351,
+            "cacheWrite": 47088,
+            "split": {
+              "files": 0,
+              "commands": 187994,
+              "earlier": 204287,
+              "calls": 19,
+              "estimated": true,
+              "startup": 190456,
+              "prompt": 27740
+            }
+          },
+          "costUsdEquivalent": 0.02671241
+        },
+        {
+          "backend": "claude",
+          "model": "claude-sonnet-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 104058,
+          "usage": {
+            "input": 30,
+            "output": 9346,
+            "reasoning": 2324,
+            "cacheRead": 408826,
+            "cacheWrite": 33552,
+            "split": {
+              "files": 0,
+              "commands": 49847,
+              "earlier": 103347,
+              "calls": 15,
+              "estimated": true,
+              "startup": 188914,
+              "prompt": 100301
+            }
+          },
+          "costUsdEquivalent": 0.2686106
+        }
+      ],
+      "expertTokens": 451754,
+      "workerTokens": 633792,
+      "usageIncomplete": false,
+      "runId": "20261119-055651-1945",
+      "finishedAt": "2026-11-19T00:31:24.978Z"
+    }
+  }
+}

@@ -1,0 +1,77 @@
+Eval swl-k6-helpers: 4 task(s) on preset dossier-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-k6-helpers
+
+[1/4] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261119-025635-0830 · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    ! No dossier: a repository of 93 files. The expert works from the request.
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 38s · input 12, cache read 94,418, cache write 16,636, output 3,235 · ≈$0.22
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/4] a2aproject__a2a-python-443 (issue, python)
+    Run 20261119-025752-244a · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 52s · input 44, cache read 695,292, cache write 47,507, output 22,675 · ≈$0.028
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 1m 47s · input 34, cache read 528,736, cache write 37,128, output 8,293 · ≈$0.57
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[3/4] openai__openai-agents-python-1633 (issue, python)
+    Run 20261119-030217-be4a · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 07s · input 36, cache read 762,803, cache write 60,873, output 26,324 · ≈$0.033
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 1m 36s · input 22, cache read 272,310, cache write 28,766, output 7,294 · ≈$0.43
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[4/4] psf__black-4720 (issue, python)
+    Run 20261119-030659-17bb · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 50s · input 42, cache read 643,330, cache write 45,704, output 25,145 · ≈$0.028
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 4m 07s · input 46, cache read 791,994, cache write 41,101, output 13,724 · ≈$0.76
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-k6-helpers · preset dossier-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    2      3m 48s   574k / 766k
+Archmonger__django-dbbackup-601 issue       team  applied     passed  pass    1      46s      114k / 0k
+openai__openai-agents-python-1633 issue       team  applied     passed  fail    2      4m 02s   308k / 850k
+psf__black-4720       issue       team  applied     passed  pass    2      7m 01s   847k / 714k
+
+Passed 3/4 · engine failures 0 · time 15m 37s · tokens 4.17M · expert share 44% · API-equivalent ≈ $2.07 (estimate, not spent)

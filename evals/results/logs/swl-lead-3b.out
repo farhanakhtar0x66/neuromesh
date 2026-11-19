@@ -1,0 +1,138 @@
+Eval swl-lead-3b: 5 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-3b
+
+[1/5] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261118-140540-5b6f · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 48s · input 8, cache read 48,614, cache write 17,555, output 4,604 · ≈$0.24
+    Plan: mediarestore now restores every tar member to exactly its archived path. The cause is `name = media_file_info.path.repl…
+   t1: Restore media files to their exact archived paths
+    Task t1: Restore media files to their exact archived paths
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 04s · input 22, cache read 283,820, cache write 29,999, output 7,790 · ≈$0.013
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests pass · applied
+
+[2/5] PyPSA__PyPSA-1310 (issue, python)
+    Run 20261118-140811-3169 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8014 characters (about 2004 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 58s · input 42, cache read 1,007,191, cache write 78,735, output 22,325 · ≈$0.037
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 2m 45s · input 20, cache read 315,137, cache write 52,128, output 15,284 · ≈$0.79
+    Plan: Components whose static `active` is False get no variables or constraints when the model is built, and `n.optimize` wri…
+   t1: Exclude inactive components from core model building
+   t2: Global constraints, MGA and expressions respect excluded inactive components after t1
+    Task t1: Exclude inactive components from core model building
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 18m 58s · input 98, cache read 4,174,589, cache write 124,258, output 41,683 · ≈$1.33
+    ! Task t1 changed files outside what it owns: pypsa/network/power_flow.py
+    Checks [t1]: tests passed
+    Merged task t1
+    Task t2: Global constraints, MGA and expressions respect excluded inactive components
+    Worker [t2] initial turn · claude claude-sonnet-5-5
+    Worker [t2] done in 6m 01s · input 44, cache read 831,086, cache write 44,264, output 12,215 · ≈$0.38
+    ! Task t2 changed files outside what it owns: test/test_lopf_activity_mask.py
+    Checks [t2]: tests passed
+    Merged task t2
+    Checks on the merged result: tests passed
+  -> hidden tests fail · applied
+
+[3/5] a2aproject__a2a-python-443 (issue, python)
+    Run 20261118-144938-60f3 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 3m 26s · input 28, cache read 419,181, cache write 46,842, output 15,755 · ≈$0.021
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 22s · input 12, cache read 107,395, cache write 27,642, output 8,805 · ≈$0.42
+    Plan: Add an optional `context: ServerCallContext | None = None` parameter to TaskStore.save/get/delete and its two implement…
+   t1: TaskStore interface + in-memory/database stores take context
+   t2: Pass ServerCallContext from handler, TaskManager and builder to the store
+    Task t2: Pass ServerCallContext from handler, TaskManager and builder to the store
+    Worker [t2] initial turn · claude claude-sonnet-5-5
+    Task t1: TaskStore interface + in-memory/database stores take context
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 35s · input 22, cache read 282,574, cache write 31,994, output 11,005 · ≈$0.015
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker [t2] timeout in 30m 02s · input 62, cache read 1,208,310, cache write 53,790, output 11,014 · ≈$0.45 — 
+    Expert [t2] advice turn · claude claude-opus-5-5
+    Expert [t2] done in 44s · input 10, cache read 64,130, cache write 20,243, output 3,665 · ≈$0.25
+    Expert advice [t2] (the worker timeout): The code change is basically done. Every store call in TaskManager (get_task, ensure_task, _save_task), DefaultRequestHandler (all 7 task_store.get c…
+   1. Run everything through the venv: `/Users/farhanakhtar/.neuromesh/swe-live/run/a2aproject__a2a-python-443 '/testbed/.venv/bin/python -m pyte…
+   2. Do not change the TaskStore, InMemoryTaskStore or DatabaseTaskStore signatures. That is t1's job, and doing it here would conflict when the…
+   3. Triage the failures in the mock-based files (test_task_manager.py, test_simple_request_context_builder.py, test_default_request_handler.py,…
+   4. Failures that come from a real InMemoryTaskStore/DatabaseTaskStore (e.g. test_integration.py, tests/integration, and handler tests that bui…
+   5. Check that the new tests are there and pass with mocks: TaskManager with and without a context (already in test_task_manager.py), plus hand…
+   6. Run `/testbed/.venv/bin/python -m compileall -q src tests` and ruff format/check on the changed files (task_manager.py line 82 is long). Th…
+    Worker [t2] advised-fix turn · claude claude-sonnet-5-5
+    Worker [t2] done in 22m 26s · input 54, cache read 708,543, cache write 32,112, output 9,424 · ≈$0.29
+    Checks [t2]: tests passed
+    Merged task t2
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 4m 00s · input 38, cache read 647,413, cache write 53,559, output 30,348 · ≈$0.032
+    Checks on the merged result: tests passed
+  -> hidden tests pass · applied
+
+[4/5] openai__openai-agents-python-1633 (issue, python)
+    Run 20261118-155423-608d · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug, library · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 00s · input 16, cache read 211,775, cache write 43,733, output 11,744 · ≈$0.017
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 37s · input 4, cache read 17,551, cache write 15,910, output 4,318 · ≈$0.22
+    Plan: Add a `headers` option to RealtimeModelConfig. When it is set, OpenAIRealtimeWebSocketModel.connect() sends exactly tho…
+   t1: Add a custom headers option to realtime connect (Azure support)
+    Task t1: Add a custom headers option to realtime connect (Azure support)
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 4m 09s · input 32, cache read 395,751, cache write 27,276, output 8,277 · ≈$0.014
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker error in 5m 17s · input 18, cache read 169,311, cache write 25,742, output 10,175 · ≈$0.012 — success API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)
+    ! The worker's connection failed (success API Error: Can't reach the API server — check your internet or DNS (ENOT); trying once more.
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 7m 25s · input 28, cache read 268,491, cache write 19,791, output 11,204 · ≈$0.012
+  -> hidden tests pass · applied
+
+[5/5] spesmilo__electrum-10172 (issue, python)
+    Run 20261118-161627-5d86 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 49s · input 34, cache read 626,767, cache write 62,714, output 20,594 · ≈$0.029
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 48s · input 6, cache read 38,565, cache write 19,291, output 5,174 · ≈$0.27
+    Plan: Add an opt-in `force_check_password` flag to `Daemon.load_wallet`. It runs `wallet.check_password(password)` before a n…
+   t1: force_check_password in Daemon.load_wallet; use it from the QML daemon
+    Task t1: force_check_password in Daemon.load_wallet; use it from the QML daemon
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 41s · input 10, cache read 95,231, cache write 21,512, output 2,599 · ≈$0.12
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+Eval swl-lead-3b · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    7      1h 02m   232k / 3.56M
+Archmonger__django-dbbackup-601 issue       team  applied     passed  pass    2      2m 01s   71k / 322k
+openai__openai-agents-python-1633 issue       team  applied     passed  pass    5      19m 53s  38k / 1.20M
+PyPSA__PyPSA-1310     issue       team  applied     passed  fail    4      31m 14s  383k / 6.34M
+spesmilo__electrum-10172 issue       team  applied     passed  fail    3      4m 16s   63k / 829k
+
+Passed 3/5 · engine failures 0 · time 2h 00m · tokens 13.04M · expert share 6% · API-equivalent ≈ $4.95 (estimate, not spent)

@@ -1,0 +1,274 @@
+{
+  "name": "build-opus-luna",
+  "preset": "factory-opus-luna",
+  "presetDetail": {
+    "name": "factory-opus-luna",
+    "description": "Claude Opus 5.5 (medium) is the lead engineer: it writes the spec and design for every new program, plans very large requests, and advises or takes over when the workers are stuck. GPT-6 Luna through Codex does the building (low effort first, high when stuck) and the reviewing. The expert reasons; the workers type.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        }
+      ],
+      "briefer": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "tier": "worker"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "low",
+        "tier": "worker"
+      },
+      {
+        "backend": "codex",
+        "model": "gpt-6-luna",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-11T09:58:36.949Z",
+  "results": {
+    "typing-detailed": {
+      "task": "typing-detailed",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 15,
+      "insertions": 545,
+      "deletions": 0,
+      "turns": 7,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 819975,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "briefer"
+          ],
+          "turns": 1,
+          "durationMs": 114231,
+          "usage": {
+            "input": 2,
+            "output": 10544,
+            "reasoning": 4015,
+            "cacheRead": 0,
+            "cacheWrite": 36349
+          },
+          "costUsdEquivalent": 0.50168
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 6,
+          "durationMs": 673757,
+          "usage": {
+            "input": 180992,
+            "output": 31215,
+            "reasoning": 11123,
+            "cacheRead": 2534912,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 46895,
+      "workerTokens": 2747119,
+      "usageIncomplete": false,
+      "runId": "20261111-152837-52d9",
+      "finishedAt": "2026-11-11T10:12:17.144Z"
+    },
+    "typing-one-line": {
+      "task": "typing-one-line",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 19,
+      "insertions": 517,
+      "deletions": 0,
+      "turns": 7,
+      "repairs": 2,
+      "escalations": 0,
+      "wallMs": 938038,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "briefer"
+          ],
+          "turns": 1,
+          "durationMs": 124551,
+          "usage": {
+            "input": 2,
+            "output": 11568,
+            "reasoning": 4772,
+            "cacheRead": 0,
+            "cacheWrite": 36624
+          },
+          "costUsdEquivalent": 0.5243599999999999
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 6,
+          "durationMs": 781436,
+          "usage": {
+            "input": 178925,
+            "output": 38180,
+            "reasoning": 19307,
+            "cacheRead": 2309888,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 48194,
+      "workerTokens": 2526993,
+      "usageIncomplete": false,
+      "runId": "20261111-154217-6e59",
+      "finishedAt": "2026-11-11T10:27:55.387Z"
+    },
+    "typing-steps": {
+      "task": "typing-steps",
+      "kind": "build",
+      "language": "any",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 25,
+      "insertions": 1991,
+      "deletions": 0,
+      "turns": 11,
+      "repairs": 2,
+      "escalations": 1,
+      "wallMs": 1538001,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "briefer",
+            "escalation"
+          ],
+          "turns": 3,
+          "durationMs": 675415,
+          "usage": {
+            "input": 60,
+            "output": 71895,
+            "reasoning": 17741,
+            "cacheRead": 2144601,
+            "cacheWrite": 192285
+          },
+          "costUsdEquivalent": 3.4053402000000004
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6-luna",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 8,
+          "durationMs": 819490,
+          "usage": {
+            "input": 252878,
+            "output": 37702,
+            "reasoning": 14188,
+            "cacheRead": 3764224,
+            "cacheWrite": 0
+          }
+        }
+      ],
+      "expertTokens": 2408841,
+      "workerTokens": 4054804,
+      "usageIncomplete": false,
+      "runId": "20261111-155755-5ced",
+      "finishedAt": "2026-11-11T10:53:33.519Z"
+    }
+  }
+}

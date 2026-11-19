@@ -1,0 +1,388 @@
+{
+  "name": "try-factory-multi",
+  "preset": "factory",
+  "presetDetail": {
+    "name": "factory",
+    "description": "The factory floor: an expert plans and steps in only when workers get stuck; Gemini Flash workers build and test. Expert order: Claude Opus 4.6 (Antigravity), then GPT-6.1 Sol, then Claude Opus 5.5.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert"
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert"
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert"
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true
+  },
+  "startedAt": "2026-11-10T23:19:29.564Z",
+  "results": {
+    "js-markdown": {
+      "task": "js-markdown",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 297,
+      "deletions": 7,
+      "turns": 5,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 715527,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 9098,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 7270,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 28593,
+          "usage": {
+            "input": 30411,
+            "output": 986,
+            "reasoning": 43,
+            "cacheRead": 73344,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 668874,
+          "usage": {
+            "input": 218451,
+            "output": 74995,
+            "reasoning": 68628,
+            "cacheRead": 1803719
+          }
+        }
+      ],
+      "expertTokens": 104741,
+      "workerTokens": 2097165,
+      "usageIncomplete": false,
+      "runId": "20261111-044929-c602",
+      "finishedAt": "2026-11-10T23:31:25.610Z"
+    },
+    "js-sales-report": {
+      "task": "js-sales-report",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 6,
+      "insertions": 332,
+      "deletions": 0,
+      "turns": 5,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 581950,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 8144,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 7376,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 31519,
+          "usage": {
+            "input": 29158,
+            "output": 1143,
+            "reasoning": 24,
+            "cacheRead": 44032,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 532346,
+          "usage": {
+            "input": 267706,
+            "output": 45154,
+            "reasoning": 36735,
+            "cacheRead": 1845394
+          }
+        }
+      ],
+      "expertTokens": 74333,
+      "workerTokens": 2158254,
+      "usageIncomplete": false,
+      "runId": "20261111-050125-b2ca",
+      "finishedAt": "2026-11-10T23:41:08.489Z"
+    },
+    "js-todo-remove": {
+      "task": "js-todo-remove",
+      "kind": "multi",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 3,
+      "insertions": 29,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 325245,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 323669,
+          "usage": {
+            "input": 157528,
+            "output": 23808,
+            "reasoning": 20551,
+            "cacheRead": 1039211
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1220547,
+      "usageIncomplete": false,
+      "runId": "20261111-051108-dfd0",
+      "finishedAt": "2026-11-10T23:46:34.801Z"
+    },
+    "py-library-loans": {
+      "task": "py-library-loans",
+      "kind": "multi",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 6,
+      "insertions": 490,
+      "deletions": 0,
+      "turns": 5,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 753062,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "claude-opus-4-6-thinking",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 8628,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "claude-sonnet-4-6",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 6960,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        },
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 29167,
+          "usage": {
+            "input": 29151,
+            "output": 1073,
+            "reasoning": 68,
+            "cacheRead": 44032,
+            "cacheWrite": 0
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker",
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 707368,
+          "usage": {
+            "input": 214198,
+            "output": 62938,
+            "reasoning": 49671,
+            "cacheRead": 2387159
+          }
+        }
+      ],
+      "expertTokens": 74256,
+      "workerTokens": 2664295,
+      "usageIncomplete": false,
+      "runId": "20261111-051634-74fb",
+      "finishedAt": "2026-11-10T23:59:08.135Z"
+    }
+  }
+}

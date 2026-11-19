@@ -1,0 +1,3 @@
+1000 seeds in 454 s on 8 processes: 955 finished, 25 paused, 20 failed; 3641 agent turns
+Runs that took each path: start-here 271, blind tests passed 78, race 63, structured rescued 59, turn moved 49, blind tests none 43, lead tests accepted 36, race won 35, race lost 27, reproduce accepted 21, reproduce kept 20, blind tests skipped 17, lead accept (evidence) 17, reproduce turn-failed 17, open question 16, reproduce none 12, patch applied 11, reproduce bad-path 10, reproduce touched-code 9, lead more 9, blind tests failed 9, reproduce passed-on-seed 9, probe 7, lead accept 6, reproduce restored 6, blind tests recorded 5, reproduce load-error 4, blind tests dropped 3, lead tests cannot 2, patch missed 1
+Every run kept every rule.

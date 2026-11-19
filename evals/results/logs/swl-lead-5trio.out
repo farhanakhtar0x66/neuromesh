@@ -1,0 +1,68 @@
+Eval swl-lead-5trio: 3 task(s) on preset lead-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-lead-5trio
+
+[1/3] a2aproject__a2a-python-414 (issue, python)
+    Run 20261118-164653-b268 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8027 characters (about 2007 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 53s · input 32, cache read 604,838, cache write 66,407, output 23,274 · ≈$0.031
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 50s · input 2, cache read 0, cache write 14,484, output 5,831 · ≈$0.23
+    Plan: One task: in `JSONRPCApplication._handle_requests`, check the basic JSON-RPC envelope before pydantic validation. A mis…
+   t1: Fix JSON-RPC envelope error mapping in JSONRPCApplication._handle_requests
+    Task t1: Fix JSON-RPC envelope error mapping in JSONRPCApplication._handle_requests
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 1m 32s · input 28, cache read 446,759, cache write 37,419, output 11,500 · ≈$0.018
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests fail · applied
+
+[2/3] a2aproject__a2a-python-443 (issue, python)
+    Run 20261118-165700-ab54 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 03s · input 30, cache read 445,907, cache write 60,718, output 24,098 · ≈$0.029
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 53s · input 2, cache read 830, cache write 13,930, output 6,905 · ≈$0.25
+    Plan: Add an optional `context: ServerCallContext | None = None` parameter to `TaskStore.get`, `save` and `delete` and to bot…
+   t1: Pass ServerCallContext through the TaskStore interface and its callers
+    Task t1: Pass ServerCallContext through the TaskStore interface and its callers
+    Worker [t1] initial turn · claude claude-haiku-5-5
+    Worker [t1] done in 4m 01s · input 72, cache read 1,922,704, cache write 84,785, output 30,457 · ≈$0.051
+    Checks [t1]: tests passed
+    Merged task t1
+    Worker evidence turn · claude claude-haiku-5-5
+    Worker done in 2m 43s · input 32, cache read 468,554, cache write 43,314, output 25,051 · ≈$0.026
+  -> hidden tests pass · applied
+
+[3/3] hgrecco__pint-2194 (issue, python)
+    Run 20261118-170729-bda9 · lead-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 58s · input 38, cache read 790,438, cache write 74,397, output 40,366 · ≈$0.043
+    Expert (plan) plan turn · claude claude-opus-5-5
+    Expert (plan) done in 1m 33s · input 2, cache read 830, cache write 15,105, output 10,309 · ≈$0.33
+    Plan: This is one change, built by one senior: dBm ± dB work as linear multiply/divide and give a result in dBm, dB/km × km g…
+   t1: Mixed log-unit arithmetic (dBm±dB, dB/km*km) and compound log conversion
+    Task t1: Mixed log-unit arithmetic (dBm±dB, dB/km*km) and compound log conversion
+    Worker [t1] initial turn · claude claude-sonnet-5-5
+    Worker [t1] done in 6m 51s · input 38, cache read 807,583, cache write 53,697, output 16,043 · ≈$0.46
+    Checks [t1]: tests passed, lead-tests passed
+    Merged task t1
+  -> hidden tests pass · applied
+
+Eval swl-lead-5trio · preset lead-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-414 issue       team  applied     passed  fail    3      4m 31s   20k / 1.19M
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    4      9m 56s   22k / 3.11M
+hgrecco__pint-2194    issue       team  applied     passed  pass    3      11m 38s  26k / 1.78M
+
+Passed 2/3 · engine failures 0 · time 26m 05s · tokens 6.15M · expert share 1% · API-equivalent ≈ $1.46 (estimate, not spent)

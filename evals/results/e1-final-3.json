@@ -1,0 +1,408 @@
+{
+  "name": "e1-final-3",
+  "preset": "factory-wf",
+  "presetDetail": {
+    "name": "factory-wf",
+    "description": "The factory floor: every request starts with a Gemini 3.8 Flash worker at low effort. A stuck worker climbs to high effort with its work kept; only a stuck high-effort worker gets the expert (GPT-6.1 Sol through Codex), first as advice and only then as a takeover. The expert plans clearly large requests. Claude Opus 5.5 medium is the last expert fallback.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "medium",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "tester": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "codex",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "tier": "expert"
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 2,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "routing": "worker-first",
+    "advise": true,
+    "expertBudget": 250000,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-low",
+        "tier": "worker"
+      },
+      {
+        "backend": "agy",
+        "model": "gemini-3.8-flash-high",
+        "tier": "worker"
+      }
+    ]
+  },
+  "startedAt": "2026-11-11T05:17:23.044Z",
+  "results": {
+    "hard-js-cache": {
+      "task": "hard-js-cache",
+      "kind": "hard",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 349,
+      "deletions": 1,
+      "turns": 4,
+      "repairs": 1,
+      "escalations": 0,
+      "wallMs": 1259487,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 2,
+          "durationMs": 129819,
+          "usage": {
+            "input": 156191,
+            "output": 11452,
+            "reasoning": 0,
+            "cacheRead": 781006
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 2,
+          "durationMs": 1127308,
+          "usage": {
+            "input": 227655,
+            "output": 120443,
+            "reasoning": 111794,
+            "cacheRead": 2286359
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 3583106,
+      "usageIncomplete": false,
+      "runId": "20261111-104723-1391",
+      "finishedAt": "2026-11-11T05:38:23.044Z"
+    },
+    "hard-py-cron": {
+      "task": "hard-py-cron",
+      "kind": "hard",
+      "language": "python",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 2,
+      "insertions": 299,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 820701,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 325979,
+          "usage": {
+            "input": 115528,
+            "output": 10743,
+            "reasoning": 0,
+            "cacheRead": 959201
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 493904,
+          "usage": {
+            "input": 112342,
+            "output": 58887,
+            "reasoning": 55404,
+            "cacheRead": 865771
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2122472,
+      "usageIncomplete": false,
+      "runId": "20261111-110823-7c2c",
+      "finishedAt": "2026-11-11T05:52:04.004Z"
+    },
+    "hard-rust-diff": {
+      "task": "hard-rust-diff",
+      "kind": "hard",
+      "language": "rust",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 521,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 818013,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 133422,
+          "usage": {
+            "input": 69901,
+            "output": 9943,
+            "reasoning": 0,
+            "cacheRead": 294574
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 681790,
+          "usage": {
+            "input": 204842,
+            "output": 65116,
+            "reasoning": 57408,
+            "cacheRead": 1813434
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2457810,
+      "usageIncomplete": false,
+      "runId": "20261111-112204-a7aa",
+      "finishedAt": "2026-11-11T06:05:44.100Z"
+    },
+    "hard-ts-expr": {
+      "task": "hard-ts-expr",
+      "kind": "hard",
+      "language": "typescript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 292,
+      "deletions": 1,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 650938,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 121622,
+          "usage": {
+            "input": 49790,
+            "output": 5142,
+            "reasoning": 0,
+            "cacheRead": 279042
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 527432,
+          "usage": {
+            "input": 170979,
+            "output": 51165,
+            "reasoning": 44193,
+            "cacheRead": 2390179
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 2946297,
+      "usageIncomplete": false,
+      "runId": "20261111-113544-8fa3",
+      "finishedAt": "2026-11-11T06:16:35.649Z"
+    },
+    "js-cart-bug": {
+      "task": "js-cart-bug",
+      "kind": "bug",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "files": 1,
+      "insertions": 3,
+      "deletions": 2,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 490333,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 148638,
+          "usage": {
+            "input": 103173,
+            "output": 3380,
+            "reasoning": 0,
+            "cacheRead": 424165
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "tester"
+          ],
+          "turns": 1,
+          "durationMs": 339687,
+          "usage": {
+            "input": 120029,
+            "output": 27371,
+            "reasoning": 23394,
+            "cacheRead": 1003012
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 1681130,
+      "usageIncomplete": false,
+      "runId": "20261111-114635-f84b",
+      "finishedAt": "2026-11-11T06:24:46.500Z"
+    },
+    "js-config-env": {
+      "task": "js-config-env",
+      "kind": "feature",
+      "language": "javascript",
+      "mode": "solo",
+      "status": "paused",
+      "checks": "-",
+      "hidden": "not run",
+      "files": 0,
+      "insertions": 0,
+      "deletions": 0,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 45065,
+      "usage": [
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-low",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 35454,
+          "usage": {
+            "input": 39604,
+            "output": 934,
+            "reasoning": 0,
+            "cacheRead": 44464
+          }
+        },
+        {
+          "backend": "agy",
+          "model": "gemini-3.8-flash-high",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 8940,
+          "usage": {
+            "input": 0,
+            "output": 0,
+            "reasoning": 0,
+            "cacheRead": 0
+          }
+        }
+      ],
+      "expertTokens": 0,
+      "workerTokens": 85002,
+      "usageIncomplete": false,
+      "reason": "subscription limits reached for every worker model: Your AI credits balance is too low to continue. (see \"neuromesh cooldowns\" for when they reset)",
+      "runId": "20261111-115446-aa04",
+      "finishedAt": "2026-11-11T06:25:31.625Z"
+    }
+  }
+}

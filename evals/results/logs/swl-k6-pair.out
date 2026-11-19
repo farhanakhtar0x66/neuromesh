@@ -1,0 +1,42 @@
+Eval swl-k6-pair: 2 task(s) on preset dossier-claude. Results: /Users/farhanakhtar/.neuromesh/evals/swl-k6-pair
+
+[1/2] a2aproject__a2a-python-443 (issue, python)
+    Run 20261119-021705-e32f · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 1m 35s · input 32, cache read 496,679, cache write 44,360, output 16,950 · ≈$0.022
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 3m 10s · input 38, cache read 604,747, cache write 45,559, output 9,083 · ≈$0.67
+    Checks [main]: tests passed, lead-tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/2] psf__black-4720 (issue, python)
+    Run 20261119-022310-c754 · dossier-claude (team) · expert claude claude-opus-5-5 · worker claude claude-haiku-5-5
+    Brief: bug · 3 working standards added
+   Staffing: the lead plans it, picks a developer per task and checks the result
+    Checks before any change: tests passed
+    Context packet: 8002 characters (about 2001 tokens) of repository map for the agents
+    Worker scout turn · claude claude-haiku-5-5
+    Worker done in 2m 08s · input 30, cache read 332,229, cache write 32,125, output 23,572 · ≈$0.022
+    Plan: the expert writes the patch in one call
+   main: the request (expert)
+    Task main: the request
+    Expert [main] initial turn · claude claude-opus-5-5
+    Expert [main] done in 5m 39s · input 48, cache read 861,273, cache write 45,518, output 15,960 · ≈$0.86
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+Eval swl-k6-pair · preset dossier-claude
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-443 issue       team  applied     passed  pass    2      5m 12s   659k / 558k
+psf__black-4720       issue       team  applied     passed  pass    2      7m 53s   923k / 388k
+
+Passed 2/2 · engine failures 0 · time 13m 05s · tokens 2.53M · expert share 63% · API-equivalent ≈ $1.57 (estimate, not spent)

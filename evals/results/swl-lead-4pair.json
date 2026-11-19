@@ -1,0 +1,260 @@
+{
+  "name": "swl-lead-4pair",
+  "preset": "lead-claude",
+  "presetDetail": {
+    "name": "lead-claude",
+    "description": "Experimental (2026-11-18, F120 to F123; docs/24-lead.md): Claude Opus 5.5 medium leads, and works only where it decides. A trivial or small self-contained request goes to Claude Haiku 5.5 alone (no Opus turn). Otherwise, on a big repository Haiku first writes a report for the request; Opus plans from it (under about 700 words): the acceptance cases, the implied ones too, and per task a developer: grunt (Haiku low), worker (Haiku high), senior (Claude Sonnet 5.5 high) or itself. After the build, Haiku probes every case and Neuromesh re-runs each probe: all hold and the checks pass, accepted with no Opus turn; otherwise Opus reviews read-only from the evidence and adds follow-ups for whom it chooses, at most twice. No separate tester.",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 4,
+    "maxParallel": 2,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 3,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "seniorLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-sonnet-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "gruntLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "low",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 2
+    }
+  },
+  "startedAt": "2026-11-18T09:58:44.191Z",
+  "results": {
+    "a2aproject__a2a-python-443": {
+      "task": "a2aproject__a2a-python-443",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 25,
+        "total": 25
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.57,
+          "seven_day": 0.04
+        },
+        "after": {
+          "five_hour": 0.62,
+          "seven_day": 0.05
+        }
+      },
+      "files": 11,
+      "insertions": 191,
+      "deletions": 53,
+      "turns": 4,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 938096,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 3,
+          "durationMs": 819000,
+          "usage": {
+            "input": 122,
+            "output": 88212,
+            "reasoning": 37100,
+            "cacheRead": 3045902,
+            "cacheWrite": 205137,
+            "long": {
+              "input": 14,
+              "output": 8476,
+              "cacheRead": 723849,
+              "cacheWrite": 8008
+            },
+            "split": {
+              "files": 746182,
+              "commands": 312227,
+              "earlier": 1407647,
+              "calls": 61,
+              "estimated": true,
+              "startup": 614743,
+              "prompt": 170363
+            }
+          },
+          "costUsdEquivalent": 0.16253858000000002
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 72252,
+          "usage": {
+            "input": 12,
+            "output": 7864,
+            "reasoning": 1669,
+            "cacheRead": 95224,
+            "cacheWrite": 21453,
+            "split": {
+              "files": 16244,
+              "commands": 0,
+              "earlier": 14675,
+              "calls": 6,
+              "estimated": true,
+              "startup": 51183,
+              "prompt": 34587
+            }
+          },
+          "costUsdEquivalent": 0.3479968
+        }
+      ],
+      "expertTokens": 124553,
+      "workerTokens": 3339373,
+      "usageIncomplete": false,
+      "runId": "20261118-152858-3404",
+      "finishedAt": "2026-11-18T10:17:32.589Z"
+    },
+    "hgrecco__pint-2194": {
+      "task": "hgrecco__pint-2194",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "fail",
+      "hiddenTail": "",
+      "quota": {
+        "before": {
+          "five_hour": 0.62,
+          "seven_day": 0.05
+        },
+        "after": {
+          "five_hour": 0.77,
+          "seven_day": 0.07
+        }
+      },
+      "files": 7,
+      "insertions": 213,
+      "deletions": 3,
+      "turns": 5,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 2202856,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 4,
+          "durationMs": 2015291,
+          "usage": {
+            "input": 124,
+            "output": 117408,
+            "reasoning": 76462,
+            "cacheRead": 2643469,
+            "cacheWrite": 237193,
+            "split": {
+              "files": 512110,
+              "commands": 186456,
+              "earlier": 1315618,
+              "calls": 63,
+              "estimated": true,
+              "startup": 657088,
+              "prompt": 214345
+            }
+          },
+          "costUsdEquivalent": 0.13258969
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "orchestrator"
+          ],
+          "turns": 1,
+          "durationMs": 112576,
+          "usage": {
+            "input": 12,
+            "output": 11490,
+            "reasoning": 6158,
+            "cacheRead": 138489,
+            "cacheWrite": 33152,
+            "split": {
+              "files": 36760,
+              "commands": 0,
+              "earlier": 42841,
+              "calls": 6,
+              "estimated": true,
+              "startup": 55925,
+              "prompt": 36128
+            }
+          },
+          "costUsdEquivalent": 0.5227617999999999
+        }
+      ],
+      "expertTokens": 183143,
+      "workerTokens": 2998194,
+      "usageIncomplete": false,
+      "runId": "20261118-154733-b135",
+      "finishedAt": "2026-11-18T11:04:20.667Z"
+    }
+  }
+}

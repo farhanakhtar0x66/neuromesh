@@ -1,0 +1,151 @@
+{
+  "name": "swl-k6-openai",
+  "preset": "dossier-claude",
+  "presetDetail": {
+    "name": "dossier-claude",
+    "description": "Experimental (2026-11-19, F129; K6): Claude Haiku 5.5 scouts the repository in a disposable copy and writes a dossier (the code the change touches, quoted; how a test file runs; xfail tests and TODOs nearby) and a reproduction, kept only if it fails on the code as it is. Claude Opus 5.5 then fixes the request in its own session with tools, starting from the dossier instead of exploring, with the reproduction as a check. No plan, no takeover. A trivial or small self-contained request goes to Haiku alone (F121).",
+    "mode": "team",
+    "roles": {
+      "orchestrator": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ],
+      "worker": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "effort": "high",
+          "tier": "worker"
+        }
+      ],
+      "escalation": [
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "tier": "expert"
+        }
+      ]
+    },
+    "repairs": 1,
+    "maxTasks": 1,
+    "maxParallel": 1,
+    "turnTimeoutMinutes": 30,
+    "intake": true,
+    "brief": true,
+    "routing": "rules",
+    "advise": true,
+    "expertBudgetUsd": 2,
+    "test": "always",
+    "workerLadder": [
+      {
+        "backend": "claude",
+        "model": "claude-haiku-5-5",
+        "effort": "high",
+        "tier": "worker"
+      }
+    ],
+    "lead": {
+      "reviews": 0,
+      "mode": "dossier"
+    }
+  },
+  "startedAt": "2026-11-18T21:47:14.682Z",
+  "results": {
+    "openai__openai-agents-python-1633": {
+      "task": "openai__openai-agents-python-1633",
+      "kind": "issue",
+      "language": "python",
+      "mode": "team",
+      "status": "applied",
+      "checks": "passed",
+      "hidden": "pass",
+      "score": {
+        "passed": 1,
+        "total": 1
+      },
+      "quota": {
+        "before": {
+          "five_hour": 0.67,
+          "seven_day": 0.18
+        },
+        "after": {
+          "five_hour": 0.71,
+          "seven_day": 0.19
+        }
+      },
+      "files": 4,
+      "insertions": 228,
+      "deletions": 12,
+      "turns": 2,
+      "repairs": 0,
+      "escalations": 0,
+      "wallMs": 796289,
+      "usage": [
+        {
+          "backend": "claude",
+          "model": "claude-haiku-5-5",
+          "tier": "worker",
+          "roles": [
+            "worker"
+          ],
+          "turns": 1,
+          "durationMs": 173221,
+          "usage": {
+            "input": 36,
+            "output": 23665,
+            "reasoning": 12745,
+            "cacheRead": 601307,
+            "cacheWrite": 48973,
+            "split": {
+              "files": 140932,
+              "commands": 55088,
+              "earlier": 245730,
+              "calls": 18,
+              "estimated": true,
+              "startup": 180797,
+              "prompt": 27770
+            }
+          },
+          "costUsdEquivalent": 0.027643769999999998
+        },
+        {
+          "backend": "claude",
+          "model": "claude-opus-5-5",
+          "tier": "expert",
+          "roles": [
+            "escalation"
+          ],
+          "turns": 1,
+          "durationMs": 554257,
+          "usage": {
+            "input": 24,
+            "output": 9287,
+            "reasoning": 2635,
+            "cacheRead": 294989,
+            "cacheWrite": 27794,
+            "split": {
+              "files": 0,
+              "commands": 28732,
+              "earlier": 67959,
+              "calls": 12,
+              "estimated": true,
+              "startup": 148797,
+              "prompt": 77319
+            }
+          },
+          "costUsdEquivalent": 0.4671858
+        }
+      ],
+      "expertTokens": 332094,
+      "workerTokens": 673981,
+      "usageIncomplete": false,
+      "runId": "20261119-031732-20f3",
+      "finishedAt": "2026-11-18T22:02:08.375Z"
+    }
+  }
+}

@@ -1,0 +1,207 @@
+Eval swl-opus-2: 16 task(s) on preset solo-opus. Results: /Users/farhanakhtar/.neuromesh/evals/swl-opus-2
+
+[1/16] Archmonger__django-dbbackup-601 (issue, python)
+    Run 20261118-140532-6e87 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 7268 characters (about 1817 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 48s · input 14, cache read 108,561, cache write 21,475, output 3,286 · ≈$0.26
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[2/16] Archmonger__django-dbbackup-604 (issue, python)
+    Run 20261118-140700-f560 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 7307 characters (about 1827 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 47s · input 16, cache read 143,094, cache write 18,035, output 3,966 · ≈$0.25
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[3/16] PyPSA__PyPSA-1310 (issue, python)
+    Run 20261118-140821-7f8c · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8014 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] timeout in 40m 01s · input 224, cache read 10,999,727, cache write 151,336, output 35,812 · ≈$4.13 — 
+    Task failed [main]: worker timeout: no detail
+  -> hidden tests not run · failed · worker timeout: no detail
+
+[4/16] QuantEcon__QuantEcon.py-797 (issue, python)
+    Run 20261118-144838-3cab · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8016 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 2m 58s · input 12, cache read 104,444, cache write 20,024, output 4,847 · ≈$0.28
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[5/16] Tuxemon__Tuxemon-3068 (issue, python)
+    Run 20261118-145619-57dd · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8023 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 13s · input 16, cache read 161,140, cache write 22,807, output 3,473 · ≈$0.28
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[6/16] a2aproject__a2a-python-443 (issue, python)
+    Run 20261118-145837-1cb8 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8021 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 20s · input 32, cache read 416,591, cache write 33,105, output 6,796 · ≈$0.48
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[7/16] ansible__molecule-4534 (issue, python)
+    Run 20261118-150101-e132 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    ! Feature F12 context-packet failed: [F12 context-packet] EISDIR: illegal operation on a directory, read
+   This came from F12 context-packet (Context packet; src/context/packet.ts). To run without it: --disable context-packet, or NEUROMESH_DISABLE=context-packet.
+    ! Feature F100 start-here failed: [F100 start-here] EISDIR: illegal operation on a directory, read
+   This came from F100 start-here (Where a task most likely begins, as line ranges; src/context/packet.ts (startHere)). To run without it: --disable start-here, or NEUROMESH_DISABLE=start-here.
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 39s · input 14, cache read 109,513, cache write 15,838, output 2,194 · ≈$0.19
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[8/16] astronomer__dag-factory-519 (issue, python)
+    Run 20261118-151146-128e · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 14s · input 22, cache read 279,623, cache write 29,410, output 6,247 · ≈$0.42
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[9/16] awslabs__mcp-1154 (issue, python)
+    Run 20261118-151947-5d03 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8013 characters (about 2003 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 42s · input 42, cache read 570,485, cache write 31,246, output 7,516 · ≈$0.51
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[10/16] certtools__intelmq-2632 (issue, python)
+    Run 20261118-152725-3de2 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8015 characters (about 2004 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 47s · input 14, cache read 140,218, cache write 21,957, output 4,720 · ≈$0.30
+    Checks [main]: tests failed
+    Repair [main] round 1 (repair)
+    Worker [main] repair turn · claude claude-opus-5-5 (same session)
+    Worker [main] done in 1m 54s · input 10, cache read 115,751, cache write 3,266, output 2,443 · ≈$0.098
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[11/16] django-guardian__django-guardian-896 (issue, python)
+    Run 20261118-154302-6b54 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8026 characters (about 2007 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 6m 23s · input 20, cache read 186,209, cache write 20,069, output 4,861 · ≈$0.30
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[12/16] falconry__falcon-2459 (issue, python)
+    Run 20261118-155137-95f8 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8009 characters (about 2002 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 3m 39s · input 26, cache read 242,468, cache write 19,391, output 4,464 · ≈$0.29
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[13/16] lastmile-ai__mcp-agent-367 (issue, python)
+    Run 20261118-155926-a10d · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8022 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] error in 6m 13s · input 20, cache read 330,658, cache write 37,492, output 7,296 · ≈$0.51 — success API Error: Can't reach the API server — check your internet or DNS (ENOTFOUND)
+    ! The worker's connection failed (success API Error: Can't reach the API server — check your internet or DNS (ENOT); trying once more.
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 5m 07s · input 10, cache read 121,933, cache write 24,688, output 1,778 · ≈$0.26
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[14/16] openai__openai-agents-python-1633 (issue, python)
+    Run 20261118-161544-a2fe · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8019 characters (about 2005 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 3m 41s · input 30, cache read 306,613, cache write 20,045, output 5,708 · ≈$0.34
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests pass · applied
+
+[15/16] python-attrs__attrs-1457 (issue, python)
+    Run 20261118-162131-db16 · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 6973 characters (about 1743 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 3m 35s · input 38, cache read 629,145, cache write 41,477, output 12,303 · ≈$0.70
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+[16/16] spesmilo__electrum-10172 (issue, python)
+    Run 20261118-162719-34db · solo-opus (solo) · worker claude claude-opus-5-5
+    Checks before any change: tests passed
+    Context packet: 8024 characters (about 2006 tokens) of repository map for the agents
+    Task main: the request
+    Worker [main] initial turn · claude claude-opus-5-5
+    Worker [main] done in 1m 40s · input 14, cache read 125,734, cache write 18,969, output 4,273 · ≈$0.26
+    Checks [main]: tests passed
+    Merged task main
+  -> hidden tests fail · applied
+
+Eval swl-opus-2 · preset solo-opus
+task                  kind        mode  status      checks  hidden  turns  time     tokens (expert / worker)
+a2aproject__a2a-python-443 issue       solo  applied     passed  pass    1      1m 28s   457k / 0k
+ansible__molecule-4534 issue       solo  applied     passed  fail    1      40s      128k / 0k
+Archmonger__django-dbbackup-601 issue       solo  applied     passed  pass    1      57s      133k / 0k
+Archmonger__django-dbbackup-604 issue       solo  applied     passed  fail    1      49s      165k / 0k
+astronomer__dag-factory-519 issue       solo  applied     passed  fail    1      7m 08s   315k / 0k
+awslabs__mcp-1154     issue       solo  applied     passed  fail    1      1m 48s   609k / 0k
+certtools__intelmq-2632 issue       solo  applied     passed  fail    2      5m 28s   288k / 0k
+django-guardian__django-guardian-896 issue       solo  applied     passed  fail    1      7m 13s   211k / 0k
+falconry__falcon-2459 issue       solo  applied     passed  fail    1      3m 47s   266k / 0k
+lastmile-ai__mcp-agent-367 issue       solo  applied     passed  fail    2      12m 44s  524k / 0k
+openai__openai-agents-python-1633 issue       solo  applied     passed  pass    1      4m 57s   332k / 0k
+PyPSA__PyPSA-1310     issue       solo  failed      -       —       1      40m 10s  11.19M / 0k
+python-attrs__attrs-1457 issue       solo  applied     passed  fail    1      3m 41s   683k / 0k
+QuantEcon__QuantEcon.py-797 issue       solo  applied     passed  fail    1      3m 24s   129k / 0k
+spesmilo__electrum-10172 issue       solo  applied     passed  fail    1      2m 42s   149k / 0k
+Tuxemon__Tuxemon-3068 issue       solo  applied     passed  fail    1      1m 28s   187k / 0k
+
+Passed 3/16 · engine failures 0 · time 1h 38m · tokens 15.77M · expert share 100% · API-equivalent ≈ $9.87 (estimate, not spent)
