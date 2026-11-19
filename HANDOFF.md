@@ -1,45 +1,5 @@
 # Handoff: for whoever works on Neuromesh next
 
-## State on 2026-11-19 (facts; the rest of this file was written 2026-11-14 to 11-17)
-
-What the 2026-11-14 session did (the phase-2 review, F100 to F104, the first
-version of the plan in doc 22, the default switched to `cascade-claude`) is
-recorded as facts in `docs/handoff-2026-11-14-session.md`.
-
-- **Branches.** `main` and `neuromesh-testing` are the 0.3.0 beta (42f672b,
-  2026-11-16). `neuromesh-research` is 80 commits ahead of them (745f30c,
-  2026-11-19). `neuromesh-routing` was merged everywhere and deleted on
-  2026-11-14. Many `code/*` worktree branches exist from Sonnet build sessions.
-- **The routing cascade** (F80 to F99, built 2026-11-13/14): Tier 0 rules,
-  Haiku grunt and worker, Sonnet senior, Opus expert that plans and advises
-  only. Evidence: `evals/routing-bench/REPORT.md`; `rb-cascade-2` matched Opus
-  alone on the 15-prompt suite at an estimated $0.84 against $3.32 (one run).
-  Design: `docs/19-cascade.md`; offline route table: `evals/routing-bench/routes.ts`.
-- **After the beta, on `neuromesh-research`:** the "lead" line (F124 to F126,
-  2026-11-18) and the K designs (F127 to F132, 2026-11-19): K1/K5 patch-lead
-  and lead-auto, K6 = a Haiku scout's dossier, then Opus in its own tool
-  session (F129), with F130 dossier-gate, F131 advisory-repro, F132 the solver
-  gets the request without the brief's worker standards. Final design: `docs/26`.
-  Latest feature id in use: F132.
-- **Last measured result (trials A, A2, B on hard SWE-bench-Live issues,
-  2026-11-19, `docs/STATUS.md` 69 to 70 and the commit messages):** K6 with
-  F132 resolved the same 7 of 19 as Opus alone, at an estimated $8.91
-  against $9.14. Quality held; the saving was small, and only where the code
-  search is large. Sonnet with the dossier lost the cases Opus won on implied
-  requirements. The worker standards in the brief cost Opus those wins (hence
-  F132).
-- **Direction the owner chose after it:** route each kind of work to what was
-  measured to win there: easy work to Haiku alone, building and medium work
-  to the cascade, hard repository issues to K6, using the models the user is
-  signed in to and this machine's record. A very large repository test
-  (Opus alone against K6) is for later.
-- **Working arrangement since 2026-11-16:** an Opus session advises and
-  decides; Sonnet sessions build from its prompts (mechanical work); the owner
-  runs live commands. The `neuromesh` command on the owner's Mac runs
-  `~/.neuromesh/app`, checked out on `neuromesh-research`.
-- The numbered list under "What to do, in order" below reflects 2026-11-17;
-  check `docs/STATUS.md` (latest entries) and `git log --all` for what changed.
-
 Rewritten 2026-11-19 on `neuromesh-research` (last commit before this file: `60f10bd`). It states facts: what exists,
 what was measured, what is known not to work, what is open. Read it, then `CLAUDE.md` (the working rules), then
 `docs/STATUS.md` (one numbered entry per event; 63 to 71 cover the work summarised here).
@@ -90,6 +50,8 @@ are API-equivalent estimates (nothing is paid per token), from one run each unle
 
 - The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, checked out on `neuromesh-research`. After a push:
   `git -C ~/.neuromesh/app pull --ff-only`. `install.sh` resets that copy to `neuromesh-testing`; it has not been run.
+- `neuromesh-routing` (where the cascade was built) was merged into all three branches and deleted on 2026-11-14.
+  The `code/*` branches are worktrees of Sonnet build sessions.
 - Feature registry: `src/features.ts`. Next free id: **F133**.
 - Tests: `npm test` 373 of 373, `npx tsc --noEmit` clean, at `60f10bd`. Fault harness (`node evals/chaos.ts --seeds 1000`,
   `--kill 1 --seeds 400`) keeps every rule at that commit.
@@ -140,6 +102,43 @@ Per-issue tables, costs by model and Opus's re-read tokens: `evals/swe-live/RESU
 6. **Sonnet with the dossier** resolved 5 of Opus's 8 at 44% of K6-with-Opus's cost and none of the three issues that
    depend on cases the issue only implies.
 7. About 4 of the 21 issues cannot be solved from the issue text (an unstated message, argument or migration name).
+
+## The routing cascade (F80 to F99, built 2026-11-13 and 14; in the 0.3.0 beta)
+
+Preset `cascade-claude`, the default. Design: `docs/19-cascade.md`. Benchmark, records and the report:
+`evals/routing-bench/` (`REPORT.md`, `results/`, `routes.ts` prints Tier 0's route for each prompt with no model call).
+
+| Ids | What |
+| --- | --- |
+| F80, F81 | Tier 0 rule router (rules, then cluster similarity, then this machine's calibration table) and the calibration record |
+| F82 | grunt tier: checked only by the project's checks, never repaired; a failure climbs to the worker |
+| F83, F91 | early-exit gate: worker and senior write a one-line confidence preamble and the turn is stopped when it says escalate or confidence is under 0.55 (F91; was 0.75/0.80) |
+| F84 | the stuck developer writes a bottleneck diagnostic; the expert advises from it, not from the history |
+| F85, F92 | blueprint-only expert: Opus plans and writes the hardest part's blueprint, builds nothing; blueprint asked to stay under about 400 words (Opus wrote 836 on prompt 4.1) |
+| F86, F87, F88 | escalation breaker (at most 2 tasks per run reach the expert), routing cost summary, 1% shadow grading queue |
+| F89, F90 | Tier 0 scores the instruction, not pasted material; an inline transform goes to the grunt as one no-tools call |
+| F93 | an expert route gets the plan-then-build sandwich only by the size rule or F94; otherwise it starts on Sonnet |
+| F94 | a short new build naming 3 or more technical domains and no code file goes to the expert's plan |
+| F95 | stand-ins for an implementation (`unimplemented!()`, `raise NotImplementedError`, `TODO: implement`...) fail the checks; applies to every preset |
+| F96 | the unplanned task's preamble may say `scope: true`; the expert then splits the task (F68), building none of it |
+| F97 | a first turn stopped before changing anything (quota, sign-in, interrupt) is asked again as a first turn; applies to every preset |
+| F98 | a build the expert planned or split is reviewed once, as a whole (F71 extended); `test: "no-checks"` still skips it when tests exist |
+| F99 | text after "In <file>:" that starts with a verb or reads as prose is the instruction, not pasted data |
+
+Measured, one run each:
+
+- Routing bench (`rb-cascade-2`, clean five-hour window): 150 of 150 after the executable rescore, against Opus alone's
+  150; est. $0.84 against $3.32; 3 points of the five-hour window against 13 (Opus's 13 include the session that ran
+  it); all three traps survived. `rb-cascade-1` (before F89 to F92): est. $1.16, 10 points.
+- Prompt 4.1 (one Rust file) cost as much in the sandwich as Opus alone ($0.339 against $0.338); that is why F93 exists.
+- Live checks of F96 on the owner's "local AI agent" prompt (F94 off): without the preamble (before F97), Sonnet
+  alone built 9 files and 7 tests, est. $0.14; with it, Sonnet answered `scope: true` after 329 output tokens, Opus
+  split the task into 4 parts, Haiku built them: 19 files, 117 tests passing, est. $0.53, of which $0.22 per-part Sonnet
+  reviews that found no blocker (hence F98). Two follow-up edits in that repository went to Haiku alone (est. $0.012
+  and $0.032); the first passed its tests with unbounded Notes, which nothing caught under `no-checks`.
+  The repository is `~/Projects/scope-test-2` (not in git here).
+- The friend's ringbuf example ("In src/ringbuf.rs: fix the memory ordering race ...") routed to the worker before
+  F99 and to the expert after; the 15 benchmark prompts' routes did not change.
 
 ## What exists (built on `neuromesh-research`)
 
