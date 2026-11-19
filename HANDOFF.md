@@ -69,7 +69,7 @@ PyPSA-1310, so most comparisons are on 20; A2's electrum did not run (sign-in lo
 | Haiku alone | solo-haiku | 8 of 27 (9 with interface notes); 3 of the 21 | $1.61 on 27 |
 | Cascade with F119 | cascade-claude | 5 of 21 | $5.13 |
 | Opus alone | solo-opus | 8 of 20 | $9.40 |
-| Sonnet alone | solo-claude (Sonnet high) | 1 of 5 | $1.10 |
+| Sonnet alone | Sonnet 5.5 high, alone | 1 of 5 | $1.10 |
 | Lead v3 (Opus plans, cheap models build, Opus reviews) | lead-claude | 7 of 20 | $15.22 |
 | K1 (Haiku scouts, Opus writes one patch with no tools) | patch-claude | 2 of 21 | $5.74 |
 | K6 with Opus, before F132 (trial A) | dossier-claude | 5 of 20 | $9.78 |
@@ -101,7 +101,7 @@ Per-issue tables, costs by model and Opus's re-read tokens: `evals/swe-live/RESU
 
 | Ids | What | Preset |
 | --- | --- | --- |
-| F111 to F118 | `neuromesh report`, `nm run` short output, reproduce-first (off), network pause, empty-done, keep-checks | |
+| F111 to F118 | telemetry summary, tool preflight, bad-run report, short output, reproduce-first (off), network pause, empty-done, keep-checks | |
 | F119 | checks green at the start no longer stand in for the review | all |
 | F120 to F126 | the lead: Opus plans with cases, triage (F121: trivial or small self-contained goes to Haiku alone), scout report on big repos, evidence probes, the lead's test file as oracle, no takeover, direct no-tool calls | lead-claude |
 | F127 | K1 patch-lead: Haiku scouts in a disposable copy, Opus writes search/replace edits in up to 3 calls | patch-claude |
