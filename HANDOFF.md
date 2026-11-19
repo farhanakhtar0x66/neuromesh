@@ -3,7 +3,7 @@
 ## State on 2026-11-19 (facts; the rest of this file was written 2026-11-14 to 11-17)
 
 - **Branches.** `main` and `neuromesh-testing` are the 0.3.0 beta (42f672b,
-  2026-11-16). `neuromesh-research` is 77 commits ahead of them (60f10bd,
+  2026-11-16). `neuromesh-research` is 80 commits ahead of them (745f30c,
   2026-11-19). `neuromesh-routing` was merged everywhere and deleted on
   2026-11-14. Many `code/*` worktree branches exist from Sonnet build sessions.
 - **The routing cascade** (F80 to F99, built 2026-11-13/14): Tier 0 rules,
