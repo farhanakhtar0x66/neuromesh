@@ -1,198 +1,179 @@
 # Handoff: for whoever works on Neuromesh next
 
-Written 2026-11-14 on `neuromesh-research`. Read this, then `CLAUDE.md` (the
-working rules), then `docs/STATUS.md` (the log of what happened). Keep this
-file current: when a step below is done, tick it and say where the result is.
+Rewritten 2026-11-19 on `neuromesh-research` (last commit before this file: `60f10bd`). It states facts: what exists,
+what was measured, what is known not to work, what is open. Read it, then `CLAUDE.md` (the working rules), then
+`docs/STATUS.md` (one numbered entry per event; 63 to 71 cover the work summarised here).
+
+## Latest facts (updated 2026-11-19)
+
+- Branch `neuromesh-research` is at 60f10bd (STATUS 71). Next free feature id: F133.
+- Lead/K-series experiments 2026-11-17 to 19 (`docs/24-lead.md`, `docs/25-cascade-research.md`,
+  `docs/26-final-design.md`): F120 to F132. On SWE-bench-Live issues, Opus alone resolved 8.
+  K1 (F127 patch-lead) resolved 2 of 21. K6 (F129 lead-dossier) with F132 (solver-own-judgement),
+  trial A2: 7 of 19, at est. $8.91 against Opus alone's $9.14 (one run). That is about Opus
+  quality for a small saving. The owner's next stated direction is routing each kind of work to
+  its measured winner.
+- Haiku shares Opus's quota on one Claude plan, so a cheaper worker saves window only on its own plan.
+- Since 2026-11-16 the arrangement is: an advisor session decides, Sonnet 5.5 sessions build
+  from its prompts, the owner runs live commands.
+- Telemetry (F52): the endpoint is live at https://neuromesh-telemetry.farhanakhtar.workers.dev
+  (Cloudflare Worker + D1, `telemetry-endpoint/`, `deploy.sh`). Its admin token is in
+  `~/.neuromesh/telemetry/admin-token` (not in git). Tests never post to it (NODE_TEST_CONTEXT guard).
+- Housekeeping done 2026-11-12: the old Rust binary (`neuromesh 0.0.1`) was removed from
+  `~/.local/bin`, which now holds the installer's shell wrapper. The old run history
+  (`~/.neuromesh/projects`, `history.json`) was moved to the Trash. `~/.neuromesh/evals` was kept.
+  An empty stray `~/Projects/.git` was moved to the Trash. New project in the TUI now makes its
+  own repository with a first commit (9dc0e63), even inside another repository and with no git
+  identity set.
+- `docs/STATUS.md` (entries up to 71) is the full log. The checklist below dates from 2026-11-14;
+  some items in it predate the K-series.
 
 ## What this is for
 
-The owner pays for a $20 Claude plan, not a $200 one. A frontier model used
-for everything builds good software and runs out of plan quickly. Neuromesh
-exists to get the same result for far less of the plan:
+The owner pays for a $20 Claude plan. The stated goal (docs/22):
 
-> minimise the total cost of a run, subject to resolving at least as often
-> as one frontier model working alone.
+> minimise the total cost of a run, subject to resolving at least as often as one frontier model working alone.
 
-"Cost" is first the plan's five-hour and weekly windows, and second dollars
-at API list prices. They are different measures and both are recorded.
-
-## What it is today
-
-The **routing cascade**, preset `cascade-claude`, the default on this
-branch. One Claude plan:
-
-| Tier | Model | Job |
-| --- | --- | --- |
-| 0 | no model: Neuromesh's rules | choose the starting tier (`src/routing/router.ts`) |
-| 1 grunt | Haiku 5.5 low | mechanical work; no tools for inline transforms |
-| 2 worker | Haiku 5.5 medium, then high | routine building |
-| 3 senior | Sonnet 5.5 | judgement; reviews |
-| 4 expert | Opus 5.5 medium | plans and advises; builds nothing |
-
-A stuck task climbs; the engine checks everything it can with the project's
-own checks. `docs/19-cascade.md` explains it; `src/engine/run.ts` is it.
-
-**The result so far** (`evals/routing-bench/REPORT.md`, run `rb-cascade-2`):
-150 of 150 (after the M9 executable rescore; 148.8 under the old
-keyword rubric) against Opus alone's 150, an estimated $0.84 against $3.32, 3
-points of the five-hour window against 13 (of which 1 to 2 are the session
-that ran it), all three traps survived, and faster. One run.
-
-**Do not judge the project from older results.** The logstat, bookshelf and
-python-bot runs and "finding 23" in `docs/STATUS.md` were measured on the
-earlier factory presets. GPT-6 Luna is no longer used. Before you assess or
-plan anything, read the last two days of `git log --all` and the owner's
-usage log (`~/.neuromesh/usage/USAGE.md`) to see what is actually being run.
-An assistant got this wrong on 2026-11-14 and wrote a plan around Luna.
+"Cost" is first the plan's five-hour and weekly windows, second dollars at API list prices. All dollar figures below
+are API-equivalent estimates (nothing is paid per token), from one run each unless said otherwise.
 
 ## Where things are
 
 | Branch | What it holds |
 | --- | --- |
 | `main`, `neuromesh-testing` | the 0.3.0 beta (2026-11-16): F01 to F110, `cascade-claude` the default. Testers install `neuromesh-testing`. |
-| `neuromesh-research` | ahead of them since 2026-11-17: F101 off by default (STATUS 57), F113 `neuromesh report`, F114 `nm run` short output (on, not measured live), F115 reproduce-first (off until measured), `evals/real-tasks-2` (29 tasks), `evals/real-tasks-3` (10), `evals/baselines.ts`. Merge to testing once the Haiku runs below show nothing broke. |
+| `neuromesh-research` | everything since: F111 to F132, the SWE-bench-Live suite, the lead and K1/K5/K6 presets, docs 23 to 26. Not merged to testing. |
 
-The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, which is
-checked out on **`neuromesh-research`** (since 2026-11-14, at the owner's
-request, so real projects use the latest). After you push here, update it:
+- The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, checked out on `neuromesh-research`. After a push:
+  `git -C ~/.neuromesh/app pull --ff-only`. `install.sh` resets that copy to `neuromesh-testing`; it has not been run.
+- Feature registry: `src/features.ts`. Next free id: **F133**.
+- Tests: `npm test` 373 of 373, `npx tsc --noEmit` clean, at `60f10bd`. Fault harness (`node evals/chaos.ts --seeds 1000`,
+  `--kill 1 --seeds 400`) keeps every rule at that commit.
 
-    git -C ~/.neuromesh/app pull --ff-only
+## Results, by kind of work
 
-Do not run `install.sh` on this Mac: it resets the copy to
-`neuromesh-testing`. Testers still install `neuromesh-testing`; nothing
-reaches them until the owner merges.
+| Kind of work | Suite | Measured | Source |
+| --- | --- | --- | --- |
+| Easy | real-tasks batch 1 (10), batch 2 (29), batch 3 (10), hard set (12) | Haiku 5.5 alone: 10/10, 28/29, 8/10, 9/12. The cascade on batch 3: 7/10 ($2.86, before F117/F118); on the hard set: 11/12 ($3.12) | STATUS 51, 61, 63, 64 |
+| Medium: building from the owner's kind of prompt | routing bench, 15 prompts, checkers run the code | cascade 150/150 at $0.84, 3 five-hour points; Opus alone 150/150 at $3.32, 13 points. Held-out set of 15 exists (`evals/routing-bench/held-out/`) | `evals/routing-bench/REPORT.md`, docs/22 |
+| Real use | owner's usage log, `~/.neuromesh/usage/USAGE.md` | cascade-claude: 4 runs, all finished with passing checks, $0.01 to $0.53, one rating (4 of 5) | usage log |
+| Hard: real repository bug fixes | SWE-bench-Live, 21 issues (below) | Opus alone and K6 + F132 resolve the same 7 of 19 at $9.14 and $8.91 | `evals/swe-live/RESULTS.md` |
 
-F100 to F104 (`docs/21-phase-2-review.md`) were audited offline on 2026-11-17
-(`docs/STATUS.md` 57): F101 is off by default (`--enable blind-tests` or
-`NEUROMESH_ENABLE=blind-tests` turns it on), F100 is kept, F102 to F104 are on
-but have never fired. If one misbehaves in the owner's real work,
-`--disable <key>` switches it off; fix it or turn it off by default, and say so
-in `docs/STATUS.md`.
+### SWE-bench-Live, all configurations
 
-## What to do, in order
+27 valid issues imported; the comparison set is 21 (Haiku's 19 failures plus 2 of its passes). Opus alone did not finish
+PyPSA-1310, so most comparisons are on 20; A2's electrum did not run (sign-in lost), so A2's is on 19.
 
-The plan is `docs/22-path-to-the-goal.md`: the items by track, then nine
-phases, each with its approach, its budget of live calls, its gate, and what
-to do if the gate is missed. **Follow its order.** Do not start a later phase
-because it is more interesting; each one spends what the one before it
-measures. The next steps, concretely:
+| Configuration | Preset | Resolved | Est. cost |
+| --- | --- | --- | --- |
+| Haiku alone | solo-haiku | 8 of 27 (9 with interface notes); 3 of the 21 | $1.61 on 27 |
+| Cascade with F119 | cascade-claude | 5 of 21 | $5.13 |
+| Opus alone | solo-opus | 8 of 20 | $9.40 |
+| Sonnet alone | solo-claude (Sonnet high) | 1 of 5 | $1.10 |
+| Lead v3 (Opus plans, cheap models build, Opus reviews) | lead-claude | 7 of 20 | $15.22 |
+| K1 (Haiku scouts, Opus writes one patch with no tools) | patch-claude | 2 of 21 | $5.74 |
+| K6 with Opus, before F132 (trial A) | dossier-claude | 5 of 20 | $9.78 |
+| K6 with Sonnet, before F132 (trial B) | dossier-sonnet | 5 of 20 (the same 5 as A) | $4.18 |
+| K6 with Opus and F132 (trial A2) | dossier-claude | **7 of 19, the same 7 as Opus alone**, plus PyPSA | **$8.91** (Opus alone on those 19: $9.14) |
+| F132 on the 3 issues A lost | dossier-claude / dossier-sonnet | Opus 3 of 3 ($2.29); Sonnet 0 of 3 ($1.03) | |
 
-- [x] **1. Finish the routing report's open items** (phase 1, step 0). Done 2026-11-15 (STATUS 46); the commands below were run. Read `evals/routing-bench/REPORT.md`, last section. A
-  second and third clean cascade run (`node evals/routing-bench/run.ts
-  --config cascade --name rb-cascade-3 --wait-reset`), and Haiku alone on the
-  same 15 prompts (a `solo-haiku` configuration for the runner). This says
-  how stable the result is and how much of it is the cascade rather than
-  Haiku. Ask the owner before starting: it spends the plan.
+Per-issue tables, costs by model and Opus's re-read tokens: `evals/swe-live/RESULTS.md`.
 
-  The runner has `--config haiku` (the `solo-haiku` preset) and `--set
-  original|held-out|all` since 2026-11-15 (STATUS 45). Run one at a time, with
-  the owner's interactive session closed, from the repository root, in this
-  order (each continues where it stopped if run again with the same name):
+## What the measurements established
 
-      node evals/routing-bench/run.ts --config frontier --name rb-frontier-2 --wait-reset
-      node evals/routing-bench/run.ts --config cascade  --name rb-cascade-3  --wait-reset
-      node evals/routing-bench/run.ts --config cascade  --name rb-cascade-4  --wait-reset
-      node evals/routing-bench/run.ts --config haiku    --name rb-haiku-1    --wait-reset
+1. **Judgement handed between models lost quality every time it was measured**: Opus's plan built by Haiku (lead v2
+   to v5 lost implied cases); Haiku's diagnosis and mandatory reproduction given to Opus (openai-1633 under K6, F131);
+   the brief's worker standards given to the solver (trials A and B, F132). Facts handed over (quoted code, test
+   commands and their output) did not lose quality.
+2. **Opus needs its own tool session on real repositories.** One blind patch (K1): 2 of 21; its own session with a
+   dossier (K6): Opus's level.
+3. **Opus's cost is the number of its calls**: each call re-reads the CLI's system prompt and the whole session. On
+   black, alone: 36 calls, 1.51M tokens re-read; with the dossier: 22 calls, 756k. Its outputs were already short.
+4. **A cheaper model's verdict is not a gate on hard fixes.** The cascade's tester approved fixes the hidden tests
+   failed; K1 accepted patches that passed Haiku's reproduction; Sonnet's K6 patches passed every visible check.
+5. **The dossier saves only where the search is big** (black, lastmile, mcp-1154, attrs). On small or well-named
+   issues it adds a Haiku turn and saves nothing; the gate (F130) skips it there.
+6. **Sonnet with the dossier** resolved 5 of Opus's 8 at 44% of K6-with-Opus's cost and none of the three issues that
+   depend on cases the issue only implies.
+7. About 4 of the 21 issues cannot be solved from the issue text (an unstated message, argument or migration name).
 
-  Then the held-out baseline, the router and the brief unchanged:
+## What exists (built on `neuromesh-research`)
 
-      node evals/routing-bench/run.ts --config frontier --set held-out --name ho-frontier-1 --wait-reset
-      node evals/routing-bench/run.ts --config cascade  --set held-out --name ho-cascade-1  --wait-reset
-      node evals/routing-bench/run.ts --config haiku    --set held-out --name ho-haiku-1    --wait-reset
+| Ids | What | Preset |
+| --- | --- | --- |
+| F111 to F118 | `neuromesh report`, `nm run` short output, reproduce-first (off), network pause, empty-done, keep-checks | |
+| F119 | checks green at the start no longer stand in for the review | all |
+| F120 to F126 | the lead: Opus plans with cases, triage (F121: trivial or small self-contained goes to Haiku alone), scout report on big repos, evidence probes, the lead's test file as oracle, no takeover, direct no-tool calls | lead-claude |
+| F127 | K1 patch-lead: Haiku scouts in a disposable copy, Opus writes search/replace edits in up to 3 calls | patch-claude |
+| F128 | K5 lead-auto: patch for repository changes, plan for big requests | auto-claude |
+| F129 | K6 lead-dossier: Haiku's dossier, then the solver's own tool session | dossier-claude, dossier-sonnet |
+| F130 | dossier gate, no model call: dossier only for a repo over 150 files whose request does not name code it defines | |
+| F131 | dossier is facts only; the scout's reproduction is advice, not a check | |
+| F132 | on K6 the solver gets the request without the brief's working standards | |
 
-  Score with `node evals/routing-bench/score.ts rb-cascade-3 rb-frontier-2`
-  (and `ho-cascade-1 ho-frontier-1`); compare with `node evals/bench.ts
-  --compare rb-cascade-2,rb-cascade-3,rb-cascade-4 rb-frontier-1,rb-frontier-2
-  --margin 10`; then `node src/record/cli.ts backfill`.
-- [ ] **2. Checkers that run the code** (the checklist at the top of doc
-  22). Done for 2.1, 2.3, 3.1, 3.2 on 2026-11-15; 3.3 waits for a Postgres. No model calls; rescore the saved answers with `rescore.ts`.
-- [x] **3. A held-out set of 15 prompts** the router has never been tuned
-  on. Done 2026-11-15: `evals/routing-bench/held-out/`, Tier 0's routes
-  recorded untouched in `evals/routing-bench/HELD_OUT_ROUTES.md` (8 of 15 on
-  an expected tier; 11 of 15 on the tuned set). Judge router changes on
-  Table B of `routes.ts`; never tune on it.
-- [x] **4. Show the developer's "choices made" in full** (D6). Done 2026-11-15 (F105).
-- [ ] **5. Start-up tokens** (C1): extend the no-tools path from the grunt
-  to worker turns that have a spec or a named file; measure tokens per
-  prompt on the routing suite. Built as F109 (STATUS 47); it never fired on
-  its first live run (a wiring bug, STATUS 49, fixed), and on the next
-  (`rb-cascade-6`) it cut the five prompts it takes by 94 percent of their
-  input at no loss of score: **kept** (STATUS 52). Still to do: run the held-out
-  set with it (`ho-cascade-3`), and look at 4.3's history (65 percent of the
-  suite's input).
-- [ ] **6. Read the owner's usage log weekly.** The owner is building real
-  projects with the cascade; each run is rated there. A low rating or a
-  failed feature is the next thing to fix, ahead of the plan.
-- [ ] **6b. M1, first batch built** (2026-11-16, STATUS 50): ten valid real tasks in
-  `evals/real-tasks/` (rebuild with `evals/make-batch.ts`). Next: a second reader
-  for the prompts, Haiku alone once on each to set the difficulty mix, more
-  repositories (Python, Rust, a refactor), and a split by repository.
-- [ ] **6c. Phase 1 step 4, the difficulty check** (run by the owner, live): from the
-  repository, `neuromesh eval --suite evals/real-tasks --preset solo-haiku --name rt-haiku-1 --quota`
-  (once on every task), then `cascade-claude` and `solo-opus` the same way
-  with `--name rt-cascade-1` and `rt-opus-1`. `--fake` rehearses it for free.
-  Then keep a mix of tasks Haiku passes, fails and half-passes (doc 22,
-  phase 1, step 4). *`rt-haiku-1` ran 2026-11-16: Haiku alone passed 10 of 10
-  (287/287 hidden tests, est. $0.46). Batch 1 is too easy to tell presets apart;
-  do not spend Opus on it. Harder tasks first (the beta sprint below).*
-- [x] **6d. Structured-output failures (STATUS 53):** built as F110 (STATUS 54), about 7.8 percent of
-  Claude tokens in the kept logs. To check live: `structured.rescued` events, no more
-  `error_max_structured_output_retries`, and whether `choices` and `open` are still filled.
-- [x] **6e. Terse-prompt run: dropped** (2026-11-16). Seven of the ten terse tasks hinge on a format the
-  short prompt leaves out, so a failure would measure format guessing, not difficulty. Difficulty comes
-  from harder real commits instead. `make-batch --prompts terse` stays; nothing to run.
-- [ ] **6f. The beta sprint (two weeks from 2026-11-16).** The claim, and only it: on about 40 real tasks
-  (several repositories, Haiku alone passing 40 to 70 percent) plus the 30 routing prompts, `cascade-claude`
-  resolves within about 10 points of Opus alone at a fraction of the window and the list price. Week 1:
-  `evals/real-tasks-2/` (ProofBench's Rust fixtures, two synthetic refactors, about 20 larger commits),
-  validated offline, then Haiku alone once to set the mix. Week 2: Opus alone once, the cascade twice, Haiku
-  once, `bench --compare`, the numbers into `README.md`. Phases 3 to 9 of doc 22 are the roadmap for after
-  the beta, with testers' reports as their evidence.
-  *2026-11-17:* both batches built offline (29 + 10 tasks, `evals/real-tasks-2/MANIFEST.md`, `evals/real-tasks-3/MANIFEST.md`).
-  Haiku alone runs on both overnight: `node evals/baselines.ts --suite evals/real-tasks-2 --only haiku` (then `real-tasks-3`);
-  results in each suite's `RESULTS.md`. Next: keep about 40 tasks with Haiku at 40 to 70 percent, then the cascade twice
-  (`--only cascade1,cascade2`) and Opus once (`--only opus --allow-opus`, the owner's OK first).
-- [ ] **7. Then phase 1 proper**: tasks from real commits (M1), three runs,
-  intervals. Then the phases in order.
+Design documents: `docs/24-lead.md` (the lead), `docs/25-cascade-research.md` (published work, K1 to K5, remedies for
+v1 to v5), `docs/26-final-design.md` (the facts-only design and where Sonnet goes).
 
-The beta release is track B in doc 22. Nothing on the beta's page may say
-more than the checklist has ticked.
+Already present before this work and relevant to what the owner described next: Tier 0 rule router (F80, F94,
+`src/routing/router.ts`); this machine's pass record per tier, `~/.neuromesh/routing/calibration.json`, which can
+overrule Tier 0 (F103); CONTEXT.md notes and compaction (F42); brief engine (F01, `src/intake/brief.ts`).
 
-Built on 2026-11-15, no model calls (STATUS 43): M5 (F106, the five-part input
-split, `bench --split`), M2 (F107, `bench --compare`), L1 (F108, the record,
-`node src/record/cli.ts`). Every benchmark run from now on lands in the record
-by itself; run `backfill` after a bench to pick up its result lines.
+## SWE-bench-Live setup (facts for running it)
+
+- Suite: `evals/swe-live/tasks/<id>` (imported by `evals/swe-live/import.ts`; README there). Interface notes for 5
+  issues: `interfaces.json`. Rejected: `tasks-rejected/`.
+- Docker: colima profile `swe` (x86 via Rosetta), socket `~/.colima/swe/docker.sock`. If it is down: `colima start swe`,
+  then `docker context use default`. The agent works on the host; a runner executes commands in the image.
+- Hidden check: the official harness; verdicts pass, fail or **error** (timeout or empty output). Five evals in
+  parallel on the 4-CPU VM produced empty grades; two in parallel did not.
+- Re-grade one issue alone: `bash -c '~/.neuromesh/swe-live/why.sh <run> <id>'` (under bash; zsh does not split the
+  arguments). Output in `~/.neuromesh/swe-live/why/<run>/<id>`.
+- Subsets are folders of symlinks in `~/.neuromesh/swe-live/subsets/` (`all21`, `lost3`, `k6pair`, `opus`, ...).
+- Run: `node src/cli/main.ts eval --suite <dir> --preset <p> --name <n> --quota`; results in
+  `~/.neuromesh/evals/<n>/results.json` (keyed by task id; per-model `usage` with `costUsdEquivalent` and
+  `usage.cacheRead`, `usage.split.calls`) and `<n>.out`. Run folders: `~/.neuromesh/projects/<task>-<hash>/runs/<run id>`.
+- The prompt text the solver received is not stored in the run folder; `events.jsonl` has the brief's kind and the
+  number of standards only.
+
+## Known issues and loose ends
+
+- The Claude CLI's sign-in was revoked mid-run twice (STATUS 64, trial A2). The engine pauses correctly; the owner
+  has to sign in again (`claude` in a terminal). electrum-10172 in A2 is unrun.
+- `ansible__molecule-4534`: F12 context-packet and F100 start-here fail with `EISDIR` (a directory read as a file);
+  the run continues without them.
+- With no dossier, Opus inside K6 made more calls than Opus alone on some issues (molecule 12 against 7, simplejwt 9
+  against 5); the cause is not established (candidates: the 8k-character repository map, start-here hints).
+- PyPSA-1310: Opus's cost there is unknown (no `costUsdEquivalent` recorded; 3.3M to 3.9M tokens re-read).
+- The lastmile-367 brief is staffed with the old cascade wording ("the cheapest worker rung starts") in dossier runs:
+  a label only.
+- The beta sprint's 40-task claim (docs/22, track B) was not run: batches 1 to 3 and the hard set proved too easy for
+  Haiku to separate presets; SWE-bench-Live replaced them as the hard measure.
+
+## Open (not built, not measured)
+
+- **The owner's stated direction (2026-11-19)**: route each kind of work to the configuration measured to win on it
+  (easy to Haiku alone, building to the cascade, hard repository fixes to K6), choosing among the models the user is
+  signed in to, using this machine's record and published results; when a task moves from Sonnet to Opus, hand over a
+  facts-only compaction of the context (decisions removed). Facts relevant to it: no measured cheap-model signal says
+  "this got hard" (finding 4); signals known before starting are the gate's (repo size, named code) and the brief's
+  kind; failing checks after repairs are a signal only where real tests exist.
+- A huge-repository test (Opus alone against K6 on a feature in a very large codebase), deferred by the owner. Chromium
+  is about 100 GB with hours-long builds; a large repository that builds quickly would test the same effect.
+- Cross-run repository facts (doc 25 C10, TokenEconomizer): keep the dossier's how-to-test and conventions per
+  repository for the next run.
+- Medium-tier evidence on real repositories: Sonnet with the dossier is measured only on the hard set above.
 
 ## How to work here
 
-- The rules are in `CLAUDE.md`. The ones people break:
-  - **Live calls spend the owner's plan.** Fake backend for engine tests.
-    Say before anything that makes more than a few live calls, and run
-    benchmarks from an idle session (`--wait-reset`).
-  - **An engine change runs the fault harness**: `node evals/chaos.ts --seeds
-    1000` and `node evals/chaos.ts --kill 1 --seeds 400`. The kill sweep
-    finds what nothing else does. A step that makes a copy removes a
-    leftover one on entry; cleanup on the way out does not survive a kill.
-  - **Every new behaviour is a feature** in `src/features.ts` with an id, a
-    switch, and its events tagged. Next free id: F133.
-  - **A number from one run is a hint.** Write "one run" beside it.
-  - **Never tune on what you judge by.** The 15 routing prompts are a
-    regression set; the held-out set stays untouched.
-  - `npm test` and `npx tsc --noEmit` before calling anything done; commit
-    and push every change to this branch.
-- Before building an idea, check it is not already there: `docs/10-features.md`
-  lists 104 features. A review on 2026-11-14 proposed a repository map and a
-  calibration loop that had existed for days (F12, F81).
-- Write a kill rule before you measure: the number below which the thing
-  you built is removed. Features that do not measure up go; that is the
-  point of phase 2.
-- Plain words in docs and code comments, as in the rest of the repository.
-  No long worklogs; `docs/STATUS.md` gets one numbered entry per event.
-
-## What "done" looks like
-
-On tasks the cheapest tier alone fails a third of, in real repositories,
-run three times: the cascade resolves at least as many as Opus alone, for
-well under half the plan, shown with intervals, repeatable by anyone, and
-with no model's name in the code. Phase 8 of doc 22 is where that is
-claimed; everything before it is what makes the claim believable.
+- `CLAUDE.md` holds the rules. The ones most often broken:
+  - Live calls spend the owner's plan; the fake backend is for engine tests; say before more than a few live calls.
+    The owner's instruction: wait for a reset only when the window is at 90% or more.
+  - An engine change (`src/engine`, `src/workspace`, `src/backends`) runs the fault harness, both sweeps. A new
+    failure seen in a real run goes into the harness first (`test/support/chaos.ts`, `docs/16-fault-harness.md`).
+  - Every new behaviour is a feature with an id, a switch (`isOn`/`optional`), a `// [Fxx key]` mark and
+    `feature: "Fxx"` on its events.
+  - One run is a hint; on 20 issues a difference of one or two is noise.
+  - An unknown number is recorded as unknown, never 0.
+- Commit and push every change to `neuromesh-research`, then update `~/.neuromesh/app`.
+- `neuromesh-old*` folders in `~/Projects` are a read-only archive.
+- Plain words in docs and comments; `docs/STATUS.md` gets one numbered entry per event; no long worklogs.
