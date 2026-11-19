@@ -2,6 +2,10 @@
 
 ## State on 2026-11-19 (facts; the rest of this file was written 2026-11-14 to 11-17)
 
+What the 2026-11-14 session did (the phase-2 review, F100 to F104, the first
+version of the plan in doc 22, the default switched to `cascade-claude`) is
+recorded as facts in `docs/handoff-2026-11-14-session.md`.
+
 - **Branches.** `main` and `neuromesh-testing` are the 0.3.0 beta (42f672b,
   2026-11-16). `neuromesh-research` is 80 commits ahead of them (745f30c,
   2026-11-19). `neuromesh-routing` was merged everywhere and deleted on
