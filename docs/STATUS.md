@@ -915,6 +915,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     and the reproduction advice, and the rerun passes ($0.49). Opus's sessions never used the nm tool and their outputs
     were already short: its cost is the number of calls (24 on black), each re-reading the whole session. Final design
     in docs/26; trials A (Opus with the dossier) and B (Sonnet with the dossier) on the 21 issues decide Sonnet's place.
+71. **The final trial (2026-11-19; F132, RESULTS.md).** K6 with Opus (A) and with Sonnet (B) on the 21 issues both
+    resolved the same 5 of the 20 Opus alone resolved 8 of (A $9.78, B $4.18, Opus alone $9.40). Both shared the
+    brief's bug standards, which Opus alone never had; "behaviour the request does not mention must stay as it is"
+    kept the solver from the implied cases the three lost issues test. F132 drops the standards for the K6 solver:
+    Opus then resolved all three, Sonnet none. A2 (Opus, dossier, F132) on all 21: on the 19 both ran, 7 and 7, at
+    est. $8.91 against $9.14; electrum did not run (sign-in lost mid-run). So K6 holds Opus's quality, saves only where
+    the search is big (black about half the re-reading), and Sonnet's place is the everyday medium tier, not the
+    repository solver. On hard repository issues alone there is little to route away; the cascade's measured saving
+    is on mixed work (routing bench 150 of 150 at $0.84 against $3.32).
 
 ## Next steps
 

@@ -110,3 +110,23 @@ trials (Sonnet $1.08; Opus's cost there is unknown, 3.9M tokens re-read in 63 ca
   received three bug standards, one of them "keep the change small; behaviour the request does not mention must stay as
   it is". The three issues lost (a2a-414, pint, openai-1633) are the ones whose hidden tests check cases the issue only
   implies (see the cascade section). F132 removes the standards from the solver's prompt on K6.
+
+### F132 on the three issues lost (`swl-f132-lost3`, `swl-f132-opus-lost3`)
+
+| Issue | Opus alone | A (with standards) | Sonnet + dossier, F132 | Opus + dossier, F132 |
+| --- | --- | --- | --- | --- |
+| a2a-414 | 2/2 $0.54 | 1/2 | 0/2 $0.17 | **2/2** $0.54 |
+| pint-2194 | 2/2 $1.08 | 1/2 | 1/2 $0.57 | **2/2** $1.23 |
+| openai-1633 | 1/1 $0.34 | 0/1 | 0/1 $0.30 | **1/1** $0.52 |
+
+Without the standards Opus resolves all three, at about Opus alone's cost; Sonnet resolves none. So the standards cost
+Opus the implied cases, and Sonnet's gap is its own. `swl-trialA2` reruns A with F132 on all 21.
+
+### Trial A2: Opus + dossier + F132 on all 21 (`swl-trialA2`)
+
+8 of 21 (PyPSA included). electrum-10172 did not run: the Claude CLI was signed out mid-run (the engine paused it,
+as it should). On the 19 issues both Opus alone and A2 ran: **Opus alone 7, $9.14; A2 7, $8.91** (Haiku's dossiers
+included). The same 7 resolved (dbbackup-601, a2a-414, a2a-443, intelmq, pint, openai-1633, black), plus PyPSA, which
+Opus alone did not finish. Opus re-read less where the search is big (black 756k against 1.51M, lastmile 194k against
+453k, mcp-1154 339k against 570k) and more on pint (1.40M against 1.11M) and molecule. Quality now matches Opus
+alone; the saving is 2.5%, within the noise of one run.
