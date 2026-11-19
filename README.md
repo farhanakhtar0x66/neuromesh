@@ -9,7 +9,7 @@
 
 <p align="center">
   <img alt="version 0.3.0, beta" src="https://img.shields.io/badge/version-0.3.0%20beta-2FA86E?style=flat-square">
-  <img alt="license PolyForm Shield 1.0.0" src="https://img.shields.io/badge/license-PolyForm%20Shield%201.0.0-8C6BE0?style=flat-square">
+  <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-8C6BE0?style=flat-square">
   <img alt="Node.js 24 or newer" src="https://img.shields.io/badge/node-%E2%89%A5%2024-5A5A5A?style=flat-square">
   <img alt="no runtime dependencies" src="https://img.shields.io/badge/runtime%20dependencies-0-5A5A5A?style=flat-square">
   <a href="https://github.com/farhanakhtar0x66/neuromesh/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/farhanakhtar0x66/neuromesh/actions/workflows/ci.yml/badge.svg"></a>
@@ -212,8 +212,6 @@ Branches: `main` is the release; `neuromesh-testing` is what testers install;
 
 ## License
 
-Source-available under the
-[PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0).
-You may use, change and share Neuromesh for anything except building a product
-that competes with it. The Neuromesh name and logo are not licensed
+[MIT](LICENSE). Use, change and share Neuromesh for anything, keeping the
+copyright notice. The Neuromesh name and logo are not licensed
 ([NOTICE.md](NOTICE.md)).

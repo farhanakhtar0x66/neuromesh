@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Licensed under the MIT License (was PolyForm Shield 1.0.0).
+
 ## 0.3.0 beta (2026-11-16)
 
 The cascade on one Claude plan, for testers.
