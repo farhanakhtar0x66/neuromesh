@@ -1,5 +1,41 @@
 # Handoff: for whoever works on Neuromesh next
 
+## State on 2026-11-19 (facts; the rest of this file was written 2026-11-14 to 11-17)
+
+- **Branches.** `main` and `neuromesh-testing` are the 0.3.0 beta (42f672b,
+  2026-11-16). `neuromesh-research` is 77 commits ahead of them (60f10bd,
+  2026-11-19). `neuromesh-routing` was merged everywhere and deleted on
+  2026-11-14. Many `code/*` worktree branches exist from Sonnet build sessions.
+- **The routing cascade** (F80 to F99, built 2026-11-13/14): Tier 0 rules,
+  Haiku grunt and worker, Sonnet senior, Opus expert that plans and advises
+  only. Evidence: `evals/routing-bench/REPORT.md`; `rb-cascade-2` matched Opus
+  alone on the 15-prompt suite at an estimated $0.84 against $3.32 (one run).
+  Design: `docs/19-cascade.md`; offline route table: `evals/routing-bench/routes.ts`.
+- **After the beta, on `neuromesh-research`:** the "lead" line (F124 to F126,
+  2026-11-18) and the K designs (F127 to F132, 2026-11-19): K1/K5 patch-lead
+  and lead-auto, K6 = a Haiku scout's dossier, then Opus in its own tool
+  session (F129), with F130 dossier-gate, F131 advisory-repro, F132 the solver
+  gets the request without the brief's worker standards. Final design: `docs/26`.
+  Latest feature id in use: F132.
+- **Last measured result (trials A, A2, B on hard SWE-bench-Live issues,
+  2026-11-19, `docs/STATUS.md` 69 to 70 and the commit messages):** K6 with
+  F132 resolved the same 7 of 19 as Opus alone, at an estimated $8.91
+  against $9.14. Quality held; the saving was small, and only where the code
+  search is large. Sonnet with the dossier lost the cases Opus won on implied
+  requirements. The worker standards in the brief cost Opus those wins (hence
+  F132).
+- **Direction the owner chose after it:** route each kind of work to what was
+  measured to win there: easy work to Haiku alone, building and medium work
+  to the cascade, hard repository issues to K6, using the models the user is
+  signed in to and this machine's record. A very large repository test
+  (Opus alone against K6) is for later.
+- **Working arrangement since 2026-11-16:** an Opus session advises and
+  decides; Sonnet sessions build from its prompts (mechanical work); the owner
+  runs live commands. The `neuromesh` command on the owner's Mac runs
+  `~/.neuromesh/app`, checked out on `neuromesh-research`.
+- The numbered list under "What to do, in order" below reflects 2026-11-17;
+  check `docs/STATUS.md` (latest entries) and `git log --all` for what changed.
+
 Rewritten 2026-11-19 on `neuromesh-research` (last commit before this file: `60f10bd`). It states facts: what exists,
 what was measured, what is known not to work, what is open. Read it, then `CLAUDE.md` (the working rules), then
 `docs/STATUS.md` (one numbered entry per event; 63 to 71 cover the work summarised here).
