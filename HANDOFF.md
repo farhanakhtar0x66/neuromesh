@@ -64,6 +64,10 @@ what was measured, what is known not to work, what is open. Read it, then `CLAUD
 - `docs/STATUS.md` (entries up to 71) is the full log. The checklist below dates from 2026-11-14;
   some items in it predate the K-series.
 
+The Fable 5.2 session of 2026-11-12 to 13 (fault harness, F69 to F79, the
+first benchmark, the `hard-py-minidb` task) is recorded in
+`HANDOFF-2026-11-13.md`.
+
 ## What this is for
 
 The owner pays for a $20 Claude plan. The stated goal (docs/22):

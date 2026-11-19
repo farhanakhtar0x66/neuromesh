@@ -25,7 +25,7 @@ on. The task passes only at 197/197.
 | `hard-solo-fable-1` | Fable 5.2 high, alone | not finished | cut at 16 min | Killed when the app session ended. One survey call, then about 91,000 thinking tokens with no file written; the 5-hour meter went from 0% to about 30%. |
 | `hard-opus-haiku-1` | `factory-opus-haiku` | stopped at 23 min | | Opus's five-task plan was thrown away (limit 4), a second plan turn was cut at the $0.60 budget, and Haiku was left to build everything alone. Stopped by hand. |
 | `hard-tiers-1` | `factory-opus-sonnet-haiku` | **197/197, pass** | 49 min | 17 turns; 5-hour meter 58% to 89% (other work ran at the same time, so this is too high). |
-| `hard-solo-fable-2` | Fable 5.2 high, alone | pending | | Scheduled for the 14:40 UTC reset. |
+| `hard-solo-fable-2` | Fable 5.2 high, alone | never ran | | Scheduled for the 14:40 UTC reset, then cancelled at the owner's request. There is no single-model bar on this task. |
 
 ## What each run showed, and what was changed
 
