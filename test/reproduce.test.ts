@@ -13,7 +13,7 @@ import type { AgentRequest } from "../src/backends/types.ts";
 import { runChecks } from "../src/checks/checks.ts";
 import { resumeRun, startRun } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
-import { failedForTheBug, parseReproduce, reproduceCommand, reproducePathOk } from "../src/engine/reproduce.ts";
+import { failedForTheBug, failsBeforeTheBuild, isNewProject, parseReproduce, reproduceCommand, reproducePathOk } from "../src/engine/reproduce.ts";
 import { loadState } from "../src/engine/store.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
 import type { RoleChain } from "../src/engine/types.ts";
@@ -373,6 +373,28 @@ test("reproduce.ts: the runner comes from the project, the failure rule is crude
   assert.deepEqual(parseReproduce({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { path: "./tests/x.test.js", command: " node --test tests/x.test.js ", summary: "s" } }), { path: "tests/x.test.js", command: "node --test tests/x.test.js", summary: "s" });
   assert.equal(parseReproduce({ stop: "done", finalText: "", usage: {}, durationMs: 0, exitCode: 0, structured: { path: "", summary: "cannot" } }), undefined);
   assert.equal(parseReproduce({ stop: "done", finalText: "nothing", usage: {}, durationMs: 0, exitCode: 0 }), undefined);
+});
+
+test("[F133] on a new project the lead's test file may fail because the code it imports is not built yet", async () => {
+  assert.equal(isNewProject([]), true);
+  assert.equal(isNewProject(["README.md", "tests/test_lead_cli.py", "test/lead_cases.test.js", "notes.txt"]), true, "tests and docs are not source");
+  assert.equal(isNewProject(["README.md", "src/cli.py"]), false);
+  assert.equal(isNewProject(["package.json", "index.js"]), false);
+  const f = (status: "failed" | "passed" | "timeout", tail: string) => failsBeforeTheBuild({ status, exitCode: status === "passed" ? 0 : 1, tail });
+  assert.equal(f("failed", "ModuleNotFoundError: No module named 'todo'\nFAILED").ok, true);
+  assert.equal(f("failed", "Error: Cannot find module '../src/todo.js'\n✖ failing tests").ok, true);
+  assert.equal(f("failed", "error[E0432]: unresolved import `todo`").ok, true);
+  assert.equal(f("failed", "AssertionError: expected 3, got 2").ok, true);
+  assert.equal(f("passed", "ok").ok, false, "passes with nothing built: tests nothing");
+  assert.equal(f("timeout", "ModuleNotFoundError").ok, false);
+  assert.equal(f("failed", "SyntaxError: Unexpected token ';'").ok, false, "the test file itself is broken");
+  assert.equal(f("failed", "IndentationError: unexpected indent").ok, false);
+  assert.equal(f("failed", "something went wrong").ok, false);
+  // A real node:test run on an empty project: the module the lead's file imports does not exist yet.
+  const dir = makeRepo({ "README.md": "# todo\n", "test/lead_todo.test.js": "const test = require('node:test');\nconst assert = require('node:assert');\nconst { add } = require('../src/todo.js');\ntest('add', () => assert.deepEqual(add([], 'milk'), ['milk']));\n" });
+  const [result] = await runChecks({ dir, checks: [{ name: "lead-tests", command: "node --test test/lead_todo.test.js" }], logDir: join(scratch, "logs"), label: "fresh" });
+  assert.equal(failedForTheBug(result!).ok, false, "F124's rule drops it");
+  assert.deepEqual(failsBeforeTheBuild(result!), { ok: true }, "F133 keeps it");
 });
 
 test("a check does not inherit the test runner's NODE_TEST_CONTEXT, so a `node --test` inside a check reports its own failures", async () => {

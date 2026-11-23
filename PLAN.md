@@ -1,6 +1,21 @@
 # Plan: start a project on Flash, hand the repository to Opus with a facts file
 
-Written 2026-11-19. A plan; nothing in it is built. Plan ids (S1, S2, ...) become feature ids (F133 on) when built.
+Written 2026-11-19. Plan ids (S1, S2, ...) become feature ids (F133 on) when built.
+
+## Built so far
+
+- **2026-11-23, S1 and S2 through the lead (F133, preset `start-opus-flash`).** Rather than a new spec turn, the start
+  route reuses the lead (F120): Opus 5.5 medium plans with the acceptance cases as one test file (F124) and picks a
+  developer per task; Flash 3.8 medium builds, climbing to Flash high, then Haiku 5.5 high (also the fallback when
+  Gemini is out of quota or capacity), then Sonnet 5.5 high as senior; the lead reviews only when the file or the
+  checks fail, at most twice; a small request goes to Flash alone (F121). Sonnet plans when Opus's window is spent.
+  F133 makes the test file work on a new project: F124 dropped any file that failed with a missing module, which on
+  an empty folder is every file. Now, with no source file yet, the lead imports the code at the top (fixing the
+  interface) with the language's built-in runner, and a missing module counts as the expected failure; a file that
+  passes with nothing built, does not parse or does not run is still dropped. Differences from S2 as written: the
+  review can still answer with follow-up tasks in prose, not only tests; the empty-response rule for Flash (S1) was
+  not needed, since the `agy` adapter already stops a denied turn as "permission". Not yet run live.
+- Not built: S3, S4 (the facts file), the TUI clean-up.
 
 ## What it is for
 

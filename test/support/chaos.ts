@@ -704,7 +704,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       // [F117 empty-done] A task that passed with no change was asked once whether its edits landed.
       for (const t of state.tasks) {
         const builds = state.attempts.filter((a) => a.task === t.id && a.role !== "tester" && a.kind !== "blind" && a.kind !== "reproduce" && a.kind !== "plan");
-        if (t.status === "passed" && (t.files ?? []).length === 0 && builds.length === 1 && state.tasks.length === 1) broke(`task ${t.id} passed with no change after one turn that said it was done`);
+        if (!off.includes("empty-done") && t.status === "passed" && (t.files ?? []).length === 0 && builds.length === 1 && state.tasks.length === 1) broke(`task ${t.id} passed with no change after one turn that said it was done`);
       }
       // [F119 green-checks] Checks that all passed before the work cannot tell whether a fix or feature was done: a tester reviews.
       if (greenStart && withChecks && roles.tester && preset.test === "no-checks" && !off.includes("green-checks") && state.brief && !["trivial", "refactor"].includes(state.brief.kind) && trouble === "none" && outageFrom < 0 && interruptAt < 0) {

@@ -6,7 +6,7 @@ import { parseStructured } from "../backends/shared.ts";
 import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import { fileURLToPath } from "node:url";
 import { isOn } from "../features.ts";
-import { reproduceLine } from "./reproduce.ts";
+import { isNewProject, reproduceLine } from "./reproduce.ts";
 import type { Spec } from "../intake/brief.ts";
 import type { Advice, BlindTest, Finding, Plan, PlannedTask, RunState, TaskState, Verdict, WorkerReport } from "./types.ts";
 
@@ -686,7 +686,7 @@ How the team works:
 ${
     // [F120 lead] The lead's own lines: acceptance cases, and a developer chosen per task.
     state.lead && isOn("lead")
-      ? leadPlanLines(state.seniorRung !== undefined, state.workerRung !== undefined, direct)
+      ? leadPlanLines(state.seniorRung !== undefined, state.workerRung !== undefined, direct, isOn("new-project-tests") && isNewProject(files))
       : // [F85 blueprint-expert]
         state.cascade?.blueprint && isOn("blueprint-expert")
       ? `- ${cascadeOwners(state.seniorRung !== undefined, state.workerRung !== undefined)}`
@@ -1111,10 +1111,15 @@ export function parseLeadTest(result: AgentResult): { path: string; content: str
 }
 
 /** [F120 lead] The plan's lines on cases and owners, in place of the usual owner rule. */
-export function leadPlanLines(senior: boolean, grunt: boolean, direct = false): string {
+export function leadPlanLines(senior: boolean, grunt: boolean, direct = false, fresh = false): string {
   return `- First work out what the request really asks. ${direct ? "You have no tools in this turn: the report below quotes the code the change touches, and you plan from it. Where it does not show something the plan depends on, say in the brief what the developer must read first." : "Where a report on the repository is given, it quotes the code the change touches: read those quotes yourself, and open a file only for code the report does not show."} The report says what the code does now, not what it should do.
 - Then list the acceptance cases in "cases": each one concrete input and the result it must give. Take them from the request and from the standard or specification it names or implies (a protocol, a file format, a language rule, the library's own documented behaviour), including the cases it implies but does not spell out: the other members of a family it names (every error code, every operator, every unit of the kind), the reverse operation, error cases and edge values. Where the current code disagrees with that standard, the case says what is right, not what the code does now. When the request says the code breaks a standard, check every behaviour of that kind against the standard, not only the ones the request lists, and including ones the project's existing tests assert: those tests may be part of what is wrong, and the change may update them. List current behaviour as a case only when the request asks to keep it, or the standard agrees with it. Write each so a developer can check it with one short command. Put each case in the brief of the task that covers it, and ask for a test of each. A cheap developer will run every case on the finished work; you see the results only if one fails.
-- Then write the cases as one new test file in "test": a path in the project's test folder with a new name starting "test_lead_" (or "lead_" where the project names tests otherwise), its full content in the project's own test framework and style, one test per case, through the public interface, and the command that runs only that file the way the project's checks run (the same runner and prefix). The tests of a case the request changes must fail on the code as it is now (with a failed assertion, not an error loading the file: import anything the change will add inside the test that uses it, never at the top); the tests of unchanged behaviour pass. This file is the developers' target: they must make it pass and may not change it, so get each expected value right. If the project has no way to run a test, give an empty content.
+- Then write the cases as one new test file in "test": a path in the project's test folder with a new name starting "test_lead_" (or "lead_" where the project names tests otherwise), its full content in the project's own test framework and style, one test per case, through the public interface, and the command that runs only that file the way the project's checks run (the same runner and prefix). ${
+    // [F133 new-project-tests] Nothing is built yet: the file names the modules and interfaces the developers must create.
+    fresh
+      ? "The project is new and nothing is built yet: import the code at the top of the file as the finished project will, with the module paths and names you put in the briefs, so the file fixes the interface the developers build. It fails now because the code does not exist; that is expected. Use the test framework the project will use (the language's built-in one unless the request names another: node --test, pytest or unittest, cargo test, go test), and give the command that runs only that file from the project's root, with nothing to install first."
+      : "The tests of a case the request changes must fail on the code as it is now (with a failed assertion, not an error loading the file: import anything the change will add inside the test that uses it, never at the top); the tests of unchanged behaviour pass."
+  } This file is the developers' target: they must make it pass and may not change it, so get each expected value right. If the project has no way to run a test, give an empty content.
 - Choose who builds each task, by what it needs: ${leadTeam(senior, grunt)} With the cases in your test file, a worker can usually build it, and one that cannot pass them climbs to the senior on its own; so choose the senior only for a change that needs judgement your tests cannot pin down. A fix or a feature in an existing project is one task, built by one developer who sees the whole change: split only parts that touch separate files and do not need each other's changes, since developers on parts of one change work against each other. A small, clear request gets a short brief.
 - Your whole answer stays under about 700 words, the test file not counted.`;
 }

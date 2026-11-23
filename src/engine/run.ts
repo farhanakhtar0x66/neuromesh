@@ -32,7 +32,7 @@ import type { CheckResult, CheckSpec } from "../checks/checks.ts";
 import { FeatureError, activeKeys, disable, enable, feature, hint, inFeature, isOn, onlyThese, resetFeatures } from "../features.ts";
 import { TEST_PATH, buildPacket, startHere, trackedFiles } from "../context/packet.ts";
 import { blindPathOk, brokenTest, signaturesOf, wantsBlindTests } from "../checks/blind.ts";
-import { REPRODUCE_SCHEMA, failedForTheBug, parseReproduce, reproduceCommand, reproducePathOk, reproducePrompt } from "./reproduce.ts";
+import { REPRODUCE_SCHEMA, failedForTheBug, failsBeforeTheBuild, isNewProject, parseReproduce, reproduceCommand, reproducePathOk, reproducePrompt } from "./reproduce.ts";
 import { loadQuota, recordQuota, shiftNow } from "./quota.ts";
 import { estimateCost } from "../usage/prices.ts";
 import { splitFromLog } from "../usage/split.ts";
@@ -1579,24 +1579,26 @@ async function leadTestStep(run: RunCtx): Promise<Stop | undefined> {
     return undefined;
   };
   if (!reproducePathOk(t.path) || existsSync(full)) return reject("bad path");
+  // [F133 new-project-tests] Nothing is built yet: a test that cannot find the code it tests fails as expected.
+  const fresh = isOn("new-project-tests") && isNewProject(trackedFiles(state.worktree));
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, t.content);
   const command = leadTestCommand(state, t.path, t.command);
   if (!command) return reject("no way to run it", { written: true });
   const [first] = await check(run, state.worktree, "lead-tests", [{ name: "lead-tests", command }]);
   if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
-  const verdict = first ? failedForTheBug(first) : { ok: false as const, why: "the run gave no result" };
-  if (!verdict.ok) return reject(verdict.why, { written: true, tail: first?.tail.slice(-400) });
+  const verdict = first ? (fresh ? failsBeforeTheBuild(first) : failedForTheBug(first)) : { ok: false as const, why: "the run gave no result" };
+  if (!verdict.ok) return reject(verdict.why, { written: true, tail: first?.tail.slice(-400), ...(fresh ? { feature: "F133" } : {}) });
   commitAll(state.worktree, "neuromesh: the lead's acceptance tests", state.prepared);
   t.stage = "accepted";
   t.command = command;
-  t.outcome = "fails on the code as it was";
+  t.outcome = fresh ? "fails before anything is built" : "fails on the code as it was";
   t.tail = first?.tail.slice(-3_000);
   if (state.tasks.length === 1) {
     state.checks = [...state.checks.filter((c) => c.name !== "lead-tests"), { name: "lead-tests", command }];
     state.tasks[0]!.reproduce = { stage: "accepted", path: t.path, content: t.content, command, outcome: LEAD_TESTS };
   }
-  log.emit("lead.tests", { feature: "F124", outcome: "accepted", path: t.path, command, tasks: state.tasks.length });
+  log.emit("lead.tests", { feature: fresh ? "F133" : "F124", outcome: "accepted", path: t.path, command, tasks: state.tasks.length });
   saveState(state);
   return undefined;
 }

@@ -86,7 +86,7 @@ export interface BriefPolicy {
   expertSpec?: boolean;
 }
 
-const CODE_FILE = /\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|swift|rb|php|c|cc|cpp|h|hpp|cs|lua|sh|zig|ex|exs|hs|ml|scala)$/i;
+export const CODE_FILE = /\.(?:[cm]?[jt]sx?|py|rs|go|java|kt|swift|rb|php|c|cc|cpp|h|hpp|cs|lua|sh|zig|ex|exs|hs|ml|scala)$/i;
 const DOC_FILE = /[\w./-]+\.(?:md|markdown|txt|rst)\b/gi;
 const NAMED_FILE = /[\w./-]+\.(?:[jt]sx?|py|rs|go|md|json|toml|ya?ml|css|html)\b/g;
 const MAX_ATTACHMENT = 40_000;

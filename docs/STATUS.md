@@ -924,6 +924,13 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     the search is big (black about half the re-reading), and Sonnet's place is the everyday medium tier, not the
     repository solver. On hard repository issues alone there is little to route away; the cascade's measured saving
     is on mixed work (routing bench 150 of 150 at $0.84 against $3.32).
+72. **The Opus and Flash start route (2026-11-23; F133, PLAN.md).** A new phase: Opus 5.5 decides, Gemini 3.8 Flash
+    builds on Google's quota, so a project is started with few Claude window points. Built on the lead (F120, F124):
+    preset `start-opus-flash`, Opus medium plans with a test file, Flash medium then high builds, Haiku high and
+    Sonnet high only when Flash is stuck or out of quota. F133: on a project with no source file yet the lead's test
+    file imports the code it fixes and may fail with a missing module before the build (F124 dropped every such file,
+    so a new project had no oracle). Fake backend, unit tests and the fault harness only; not run live. The fault
+    harness's F117 rule now honours `empty-done` being switched off (a gap the new feature's shifted dice exposed).
 
 ## Next steps
 

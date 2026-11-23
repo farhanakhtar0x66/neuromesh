@@ -1,7 +1,7 @@
 // [F120 lead] The lead's review answer, offline.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseLead } from "../src/engine/prompts.ts";
+import { leadPlanLines, parseLead } from "../src/engine/prompts.ts";
 import type { AgentResult } from "../src/backends/types.ts";
 
 const answer = (structured: unknown): AgentResult => ({ stop: "done", finalText: "", structured }) as AgentResult;
@@ -44,4 +44,13 @@ test("the lead's test file is read with its command, or dropped when empty", () 
   assert.deepEqual(parseLeadTest(answer({ test: { path: "./tests/test_lead_db.py", content: "def test_a():\n    assert 1 == 1", command: "pytest -q tests/test_lead_db.py" } })), { path: "tests/test_lead_db.py", content: "def test_a():\n    assert 1 == 1\n", command: "pytest -q tests/test_lead_db.py" });
   assert.equal(parseLeadTest(answer({ test: { path: "", content: "", command: "" } })), undefined);
   assert.equal(parseLeadTest(answer({ cases: [] })), undefined);
+});
+
+test("[F133] on a new project the lead is told to import the code it names at the top", () => {
+  const fresh = leadPlanLines(true, false, false, true);
+  const old = leadPlanLines(true, false, false, false);
+  assert.match(fresh, /nothing is built yet: import the code at the top/);
+  assert.doesNotMatch(fresh, /never at the top/);
+  assert.match(old, /never at the top/);
+  assert.doesNotMatch(old, /nothing is built yet/);
 });

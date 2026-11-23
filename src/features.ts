@@ -1232,6 +1232,15 @@ export const FEATURES: Feature[] = [
     what: "With K6 (F129): the solver works in its own session from the request as typed (attachments kept), without the brief's working standards. The bug standards ('keep the change small; behaviour the request does not mention must stay as it is', 'add a test', 'find the cause first') are rules written for cheap workers; for the solver they are judgement handed in from outside. Seen in swl-trialA and swl-trialB (21 issues each): Opus and Sonnet with the dossier and the standards resolved the same 5 of the 20 that Opus alone (no brief) resolved 8 of; the three lost (a2a-414, pint-2194, openai-1633) are the issues whose hidden tests check cases the issue only implies, which 'behaviour the request does not mention must stay as it is' tells the solver to leave alone.",
     optional: false,
   },
+  {
+    id: "F133",
+    key: "new-project-tests",
+    name: "On a new project the lead's test file may fail because nothing is built yet",
+    added: "2026-11-23",
+    files: ["src/engine/reproduce.ts (isNewProject, failsBeforeTheBuild)", "src/engine/run.ts (leadTestStep)", "src/engine/prompts.ts (leadPlanLines)", "presets/start-opus-flash.json"],
+    what: "With the lead's test file (F124) on a project with no source file yet (test files and docs do not count): the lead is told nothing is built, to import the code at the top as the finished project will (so the file fixes the interface the developers build) and to use the language's built-in test runner; and the file is kept when it fails before the build with a missing module or name, as well as with a failed assertion. It is still dropped when it passes with nothing built, times out, cannot start, or does not parse. Before, F124's rule (a load error is a broken test) dropped every test file on a new project, since the code it imports does not exist, so a project started under the lead had no oracle: PLAN.md's S2 (decisions as tests) for the Opus and Flash start route.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

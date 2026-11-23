@@ -3,6 +3,10 @@
 ## Unreleased
 
 - Licensed under the MIT License (was PolyForm Shield 1.0.0).
+- Preset `start-opus-flash` (experimental): Opus 5.5 decides with a test file,
+  Gemini 3.8 Flash builds on Google's quota, Haiku and Sonnet only when Flash
+  is stuck or out of quota (PLAN.md).
+- The lead's test file now works on a new, empty project (F133).
 
 ## 0.3.0 beta (2026-11-16)
 

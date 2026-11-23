@@ -10,6 +10,7 @@ import type { AgentResult } from "../backends/types.ts";
 import type { CheckResult } from "../checks/checks.ts";
 import { brokenTest } from "../checks/blind.ts";
 import { TEST_PATH } from "../context/packet.ts";
+import { CODE_FILE } from "../intake/brief.ts";
 
 /** The reproduction the engine keeps for a task: the test file, how to run it, and what became of it. */
 export interface Reproduction {
@@ -128,6 +129,27 @@ export function failedForTheBug(result: Pick<CheckResult, "status" | "exitCode" 
   if (result.status !== "failed") return { ok: false, why: `the run ${result.status}` };
   if (brokenTest(result.tail) || LOAD_ERROR.test(result.tail)) return { ok: false, why: "cannot load (a syntax, name or import error)" };
   if (!TEST_FAILED.test(result.tail)) return { ok: false, why: "no failed test or assertion in the output" };
+  return { ok: true };
+}
+
+/** [F133 new-project-tests] A project with no source file yet (test files and docs do not count). */
+export function isNewProject(files: string[]): boolean {
+  return !files.some((f) => CODE_FILE.test(f) && !TEST_PATH.test(f));
+}
+
+/** [F133 new-project-tests] A mistake in the test file itself: it does not parse. */
+const OWN_MISTAKE = /SyntaxError|IndentationError|TabError|Unexpected token|ERR_UNKNOWN_FILE_EXTENSION/;
+
+/**
+ * [F133 new-project-tests] On a new project the code under test does not exist yet, so a test that cannot find it
+ * (a missing module or name) is the failure expected before the build, as is a failed assertion. It is still rejected
+ * when it passes with nothing built, when the run times out or cannot start, or when the test file does not parse.
+ */
+export function failsBeforeTheBuild(result: Pick<CheckResult, "status" | "exitCode" | "tail">): { ok: true } | { ok: false; why: string } {
+  if (result.status === "passed") return { ok: false, why: "passes before anything is built" };
+  if (result.status !== "failed") return { ok: false, why: `the run ${result.status}` };
+  if (OWN_MISTAKE.test(result.tail)) return { ok: false, why: "the test file does not parse" };
+  if (!brokenTest(result.tail) && !LOAD_ERROR.test(result.tail) && !TEST_FAILED.test(result.tail)) return { ok: false, why: "no failed test, assertion or missing module in the output" };
   return { ok: true };
 }
 
