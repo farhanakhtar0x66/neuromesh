@@ -31,7 +31,7 @@ API-equivalent estimates (nothing is paid per token). Unless said otherwise ever
 - The `neuromesh` command on the owner's Mac runs `~/.neuromesh/app`, a checkout of `neuromesh-research` (switched from
   `neuromesh-testing` on 2026-11-14). After a push: `git -C ~/.neuromesh/app pull --ff-only`. `install.sh` resets that
   copy to `neuromesh-testing`; it has not been run.
-- Feature registry: `src/features.ts`; `docs/10-features.md` lists them. Next free id: **F134**.
+- Feature registry: `src/features.ts`; `docs/10-features.md` lists them. Next free id: **F136**.
 - License: MIT since 2026-11-19 (was PolyForm Shield 1.0.0); the name and logo are not licensed (`NOTICE.md`).
 - `PLAN.md`: the plan for starting projects on Gemini Flash and continuing with Opus (not built).
 - At `60f10bd`: `npm test` 373 of 373, `npx tsc --noEmit` clean, both fault-harness sweeps keep every rule.

@@ -14,7 +14,9 @@ Written 2026-11-19. Plan ids (S1, S2, ...) become feature ids (F133 on) when bui
   interface) with the language's built-in runner, and a missing module counts as the expected failure; a file that
   passes with nothing built, does not parse or does not run is still dropped. Differences from S2 as written: the
   review can still answer with follow-up tasks in prose, not only tests; the empty-response rule for Flash (S1) was
-  not needed, since the `agy` adapter already stops a denied turn as "permission". Not yet run live.
+  not needed, since the `agy` adapter already stops a denied turn as "permission". F134 and F135 followed from the
+  first live runs (a new program is always planned; Flash, not Haiku, starts the build). First live result: a Python
+  CLI todo app, Opus planned once (est. $0.15), Flash medium built it in one turn and passed (STATUS 72).
 - Not built: S3, S4 (the facts file), the TUI clean-up.
 
 ## What it is for

@@ -405,6 +405,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
         try {
           small = inFeature("lead-triage", () => {
             if (brief!.kind === "trivial") return "a small change: a worker does it alone";
+            // [F134 lead-new-programs] A new program is the lead's to plan, however short the request: a file name it gives is not a small edit.
+            if (brief!.kind === "greenfield" && isOn("lead-new-programs")) return undefined;
             const count = git(repo.root, "ls-files").split("\n").filter(Boolean).length;
             return count <= 60 && selfContained(options.prompt, projectFiles(repo.root, [])).ok ? "small and self-contained: a worker does it alone" : undefined;
           });
@@ -563,6 +565,8 @@ function startRung(state: RunState, owner: PlannedTask["owner"]): number | undef
   if (owner === "senior" && state.seniorRung !== undefined) return state.seniorRung;
   // [F82 grunt-tier] With grunt rungs below them, worker parts start on the first worker rung; grunt parts on the cheapest.
   if (owner === "worker" && state.workerRung !== undefined) return state.workerRung;
+  // [F135 lead-first-rung] The lead chose a worker, and its tests let a stuck one climb: start on the first worker rung, not the strongest.
+  if (owner === "worker" && state.lead && state.workerLadder && isOn("lead") && isOn("lead-first-rung")) return 0;
   return undefined;
 }
 

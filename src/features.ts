@@ -1241,6 +1241,24 @@ export const FEATURES: Feature[] = [
     what: "With the lead's test file (F124) on a project with no source file yet (test files and docs do not count): the lead is told nothing is built, to import the code at the top as the finished project will (so the file fixes the interface the developers build) and to use the language's built-in test runner; and the file is kept when it fails before the build with a missing module or name, as well as with a failed assertion. It is still dropped when it passes with nothing built, times out, cannot start, or does not parse. Before, F124's rule (a load error is a broken test) dropped every test file on a new project, since the code it imports does not exist, so a project started under the lead had no oracle: PLAN.md's S2 (decisions as tests) for the Opus and Flash start route.",
     optional: true,
   },
+  {
+    id: "F134",
+    key: "lead-new-programs",
+    name: "Under the lead a new program is always planned",
+    added: "2026-11-23",
+    files: ["src/engine/run.ts (the lead block in startRun)"],
+    what: "With the lead (F120), a request the brief calls greenfield (a new program) is never sent to a worker alone by F121's small-request test; only a trivial one is. F109's test calls a short request that names one file small, which suits an edit to a small project but sent a whole new program (a CLI todo app with four commands and a JSON store, 44 words naming todos.json) to one no-tools worker call with no plan and no test file, so the start route (start-opus-flash) skipped the lead entirely. Same rule as F128's auto mode, where a new program gets the lead's plan.",
+    optional: true,
+  },
+  {
+    id: "F135",
+    key: "lead-first-rung",
+    name: "Under the lead a worker task starts on the first worker rung",
+    added: "2026-11-23",
+    files: ["src/engine/run.ts (startRung)"],
+    what: "With the lead (F120) and a worker ladder with no grunt rungs, a task the lead gives a worker starts on the ladder's first rung and climbs from there when stuck. Before, only a preset with grunt rungs (F82) placed it there; otherwise the brief's rule for something new (start on the strongest worker rung) applied, which in start-opus-flash is Claude Haiku: in the first live run (2026-11-23, a CLI todo app) Opus planned and Haiku built, and Gemini Flash, the preset's builder, was never called. The lead picks the developer and its tests let a worker climb, so the strongest-rung start is not needed under it.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

@@ -929,8 +929,20 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     preset `start-opus-flash`, Opus medium plans with a test file, Flash medium then high builds, Haiku high and
     Sonnet high only when Flash is stuck or out of quota. F133: on a project with no source file yet the lead's test
     file imports the code it fixes and may fail with a missing module before the build (F124 dropped every such file,
-    so a new project had no oracle). Fake backend, unit tests and the fault harness only; not run live. The fault
-    harness's F117 rule now honours `empty-done` being switched off (a gap the new feature's shifted dice exposed).
+    so a new project had no oracle). The fault harness's F117 rule now honours `empty-done` being switched off (a gap
+    the new feature's shifted dice exposed). First live runs, on a new Mac, the same request twice (a Python CLI todo
+    app, 4 commands, JSON store, 44 words) in an empty repository:
+    - Before any fix, the lead was skipped: F121's small-request test called the request small (it names
+      `todos.json`). F134: under the lead a new program is always planned.
+    - Run 1 (`20261123-172039-b396`): Opus planned in one 50 s call, F133 kept its test file, but Haiku built, not
+      Flash: the brief's "something new starts on the strongest worker rung" picked the ladder's top. Passed, accepted
+      by the tests with no review; 48 tests; est. $0.21 (Opus $0.19, Haiku $0.02); about 2.5 minutes.
+    - F135: under the lead a worker task starts on the first worker rung.
+    - Run 2 (`20261123-172354-5ce2`): Opus planned (50 s, est. $0.15), F133 kept the file, Flash 3.8 medium built it
+      in one 5-minute turn and passed the lead's tests first time; accepted with no review. The only Claude use was
+      the plan. Flash's turn is shown at Gemini list prices (est. $0.13) but is on the Google AI Pro quota.
+    Both apps work by hand (add, done, list, unknown id exits 1, missing command shows usage). One request, one run
+    each: a hint, not a measurement; Opus alone on the same request was not run.
 
 ## Next steps
 

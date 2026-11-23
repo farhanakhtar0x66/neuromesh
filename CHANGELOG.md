@@ -7,6 +7,8 @@
   Gemini 3.8 Flash builds on Google's quota, Haiku and Sonnet only when Flash
   is stuck or out of quota (PLAN.md).
 - The lead's test file now works on a new, empty project (F133).
+- Under the lead, a new program is always planned (F134) and a worker task
+  starts on the first worker rung, so Flash builds rather than Haiku (F135).
 
 ## 0.3.0 beta (2026-11-16)
 
