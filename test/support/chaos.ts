@@ -162,6 +162,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const greenStart = dice(seed + 6_666_661).chance(0.2) && !withRepro && !withBlind;
   // [F136 lean-runner] A third of the runs put the one unplanned task to the model lean (own dice).
   const withLean = dice(seed + 5_555_551).chance(0.33);
+  // [F138 structural-probe] A third of the runs probe the repository at the start (own dice).
+  const withProbe = dice(seed + 8_888_881).chance(0.33);
   // [F12 context-packet] [F100 start-here] A fifth of the repositories track a link to a folder and a broken link, which
   // git ls-files lists as paths, as it does a submodule (ansible__molecule-4534: both features crashed with EISDIR). Own dice.
   const awkwardPaths = dice(seed + 2_222_221).chance(0.2);
@@ -244,7 +246,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
     // [F101 blind-tests] Off by default since 2026-11-17, so the harness switches it on to keep exercising its code (a disable still wins).
-    enable: ["blind-tests", "reproduce-first", ...(withLean ? ["lean-runner"] : [])],
+    enable: ["blind-tests", "reproduce-first", ...(withLean ? ["lean-runner"] : []), ...(withProbe ? ["structural-probe"] : [])],
     quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -700,6 +702,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (Object.keys(state.inFlight).length > 0) broke("turns are still marked in flight after the run ended");
     // [F12 context-packet] [F100 start-here] A folder or a broken link listed by git is skipped, never read as a file.
     for (const f of state.featureErrors ?? []) if (/EISDIR/.test(f.message)) broke(`${f.id} ${f.key} read a folder as a file: ${f.message.slice(0, 120)}`);
+    // [F138 structural-probe] The probe never throws and never overruns: when on, it is there, within its deadline.
+    if (state.features?.includes("structural-probe")) {
+      if (!state.probe) broke("the structural probe was on but left no facts");
+      else if (state.probe.facts.ms > 1_500) broke(`the structural probe took ${state.probe.facts.ms} ms`);
+    }
+    if ((state.featureErrors ?? []).some((f) => f.key === "structural-probe")) broke("the structural probe failed");
     if (state.pid !== undefined) broke("the run still names an engine process after it ended");
     if (state.status === "finished") {
       const open = state.tasks.filter((t) => t.status !== "passed" && t.status !== "failed");

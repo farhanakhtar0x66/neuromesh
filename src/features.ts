@@ -1278,6 +1278,16 @@ export const FEATURES: Feature[] = [
     what: "Every agent.finished event, record.jsonl turn and run line, and each model's usage in an eval's results.json also carries `tokens`: inputUncached, cacheRead, cacheCreation, output and calls (model calls in the turn, counted per message id in Claude Code's stream). Beside the old `usage` object, whose names stay, so existing readers and evals/bench.ts are unchanged. A count the tool did not report is left out, never 0; a run's or a model's total is left out when any of its turns did not report it.",
     optional: true,
   },
+  {
+    id: "F138",
+    key: "structural-probe",
+    name: "Zero-token structural probe of the repository and the request",
+    added: "2026-11-27",
+    files: ["src/routing/probe.ts", "src/engine/run.ts (startRun)", "src/engine/types.ts (RunState.probe)", "presets/temporal-claude.json"],
+    what: "Opt-in (temporal-claude). At the start of a run, with no model call and no command run, from the request as typed (never the brief's rewrite, F109): file and source counts (dependency, build and virtualenv folders skipped, links never followed); the files, stack-trace frames and symbols the request names and where they are found or defined; the import fan-in of that code (or of the repository's most imported module) as low, medium or high coupling; a 0 to 1 mechanical score from rename-style requests, schema/config/generated files and repeated file shapes against async, locking, state-machine, metaprogramming, SQL and parser code; whether a spec, reproduction, expected result, ADR or acceptance criteria is given; the test runners (Node, Python, Rust, Go, make) with a single-test template, read from config files only; and two flags, trivialSelfContained (F109's one-call test on the named files, with low coupling) and skipDossier (F130's rule). Kept in run.json as `probe.facts`, with `probe.layaStateText`, a plain-English summary under 220 tokens with qualitative words instead of numbers and no file names; the probe.ready event carries labels and counts only. A deadline (500 ms) is checked in every loop, and a probe that runs out returns what it found marked truncated. It informs nothing yet: routing on it is a later stage. Not measured live.",
+    optional: true,
+    defaultOff: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

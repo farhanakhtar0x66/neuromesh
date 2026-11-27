@@ -952,6 +952,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     starts a fresh facts-only session for a repair after 22 model calls (Claude Code owns the history, so nothing is
     masked mid-turn). F137 adds `tokens` (inputUncached, cacheRead, cacheCreation, output, calls) beside `usage` in
     events, record.jsonl and results.json. Whether Claude Code applies the hook is checked in the live phase.
+74. **v0.4 stage 2, offline (2026-11-28; F138).** `src/routing/probe.ts`: a zero-token probe at run start
+    (temporal-claude only) from the request as typed, reading files only: sizes, named files, stack frames and symbols
+    resolved to the repository, import fan-in as low/medium/high coupling, a mechanical-versus-complex score, whether a
+    spec or reproduction is given, test runners with a single-test template (Node, Python, Rust, Go, make), and the
+    trivialSelfContained and skipDossier flags. Facts in run.json; a plain-English summary under 220 tokens with no
+    numbers or file names for Laya; the event carries labels and counts only. 121 ms on this repository (1,406 files);
+    a 500 ms deadline is checked in every loop. It informs no routing yet. Fixture tests cover the four archetypes;
+    the fault harness probes a third of its runs.
 
 ## Next steps
 

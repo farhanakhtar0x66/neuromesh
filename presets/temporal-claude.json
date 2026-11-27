@@ -8,7 +8,7 @@
     "model": "claude-opus-5-5",
     "effort": "medium"
   },
-  "enable": ["lean-runner"],
+  "enable": ["lean-runner", "structural-probe"],
   "repairs": 1,
   "turnTimeoutMinutes": 40
 }

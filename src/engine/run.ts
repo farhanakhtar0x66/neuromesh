@@ -141,6 +141,8 @@ import { describeStubs, findStubs } from "../checks/stubs.ts";
 import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
 import type { Preamble } from "../routing/preamble.ts";
 import { selfContained } from "../routing/selfcontained.ts";
+import { probeRepo, probeSummary } from "../routing/probe.ts";
+import type { Probe } from "../routing/probe.ts";
 import { routeTier } from "../routing/router.ts";
 import type { CascadeTier } from "../routing/router.ts";
 import { DEFAULT_SHADOW_RATE, maybeEnqueue } from "../routing/shadow.ts";
@@ -434,6 +436,18 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     why = decision.reason;
   }
 
+  // [F138 structural-probe] Opt-in: the repository and the request as typed (options.prompt, never the brief's
+  // rewrite: F109), with no model call. It never throws by design; a failure is still caught and switches it off.
+  let probe: Probe | undefined;
+  if (isOn("structural-probe")) {
+    try {
+      probe = inFeature("structural-probe", () => probeRepo(repo.root, options.prompt));
+    } catch (error) {
+      featureErrors.push(failure(error, "structural-probe"));
+      disable("structural-probe");
+    }
+  }
+
   const state: RunState = {
     version: 2,
     id,
@@ -444,6 +458,7 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     follows: follow ? options.follows!.id : undefined,
     start: follow?.start,
     request: brief ? options.prompt : undefined,
+    probe,
     usagePerTurn: true,
     features: activeKeys(),
     featureErrors,
@@ -501,6 +516,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     base: repo.head,
     prompt: options.prompt,
   });
+  // [F138 structural-probe] Labels and counts only: no file or symbol names go to the event log or the record.
+  if (probe) log.emit("probe.ready", { feature: "F138", ...probeSummary(probe) });
   for (const f of featureErrors) log.emit("feature.failed", { feature: f.id, key: f.key, message: f.message, hint: hint(feature(f.key)) });
   if (cascade?.route) log.emit("route.tier", { feature: cascade.route.domains ? "F94" : "F80", tier: cascade.route.tier, stage: cascade.route.stage, cluster: cascade.route.cluster, confidence: cascade.route.confidence, stripped: cascade.route.stripped, reasons: cascade.route.reasons, ...(cascade.route.domains ? { domains: cascade.route.domains } : {}) });
   // [F103 evidence-override]

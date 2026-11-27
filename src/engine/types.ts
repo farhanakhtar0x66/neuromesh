@@ -4,6 +4,7 @@ import type { FileChange } from "../workspace/workspace.ts";
 import type { ProgressHistory } from "./progress.ts";
 import type { Brief } from "../intake/brief.ts";
 import type { CascadeTier, TierRoute } from "../routing/router.ts";
+import type { Probe } from "../routing/probe.ts";
 import type { QuotaShift } from "./quota.ts";
 import type { Reproduction } from "./reproduce.ts";
 import type { CaseResult } from "./prompts.ts";
@@ -309,6 +310,8 @@ export interface RunState {
   featureErrors?: { id: string; key: string; message: string; at: string }[];
   /** The request as typed, when the brief engine rewrote it. */
   request?: string;
+  /** [F138 structural-probe] The repository and request probe, from the request as typed (F109); no model call. */
+  probe?: Probe;
   /** [F49 follow-up] The session this run belongs to (the first run's id), the run it follows, and the commit it starts from. */
   session?: string;
   follows?: string;
