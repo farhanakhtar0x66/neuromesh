@@ -67,7 +67,9 @@ export type AttemptKind =
   // [F101 blind-tests] Tests written from the task and the signatures alone.
   | "blind"
   // [F115 reproduce-first] A test that reproduces the reported bug, written before the first build turn.
-  | "reproduce";
+  | "reproduce"
+  // [F140 temporal-cascade] The cheap model's capped first turn.
+  | "probe";
 
 export interface AttemptRecord {
   role: Role;
@@ -160,7 +162,55 @@ export interface Plan {
   tasks: PlannedTask[];
 }
 
-export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done" | "race" | "blind" | "reproduce";
+export type TaskStep = "start" | "agent" | "checks" | "test" | "advise" | "escalate" | "split" | "merge" | "done" | "race" | "blind" | "reproduce"
+  // [F140 temporal-cascade] The whole request under the temporal cascade: probe, Laya, clean-room escalation.
+  | "temporal";
+
+/** [F140 temporal-cascade] Where a temporal task is, saved after every transition so a killed run resumes there. */
+export type TemporalStage = "stage0_done" | "probe_running" | "probe_done" | "laya_decided" | "cheap_continue" | "cleanroom_reset" | "cleanroom_reset_done" | "escalated_running";
+
+/** [F140 temporal-cascade] The models and turn caps of the temporal cascade (preset field `temporal`). */
+export interface TemporalConfig {
+  cheap: RoleConfig;
+  senior: RoleConfig;
+  expert: RoleConfig;
+  /** Turn cap of the cheap probe (Claude Code's --max-turns). */
+  probeMaxTurns: number;
+  /** Turn cap when the probe says the request is trivially self-contained. */
+  trivialMaxTurns: number;
+  /** More turns for the cheap model when Laya says it will finish. */
+  continueMaxTurns: number;
+}
+
+/** [F140 temporal-cascade] A temporal task's progress. */
+export interface TemporalTaskState {
+  stage: TemporalStage;
+  /** The cheap probe turn was started (a kill after this and before probeDone left it cut off). */
+  probeStarted?: boolean;
+  probeDone?: boolean;
+  cheapSession?: string;
+  /** The cheap continuation was started and finished. */
+  continueStarted?: boolean;
+  continueDone?: boolean;
+  /** What each cheap turn did, for the digest (tool calls, not text). */
+  cheapTurns: import("../routing/handoff.ts").CheapTurn[];
+  /** Laya's decision, through the gate. */
+  action?: "continue_cheap" | "escalate_sonnet" | "escalate_opus";
+  reason?: string;
+  conformalAuto?: boolean;
+  laya?: "ok" | "unavailable" | "skipped";
+  /** The solver the clean room is for. */
+  solver?: "senior" | "expert";
+  /** Files the discarded cheap work had changed. */
+  discardedFiles?: number;
+  /** Resets done (one per clean room). */
+  resets: number;
+  solverStarted?: boolean;
+  solverSession?: string;
+  solverRepairs: number;
+  /** The senior's one fall-back to the expert has been used. */
+  seniorFellBack?: boolean;
+}
 
 export interface TaskState extends PlannedTask {
   status: "pending" | "active" | "passed" | "failed";
@@ -223,6 +273,8 @@ export interface TaskState extends PlannedTask {
   noPreamble?: boolean;
   /** [F100 start-here] Where this task most likely begins, found by name before its first turn. */
   startHere?: string;
+  /** [F140 temporal-cascade] */
+  temporal?: TemporalTaskState;
   /** [F102 repair-race] The two side-by-side repair attempts were made (once per task). */
   raced?: boolean;
   /** [F115 reproduce-first] The test that reproduces the bug, asked for once per task, and what became of it. */
@@ -312,6 +364,8 @@ export interface RunState {
   request?: string;
   /** [F138 structural-probe] The repository and request probe, from the request as typed (F109); no model call. */
   probe?: Probe;
+  /** [F140 temporal-cascade] The preset's temporal cascade, when it is on. */
+  temporal?: TemporalConfig;
   /** [F49 follow-up] The session this run belongs to (the first run's id), the run it follows, and the commit it starts from. */
   session?: string;
   follows?: string;

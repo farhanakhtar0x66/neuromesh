@@ -131,11 +131,15 @@ import {
 } from "./prompts.ts";
 import { sumTokenFields, tokenFields } from "../usage/tokens.ts";
 import type { TokenFields } from "../usage/tokens.ts";
+import { LayaClient, layaConfig } from "../routing/laya-client.ts";
+import { evaluateGate } from "../routing/laya-policy.ts";
+import { buildCleanRoomFactsPacket, buildTrajectoryDigest, parseTrajectory } from "../routing/handoff.ts";
+import type { CheapTurn } from "../routing/handoff.ts";
 import { isLean, leanBackendOptions, leanFreshDue, leanFreshPrompt, leanTaskPrompt, sessionCalls } from "./lean-runner.ts";
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
-import type { AttemptKind, AttemptRecord, BlindTest, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, Tier, Verdict } from "./types.ts";
+import type { AttemptKind, AttemptRecord, BlindTest, CascadeState, Finding, Plan, PlannedTask, Role, RoleConfig, RunState, TaskState, TemporalStage, TemporalTaskState, Tier, Verdict } from "./types.ts";
 import { DEFAULT_ALPHA, calibrated, loadCalibration, record as recordOutcome, saveCalibration } from "../routing/calibration.ts";
 import { describeStubs, findStubs } from "../checks/stubs.ts";
 import { DEFAULT_THRESHOLDS, GATE_FLOOR, parsePreamble, preambleInstruction, shouldExit } from "../routing/preamble.ts";
@@ -164,6 +168,8 @@ export interface EngineContext {
   ask?: (question: Question) => Promise<Answer>;
   /** [F42 compact] Set `compact` to have the next follow-up turn start a fresh session. */
   steer?: { compact?: boolean };
+  /** [F139 laya-gate] The Laya sidecar's address, over NEUROMESH_LAYA_URL (tests and the fault harness use this). */
+  layaUrl?: string;
 }
 
 /** [F39 ask-first] What the run may stop to ask. */
@@ -459,6 +465,8 @@ export async function startRun(options: StartOptions, ctx: EngineContext): Promi
     start: follow?.start,
     request: brief ? options.prompt : undefined,
     probe,
+    // [F140 temporal-cascade]
+    temporal: preset.temporal && isOn("temporal-cascade") && mode === "solo" ? preset.temporal : undefined,
     usagePerTurn: true,
     features: activeKeys(),
     featureErrors,
@@ -997,6 +1005,8 @@ interface TurnRequest {
   rungBase?: number;
   /** [F136 lean-runner] A lean runner turn: the anti-waste skill, the output filter, the fresh-session rule. */
   lean?: boolean;
+  /** [F140 temporal-cascade] The session's turn cap (Claude Code's --max-turns). */
+  maxTurns?: number;
 }
 
 interface TurnResult {
@@ -1260,6 +1270,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     },
     // [F136 lean-runner]
     ...(req.lean && isOn("lean-runner") ? leanBackendOptions() : {}),
+    // [F140 temporal-cascade]
+    ...(req.maxTurns !== undefined ? { maxTurns: req.maxTurns } : {}),
     });
   } catch (error) {
     // [F74 adapter-guard]
@@ -3256,6 +3268,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       await prepareEnv(run, task.worktree, task.prepared, task.id);
       // [F115 reproduce-first] A bug fix first gets a test that fails on the code as it is.
       task.step = reproduceApplies(run, task) ? "reproduce" : "agent";
+      // [F140 temporal-cascade] The whole request goes through the probe, Laya and the clean room instead.
+      if (state.temporal && isOn("temporal-cascade") && wholeRequest(state, task) && state.tasks.length === 1) task.step = "temporal";
       // [F100 start-here] Where this task most likely begins, from its own words; nothing when nothing matches by name.
       if (isOn("start-here") && task.startHere === undefined) {
         const lead = optional(run, "start-here", undefined, () => startHere(task.worktree, wholeRequest(state, task) ? (state.request ?? state.prompt) : `${task.title}\n${task.brief}`));
@@ -3277,6 +3291,13 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
 
     if (task.step === "reproduce") {
       const stop = await reproduceStep(run, task);
+      if (stop) return stop;
+      continue;
+    }
+
+    // [F140 temporal-cascade]
+    if (task.step === "temporal") {
+      const stop = await temporalStep(run, task);
       if (stop) return stop;
       continue;
     }
@@ -3824,6 +3845,318 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
     }
 
     if (task.step === "done") return undefined;
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// [F140 temporal-cascade] The temporal cascade for the whole request: a capped cheap probe, a decision from F138's
+// probe and the probe's trajectory through Laya's conformal gate (F139), and, when it escalates, a stronger model in
+// a clean room (the cheap edits discarded, only verified facts handed over: F141). Every transition is saved before
+// the next action, so a killed run resumes at the stage it reached, never resets twice once the solver has begun, and
+// never carries the cheap model's edits into an escalated solver's workspace.
+
+/** One Laya client per run: its health result is kept across the run's decisions. */
+const LAYA_CLIENTS = new Map<string, LayaClient>();
+
+function layaFor(run: RunCtx): LayaClient {
+  const known = LAYA_CLIENTS.get(run.state.id);
+  if (known) return known;
+  // Under `node --test`, a run that names no Laya address never reaches a real sidecar on this machine (as the
+  // telemetry guard keeps tests off the telemetry endpoint): it gets a port nothing listens on, so Laya is unavailable.
+  const testGuard = process.env.NODE_TEST_CONTEXT && !run.ctx.layaUrl && !process.env.NEUROMESH_LAYA_URL ? { url: "http://127.0.0.1:1" } : {};
+  const client = new LayaClient({ ...layaConfig(), ...testGuard, ...(run.ctx.layaUrl ? { url: run.ctx.layaUrl.replace(/\/+$/, "") } : {}) });
+  LAYA_CLIENTS.set(run.state.id, client);
+  return client;
+}
+
+/** The checks on a temporal task's folder, with F95's stub gate; `clean` is everything passing on a real change. */
+async function temporalChecks(run: RunCtx, task: TaskState, label: string): Promise<{ results: CheckResult[]; clean: boolean; empty: boolean; stubs: boolean; capped?: boolean } | Stop> {
+  const { state, log } = run;
+  if (state.checks.length === 0 && isOn("work-created-checks")) {
+    const found = optional(run, "work-created-checks", [], () => detectChecks(task.worktree));
+    if (found.length > 0) state.checks = found;
+  }
+  await prepareEnv(run, task.worktree, task.prepared, task.id);
+  let results = keepLostChecks(run, await check(run, task.worktree, label));
+  const cannotRun = results.filter((r) => r.status === "unavailable").map((r) => r.name);
+  if (cannotRun.length > 0) {
+    state.checks = state.checks.filter((c) => !cannotRun.includes(c.name));
+    results = results.filter((r) => r.status !== "unavailable");
+  }
+  if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+  const diff = diffOf(task);
+  let stubs = false;
+  if (isOn("stub-gate")) {
+    const found = optional(run, "stub-gate", [], () => findStubs(diff));
+    if (found.length > 0) {
+      stubs = true;
+      results = [...results, { name: "stub-gate", command: "neuromesh stub gate (F95)", status: "failed", exitCode: 1, durationMs: 0, tail: describeStubs(found), logPath: "" }];
+    }
+  }
+  task.latest = results;
+  task.files = snapshot(task.worktree, task.base!, task.prepared).files;
+  const failing = results.filter((r) => r.status === "failed" || r.status === "timeout");
+  const empty = diff.trim() === "";
+  log.emit("checks.finished", { phase: "task", task: task.id, round: task.round, results: brief(results), ok: failing.length === 0 && !empty });
+  saveState(state);
+  return { results, clean: state.checks.length > 0 && failing.length === 0 && !empty && !stubs, empty, stubs };
+}
+
+/** What a cheap turn did, from its kept stream log (tool calls only) and the folder. */
+function cheapTurnOf(state: RunState, task: TaskState, result: AgentResult | undefined): CheapTurn {
+  const attempt = [...state.attempts].reverse().find((a) => a.task === task.id);
+  let tools: CheapTurn["tools"] = [];
+  const logPath = result?.logPath ?? attempt?.logPath;
+  if (logPath && existsSync(logPath)) {
+    try {
+      // Paths relative to the task's folder, so the digest can tell modules apart.
+      const roots = [task.worktree, ...(existsSync(task.worktree) ? [realpathSync(task.worktree)] : [])];
+      tools = parseTrajectory(readFileSync(logPath, "utf8")).map((t) => {
+        const root = t.path ? roots.find((r) => t.path!.startsWith(`${r}/`)) : undefined;
+        return root ? { ...t, path: t.path!.slice(root.length + 1) } : t;
+      });
+    } catch {
+      tools = [];
+    }
+  }
+  const changed = existsSync(task.worktree) ? snapshot(task.worktree, task.base!, task.prepared).files.map((f) => f.path) : [];
+  return { tools, calls: result?.usage.calls ?? attempt?.usage.calls, changedFiles: changed, capped: result?.capped };
+}
+
+/** One temporal turn on the task's folder. */
+async function temporalTurn(run: RunCtx, task: TaskState, o: { role: Role; config: RoleConfig; kind: AttemptKind; prompt: string; maxTurns?: number; resume?: string }): Promise<TurnResult> {
+  const { state } = run;
+  healTask(run, task);
+  const env = isOn("work-env") ? envNote(task.worktree) : "";
+  const prompt = o.prompt + (o.resume ? "" : env);
+  const out = await turn(run, {
+    key: task.id,
+    role: o.role,
+    kind: o.kind,
+    task: task.id,
+    round: task.round,
+    cwd: task.worktree,
+    prompt,
+    freshPrompt: o.resume ? leanFreshPrompt(state, task) + env : prompt,
+    access: "write",
+    schema: reportSchema(),
+    resume: o.resume ? { sessionId: o.resume, model: modelKey(o.config) } : undefined,
+    chain: [o.config],
+    lean: isOn("lean-runner"),
+    ...(o.maxTurns !== undefined ? { maxTurns: o.maxTurns } : {}),
+  });
+  healTask(run, task);
+  return out;
+}
+
+/** A turn that did not finish: stop the run (quota, sign-in, network, user) or report what went wrong. */
+function temporalHeld(result: AgentResult, what: string): Stop | undefined {
+  if (result.stop === "cancelled" || result.stop === "quota" || held(result)) return stopFor(result, what);
+  return undefined;
+}
+
+async function temporalStep(run: RunCtx, task: TaskState): Promise<Stop | undefined> {
+  const { state, log } = run;
+  const cfg = state.temporal!;
+  const t: TemporalTaskState = (task.temporal ??= { stage: "stage0_done", cheapTurns: [], resets: 0, solverRepairs: 0 });
+  const probe = state.probe?.facts;
+  const go = (stage: TemporalStage, extra: Record<string, unknown> = {}): void => {
+    t.stage = stage;
+    saveState(state);
+    log.emit("temporal.stage", { feature: "F140", task: task.id, stage, ...extra });
+  };
+  const merge = (why: string): undefined => {
+    log.emit("note", { feature: "F140", message: `Task ${task.id}: ${why}` });
+    // Accepted work goes through the same review gate as any other (F119: a suite green before the change proves nothing).
+    task.step = wantsTester(run, task) ? "test" : "merge";
+    saveState(state);
+    return undefined;
+  };
+  /** Starts the clean room, or ends the task here (the breaker): then `{ stop }`, which may hold no stop (the run goes on). */
+  const escalate = (action: "escalate_sonnet" | "escalate_opus", reason: string): { stop: Stop | undefined } | undefined => {
+    // [F86 escalation-breaker] The expert's clean room counts against the run's escalations like any other; the senior's does not.
+    if (action === "escalate_opus" && breakerTripped(state, task)) {
+      const max = state.cascade!.maxEscalations!;
+      if (state.checks.length > 0 && checksPass(task) && (task.files ?? []).length > 0) {
+        log.emit("note", { feature: "F86", message: `Task ${task.id}: ${max} task(s) already went to the expert in this run; it keeps its work (the checks pass).` });
+        task.step = "merge";
+        saveState(state);
+        return { stop: undefined };
+      }
+      log.emit("note", { feature: "F86", message: `Task ${task.id}: ${max} task(s) already went to the expert in this run; the circuit breaker stops it here.` });
+      // The reason names the decision, not Laya's transport error: the task ended on the breaker, not on a lost network.
+      void reason;
+      return { stop: failTask(run, task, `the temporal cascade would send it to the expert, and the escalation circuit breaker is open (${max} per run)`) };
+    }
+    t.action = action;
+    t.reason = reason;
+    go("cleanroom_reset", { action, reason });
+    return undefined;
+  };
+
+  while (task.status === "active" && task.step === "temporal") {
+    if (run.signal.aborted) return { status: "interrupted", reason: "stopped" };
+
+    if (t.stage === "stage0_done") {
+      go("probe_running", { trivial: probe?.trivialSelfContained === true });
+      continue;
+    }
+
+    if (t.stage === "probe_running") {
+      if (!t.probeStarted || !t.probeDone) {
+        if (t.probeStarted) {
+          // Resumed after the engine stopped mid-probe: its work so far is checked as the probe's result.
+          log.emit("note", { feature: "F140", message: `Task ${task.id}: the cheap probe was cut off when the engine stopped; its work so far is checked.` });
+        } else {
+          t.probeStarted = true;
+          saveState(state);
+          const trivial = probe?.trivialSelfContained === true;
+          const { result } = await temporalTurn(run, task, { role: "worker", config: cfg.cheap, kind: "probe", prompt: leanTaskPrompt(state), maxTurns: trivial ? cfg.trivialMaxTurns : cfg.probeMaxTurns });
+          const stop = temporalHeld(result, "worker");
+          if (stop) {
+            // The probe never ran: it is asked again on resume.
+            t.probeStarted = false;
+            saveState(state);
+            return stop;
+          }
+          if (result.stop === "done") t.cheapSession = result.sessionId;
+          t.cheapTurns.push(cheapTurnOf(state, task, result));
+        }
+        t.probeDone = true;
+        saveState(state);
+      }
+      const c = await temporalChecks(run, task, `${task.id}-probe`);
+      if ("status" in c) return c;
+      const last = t.cheapTurns.at(-1);
+      if (last) last.checks = c.results;
+      go("probe_done", { clean: c.clean });
+      continue;
+    }
+
+    if (t.stage === "probe_done") {
+      const latest = task.latest ?? [];
+      const failing = latest.filter((r) => r.status === "failed" || r.status === "timeout");
+      const empty = (task.files ?? []).length === 0;
+      const clean = state.checks.length > 0 && failing.length === 0 && !empty;
+      // A suite that already passed before any change proves nothing about the change (F119).
+      const greenStart = (state.baseline ?? []).length > 0 && (state.baseline ?? []).every((r) => r.status === "passed");
+      const easy = probe?.trivialSelfContained === true || (probe?.mechanicalScore ?? 0) >= 0.65;
+      if (clean && easy && !greenStart) return merge("the cheap probe's change passes the checks and the work is trivial or mechanical; accepted without Laya.");
+      const digest = optional(run, "cleanroom-handoff", "", () => buildTrajectoryDigest(probe, t.cheapTurns, state.baseline));
+      const text = [state.probe?.layaStateText ?? "Nothing is known about the repository.", digest].filter(Boolean).join(" ");
+      const decision = isOn("laya-gate") ? await optionalAsync(run, "laya-gate", { status: "unavailable" as const, route: "review" as const, reason: "F139 failed", ms: 0 }, () => layaFor(run).decideRouting(text)) : { status: "unavailable" as const, route: "review" as const, reason: "F139 laya-gate is off", ms: 0 };
+      const gate = evaluateGate(probe, decision, { tier: "the cheap model" });
+      t.laya = decision.status === "ok" ? "ok" : "unavailable";
+      t.action = gate.action;
+      t.reason = gate.reason;
+      t.conformalAuto = gate.conformalAuto;
+      log.emit("laya.decided", { feature: "F139", task: task.id, status: decision.status, action: gate.action, conformalAuto: gate.conformalAuto, ms: decision.ms });
+      if (gate.action === "continue_cheap" && clean) return merge(`the cheap probe's change passes the checks and Laya confirms it (${gate.reason}).`);
+      // No checks to say otherwise: a probe that finished within its cap, changed something and left no stand-in is kept when Laya says the cheap model resolves it.
+      if (gate.action === "continue_cheap" && state.checks.length === 0 && !empty && !failing.length && !t.cheapTurns.at(-1)?.capped) return merge(`the cheap probe finished and Laya says it resolves the request (${gate.reason}); the project has no checks.`);
+      go("laya_decided", { action: gate.action, laya: t.laya });
+      continue;
+    }
+
+    if (t.stage === "laya_decided") {
+      if (t.action === "continue_cheap") {
+        go("cheap_continue");
+        continue;
+      }
+      const stop = escalate(t.action === "escalate_sonnet" ? "escalate_sonnet" : "escalate_opus", t.reason ?? "Laya's gate");
+      if (stop) return stop.stop;
+      continue;
+    }
+
+    if (t.stage === "cheap_continue") {
+      if (!t.continueDone) {
+        if (t.continueStarted) {
+          log.emit("note", { feature: "F140", message: `Task ${task.id}: the cheap continuation was cut off when the engine stopped; its work so far is checked.` });
+        } else {
+          t.continueStarted = true;
+          saveState(state);
+          const failing = (task.latest ?? []).some((r) => r.status === "failed" || r.status === "timeout");
+          const prompt = !t.cheapSession ? leanFreshPrompt(state, task) : failing ? repairPrompt(state, task) : "Continue: finish the request, run the covering tests, then give your final answer in the same JSON format as before.";
+          const { result } = await temporalTurn(run, task, { role: "worker", config: cfg.cheap, kind: "continue", prompt, maxTurns: cfg.continueMaxTurns, ...(t.cheapSession ? { resume: t.cheapSession } : {}) });
+          const stop = temporalHeld(result, "worker");
+          if (stop) {
+            t.continueStarted = false;
+            saveState(state);
+            return stop;
+          }
+          t.cheapTurns.push(cheapTurnOf(state, task, result));
+        }
+        t.continueDone = true;
+        saveState(state);
+      }
+      const c = await temporalChecks(run, task, `${task.id}-continue`);
+      if ("status" in c) return c;
+      const capped = t.cheapTurns.at(-1)?.capped === true;
+      if (c.clean || (state.checks.length === 0 && !c.empty && !c.stubs && !capped)) return merge("the cheap model finished within its extra turns.");
+      const stop = escalate("escalate_opus", `the cheap model was granted ${cfg.continueMaxTurns} more turns and the work is still ${state.checks.length > 0 ? "failing" : "unverified"}`);
+      if (stop) return stop.stop;
+      continue;
+    }
+
+    if (t.stage === "cleanroom_reset") {
+      // Discard every unverified edit: the solver starts from the task's base commit. Idempotent, so a kill here is safe.
+      t.discardedFiles = snapshot(task.worktree, task.base!, task.prepared).files.length;
+      resetTo(task.worktree, task.base!);
+      t.resets += 1;
+      t.solver = t.action === "escalate_sonnet" ? "senior" : "expert";
+      t.solverStarted = false;
+      t.solverSession = undefined;
+      t.solverRepairs = 0;
+      task.latest = undefined;
+      task.files = [];
+      go("cleanroom_reset_done", { discarded: t.discardedFiles, solver: t.solver });
+      continue;
+    }
+
+    if (t.stage === "cleanroom_reset_done") {
+      if (t.solver === "expert") task.escalated = true;
+      task.escalationReason = t.reason;
+      go("escalated_running", { solver: t.solver });
+      log.emit("task.escalated", { feature: "F140", task: task.id, reason: t.reason, solver: t.solver });
+      continue;
+    }
+
+    if (t.stage === "escalated_running") {
+      const config = t.solver === "senior" ? cfg.senior : cfg.expert;
+      const role: Role = t.solver === "senior" ? "worker" : "escalation";
+      if (t.solverStarted && !t.solverSession) {
+        // Resumed after the engine stopped mid-solve: the solver starts again in the same folder (its own work stays; nothing of the cheap model's is there).
+        log.emit("note", { feature: "F140", message: `Task ${task.id}: the ${t.solver} was cut off when the engine stopped; it starts again on its own work so far.` });
+      }
+      t.solverStarted = true;
+      saveState(state);
+      const facts = optional(run, "cleanroom-handoff", "", () => buildCleanRoomFactsPacket(probe, t.cheapTurns, { files: t.discardedFiles ?? 0 }, { baseline: state.baseline, dir: task.worktree }));
+      const repairing = t.solverSession !== undefined && t.solverRepairs > 0;
+      const prompt = repairing ? repairPrompt(state, task) : [leanTaskPrompt(state), facts].filter(Boolean).join("\n\n");
+      const { result } = await temporalTurn(run, task, { role, config, kind: repairing ? "repair" : t.solver === "senior" ? "climb" : "escalation", prompt, ...(repairing ? { resume: t.solverSession } : {}) });
+      const stop = temporalHeld(result, role === "escalation" ? "escalation" : "worker");
+      if (stop) return stop;
+      if (result.stop === "done") t.solverSession = result.sessionId;
+      saveState(state);
+      const c = await temporalChecks(run, task, `${task.id}-x${t.resets}-${t.solverRepairs}`);
+      if ("status" in c) return c;
+      if (c.clean || (state.checks.length === 0 && !c.empty && !c.stubs && result.stop === "done")) return merge(`the ${t.solver === "senior" ? "senior" : "expert"} solved it in a clean room.`);
+      // The senior's work fails the project's checks: one clean-room fall-back to the expert.
+      if (t.solver === "senior" && !t.seniorFellBack && state.checks.length > 0) {
+        t.seniorFellBack = true;
+        const stop = escalate("escalate_opus", "the senior's clean-room attempt fails the project's checks");
+        if (stop) return stop.stop;
+        continue;
+      }
+      if (result.stop === "done" && t.solverRepairs < state.repairs) {
+        t.solverRepairs += 1;
+        task.round += 1;
+        saveState(state);
+        continue;
+      }
+      return failTask(run, task, `checks still fail after the ${t.solver === "senior" ? "senior" : "expert"}'s clean-room attempt${result.stop === "done" ? "" : ` (${result.stop}: ${result.detail ?? ""})`}`);
+    }
   }
   return undefined;
 }

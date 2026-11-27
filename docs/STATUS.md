@@ -968,6 +968,17 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     `scripts/laya-sidecar.sh` runs laya-serve in `~/.neuromesh/laya-venv` and refuses vegaml-learn. Tested against an
     in-process mock; laya-serve's endpoint paths and request shape are not published, so they are assumptions to
     check before the live phase. Nothing calls the gate yet.
+76. **v0.4 stage 4, offline (2026-11-28; F140, F141).** `temporal-claude` is now the temporal cascade: F138's probe,
+    Haiku 5.5 high under Claude Code's `--max-turns` (4, or 6 when trivially self-contained), then F139's gate on the
+    probe text and a digest of Haiku's tool calls (F141; never its text). It keeps the work on Haiku (6 more turns,
+    then Opus), or discards every cheap edit and runs Sonnet 5.5 high or Opus 5.5 medium through the lean runner with
+    a facts-only packet (the baseline checks' verified output; pointers only where F130's gate applies). Sonnet
+    failing the checks falls back once to Opus. Stages are saved before each action; kills mid-probe, mid-reset and
+    mid-solve resume cleanly. The fault harness runs a quarter of its seeds through it with a mock Laya that decides,
+    abstains, answers late, fails or is gone, and found three real gaps before the sweeps were clean: the expert
+    clean room now counts against F86's breaker (the senior's is a climb), a breaker stop no longer quotes Laya's
+    transport error, and accepted work goes through F119's review gate. The stage-1 lean tests moved to solo-opus
+    with lean-runner on. Not measured live; laya-serve's wire format is still an assumption (docs/29).
 
 ## Next steps
 

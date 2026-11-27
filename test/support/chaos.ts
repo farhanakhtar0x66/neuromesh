@@ -25,6 +25,12 @@ import type { Preset } from "../../src/presets/presets.ts";
 import { estimateCost } from "../../src/usage/prices.ts";
 import { formatEvent } from "../../src/cli/format.ts";
 import { git } from "../../src/workspace/git.ts";
+import { conformal, startMockLaya } from "./mock-laya.ts";
+import type { MockLaya } from "./mock-laya.ts";
+
+/** [F140 temporal-cascade] What the cheap model leaves and thinks; neither may reach an escalated solver. */
+const TEMPORAL_POISON = "cheap-probe-edit";
+const CHEAP_DIAGNOSIS = "CHEAP-DIAGNOSIS: the root cause is elsewhere";
 
 export interface ChaosOptions {
   /** A folder the run may fill and that the caller removes. */
@@ -164,6 +170,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const withLean = dice(seed + 5_555_551).chance(0.33);
   // [F138 structural-probe] A third of the runs probe the repository at the start (own dice).
   const withProbe = dice(seed + 8_888_881).chance(0.33);
+  // [F140 temporal-cascade] A quarter of the runs (solo, no lead) go through the temporal cascade, with a mock Laya
+  // that decides, abstains, answers late, fails, talks nonsense or is not there at all (own dice).
+  const temporalDice = dice(seed + 1_212_121);
+  const withTemporal = temporalDice.chance(0.25) && !withLead;
+  const layaKind = temporalDice.weighted({ cheap: 2, sonnet: 2, opus: 2, abstain: 1, review: 1, late: 1, http500: 1, garbage: 1, offline: 1.5 });
+  const temporalCaps = { probeMaxTurns: temporalDice.int(1, 4), trivialMaxTurns: temporalDice.int(2, 6), continueMaxTurns: temporalDice.int(1, 6) };
   // [F12 context-packet] [F100 start-here] A fifth of the repositories track a link to a folder and a broken link, which
   // git ls-files lists as paths, as it does a submodule (ansible__molecule-4534: both features crashed with EISDIR). Own dice.
   const awkwardPaths = dice(seed + 2_222_221).chance(0.2);
@@ -225,7 +237,9 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   const preset: Preset = {
     name: "chaos",
     description: "",
-    mode: ((m: "solo" | "team") => (withLead ? "team" : m))(d.pick(["solo", "team", "team"] as const)),
+    mode: ((m: "solo" | "team") => (withLead ? "team" : withTemporal ? "solo" : m))(d.pick(["solo", "team", "team"] as const)),
+    // [F140 temporal-cascade]
+    temporal: withTemporal ? { cheap: { backend: "fake", model: "t-cheap", tier: "worker" }, senior: { backend: "fake", model: "t-senior", tier: "worker" }, expert: EXPERT, ...temporalCaps } : undefined,
     roles,
     repairs: d.int(0, 2),
     maxTasks: d.int(2, 5),
@@ -246,7 +260,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
     // [F101 blind-tests] Off by default since 2026-11-17, so the harness switches it on to keep exercising its code (a disable still wins).
-    enable: ["blind-tests", "reproduce-first", ...(withLean ? ["lean-runner"] : []), ...(withProbe ? ["structural-probe"] : [])],
+    enable: ["blind-tests", "reproduce-first", ...(withLean ? ["lean-runner"] : []), ...(withProbe ? ["structural-probe"] : []), ...(withTemporal ? ["temporal-cascade", "cleanroom-handoff", "laya-gate", "structural-probe", "lean-runner"] : [])],
     quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -327,6 +341,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   };
 
   const calls: AgentRequest[] = [];
+  const temporalLeaks: string[] = [];
   let aborter = new AbortController();
   let runaway = false;
   // [F82 grunt-tier] A grunt must never be asked to judge itself.
@@ -596,8 +611,24 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       const t = Date.now();
       const index = calls.length;
       calls.push(request);
+      // [F140 temporal-cascade] An escalated solver must start clean, and must never be shown the cheap model's reasoning.
+      if (withTemporal && (request.model === "t-senior" || request.model === EXPERT.model) && request.access === "write") {
+        if (existsSync(join(request.cwd, "temporal-poison.txt"))) temporalLeaks.push(`a ${request.model} turn started in a folder with the cheap model's edits`);
+        if (request.prompt.includes(CHEAP_DIAGNOSIS) || (request.appendSystemPrompt ?? "").includes(CHEAP_DIAGNOSIS)) temporalLeaks.push(`the cheap model's diagnosis reached ${request.model}`);
+      }
+      if (withTemporal && request.model === "t-cheap" && request.access === "write" && temporalDice.chance(0.6)) put(request.cwd, "temporal-poison.txt", TEMPORAL_POISON);
       // [F137 cache-accounting] [F136 lean-runner] A call count on every turn, so the lean runner's fresh-session rule is taken.
-      const base = (partial: Partial<AgentResult>): AgentResult => ({ stop: "done", finalText: "", usage: { calls: ((index * 7) % 30) + 1 }, exitCode: 0, sessionId: `fake-${index}`, model: request.model, ...partial, durationMs: Date.now() - t });
+      const base = (partial: Partial<AgentResult>): AgentResult => {
+        const out: AgentResult = { stop: "done", finalText: "", usage: { calls: ((index * 7) % 30) + 1 }, exitCode: 0, sessionId: `fake-${index}`, model: request.model, ...partial, durationMs: Date.now() - t };
+        // [F140 temporal-cascade] The cheap model sometimes stops at its turn cap, and always explains itself.
+        if (request.model === "t-cheap" && out.stop === "done") {
+          if (request.maxTurns !== undefined && index % 3 !== 0) out.capped = true;
+          const s = out.structured as Record<string, unknown> | undefined;
+          if (s && typeof s === "object" && !Array.isArray(s)) out.structured = { ...s, notes: CHEAP_DIAGNOSIS };
+          out.finalText = `${CHEAP_DIAGNOSIS} ${out.finalText}`;
+        }
+        return out;
+      };
       const cancelled = new Promise<Partial<AgentResult>>((resolve) => {
         if (request.signal?.aborted) resolve({ stop: "cancelled", exitCode: null });
         request.signal?.addEventListener("abort", () => resolve({ stop: "cancelled", exitCode: null }), { once: true });
@@ -614,10 +645,26 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     },
   };
 
+  let laya: MockLaya | undefined;
+  if (withTemporal && layaKind !== "offline") {
+    laya = await startMockLaya();
+    const decide = (mech: boolean, inv: boolean, cheap: boolean, extra: Record<string, unknown> = {}): unknown => ({ answers: [conformal("is_mechanical_or_localized", mech, extra), conformal("has_implied_invariants", inv, extra), conformal("cheap_will_resolve", cheap, extra)] });
+    laya.reply =
+      layaKind === "cheap" ? { json: decide(true, false, true) }
+      : layaKind === "sonnet" ? { json: decide(false, false, false) }
+      : layaKind === "opus" ? { json: decide(false, true, false) }
+      : layaKind === "abstain" ? { json: decide(true, false, true, { abstain: true }) }
+      : layaKind === "review" ? { json: decide(true, false, true, { route: "review" }) }
+      : layaKind === "late" ? { json: decide(true, false, true), delayMs: 900 }
+      : layaKind === "http500" ? { status: 500, raw: "boom" }
+      : { raw: "{not json" };
+  }
   const events: NeuromeshEvent[] = [];
   const context = (): EngineContext => {
     aborter = new AbortController();
     return {
+      // [F140 temporal-cascade] The mock, or a port nothing listens on.
+      layaUrl: laya?.url ?? "http://127.0.0.1:1",
       home,
       // [F104 quota-shift] The same agents under a second tool's name, for the turns that move.
       backends: { fake: backend, other: { ...backend, id: "other" } },
@@ -702,6 +749,14 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (Object.keys(state.inFlight).length > 0) broke("turns are still marked in flight after the run ended");
     // [F12 context-packet] [F100 start-here] A folder or a broken link listed by git is skipped, never read as a file.
     for (const f of state.featureErrors ?? []) if (/EISDIR/.test(f.message)) broke(`${f.id} ${f.key} read a folder as a file: ${f.message.slice(0, 120)}`);
+    // [F140 temporal-cascade] The cheap model's edits and reasoning never reach an escalated solver, nor its result.
+    for (const leak of temporalLeaks) broke(leak);
+    const temporal = state.tasks[0]?.temporal;
+    if (temporal) {
+      if (temporal.resets > 2) broke(`the temporal task was reset ${temporal.resets} times`);
+      if (temporal.resets > 0 && state.status === "finished" && existsSync(join(state.dir, "diff.patch")) && readFileSync(join(state.dir, "diff.patch"), "utf8").includes(TEMPORAL_POISON)) broke("an escalated temporal run kept the cheap model's edits");
+      if (temporal.action === "continue_cheap" && temporal.laya !== "ok") broke("the gate kept a task on the cheap model without a decisive Laya answer");
+    }
     // [F138 structural-probe] The probe never throws and never overruns: when on, it is there, within its deadline.
     if (state.features?.includes("structural-probe")) {
       if (!state.probe) broke("the structural probe was on but left no facts");
@@ -738,7 +793,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (trouble === "none" && outageFrom < 0 && interruptAt < 0 && state.status !== "finished") broke(`every agent did its work, yet the run ${state.status}: ${state.reason}`);
     // Good work is not redone, repaired or sent to the expert.
     if (calm) {
-      const waste = state.attempts.filter((a) => ["repair", "review-fix", "advised-fix", "climb", "redo", "continue", "advice", "escalation", "integration", "race"].includes(a.kind));
+      // [F140 temporal-cascade] Laya is part of the world here, like the agents: when its gate orders more turns (a
+      // continuation, a senior's or the expert's clean room), those are its decision, not the engine's waste. Any other
+      // extra turn still counts.
+      const ordered = state.tasks[0]?.temporal?.action !== undefined ? ["continue", "climb", "escalation"] : [];
+      const waste = state.attempts.filter((a) => ["repair", "review-fix", "advised-fix", "climb", "redo", "continue", "advice", "escalation", "integration", "race"].includes(a.kind) && !ordered.includes(a.kind));
       if (waste.length > 0) broke(`every agent did its work, yet the engine spent ${waste.length} extra turn(s): ${[...new Set(waste.map((a) => a.kind))].join(", ")}`);
     }
     // Finished or failed for good: nothing of the tasks is left behind.
@@ -997,5 +1056,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (e.type === "agent.finished" && String(e.detail ?? "").startsWith("error_max_structured_output_retries")) seen.add("structured exhausted");
     if (e.type === "structured.rescued") seen.add("structured rescued");
   }
-  return { seed, scenario, status: state?.status ?? "none", reason: state?.reason, calls: calls.length, resumes, ms: Date.now() - started, violations, seen: [...seen] };
+  // [F140 temporal-cascade]
+  for (const e of events) {
+    if (e.type === "laya.decided") seen.add(`temporal ${String(e.action)}${e.status === "ok" ? "" : " (laya unavailable)"}`);
+    if (e.type === "temporal.stage" && e.stage === "cleanroom_reset_done") seen.add("temporal clean room");
+  }
+  await laya?.close();
+  return { seed, scenario: withTemporal ? `${scenario} temporal(laya=${layaKind})` : scenario, status: state?.status ?? "none", reason: state?.reason, calls: calls.length, resumes, ms: Date.now() - started, violations, seen: [...seen] };
 }

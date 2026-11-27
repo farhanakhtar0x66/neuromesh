@@ -9,7 +9,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { QuotaShift } from "../engine/quota.ts";
-import type { Role, RoleChain, RoleConfig, Tier } from "../engine/types.ts";
+import type { Role, RoleChain, RoleConfig, TemporalConfig, Tier } from "../engine/types.ts";
 
 export interface Preset {
   name: string;
@@ -83,6 +83,11 @@ export interface Preset {
    * at most `reviews` times (default 2).
    */
   lead?: { reviews?: number; mode?: "plan" | "patch" | "auto" | "dossier"; dossierMinFiles?: number };
+  /**
+   * [F140 temporal-cascade] The temporal cascade: the cheap model probes the whole request under a turn cap, Laya's gate
+   * decides from the probe and its trajectory, and a stronger model takes it in a clean room. Solo presets only.
+   */
+  temporal?: TemporalConfig;
 }
 
 export interface CascadeConfig {
@@ -166,6 +171,31 @@ export function validatePreset(raw: unknown, file: string): Preset {
     cascade: cascadeConfig(p.cascade, file),
     quotaShift: quotaShift(p.quotaShift, file),
     lead: p.lead === undefined ? undefined : leadConfig(p.lead, file),
+    temporal: p.temporal === undefined ? undefined : temporalConfig(p.temporal, file),
+  };
+}
+
+/** [F140 temporal-cascade] */
+function temporalConfig(raw: unknown, file: string): TemporalConfig {
+  if (typeof raw !== "object" || raw === null) throw new Error(`Preset ${file}: temporal must be an object`);
+  const t = raw as Record<string, unknown>;
+  const one = (v: unknown, name: string, tier: "worker" | "expert"): RoleConfig => {
+    if (v === undefined || typeof v !== "object" || v === null) throw new Error(`Preset ${file}: temporal needs ${name}`);
+    const [c] = chain(v, "worker", file);
+    return { ...c!, tier: (v as Partial<RoleConfig>).tier ?? tier };
+  };
+  const turns = (v: unknown, name: string, fallback: number): number => {
+    if (v === undefined) return fallback;
+    if (typeof v !== "number" || !Number.isInteger(v) || v < 1) throw new Error(`Preset ${file}: temporal ${name} must be a whole number of at least 1`);
+    return v;
+  };
+  return {
+    cheap: one(t.cheap, "cheap", "worker"),
+    senior: one(t.senior, "senior", "worker"),
+    expert: one(t.expert, "expert", "expert"),
+    probeMaxTurns: turns(t.probeMaxTurns, "probeMaxTurns", 4),
+    trivialMaxTurns: turns(t.trivialMaxTurns, "trivialMaxTurns", 6),
+    continueMaxTurns: turns(t.continueMaxTurns, "continueMaxTurns", 6),
   };
 }
 

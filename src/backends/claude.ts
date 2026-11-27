@@ -36,6 +36,8 @@ export function claudeArgs(request: AgentRequest): string[] {
   // [F136 lean-runner] Both documented flags: text added to the system prompt, and a settings value (the output-filter hook).
   if (request.appendSystemPrompt) args.push("--append-system-prompt", request.appendSystemPrompt);
   if (request.settings) args.push("--settings", request.settings);
+  // [F140 temporal-cascade] A checkpoint: the session stops after this many agentic turns and can be resumed.
+  if (request.maxTurns !== undefined) args.push("--max-turns", String(request.maxTurns));
   // [F08 lean-claude]
   const lean = isOn("lean-claude");
   if (lean) args.push(...LEAN);
@@ -188,6 +190,13 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
           run.model = best ?? run.model;
         }
         const denials = Array.isArray(event.permission_denials) ? event.permission_denials : [];
+        // [F140 temporal-cascade] Stopped at --max-turns: the session is fine and can be resumed; the engine checks the work.
+        if (event.subtype === "error_max_turns") {
+          run.stop = "done";
+          run.capped = true;
+          run.detail = "stopped at its turn cap";
+          return;
+        }
         if (event.is_error === true || event.subtype !== "success") {
           run.detail = short(`${String(event.subtype)} ${run.finalText} ${String(event.api_error_status ?? "")}`, 600);
           run.stop = quotaBlocked ? "quota" : classifyFailure(run.detail);

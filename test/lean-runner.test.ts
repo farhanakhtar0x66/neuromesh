@@ -178,14 +178,14 @@ async function runPreset(name: string, script: (req: AgentRequest, i: number) =>
   const events: NeuromeshEvent[] = [];
   const fake = createFakeBackend(script as never, "claude");
   const ctx: EngineContext = { home: join(scratch, `home-${++counter}`), backends: { claude: fake }, onEvent: (e) => events.push(e), turnTimeoutMs: 5_000 };
-  const state = await startRun({ cwd: project(), prompt: "make the test pass: fixed.txt must say ok", preset: loadPreset(name) }, ctx);
+  const state = await startRun({ cwd: project(), prompt: "make the test pass: fixed.txt must say ok", preset: name === "lean-solo" ? { ...loadPreset("solo-opus"), name: "lean-solo", enable: ["lean-runner"] } : loadPreset(name) }, ctx);
   return { state, fake, events };
 }
 
 const done = (summary: string) => ({ structured: { status: "done", summary, notes: "" } });
 
-test("temporal-claude sends the lean prompt, the skill and the hook; solo-opus is unchanged", async () => {
-  const lean = await runPreset("temporal-claude", (req) => {
+test("the lean runner (solo Opus with lean-runner on) sends the lean prompt, the skill and the hook; solo-opus is unchanged", async () => {
+  const lean = await runPreset("lean-solo", (req) => {
     writeFileSync(join(req.cwd, "fixed.txt"), "ok\n");
     return done("wrote it");
   });
@@ -213,7 +213,7 @@ test("temporal-claude sends the lean prompt, the skill and the hook; solo-opus i
 
 for (const [calls, fresh] of [[19, false], [22, true], [25, true]] as const) {
   test(`a repair after a first turn of ${calls} model calls ${fresh ? "starts a fresh session from facts" : "resumes the session"}`, async () => {
-    const run = await runPreset("temporal-claude", (req, i) => {
+    const run = await runPreset("lean-solo", (req, i) => {
       if (i === 0) return { ...done("first try"), usage: { input: 10, output: 5, cacheRead: 1000, cacheWrite: 50, calls } };
       writeFileSync(join(req.cwd, "fixed.txt"), "ok\n");
       return { ...done("fixed"), usage: { input: 3, output: 2, cacheRead: 200, calls: 2 } };
@@ -258,7 +258,7 @@ test("token fields leave an unknown count out, and a total is unknown when one p
 });
 
 test("record turn and run lines, events and eval usage carry the token fields beside the old usage", async () => {
-  const run = await runPreset("temporal-claude", (req) => {
+  const run = await runPreset("lean-solo", (req) => {
     writeFileSync(join(req.cwd, "fixed.txt"), "ok\n");
     return { ...done("ok"), usage: { input: 4, output: 9, cacheRead: 700, cacheWrite: 30, calls: 3 } };
   });
@@ -279,7 +279,7 @@ test("record turn and run lines, events and eval usage carry the token fields be
 test("a failing lean runner (NEUROMESH_FAULT) is switched off and the run goes on with the ordinary prompt", async () => {
   process.env.NEUROMESH_FAULT = "lean-runner";
   try {
-    const run = await runPreset("temporal-claude", (req) => {
+    const run = await runPreset("lean-solo", (req) => {
       writeFileSync(join(req.cwd, "fixed.txt"), "ok\n");
       return done("ok");
     });

@@ -1,14 +1,22 @@
 {
   "name": "temporal-claude",
-  "description": "Experimental (2026-11-27, F136; v0.4 stage 1): Claude Opus 5.5 at medium effort, alone, as solo-opus, through the lean frontier runner: the request as typed with no repository map or brief standards, a fixed anti-waste skill in the system prompt, Bash output filtered before Opus reads it, and a fresh facts-only session for a repair once a session has made 22 model calls. Not measured live.",
+  "description": "Experimental (2026-11-28, F140; v0.4 stage 4): the temporal cascade on one Claude plan. A zero-token probe of the repository and request (F138); Claude Haiku 5.5 high probes the whole request under a 4-turn cap (6 when the probe calls it trivially self-contained); Laya's conformal gate (F139) reads the probe and Haiku's trajectory and keeps it on Haiku (6 more turns), or discards Haiku's edits and hands only verified facts (F141) to Claude Sonnet 5.5 high or Claude Opus 5.5 medium through the lean runner (F136). Sonnet failing the checks falls back once to Opus. Without Laya every undecided case escalates by the probe, never stays cheap. Not measured live.",
   "mode": "solo",
   "worker": {
-    "tier": "expert",
+    "tier": "worker",
     "backend": "claude",
-    "model": "claude-opus-5-5",
-    "effort": "medium"
+    "model": "claude-haiku-5-5",
+    "effort": "high"
   },
-  "enable": ["lean-runner", "structural-probe"],
+  "temporal": {
+    "cheap": { "backend": "claude", "model": "claude-haiku-5-5", "effort": "high" },
+    "senior": { "backend": "claude", "model": "claude-sonnet-5-5", "effort": "high" },
+    "expert": { "backend": "claude", "model": "claude-opus-5-5", "effort": "medium" },
+    "probeMaxTurns": 4,
+    "trivialMaxTurns": 6,
+    "continueMaxTurns": 6
+  },
+  "enable": ["lean-runner", "structural-probe", "laya-gate", "temporal-cascade", "cleanroom-handoff"],
   "repairs": 1,
   "turnTimeoutMinutes": 40
 }

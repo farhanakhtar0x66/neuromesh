@@ -23,6 +23,8 @@ export interface ParsedRun {
   peakPrompt?: number;
   /** [F110 structured-rescue] The input of the last StructuredOutput call the tool saw. */
   lastStructured?: Record<string, unknown>;
+  /** [F140 temporal-cascade] Stopped at its --max-turns cap. */
+  capped?: boolean;
 }
 
 export interface StreamParser {
@@ -129,6 +131,7 @@ export async function runCli(invocation: CliInvocation): Promise<AgentResult> {
     durationMs: proc.durationMs,
     peakPrompt: parsed.peakPrompt,
     lastStructured: parsed.lastStructured,
+    ...(parsed.capped ? { capped: true } : {}),
     exitCode: proc.exitCode,
     detail,
     logPath: request.logPath,

@@ -117,6 +117,8 @@ export interface AgentRequest {
   appendSystemPrompt?: string;
   /** [F136 lean-runner] A `--settings` JSON value for the session (the lean runner's output-filter hook). Claude Code only. */
   settings?: string;
+  /** [F140 temporal-cascade] Most agentic turns in the session (Claude Code's --max-turns). Claude Code only. */
+  maxTurns?: number;
 }
 
 export interface AgentResult {
@@ -145,6 +147,8 @@ export interface AgentResult {
   logPath?: string;
   /** [F110 structured-rescue] The input of the last StructuredOutput call the tool saw, when it gave up on the format. */
   lastStructured?: Record<string, unknown>;
+  /** [F140 temporal-cascade] The turn stopped at its --max-turns cap: not a failure, a checkpoint. */
+  capped?: boolean;
 }
 
 export interface AgentBackend {
