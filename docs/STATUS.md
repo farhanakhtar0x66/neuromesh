@@ -960,6 +960,14 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     numbers or file names for Laya; the event carries labels and counts only. 121 ms on this repository (1,406 files);
     a 500 ms deadline is checked in every loop. It informs no routing yet. Fixture tests cover the four archetypes;
     the fault harness probes a third of its runs.
+75. **v0.4 stage 3, offline (2026-11-28; F139, docs/29).** A zero-dependency client for a local laya-serve sidecar
+    (`src/routing/laya-client.ts`): one request, three yes/no questions about F138's state text, Laya 0.5's conformal
+    fields kept; refused, slow (500 ms), HTTP-error or malformed replies are `review`, never thrown, and a down sidecar
+    is not asked again for 30 s. The gate (`src/routing/laya-policy.ts`) acts only on route auto, no abstention and a
+    one-answer set, never on confidence or `unbound`; anything not decisive escalates by the probe, never cheap.
+    `scripts/laya-sidecar.sh` runs laya-serve in `~/.neuromesh/laya-venv` and refuses vegaml-learn. Tested against an
+    in-process mock; laya-serve's endpoint paths and request shape are not published, so they are assumptions to
+    check before the live phase. Nothing calls the gate yet.
 
 ## Next steps
 

@@ -1288,6 +1288,16 @@ export const FEATURES: Feature[] = [
     optional: true,
     defaultOff: true,
   },
+  {
+    id: "F139",
+    key: "laya-gate",
+    name: "Laya sidecar client and conformal decision gate",
+    added: "2026-11-28",
+    files: ["src/routing/laya-client.ts", "src/routing/laya-policy.ts", "scripts/laya-sidecar.sh", "docs/29-laya-sidecar.md"],
+    what: "Off by default. A zero-dependency HTTP client for a local laya-serve sidecar (Apache-2.0; NEUROMESH_LAYA_URL, default http://127.0.0.1:8787; NEUROMESH_LAYA_API_KEY as a bearer token; NEUROMESH_LAYA_TIMEOUT_MS, default 500). One request asks three yes/no questions about F138's plain-English state text (is_mechanical_or_localized, has_implied_invariants, cheap_will_resolve) and keeps Laya 0.5's conformal fields. Refused, slow, HTTP-error, oversized or malformed replies give status unavailable with route review; nothing throws, and a sidecar found down is not asked again until its health result expires (30 s). Laya 0.3/0.4 answers (no route or abstain) count as review unless NEUROMESH_LAYA_LEGACY_CALIBRATED=1. The gate (evaluateGate) acts only on answers with route auto, no abstention and a single-answer prediction set, never on a confidence number or on unbound: will resolve with nothing implied continues on the cheap model; otherwise Sonnet when nothing is implied or the edit is mechanical, else Opus; anything not decisive escalates by the probe (Opus when hard or unclear, Sonnet for a small mechanical low-coupling edit), never cheap. Nothing calls it yet; the wire paths are assumptions to check against the owner's laya-serve (docs/29). Never imports Laya or its noncommercial calibration package. Not measured live.",
+    optional: true,
+    defaultOff: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();
