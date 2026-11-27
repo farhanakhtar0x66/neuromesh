@@ -25,6 +25,9 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Usage } from "../backends/types.ts";
+import { isOn } from "../features.ts";
+import { sumTokenFields, tokenFields } from "../usage/tokens.ts";
+import type { TokenFields } from "../usage/tokens.ts";
 import { existsSync as exists, readFileSync as readFile } from "node:fs";
 import { dirname } from "node:path";
 import type { NeuromeshEvent } from "../engine/store.ts";
@@ -54,6 +57,8 @@ export interface TurnLine extends Base {
   stop?: string;
   durationMs?: number;
   usage?: Usage;
+  /** [F137 cache-accounting] The usage as explicit fields: inputUncached, cacheRead, cacheCreation, output, calls. */
+  tokens?: TokenFields;
   /** Estimated at API list prices; not money spent. Absent when the model has no listed price. */
   costEstimateUsd?: number;
   quotaUsed?: Record<string, number>;
@@ -83,6 +88,8 @@ export interface RunLine extends Base {
   tasks?: number;
   escalated?: boolean;
   costEstimateUsd?: number;
+  /** [F137 cache-accounting] Summed over the run's turns; a field is left out when a turn did not report it. */
+  tokens?: TokenFields;
   features?: string[];
   featureErrors?: string[];
   files?: number;
@@ -184,6 +191,8 @@ export function linesFromEvent(event: NeuromeshEvent, src = "live"): RecordLine[
       stop: str(event.stop),
       durationMs: num(event.durationMs),
       usage: event.usage as Usage | undefined,
+      // [F137 cache-accounting] From the usage itself, so the backfill of older runs gets the fields too.
+      tokens: isOn("cache-accounting") ? tokenFields(event.usage as Usage | undefined) : undefined,
       costEstimateUsd: num(event.cost),
       quotaUsed: event.quotaUsed as Record<string, number> | undefined,
       earlyExit: event.earlyExit === true ? true : undefined,
@@ -224,6 +233,8 @@ export function linesFromState(state: RunState, src = "live"): RecordLine[] {
     escalated: state.tasks.some((t) => t.escalated || t.advised),
     // The tool's own figure, in the owner's currency of record: kept as an estimate, and only when every turn reported one.
     costEstimateUsd: costs.length > 0 && costs.length === state.attempts.length ? costs.reduce((n, c) => n + c, 0) : undefined,
+    // [F137 cache-accounting]
+    tokens: isOn("cache-accounting") ? sumTokenFields(state.attempts.map((a) => tokenFields(a.usage))) : undefined,
     features: state.features,
     featureErrors: (state.featureErrors ?? []).map((f) => `${f.id} ${f.key}`),
     files: state.outcome?.files.length,

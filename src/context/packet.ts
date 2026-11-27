@@ -7,7 +7,7 @@
 // expressions per language instead of a parser, which is enough for a map.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 
 export interface SymbolLine {
@@ -75,12 +75,27 @@ export function trackedFiles(dir: string): string[] {
   return [...new Set(r.stdout.split("\n").filter((f) => f && !SKIP.test(f)))].sort();
 }
 
+/**
+ * The size of a regular file, or undefined for anything that cannot be read as
+ * one. `git ls-files` lists a submodule (or a symbolic link to a folder) as a
+ * path, and reading that crashed F12 and F100 with EISDIR (ansible__molecule-4534).
+ * statSync follows symbolic links, so a broken one throws and is skipped too.
+ */
+export function regularFileSize(full: string): number | undefined {
+  try {
+    const st = statSync(full);
+    return st.isFile() ? st.size : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function scanRepo(dir: string): FileInfo[] {
   const files: FileInfo[] = [];
   for (const path of trackedFiles(dir)) {
     const full = join(dir, path);
-    if (!existsSync(full)) continue;
-    const size = statSync(full).size;
+    const size = regularFileSize(full);
+    if (size === undefined) continue;
     if (size > MAX_FILE_BYTES) {
       files.push({ path, lines: -1, symbols: [] });
       continue;
@@ -295,7 +310,7 @@ export function startHere(dir: string, request: string, options: StartHereOption
   let shown: { path: string; start: number; lines: string[] } | undefined;
   for (const hit of top) {
     const full = join(dir, hit.file.path);
-    const text = existsSync(full) ? readFileSync(full, "utf8") : "";
+    const text = regularFileSize(full) !== undefined ? readFileSync(full, "utf8") : "";
     if (hit.symbols.length === 0) {
       // Named by the task, nothing in it matched by name: its first definitions.
       const first = hit.file.symbols.slice(0, 4).map((s) => `${s.name} (${s.line})`).join(", ");

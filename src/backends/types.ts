@@ -44,6 +44,8 @@ export interface Usage {
   estimated?: boolean;
   /** [F106 input-split] Where the turn's input tokens went, in five parts (estimated from the stream). */
   split?: InputSplit;
+  /** [F137 cache-accounting] Model calls the turn made, when the tool reports them one by one (Claude Code does). */
+  calls?: number;
 }
 
 /** [F66 tier-pricing] Prompt size above which a call is priced at a model's long-context rates. */
@@ -108,6 +110,13 @@ export interface AgentRequest {
   onText?: (text: string) => void;
   /** Called with the tool's process id (also its process group) once started. */
   onSpawn?: (pid: number) => void;
+  /**
+   * [F136 lean-runner] Text added once to the tool's own system prompt, the same
+   * on every call so it stays in the cached prefix. Claude Code only.
+   */
+  appendSystemPrompt?: string;
+  /** [F136 lean-runner] A `--settings` JSON value for the session (the lean runner's output-filter hook). Claude Code only. */
+  settings?: string;
 }
 
 export interface AgentResult {
@@ -164,6 +173,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
     reasoning: sum(a.reasoning, b.reasoning),
     cacheRead: sum(a.cacheRead, b.cacheRead),
     cacheWrite: sum(a.cacheWrite, b.cacheWrite),
+    ...(a.calls !== undefined || b.calls !== undefined ? { calls: sum(a.calls, b.calls) } : {}),
     ...(long ? { long } : {}),
     ...(split ? { split } : {}),
   };
@@ -183,6 +193,7 @@ export function usageSince(totals: Usage, earlier: Usage[]): Usage {
     reasoning: minus(totals.reasoning, before.reasoning),
     cacheRead: minus(totals.cacheRead, before.cacheRead),
     cacheWrite: minus(totals.cacheWrite, before.cacheWrite),
+    ...(totals.calls !== undefined ? { calls: minus(totals.calls, before.calls) } : {}),
   };
 }
 

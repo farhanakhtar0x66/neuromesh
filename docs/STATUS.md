@@ -943,6 +943,15 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
       the plan. Flash's turn is shown at Gemini list prices (est. $0.13) but is on the Google AI Pro quota.
     Both apps work by hand (add, done, list, unknown id exits 1, missing command shows usage). One request, one run
     each: a hint, not a measurement; Opus alone on the same request was not run.
+73. **v0.4 stage 1, offline (2026-11-27; F136, F137, docs/27 and 28).** Built with no model call. F12 and F100 no
+    longer crash with EISDIR on a submodule or a link to a folder (molecule-4534); the fault harness now builds such
+    repositories, and the pre-fix code broke its new rule 25 times in 60 seeds. The K6-without-dossier audit: Opus gets
+    solo-opus's prompt plus one line and a capitalised request; the 8k repository map is in both. F136 `lean-runner`
+    (preset `temporal-claude`, opt-in) drops the map, start-here lines, standards and rewrite (1,263 characters against
+    9,142), appends a fixed anti-waste skill to the system prompt, filters Bash output through a PreToolUse hook, and
+    starts a fresh facts-only session for a repair after 22 model calls (Claude Code owns the history, so nothing is
+    masked mid-turn). F137 adds `tokens` (inputUncached, cacheRead, cacheCreation, output, calls) beside `usage` in
+    events, record.jsonl and results.json. Whether Claude Code applies the hook is checked in the live phase.
 
 ## Next steps
 

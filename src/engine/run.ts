@@ -129,6 +129,9 @@ import {
   testerPrompt,
   VERDICT_SCHEMA,
 } from "./prompts.ts";
+import { sumTokenFields, tokenFields } from "../usage/tokens.ts";
+import type { TokenFields } from "../usage/tokens.ts";
+import { isLean, leanBackendOptions, leanFreshDue, leanFreshPrompt, leanTaskPrompt, sessionCalls } from "./lean-runner.ts";
 import { currentPatch } from "./apply.ts";
 import { EventLog, newRunId, runPaths, runsDir, saveState } from "./store.ts";
 import type { NeuromeshEvent } from "./store.ts";
@@ -975,6 +978,8 @@ interface TurnRequest {
   exited?: Preamble;
   /** [F87 routing-summary] The task's rung, to tell which tier a ladder model ran on. */
   rungBase?: number;
+  /** [F136 lean-runner] A lean runner turn: the anti-waste skill, the output filter, the fresh-session rule. */
+  lean?: boolean;
 }
 
 interface TurnResult {
@@ -1096,6 +1101,14 @@ async function turn(run: RunCtx, req: TurnRequest): Promise<TurnResult> {
     if (sameSession && peak > SESSION_CAP && req.freshPrompt) {
       sameSession = false;
       log.emit("context.compacted", { feature: "F67", role: req.role, task: req.task, peakPrompt: peak });
+    }
+    // [F136 lean-runner] A session that has made LEAN_FRESH_AT model calls is not resumed: the follow-up starts fresh, from facts.
+    if (sameSession && req.lean && req.freshPrompt && isOn("lean-runner")) {
+      const calls = sessionCalls(state.attempts, req.resume!.sessionId);
+      if (leanFreshDue(calls)) {
+        sameSession = false;
+        log.emit("context.compacted", { feature: "F136", role: req.role, task: req.task, calls });
+      }
     }
     // [F42 compact] Asked to compact: this follow-up starts a fresh session from the brief and the last report.
     if (sameSession && ctx.steer?.compact && isOn("compact") && req.freshPrompt) {
@@ -1228,6 +1241,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
       if (f) f.pid = pid;
       saveState(state);
     },
+    // [F136 lean-runner]
+    ...(req.lean && isOn("lean-runner") ? leanBackendOptions() : {}),
     });
   } catch (error) {
     // [F74 adapter-guard]
@@ -1299,6 +1314,8 @@ async function once(run: RunCtx, req: TurnRequest, config: RoleConfig, backend: 
     model: record.model,
     durationMs: result.durationMs,
     usage,
+    // [F137 cache-accounting] The same counts as explicit fields: fresh input, cache read, cache creation, output, calls.
+    tokens: isOn("cache-accounting") ? tokenFields(usage) : undefined,
     // [F17 live-cost]
     // An estimate at list prices; for models without one (opencode's), what the tool reported.
     cost: isOn("live-cost") ? (estimateCost(record.model, usage) ?? (backend.id === "opencode" ? result.costUsdEquivalent : undefined)) : undefined,
@@ -3269,6 +3286,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
       const followUp = task.next === "repair" || task.next === "review-fix" || task.next === "advised-fix";
       // [F54 work-env] Every first prompt of a session says how to use the environment.
       const env = isOn("work-env") ? envNote(task.worktree) : "";
+      // [F136 lean-runner] Opt-in (temporal-claude): the one task of an unplanned run, put to the model lean.
+      const lean = isOn("lean-runner") && optional(run, "lean-runner", false, () => isLean(state, task));
       const prompt =
         task.next === "climb" ? climbPrompt(state, task) + env
         : task.next === "advised-fix" ? advisedFixPrompt(task)
@@ -3279,6 +3298,8 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         : task.next === "redo" ? redoPrompt(state, task) + env
         : task.next === "continue" ? continuePrompt(state, task) + env
         : task.escalated ? (task.patch ? patchPrompt(state, task) : isOn("no-rebuild") ? fixInPlacePrompt(state, task, observedFor(state, task)) : escalationPrompt(state, task)) + env
+        // [F136 lean-runner] The request as typed, the checks, the answer format; nothing else.
+        : lean ? leanTaskPrompt(state) + env
         : taskPrompt(state, task) + env;
       // [F83 early-exit] A worker or senior judges the task first; the grunt and the expert do not.
       const gate = preambleGate(state, task, role);
@@ -3292,13 +3313,14 @@ async function driveTask(run: RunCtx, task: TaskState): Promise<Stop | undefined
         round: task.round,
         cwd: task.worktree,
         prompt: asked,
-        freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? freshFollowUpPrompt(state, task) : asked) + (followUp ? env : ""),
+        freshPrompt: (task.next === "advised-fix" ? freshAdvisedFixPrompt(state, task) : followUp ? (lean ? leanFreshPrompt(state, task) : freshFollowUpPrompt(state, task)) : asked) + (followUp ? env : ""),
         access: "write",
         schema: reportSchema(),
         resume: followUp ? { sessionId: task.sessionId, model: task.sessionModel } : undefined,
         chain: role === "worker" && state.workerLadder ? state.workerLadder.slice(task.rung ?? 0) : undefined,
         preamble: gate,
         rungBase: task.rung,
+        lean,
       };
       const { result, config } = await turn(run, request);
       task.envProblem = undefined;
@@ -3977,6 +3999,8 @@ export interface ModelUsage {
   durationMs: number;
   usage: Usage;
   costUsdEquivalent?: number;
+  /** [F137 cache-accounting] The usage as explicit fields; a field is left out when a turn did not report it. */
+  tokens?: TokenFields;
 }
 
 /**
@@ -4000,6 +4024,7 @@ export function perTurnAttempts(state: RunState, sessionTotals: (backend: string
 
 export function usageByModel(attempts: AttemptRecord[]): ModelUsage[] {
   const byKey = new Map<string, ModelUsage>();
+  const parts = new Map<string, (TokenFields | undefined)[]>();
   for (const a of attempts) {
     const model = a.model ?? "default";
     const tier = a.tier ?? "worker";
@@ -4008,10 +4033,16 @@ export function usageByModel(attempts: AttemptRecord[]): ModelUsage[] {
     entry.turns += 1;
     entry.durationMs += a.durationMs;
     entry.usage = addUsage(entry.usage, a.usage);
+    // [F137 cache-accounting] Summed only where every turn of the group reported the count.
+    if (isOn("cache-accounting")) parts.set(key, [...(parts.get(key) ?? []), tokenFields(a.usage)]);
     const role = a.role ?? "worker";
     if (!entry.roles.includes(role)) entry.roles.push(role);
     if (a.costUsdEquivalent !== undefined) entry.costUsdEquivalent = (entry.costUsdEquivalent ?? 0) + a.costUsdEquivalent;
     byKey.set(key, entry);
+  }
+  for (const [key, entry] of byKey) {
+    const tokens = sumTokenFields(parts.get(key) ?? []);
+    if (tokens) entry.tokens = tokens;
   }
   return [...byKey.values()];
 }

@@ -1259,6 +1259,25 @@ export const FEATURES: Feature[] = [
     what: "With the lead (F120) and a worker ladder with no grunt rungs, a task the lead gives a worker starts on the ladder's first rung and climbs from there when stuck. Before, only a preset with grunt rungs (F82) placed it there; otherwise the brief's rule for something new (start on the strongest worker rung) applied, which in start-opus-flash is Claude Haiku: in the first live run (2026-11-23, a CLI todo app) Opus planned and Haiku built, and Gemini Flash, the preset's builder, was never called. The lead picks the developer and its tests let a worker climb, so the strongest-rung start is not needed under it.",
     optional: true,
   },
+  {
+    id: "F136",
+    key: "lean-runner",
+    name: "Lean frontier runner",
+    added: "2026-11-27",
+    files: ["src/engine/lean-runner.ts", "src/tools/leanfilter.ts", "src/tools/lean-hook.ts", "src/tools/lean-run.ts", "src/backends/claude.ts (claudeArgs)", "src/engine/run.ts (turn, once, the task's prompt)", "presets/temporal-claude.json"],
+    what: "Opt-in (temporal-claude). The one task of an unplanned run is put to the model lean: the request as typed (state.request, F109), the checks and the answer format, with no repository map (F12), start-here lines (F100), brief standards (F132) or dossier. A fixed anti-waste skill (parallel first reads, no re-reading, one reproduction script, single tests while iterating and the broad check once) goes once into Claude Code's system prompt with --append-system-prompt, so the cached prefix never changes. A PreToolUse hook passed with --settings reruns each Bash command through a filter (ANSI and progress redraws out, repeats collapsed, the first 30 lines, failure lines from the middle and the last 60, with the exact lines and bytes left out, and the exit code kept); the skill also names nm run for output that arrives unshortened. Claude Code owns the session's history, so nothing is masked mid-turn: a follow-up after the session has made 22 model calls starts a fresh session from facts only (the request, the checks' raw output, the changes on disk; F131) instead of resuming. From the K6 audit (docs/28-v04-lean-runner.md). Not measured live.",
+    optional: true,
+    defaultOff: true,
+  },
+  {
+    id: "F137",
+    key: "cache-accounting",
+    name: "Cache-aware token fields",
+    added: "2026-11-27",
+    files: ["src/usage/tokens.ts", "src/backends/claude.ts (claudeParser)", "src/engine/run.ts (once, usageByModel)", "src/record/record.ts (linesFromEvent, linesFromState)"],
+    what: "Every agent.finished event, record.jsonl turn and run line, and each model's usage in an eval's results.json also carries `tokens`: inputUncached, cacheRead, cacheCreation, output and calls (model calls in the turn, counted per message id in Claude Code's stream). Beside the old `usage` object, whose names stay, so existing readers and evals/bench.ts are unchanged. A count the tool did not report is left out, never 0; a run's or a model's total is left out when any of its turns did not report it.",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

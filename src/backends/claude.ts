@@ -33,6 +33,9 @@ export function claudeArgs(request: AgentRequest): string[] {
   if (request.effort) args.push("--effort", request.effort);
   if (request.outputSchema) args.push("--json-schema", JSON.stringify(request.outputSchema));
   if (request.resumeSessionId) args.push("--resume", request.resumeSessionId);
+  // [F136 lean-runner] Both documented flags: text added to the system prompt, and a settings value (the output-filter hook).
+  if (request.appendSystemPrompt) args.push("--append-system-prompt", request.appendSystemPrompt);
+  if (request.settings) args.push("--settings", request.settings);
   // [F08 lean-claude]
   const lean = isOn("lean-claude");
   if (lean) args.push(...LEAN);
@@ -70,7 +73,7 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
       cacheRead += c.cacheRead;
       cacheWrite += c.cacheWrite;
     }
-    request.onUsage({ input, cacheRead, cacheWrite, output: Math.round(writtenChars / 4) + thinking });
+    request.onUsage({ input, cacheRead, cacheWrite, output: Math.round(writtenChars / 4) + thinking, ...(calls.size > 0 ? { calls: calls.size } : {}) });
   };
 
   return {
@@ -155,6 +158,8 @@ export function claudeParser(request: Pick<AgentRequest, "onActivity" | "onUsage
           reasoning: num(obj(usage?.output_tokens_details)?.thinking_tokens),
           cacheRead: num(usage?.cache_read_input_tokens),
           cacheWrite: num(usage?.cache_creation_input_tokens),
+          // [F137 cache-accounting] One entry per model call (message id) seen in the stream; unknown when none carried usage.
+          ...(calls.size > 0 ? { calls: calls.size } : {}),
         };
         // [F66 tier-pricing] Calls over the long-context size, priced apart.
         if (isOn("tier-pricing") && calls.size > 0) {

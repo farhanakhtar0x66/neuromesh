@@ -11,7 +11,7 @@
 // evals/chaos.ts (many seeds at once).
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { AgentBackend, AgentRequest, AgentResult } from "../../src/backends/types.ts";
 import { applyRun } from "../../src/engine/apply.ts";
@@ -160,6 +160,11 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
   // [F119 green-checks] A fifth of the runs with checks start green: the project's tests already pass and test nothing the
   // request asks for (a real repository's suite, as in SWE-bench-Live). Its own dice, so a seed's scenario otherwise stays.
   const greenStart = dice(seed + 6_666_661).chance(0.2) && !withRepro && !withBlind;
+  // [F136 lean-runner] A third of the runs put the one unplanned task to the model lean (own dice).
+  const withLean = dice(seed + 5_555_551).chance(0.33);
+  // [F12 context-packet] [F100 start-here] A fifth of the repositories track a link to a folder and a broken link, which
+  // git ls-files lists as paths, as it does a submodule (ansible__molecule-4534: both features crashed with EISDIR). Own dice.
+  const awkwardPaths = dice(seed + 2_222_221).chance(0.2);
   const quotaShift = phaseDice.chance(0.33) ? { backend: "fake", window: "five_hour", above: phaseDice.pick([0.05, 0.22, 0.9]), to: [{ backend: "other", model: "shift-1", tier: "worker" as const }] } : undefined;
   // ---- The repository: its check passes when every listed file says "ok".
   const repo = join(options.scratch, `repo-${seed}`);
@@ -182,6 +187,12 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     writeFileSync(join(repo, "README.md"), "a project without checks\n");
   }
   if (!options.resume && withBlind) writeFileSync(join(repo, "queue.js"), "function boundedQueue(limit) {\n  return [];\n}\nmodule.exports = { boundedQueue };\n");
+  if (!options.resume && awkwardPaths) {
+    mkdirSync(join(repo, "vendored"), { recursive: true });
+    writeFileSync(join(repo, "vendored", "notes.txt"), "kept\n");
+    symlinkSync("vendored", join(repo, "linked-folder"));
+    symlinkSync("nowhere", join(repo, "broken-link"));
+  }
   if (!options.resume) {
     sh(repo, "init", "-q", "-b", "main");
     sh(repo, "add", "-A");
@@ -233,7 +244,7 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     expertBudget: d.chance(0.1) ? d.pick([2_000, 50_000]) : undefined,
     disable: off,
     // [F101 blind-tests] Off by default since 2026-11-17, so the harness switches it on to keep exercising its code (a disable still wins).
-    enable: ["blind-tests", "reproduce-first"],
+    enable: ["blind-tests", "reproduce-first", ...(withLean ? ["lean-runner"] : [])],
     quotaShift,
     // [F80-F88 the routing cascade] In a third of the runs, with its own dice (older seeds keep their scenario).
     gruntLadder: gruntRungs > 0 ? Array.from({ length: gruntRungs }, (_, i) => ({ backend: "fake", model: `grunt-${i + 1}`, tier: "worker" as const })) : undefined,
@@ -583,7 +594,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
       const t = Date.now();
       const index = calls.length;
       calls.push(request);
-      const base = (partial: Partial<AgentResult>): AgentResult => ({ stop: "done", finalText: "", usage: {}, exitCode: 0, sessionId: `fake-${index}`, model: request.model, ...partial, durationMs: Date.now() - t });
+      // [F137 cache-accounting] [F136 lean-runner] A call count on every turn, so the lean runner's fresh-session rule is taken.
+      const base = (partial: Partial<AgentResult>): AgentResult => ({ stop: "done", finalText: "", usage: { calls: ((index * 7) % 30) + 1 }, exitCode: 0, sessionId: `fake-${index}`, model: request.model, ...partial, durationMs: Date.now() - t });
       const cancelled = new Promise<Partial<AgentResult>>((resolve) => {
         if (request.signal?.aborted) resolve({ stop: "cancelled", exitCode: null });
         request.signal?.addEventListener("abort", () => resolve({ stop: "cancelled", exitCode: null }), { once: true });
@@ -686,6 +698,8 @@ export async function runChaos(seed: number, options: ChaosOptions): Promise<Cha
     if (state.status !== "finished" && !state.reason?.trim()) broke(`a ${state.status} run gives no reason`);
     if (state.status === "failed" && state.failure === "engine" && !/^environment: /.test(state.reason ?? "")) broke(`engine failure: ${state.reason}`);
     if (Object.keys(state.inFlight).length > 0) broke("turns are still marked in flight after the run ended");
+    // [F12 context-packet] [F100 start-here] A folder or a broken link listed by git is skipped, never read as a file.
+    for (const f of state.featureErrors ?? []) if (/EISDIR/.test(f.message)) broke(`${f.id} ${f.key} read a folder as a file: ${f.message.slice(0, 120)}`);
     if (state.pid !== undefined) broke("the run still names an engine process after it ended");
     if (state.status === "finished") {
       const open = state.tasks.filter((t) => t.status !== "passed" && t.status !== "failed");
