@@ -19,6 +19,7 @@
 //   transcript or summary (F131). Below that, the session is always resumed, so
 //   its cached prefix is never rewritten early.
 
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { CheckSpec } from "../checks/checks.ts";
 import { isOn } from "../features.ts";
@@ -82,10 +83,40 @@ ${LEAN_RULES}`;
 }
 
 /** The first prompt of a fresh session for a follow-up: facts only (the request, what is on disk, the checks' output). */
+/** At most this many lines of the change list in a fresh session's prompt. */
+const MAX_CHANGE_LINES = 40;
+
+/**
+ * The changes on disk against the task's base, as Neuromesh reads them with git: `git diff --stat` of tracked
+ * files and the new untracked ones, so a fresh session does not redo an edit already made. Paths and counts
+ * only, never the content. Undefined when git cannot say (the prompt then points at `git diff` alone).
+ */
+export function changesOnDisk(worktree: string, base: string | undefined): string | undefined {
+  if (!worktree || !base) return undefined;
+  const git = (...args: string[]): string | undefined => {
+    const r = spawnSync("git", args, { cwd: worktree, encoding: "utf8", timeout: 10_000 });
+    return r.status === 0 ? r.stdout : undefined;
+  };
+  const stat = git("diff", "--stat=120", base);
+  const untracked = git("ls-files", "--others", "--exclude-standard");
+  if (stat === undefined || untracked === undefined) return undefined;
+  const lines = [...stat.split("\n").filter((l) => l.trim()), ...untracked.split("\n").filter(Boolean).map((p) => ` ${p} (new, not yet added)`)];
+  if (lines.length === 0) return "";
+  const kept = lines.length > MAX_CHANGE_LINES ? [...lines.slice(0, MAX_CHANGE_LINES - 1), ` ... and ${lines.length - MAX_CHANGE_LINES + 1} more lines (\`git status\`)`] : lines;
+  return kept.join("\n");
+}
+
 export function leanFreshPrompt(state: RunState, task: TaskState): string {
+  const changes = changesOnDisk(task.worktree, task.base ?? state.base);
+  const onDisk =
+    changes === undefined
+      ? "An earlier session already changed files in this directory (`git diff` shows them)."
+      : changes === ""
+        ? "No file in this directory differs from the start of the task yet."
+        : `An earlier session already changed these files in this directory; the changes are still there, so do not make them again (\`git diff\` shows the content):\n${changes}`;
   return `${leanTaskPrompt(state)}
 
-An earlier session already changed files in this directory (\`git diff\` shows them). Neuromesh then ran the project's checks:
+${onDisk} Neuromesh then ran the project's checks:
 
 ${failureSummary(task.latest, state.baseline)}
 

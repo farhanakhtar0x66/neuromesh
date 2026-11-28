@@ -2,14 +2,19 @@
 # [F139 laya-gate] Run the Apache-2.0 Laya server (laya-serve) as a local sidecar for Neuromesh, in its own
 # Python virtual environment. Neuromesh never installs or imports Laya itself; see docs/29-laya-sidecar.md.
 #
-#   scripts/laya-sidecar.sh install <pip spec or local path>   e.g. ~/src/laya  or  'laya==0.5.*'
-#   scripts/laya-sidecar.sh start | stop | status | logs
+#   scripts/laya-sidecar.sh install <pip spec or local path>   e.g. 'laya[serve]==0.5.6'  or  ~/src/laya
+#   scripts/laya-sidecar.sh start [--agent] | stop | status | logs
+#
+# start runs stock laya-serve (the classic Router: answers with no conformal fields, which Neuromesh counts as
+# review). start --agent runs scripts/laya-agent-server.py, which serves laya.Agent (Laya 0.5) on the same routes,
+# with route, abstain and prediction_set. Both listen on 127.0.0.1 only (laya-serve's own default is 0.0.0.0).
 #
 # Environment:
 #   NEUROMESH_LAYA_VENV   the virtual environment (default ~/.neuromesh/laya-venv)
 #   NEUROMESH_LAYA_URL    where Neuromesh looks for it (default http://127.0.0.1:8787); its port is used here
 #   NEUROMESH_LAYA_API_KEY  passed to the server as LAYA_API_KEY when set
-#   LAYA_SERVE_ARGS       the server's own arguments, if its flags differ (default: --host 127.0.0.1 --port <port>)
+#   LAYA_SERVE_ARGS       extra arguments for laya-serve, if any (it takes its address from LAYA_HOST and LAYA_PORT)
+#   LAYA_AGENT_REPO, NEUROMESH_LAYA_CALIBRATION   for --agent: the model repo, and a saved calibration folder
 #
 # Not installed here, ever: vegaml-learn (noncommercial license). If you install it yourself for personal
 # calibration, it stays in this venv, outside the Neuromesh repository (docs/29).
@@ -49,11 +54,20 @@ case "${1:-}" in
     [ -x "$VENV/bin/laya-serve" ] || { echo "Not installed: scripts/laya-sidecar.sh install <package>" >&2; exit 1; }
     if running; then echo "Already running (pid $(cat "$PID_FILE"))."; exit 0; fi
     mkdir -p "$RUN_DIR"
-    # Apple silicon: let PyTorch fall back to the CPU for operations MPS lacks.
-    PYTORCH_ENABLE_MPS_FALLBACK=1 LAYA_API_KEY="${NEUROMESH_LAYA_API_KEY:-}" \
-      nohup "$VENV/bin/laya-serve" ${LAYA_SERVE_ARGS:---host 127.0.0.1 --port "$PORT"} >"$LOG_FILE" 2>&1 &
+    # Apple silicon: let PyTorch fall back to the CPU for operations MPS lacks. LAYA_API_KEY is only set when given:
+    # an empty one would be a key of its own.
+    if [ -n "${NEUROMESH_LAYA_API_KEY:-}" ]; then export LAYA_API_KEY="$NEUROMESH_LAYA_API_KEY"; fi
+    export PYTORCH_ENABLE_MPS_FALLBACK=1 LAYA_HOST=127.0.0.1 LAYA_PORT="$PORT"
+    if [ "${2:-}" = "--agent" ]; then
+      nohup "$VENV/bin/python" "$(dirname "$0")/laya-agent-server.py" >"$LOG_FILE" 2>&1 &
+      what="laya.Agent (conformal)"
+    else
+      # shellcheck disable=SC2086
+      nohup "$VENV/bin/laya-serve" ${LAYA_SERVE_ARGS:-} >"$LOG_FILE" 2>&1 &
+      what="laya-serve (classic Router: answers count as review unless calibrated)"
+    fi
     echo $! >"$PID_FILE"
-    echo "Started (pid $!), listening on 127.0.0.1:$PORT; log: $LOG_FILE"
+    echo "Started $what (pid $!), listening on 127.0.0.1:$PORT; log: $LOG_FILE"
     ;;
   stop)
     if running; then kill "$(cat "$PID_FILE")" && rm -f "$PID_FILE" && echo "Stopped."; else rm -f "$PID_FILE"; echo "Not running."; fi
@@ -65,7 +79,7 @@ case "${1:-}" in
     tail -n 50 "$LOG_FILE"
     ;;
   *)
-    sed -n '2,16p' "$0"
+    sed -n '2,20p' "$0"
     exit 2
     ;;
 esac

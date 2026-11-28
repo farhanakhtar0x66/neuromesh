@@ -320,7 +320,7 @@ test("F142: through the real client, a mock Laya on 127.0.0.1 is asked once per 
     mock.reply = { json: { answers: [conformal("is_mechanical_or_localized", true), conformal("has_implied_invariants", false), conformal("cheap_will_resolve", true)] } };
     const client = new LayaClient({ ...layaConfig({}), url: mock.url, timeoutMs: 2000 });
     const up = await replay(history.runs, history.skipped, { cutoff: 4, ask: (t) => client.decideRouting(t), tmpRoot: scratch, includeChecks: true });
-    assert.equal(mock.requests.filter((q) => q.path === "/v1/ask").length, 4);
+    assert.equal(mock.requests.filter((q) => q.path === "/v1/systemone").length, 4);
     assert.equal(up.report.actions.continue_cheap, 4);
     assert.equal(up.report.judged, 4);
     assert.deepEqual(up.report.matrix, { cheapResolvedRoutedCheap: 2, cheapResolvedRoutedFrontier: 0, cheapFailedRoutedCheap: 2, cheapFailedRoutedFrontier: 0 });

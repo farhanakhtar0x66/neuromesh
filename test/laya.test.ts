@@ -56,10 +56,12 @@ test("auto: will resolve, nothing implied: the cheap model continues", async () 
   assert.equal(laya.requests.length, 1);
   const r = laya.requests[0]!;
   assert.equal(r.method, "POST");
-  assert.equal(r.path, "/v1/ask");
-  const body = r.body as { context: string; questions: { id: string; type: string }[] };
-  assert.deepEqual(body.questions.map((q) => [q.id, q.type]), ROUTING_QUESTIONS.map((q) => [q.id, "noul"]));
-  assert.match(body.context, /small repository/);
+  assert.equal(r.path, "/v1/systemone");
+  // laya's documented body: the state, and the questions keyed by id with type and instructions.
+  const body = r.body as { state: string; questions: Record<string, { type: string; instructions: string }>; min_confidence?: number };
+  assert.deepEqual(Object.entries(body.questions).map(([id, q]) => [id, q.type, q.instructions]), ROUTING_QUESTIONS.map((q) => [q.id, "noul", q.question]));
+  assert.match(body.state, /small repository/);
+  assert.equal(body.min_confidence, undefined, "no gate asked for unless configured");
   assert.equal(r.headers.authorization, undefined, "no key, no header");
 });
 
@@ -230,7 +232,10 @@ test("decisive needs auto, no abstention, one answer and a yes or no", () => {
 
 test("configuration comes from the environment, with safe defaults", () => {
   const d = layaConfig({});
-  assert.deepEqual([d.url, d.apiKey, d.timeoutMs, d.askPath, d.healthPath, d.legacyCalibrated], ["http://127.0.0.1:8787", undefined, 500, "/v1/ask", "/health", false]);
+  assert.deepEqual([d.url, d.apiKey, d.timeoutMs, d.askPath, d.healthPath, d.legacyCalibrated], ["http://127.0.0.1:8787", undefined, 500, "/v1/systemone", "/health", false]);
+  assert.equal(d.minConfidence, undefined);
+  assert.equal(layaConfig({ NEUROMESH_LAYA_MIN_CONFIDENCE: "0.8" }).minConfidence, 0.8);
+  assert.equal(layaConfig({ NEUROMESH_LAYA_MIN_CONFIDENCE: "2" }).minConfidence, undefined, "outside 0 to 1 is ignored");
   const c = layaConfig({ NEUROMESH_LAYA_URL: "http://127.0.0.1:9000/", NEUROMESH_LAYA_API_KEY: "k", NEUROMESH_LAYA_TIMEOUT_MS: "250", NEUROMESH_LAYA_ASK_PATH: "/ask" });
   assert.deepEqual([c.url, c.apiKey, c.timeoutMs, c.askPath], ["http://127.0.0.1:9000", "k", 250, "/ask"]);
   assert.equal(layaConfig({ NEUROMESH_LAYA_TIMEOUT_MS: "nonsense" }).timeoutMs, 500);
@@ -245,4 +250,47 @@ test("license boundary: no runtime dependency, and nothing in src names vegaml-l
   assert.ok(!Object.keys(pkg.devDependencies ?? {}).some((d) => /vegaml|laya/i.test(d)));
   const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : e.name.endsWith(".ts") ? [join(dir, e.name)] : []));
   for (const file of walk(join(root, "src"))) assert.ok(!/vegaml/i.test(readFileSync(file, "utf8")), file);
+});
+
+// Stock laya-serve (the classic Router), as its HTTP API documents it: answers keyed by id, noul the probability
+// of yes, confidence fields, and no conformal route or abstain.
+const classic = (p: [number, number, number], extra: Record<string, unknown>[] = [{}, {}, {}]) => ({
+  model: "typed-decisions",
+  answers: Object.fromEntries(ROUTING_QUESTIONS.map((q, i) => [q.id, { type: "noul", noul: p[i], confidence: 0.9, answer_confidence: 0.9, action: { act_probability: 0.5 }, ...extra[i] }])),
+  usage: { input_tokens: 80, output_tokens: 3 },
+  routing: { model: "typed-decisions" },
+});
+
+test("stock laya-serve: a probability of yes is read, but with no conformal fields every answer is review unless calibrated", () => {
+  const d = parseLayaResponse(classic([0.91, 0.08, 0.77]), { legacyCalibrated: false });
+  assert.equal(d.status, "ok");
+  if (d.status !== "ok") return;
+  assert.deepEqual(ROUTING_QUESTIONS.map((q) => [d.answers[q.id].value, d.answers[q.id].route, d.answers[q.id].conformal]), [[true, "review", false], [false, "review", false], [true, "review", false]]);
+  assert.equal(evaluateGate(EASY, d).conformalAuto, false, "the gate does not act on it");
+  // Exactly 0.5 is no answer.
+  const half = parseLayaResponse(classic([0.5, 0.1, 0.9]), { legacyCalibrated: true });
+  assert.ok(half.status === "ok" && half.answers.is_mechanical_or_localized.value === undefined && half.answers.is_mechanical_or_localized.route === "review");
+});
+
+test("stock laya-serve, calibrated by the owner: its min_confidence gate decides; abstained or unevaluated is review", () => {
+  const calibrated = parseLayaResponse(classic([0.91, 0.08, 0.77]), { legacyCalibrated: true });
+  assert.equal(evaluateGate(HARD, calibrated).action, "continue_cheap");
+  const gated = parseLayaResponse(classic([0.91, 0.08, 0.77], [{ abstention: "passed" }, { abstention: "abstained", low_confidence: true }, { abstention: "unevaluated" }]), { legacyCalibrated: true });
+  assert.ok(gated.status === "ok");
+  if (gated.status !== "ok") return;
+  assert.deepEqual(ROUTING_QUESTIONS.map((q) => [gated.answers[q.id].route, gated.answers[q.id].abstain]), [["auto", false], ["review", true], ["review", false]]);
+  assert.equal(evaluateGate(HARD, gated).action, "escalate_opus", "not decisive: escalate by the probe");
+});
+
+test("min_confidence goes in the request body when configured", async () => {
+  const client = new LayaClient({ ...layaConfig({}), url: laya.url, minConfidence: 0.85 });
+  laya.reply = { json: classic([0.9, 0.1, 0.9]) };
+  await client.decideRouting("state");
+  assert.equal((laya.requests.at(-1)!.body as { min_confidence?: number }).min_confidence, 0.85);
+});
+
+test("laya.Agent's conformal answer: a one-answer prediction set is the answer, over the noul probability", () => {
+  const body = { answers: Object.fromEntries(ROUTING_QUESTIONS.map((q) => [q.id, { type: "noul", noul: 0.4, route: "auto", abstain: false, prediction_set: ["yes"], unbound: false }])) };
+  const d = parseLayaResponse(body, { legacyCalibrated: false });
+  assert.ok(d.status === "ok" && ROUTING_QUESTIONS.every((q) => d.answers[q.id].value === true && d.answers[q.id].conformal));
 });

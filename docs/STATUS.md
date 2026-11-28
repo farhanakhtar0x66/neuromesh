@@ -991,6 +991,16 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     claims each task per machine and warns when another eval runs it (shared prompt cache), or waits with
     `--sequential-by-task`; `evals/bench.ts --rollup` and SWE-bench-Live's RESULTS.md show all27 next to all21.
     Not run on the owner's history yet: it needs laya-serve running locally.
+78. **Laya wire format corrected (2026-11-28; F139, F136).** Read against laya's published HTTP API: the client now
+    asks `POST /v1/systemone` with `{state, questions: {<id>: {type: "noul", instructions}}}` (it was a guessed
+    `/v1/ask` with another body) and reads `noul` as the probability of yes. Stock laya-serve sends no conformal
+    fields over HTTP, so its answers count as review and a replay would escalate everything: `laya-sidecar.sh start
+    --agent` now serves laya.Agent (conformal) on the same routes, and a calibrated classic router can be trusted with
+    `NEUROMESH_LAYA_LEGACY_CALIBRATED=1` plus laya's own `min_confidence` gate. The sidecar script set the address with
+    flags laya-serve does not have, so it would have listened on 0.0.0.0:8000; it now sets `LAYA_HOST=127.0.0.1` and
+    `LAYA_PORT`. F136's output filter was already a PreToolUse `updatedInput` hook keeping the exit code (no change);
+    its fresh session after 22 calls now lists the changes already on disk (`git diff --stat` and new files). Still
+    not run against a real laya install; docs/29 has the curl smoke check to do first.
 
 ## Next steps
 

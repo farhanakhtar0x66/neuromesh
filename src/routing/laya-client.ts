@@ -11,10 +11,13 @@
 // being off all give `{ status: "unavailable", route: "review", reason }`. Nothing here throws, and a sidecar
 // found down is not asked again for a while, so a run never stalls on it.
 //
-// The wire format (paths, request body, answer list) is in two functions, layaRequestBody and
-// parseLayaResponse. It follows the field names of the Laya 0.5 contract as given to us (2026-11-28); the
-// paths and the request shape are not published anywhere we could check, so they are configurable and must be
-// checked against the owner's laya-serve before live use (docs/29).
+// The wire format is in two functions, layaRequestBody and parseLayaResponse, and follows laya's published HTTP
+// API (docs/http-api.md upstream, read 2026-11-28): `POST /v1/systemone` with `{state, questions: {<id>: {type:
+// "noul", instructions}}}`, answers keyed by id, `noul` the probability of yes. Stock laya-serve (the classic
+// Router) sends no conformal fields over HTTP, so its answers count as review unless the owner calibrated it
+// (NEUROMESH_LAYA_LEGACY_CALIBRATED=1, then judged by laya-serve's own min_confidence gate when one is set).
+// Conformal answers (route, abstain, prediction_set) come from laya.Agent, served by scripts/laya-agent-server.py.
+// Not yet checked against a running server (docs/29).
 
 import { isOn } from "../features.ts";
 
@@ -57,8 +60,10 @@ export interface LayaConfig {
   timeoutMs: number;
   healthPath: string;
   askPath: string;
-  /** Trust Laya 0.3/0.4 answers (no conformal fields) as "auto": only when the owner has calibrated them. */
+  /** Trust classic answers (no conformal fields) as "auto": only when the owner has calibrated them. */
   legacyCalibrated: boolean;
+  /** laya-serve's min_confidence, sent when set: its gate marks each answer passed, abstained or unevaluated. */
+  minConfidence?: number;
   /** How long a health result is kept. */
   healthTtlMs: number;
 }
@@ -70,6 +75,11 @@ function positive(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function unit(raw: string | undefined): number | undefined {
+  const n = raw === undefined || raw === "" ? NaN : Number(raw);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : undefined;
+}
+
 /** Configuration from the environment. */
 export function layaConfig(env: NodeJS.ProcessEnv = process.env): LayaConfig {
   return {
@@ -77,22 +87,28 @@ export function layaConfig(env: NodeJS.ProcessEnv = process.env): LayaConfig {
     apiKey: env.NEUROMESH_LAYA_API_KEY || undefined,
     timeoutMs: positive(env.NEUROMESH_LAYA_TIMEOUT_MS, 500),
     healthPath: env.NEUROMESH_LAYA_HEALTH_PATH || "/health",
-    askPath: env.NEUROMESH_LAYA_ASK_PATH || "/v1/ask",
+    askPath: env.NEUROMESH_LAYA_ASK_PATH || "/v1/systemone",
     legacyCalibrated: env.NEUROMESH_LAYA_LEGACY_CALIBRATED === "1",
+    ...(unit(env.NEUROMESH_LAYA_MIN_CONFIDENCE) !== undefined ? { minConfidence: unit(env.NEUROMESH_LAYA_MIN_CONFIDENCE) } : {}),
     healthTtlMs: positive(env.NEUROMESH_LAYA_HEALTH_TTL_MS, 30_000),
   };
 }
 
-/** The request body: the state text and the three typed questions. */
-export function layaRequestBody(stateText: string): Record<string, unknown> {
-  return { context: stateText, questions: ROUTING_QUESTIONS.map((q) => ({ id: q.id, type: q.type, question: q.question })) };
+/** The request body (laya's POST /v1/systemone): the state text and the three typed questions, keyed by id. */
+export function layaRequestBody(stateText: string, options: { minConfidence?: number } = {}): Record<string, unknown> {
+  return {
+    state: stateText,
+    questions: Object.fromEntries(ROUTING_QUESTIONS.map((q) => [q.id, { type: q.type, instructions: q.question }])),
+    ...(options.minConfidence !== undefined ? { min_confidence: options.minConfidence } : {}),
+  };
 }
 
 const obj = (v: unknown): Record<string, unknown> | undefined => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined);
 
-/** A yes/no value from the forms Laya may give it; undefined for "unknown" or anything else. */
+/** A yes/no value from the forms Laya may give it (laya's noul is the probability of yes); undefined for "unknown", exactly 0.5 or anything else. */
 function noulValue(v: unknown): boolean | undefined {
   if (typeof v === "boolean") return v;
+  if (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1 && v !== 0.5) return v > 0.5;
   if (typeof v === "string") {
     const s = v.trim().toLowerCase();
     if (s === "yes" || s === "true") return true;
@@ -137,15 +153,20 @@ export function parseLayaResponse(body: unknown, config: Pick<LayaConfig, "legac
       predictionSet = a.prediction_set;
     }
     if ("unbound" in a && typeof a.unbound !== "boolean") return bad(`${q.id}: unbound is not true or false`);
-    let value = noulValue(a.noul ?? a.value ?? a.choice);
-    if (value === undefined && predictionSet?.length === 1) value = noulValue(predictionSet[0]);
+    // A one-answer conformal set is the answer; otherwise the noul probability, value or choice.
+    let value = predictionSet?.length === 1 ? noulValue(predictionSet[0]) : undefined;
+    if (value === undefined) value = noulValue(a.noul ?? a.value ?? a.choice);
     if (conformal) {
       if (a.route !== "auto" && a.route !== "review") return bad(`${q.id}: route is ${JSON.stringify(a.route)}`);
       if (typeof a.abstain !== "boolean") return bad(`${q.id}: abstain is not true or false`);
       answers[q.id] = { id: q.id, value, route: a.route, abstain: a.abstain, predictionSet, unbound: a.unbound as boolean | undefined, conformal: true };
     } else {
-      // Laya 0.3/0.4: no conformal guarantee, so a person (or a stronger model) reviews, unless the owner calibrated it.
-      answers[q.id] = { id: q.id, value, route: config.legacyCalibrated && value !== undefined ? "auto" : "review", abstain: value === undefined, predictionSet, unbound: a.unbound as boolean | undefined, conformal: false };
+      // Classic laya-serve: no conformal guarantee, so a person (or a stronger model) reviews, unless the owner
+      // calibrated it. Then its own min_confidence gate, when one was asked for, decides: only "passed" counts.
+      const gate = typeof a.abstention === "string" ? a.abstention : undefined;
+      const gated = gate === undefined || gate === "passed";
+      const trusted = config.legacyCalibrated && value !== undefined && gated;
+      answers[q.id] = { id: q.id, value, route: trusted ? "auto" : "review", abstain: value === undefined || gate === "abstained", predictionSet, unbound: a.unbound as boolean | undefined, conformal: false };
     }
   }
   const version = typeof root.version === "string" ? root.version : undefined;
@@ -201,7 +222,7 @@ export class LayaClient {
       if (!isOn("laya-gate")) return unavailable("F139 laya-gate is off");
       // A sidecar found down recently is not asked again until the health result expires.
       if (this.health && !this.health.ok && this.now() - this.health.at < this.config.healthTtlMs) return unavailable(`Laya was unavailable (${this.health.reason ?? "down"}); not asked again yet`);
-      const r = await this.call(this.config.askPath, layaRequestBody(stateText));
+      const r = await this.call(this.config.askPath, layaRequestBody(stateText, { minConfidence: this.config.minConfidence }));
       if (!r.ok) {
         this.health = { ok: false, at: this.now(), reason: r.reason };
         return unavailable(r.reason);

@@ -150,7 +150,7 @@ test("easy-looking complex repo: a capped Haiku probe, Laya escalate_opus, a cle
   assert.ok(!diffOf(run.state).includes(POISON), "nothing of the cheap work in the result");
   // Laya was asked once, with the probe's text and the digest, and no file names or cheap text.
   assert.equal(laya.requests.length, 1);
-  const context = (laya.requests[0]!.body as { context: string }).context;
+  const context = (laya.requests[0]!.body as { state: string }).state;
   assert.match(context, /tiny repository, with high cross-module coupling/);
   assert.match(context, /re-read a file|same failing command/);
   assert.ok(!context.includes("CHEAP") && !context.includes("store.js") && !context.includes("cart.js"));

@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { claudeArgs, claudeParser } from "../src/backends/claude.ts";
 import { createFakeBackend } from "../src/backends/fake.ts";
 import type { AgentRequest } from "../src/backends/types.ts";
-import { LEAN_FRESH_AT, LEAN_SKILL, leanFreshDue, leanRequest, leanTaskPrompt, sessionCalls } from "../src/engine/lean-runner.ts";
+import { LEAN_FRESH_AT, LEAN_SKILL, changesOnDisk, leanFreshDue, leanRequest, leanTaskPrompt, sessionCalls } from "../src/engine/lean-runner.ts";
 import { startRun, usageByModel } from "../src/engine/run.ts";
 import type { EngineContext } from "../src/engine/run.ts";
 import type { NeuromeshEvent } from "../src/engine/store.ts";
@@ -222,7 +222,7 @@ for (const [calls, fresh] of [[19, false], [22, true], [25, true]] as const) {
     const repair = run.fake.calls[1]!;
     assert.equal(repair.resumeSessionId === undefined, fresh);
     if (fresh) {
-      assert.match(repair.prompt, /An earlier session already changed files/);
+      assert.match(repair.prompt, /No file in this directory differs from the start of the task yet\. Neuromesh then ran the project.s checks/);
       assert.match(repair.prompt, /expected fixed\.txt to say ok/, "the checks' raw output, a fact");
       assert.ok(!repair.prompt.includes("first try"), "not the earlier session's own summary (F131)");
       assert.ok(run.events.some((e) => e.type === "context.compacted" && e.feature === "F136"));
@@ -288,5 +288,27 @@ test("a failing lean runner (NEUROMESH_FAULT) is switched off and the run goes o
     assert.ok(run.state.featureErrors?.some((f) => f.id === "F136"));
   } finally {
     delete process.env.NEUROMESH_FAULT;
+  }
+});
+
+test("F136: a fresh session after 22 calls is shown the changes already on disk (paths and counts, never content)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "neuromesh-lean-changes-"));
+  try {
+    const git = (...args: string[]): string => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@localhost", "-c", "commit.gpgsign=false", ...args], { cwd: dir, encoding: "utf8" }).trim();
+    git("init", "-q", "-b", "main");
+    writeFileSync(join(dir, "calc.js"), "export const add = (a, b) => a * b;\n");
+    git("add", "-A");
+    git("commit", "-q", "-m", "seed");
+    const base = git("rev-parse", "HEAD");
+    assert.equal(changesOnDisk(dir, base), "", "nothing changed yet");
+    writeFileSync(join(dir, "calc.js"), "export const add = (a, b) => a + b;\n");
+    writeFileSync(join(dir, "repro.js"), "secret body\n");
+    const list = changesOnDisk(dir, base)!;
+    assert.match(list, /calc\.js \| 2 \+-/);
+    assert.match(list, /repro\.js \(new, not yet added\)/);
+    assert.ok(!list.includes("a + b") && !list.includes("secret body"), "no content");
+    assert.equal(changesOnDisk(join(dir, "missing"), base), undefined, "git cannot say: unknown");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
