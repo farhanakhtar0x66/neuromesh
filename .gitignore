@@ -17,3 +17,4 @@ evals/hard-tasks/**/target/
 evals/swe-live/tasks/
 evals/swe-live/tasks-rejected/
 evals/swe-live/import.log
+laya-labels*.jsonl

@@ -26,6 +26,7 @@ import { DEFAULT_PRESET, describeRole, listPresets, loadPreset } from "../preset
 import { findRepo } from "../workspace/workspace.ts";
 import { evalDir, loadReport, loadTasks, recheckEval, recountEval, runEval } from "../eval/eval.ts";
 import { referenceBackend } from "../eval/reference.ts";
+import { claimsDir } from "../eval/isolation.ts";
 import { ROUTING_HELP, commandRouting } from "./routing.ts";
 import { bold, formatComparison, formatEvalReport, formatEvent, formatRunList, formatSummary, green, red } from "./format.ts";
 
@@ -55,6 +56,7 @@ const HELP = `neuromesh: a multi-agent coding engine built like a factory floor
       --name <name>             results name; rerunning a name continues where it stopped
       --rerun a,b               run these tasks again even though they have results
       --model <id>              use this worker model instead of the preset's
+      --sequential-by-task      wait while another eval runs the same task (shared prompt cache); by default it only warns
   neuromesh eval compare <name> <name>...   compare saved eval results
   neuromesh eval recheck <name>...          rerun hidden checks on applied results (no model calls)
   neuromesh cooldowns [--clear] models waiting for a subscription limit to reset
@@ -78,7 +80,7 @@ ${ROUTING_HELP}  neuromesh                     (no command, in a terminal) open 
   --repo <path> works with any command to point at another repository.
 `;
 
-const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate", "fake", "offline"]);
+const BOOLEAN_FLAGS = new Set(["json", "force", "keep", "help", "verbose", "solo", "team", "clear", "quota", "no-log", "no-rate", "fake", "offline", "sequential-by-task"]);
 
 interface Parsed {
   positional: string[];
@@ -426,6 +428,8 @@ async function commandEval({ positional, flags }: Parsed): Promise<number> {
     specFor,
     rerun: flags.get("rerun")?.split(",").filter(Boolean),
     workerModel: flags.get("model"),
+    // [F142 replay-harness] One claim folder per machine (the cache is per account); --fake keeps them in its own home.
+    isolation: { dir: flags.has("fake") ? join(home, "eval-claims") : claimsDir(), mode: flags.has("sequential-by-task") ? "sequential" : "warn", warn: (m) => process.stderr.write(`  ! ${m}\n`) },
     onTaskStart: (task, i, total) => {
       currentTask = task;
       process.stderr.write(`\n[${i + 1}/${total}] ${task.name} (${task.kind}, ${task.language})\n`);

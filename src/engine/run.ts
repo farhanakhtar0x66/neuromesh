@@ -133,7 +133,7 @@ import { sumTokenFields, tokenFields } from "../usage/tokens.ts";
 import type { TokenFields } from "../usage/tokens.ts";
 import { LayaClient, layaConfig } from "../routing/laya-client.ts";
 import { evaluateGate } from "../routing/laya-policy.ts";
-import { buildCleanRoomFactsPacket, buildTrajectoryDigest, parseTrajectory } from "../routing/handoff.ts";
+import { buildCleanRoomFactsPacket, buildTrajectoryDigest, parseTrajectory, temporalStateText } from "../routing/handoff.ts";
 import type { CheapTurn } from "../routing/handoff.ts";
 import { isLean, leanBackendOptions, leanFreshDue, leanFreshPrompt, leanTaskPrompt, sessionCalls } from "./lean-runner.ts";
 import { currentPatch } from "./apply.ts";
@@ -4044,7 +4044,7 @@ async function temporalStep(run: RunCtx, task: TaskState): Promise<Stop | undefi
       const easy = probe?.trivialSelfContained === true || (probe?.mechanicalScore ?? 0) >= 0.65;
       if (clean && easy && !greenStart) return merge("the cheap probe's change passes the checks and the work is trivial or mechanical; accepted without Laya.");
       const digest = optional(run, "cleanroom-handoff", "", () => buildTrajectoryDigest(probe, t.cheapTurns, state.baseline));
-      const text = [state.probe?.layaStateText ?? "Nothing is known about the repository.", digest].filter(Boolean).join(" ");
+      const text = temporalStateText(state.probe?.layaStateText, digest);
       const decision = isOn("laya-gate") ? await optionalAsync(run, "laya-gate", { status: "unavailable" as const, route: "review" as const, reason: "F139 failed", ms: 0 }, () => layaFor(run).decideRouting(text)) : { status: "unavailable" as const, route: "review" as const, reason: "F139 laya-gate is off", ms: 0 };
       const gate = evaluateGate(probe, decision, { tier: "the cheap model" });
       t.laya = decision.status === "ok" ? "ok" : "unavailable";

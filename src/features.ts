@@ -1318,6 +1318,15 @@ export const FEATURES: Feature[] = [
     optional: true,
     defaultOff: true,
   },
+  {
+    id: "F142",
+    key: "replay-harness",
+    name: "Offline replay of past runs through the temporal gate, and cache isolation between evals",
+    added: "2026-11-28",
+    files: ["src/eval/replay.ts", "evals/replay-temporal.ts", "src/eval/isolation.ts", "src/eval/eval.ts (runEval)", "src/eval/rollup.ts", "evals/bench.ts (--rollup)", "evals/baselines.ts (sweSubsets)"],
+    what: "No model call. evals/replay-temporal.ts reads past runs (run folders, evals' results.json, the record) and changes none of them. For every run made by Haiku or Sonnet alone with a known outcome (an eval's hidden check; the record's checks only with --include-checks), it rebuilds F140's question after the cheap turn's first --cutoff (3, 4 or 5) model calls: F138's state text as recorded, else probed again on the run's base commit unpacked into a temporary folder, else facts recorded before the run; and F141's digest from the turn's stream log cut at that call. It asks a local laya-serve and routes through the same gate (evaluateGate), then reports the confusion matrix (false-cheap: kept cheap, cheap failed; false-frontier: escalated, cheap resolved), Laya's abstention and conformal coverage per question, and the quota the routed policy would have used against solo-opus in Opus-equivalent units from F137's four token fields (Haiku 1/6 of Opus, measured; Sonnet 1/2, assumed; an unknown field makes the task unknown, not 0). It writes ~/.neuromesh/routing/laya-labels.jsonl, {stateText, labels} with labels true, false or null (unknown), for calibrating Laya offline. The eval runner claims each task in a per-machine folder while it runs it: another eval on the same task (a prompt variant sharing the account's prompt cache) is warned about, or waited out with --sequential-by-task. evals/bench.ts --rollup and the SWE-bench-Live RESULTS.md show every run on all27 next to all21 (the issues an Opus-alone run finished).",
+    optional: true,
+  },
 ];
 
 const byAny = new Map<string, Feature>();

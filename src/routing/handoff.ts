@@ -140,6 +140,12 @@ export function buildTrajectoryDigest(probe: ProbeFacts | undefined, turns: Chea
   return text;
 }
 
+/** What F140 sends Laya: the probe's state text, then the digest. Shared with the replay (F142), so both ask the same thing. */
+export const NO_PROBE_TEXT = "Nothing is known about the repository.";
+export function temporalStateText(probeText: string | undefined, digest: string): string {
+  return [probeText ?? NO_PROBE_TEXT, digest].filter(Boolean).join(" ");
+}
+
 export interface DiffStats {
   /** Files the cheap work changed (discarded before the stronger model starts). */
   files: number;

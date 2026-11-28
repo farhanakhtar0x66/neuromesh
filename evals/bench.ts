@@ -8,6 +8,7 @@
 //     (names are evals, or routing-bench runs such as rb-cascade-3 or ho-cascade-1)
 //   node evals/bench.ts --split bench-solo-opus-1 ...  where the input tokens went, in five parts
 //   node evals/bench.ts --fit bench-solo-opus-1 ...     quota points per token, fitted over the tasks
+//   node evals/bench.ts --rollup [swl-haiku-1 ...]       SWE-bench-Live: all27 next to all21 (the frontier subset), every swl- run if none named
 //
 // Costs are estimates at API list prices (src/usage/prices.ts). Quota is what
 // `neuromesh eval --quota` read before and after each task, in points of the
@@ -25,6 +26,8 @@ import { estimateCost } from "../src/usage/prices.ts";
 import { describeComparison, pair, pairedBootstrap, taskScores } from "../src/eval/stats.ts";
 import { isOn } from "../src/features.ts";
 import { addSplit, splitFromLog, splitParts } from "../src/usage/split.ts";
+import { frontierSubset, reportsWithPrefix, rollupTable, sweRollup } from "../src/eval/rollup.ts";
+import { loadTasks } from "../src/eval/eval.ts";
 import type { InputSplit } from "../src/usage/split.ts";
 
 const home = defaultHome();
@@ -230,12 +233,23 @@ function compare(): string {
   return describeComparison(a.label, b.label, interval, margin, { a: a.runs.length, b: b.runs.length }).join("\n");
 }
 
-const reports = flag("compare") ? [] : names.map((n) => {
+/** [F142 replay-harness] The suite's tasks (evals/swe-live/tasks when built), else every task any swl- run has. */
+function rollup(): string {
+  const all = reportsWithPrefix(home, "swl-");
+  const shown = names.length > 0 ? names.map((n) => loadReport(home, n) ?? (() => { throw new Error(`No eval results named "${n}"`); })()) : all;
+  const suite = join(dirname(fileURLToPath(import.meta.url)), "swe-live", "tasks");
+  const tasks = existsSync(suite) ? loadTasks(suite).map((t) => t.name) : [...new Set(all.flatMap((r) => Object.keys(r.results)))].sort();
+  const frontier = frontierSubset(all);
+  return rollupTable(sweRollup(shown, tasks, frontier), { all: tasks.length, frontier: tasks.filter((t) => frontier.has(t)).length });
+}
+
+const reports = flag("compare") || flag("rollup") ? [] : names.map((n) => {
   const r = loadReport(home, n) ?? (flag("split") ? routingReport(n) : undefined);
   if (!r) throw new Error(`No eval results named "${n}"`);
   return r;
 });
-if (flag("compare") && isOn("paired-bootstrap")) console.log(compare());
+if (flag("rollup") && isOn("replay-harness")) console.log(rollup());
+else if (flag("compare") && isOn("paired-bootstrap")) console.log(compare());
 else if (flag("fit")) console.log(fit(reports));
 else if (flag("split")) console.log(reports.map(splitTable).join("\n\n"));
 else if (flag("turns")) console.log(reports.map(turns).join("\n\n"));

@@ -23,6 +23,7 @@ import { estimateCost } from "../usage/prices.ts";
 import { inFeature, isOn } from "../features.ts";
 import { evalResultLine } from "../record/backfill.ts";
 import { appendRecord } from "../record/record.ts";
+import { claimTask, release } from "./isolation.ts";
 
 export const TASKS_DIR = fileURLToPath(new URL("../../evals/tasks/", import.meta.url));
 
@@ -190,6 +191,8 @@ export interface EvalOptions {
   specFor?: (task: EvalTask) => Spec | undefined;
   onTaskStart?: (task: EvalTask, index: number, total: number) => void;
   onTaskDone?: (result: TaskResult) => void;
+  /** [F142 replay-harness] Claim each task while it runs, so two evals never run it at once unseen (src/eval/isolation.ts). */
+  isolation?: { dir: string; mode: "warn" | "sequential"; warn?: (message: string) => void; pollMs?: number };
 }
 
 export async function runEval(options: EvalOptions): Promise<EvalReport> {
@@ -215,11 +218,29 @@ export async function runEval(options: EvalOptions): Promise<EvalReport> {
   let quotaNow = todo.length > 0 ? await options.quotaProbe?.() : undefined;
   for (const [index, task] of todo.entries()) {
     if (ctx.signal?.aborted) break;
+    // [F142 replay-harness] Cache isolation: warn about, or wait out, another eval running this task right now.
+    const iso = options.isolation && isOn("replay-harness") ? options.isolation : undefined;
+    const claim = { task: task.name, eval: options.name, preset: preset.name };
+    let claimed = false;
+    if (iso) {
+      try {
+        claimed = await claimTask(iso.dir, claim, iso.mode, { warn: iso.warn, signal: ctx.signal, pollMs: iso.pollMs });
+      } catch (error) {
+        // A claim that cannot be written never stops the eval: it runs unguarded, and says so.
+        iso.warn?.(`[F142 replay-harness] could not claim ${task.name}: ${error instanceof Error ? error.message : String(error)}; running without cache isolation`);
+      }
+      if (!claimed && iso.mode === "sequential" && ctx.signal?.aborted) break;
+    }
     options.onTaskStart?.(task, index, todo.length);
     const quotaBefore = quotaNow;
     const repo = seedRepo(task, join(evalDir(ctx.home, options.name), "repos", task.name));
     const started = Date.now();
-    const state = await startRun({ cwd: repo, prompt: task.prompt, preset, worker: options.workerModel ? { model: options.workerModel } : undefined, spec: options.specFor?.(task) }, ctx);
+    let state: RunState;
+    try {
+      state = await startRun({ cwd: repo, prompt: task.prompt, preset, worker: options.workerModel ? { model: options.workerModel } : undefined, spec: options.specFor?.(task) }, ctx);
+    } finally {
+      if (iso && claimed) release(iso.dir, task.name, claim);
+    }
     const wallMs = Date.now() - started;
     quotaNow = await options.quotaProbe?.();
 

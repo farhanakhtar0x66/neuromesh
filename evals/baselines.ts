@@ -33,6 +33,8 @@ import { defaultHome } from "../src/engine/store.ts";
 import { loadReport, loadTasks, summarize } from "../src/eval/eval.ts";
 import type { EvalReport, EvalTask, TaskResult } from "../src/eval/eval.ts";
 import { utcMinute, waitForReset } from "./wait-reset.ts";
+import { isOn } from "../src/features.ts";
+import { frontierSubset, reportsWithPrefix, rollupTable, sweRollup } from "../src/eval/rollup.ts";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MAX_TRIES = 12;
@@ -352,6 +354,24 @@ function comparisonTable(cs: Comparison[]): string {
   return lines.join("\n");
 }
 
+/** [F142 replay-harness] On SWE-bench-Live: every swl- run on the whole suite and on the frontier subset, side by side. */
+export function sweSubsets(suite: string, home: string, tasks: EvalTask[]): string[] {
+  if (!/(^|\/)swe-live\/tasks\/*$/.test(suite) || !isOn("replay-harness")) return [];
+  const reports = reportsWithPrefix(home, "swl-");
+  if (reports.length === 0) return [];
+  const frontier = frontierSubset(reports);
+  const names = tasks.map((t) => t.name);
+  const size = names.filter((n) => frontier.has(n)).length;
+  return [
+    `### Whole suite and frontier subset (all${names.length} and all${size})`,
+    "",
+    rollupTable(sweRollup(reports, names, frontier), { all: names.length, frontier: size }),
+    "",
+    `all${names.length} is every issue; all${size} is the issues an Opus-alone run (solo-opus) has a final result on. Routing's saving on easy issues shows only in the first.`,
+    "",
+  ];
+}
+
 export function renderResults(params: { suite: string; tasks: EvalTask[]; fake: boolean; generated?: string }): string {
   const home = defaultHome();
   const { tasks } = params;
@@ -380,6 +400,7 @@ export function renderResults(params: { suite: string; tasks: EvalTask[]; fake: 
     "",
     runTable(figs, tasks),
     "",
+    ...sweSubsets(params.suite, home, tasks),
     "Costs are **estimates** at API list prices (`src/usage/prices.ts`), not money spent: the runs draw on one Claude plan. Window points are whole points of the plan's windows read by a one-word call before and after each task; a window that reset in between, or a task with no reading, is counted as unknown, not 0. Minutes are the time the final attempt of each task took; waiting for a reset is not counted. A task that failed because the engine failed (crash, hang) is counted separately from one where the model wrote wrong code.",
     "",
     "## Paired comparisons",

@@ -979,6 +979,18 @@ idle timeout, 10-second linger after a final event, one retry on network errors)
     clean room now counts against F86's breaker (the senior's is a climb), a breaker stop no longer quotes Laya's
     transport error, and accepted work goes through F119's review gate. The stage-1 lean tests moved to solo-opus
     with lean-runner on. Not measured live; laya-serve's wire format is still an assumption (docs/29).
+77. **v0.4 stage 5, offline (2026-11-28; F142).** `node evals/replay-temporal.ts --cutoff 3|4|5` replays past runs
+    made by Haiku or Sonnet alone through F140's gate with no Claude call: the state text as recorded, or probed on
+    the run's base commit, or pre-run facts; F141's digest from the cheap turn's log cut at that model call; a local
+    laya-serve's answer. It prints the confusion matrix (false-cheap, false-frontier), abstention and coverage per
+    question, and the routed policy's quota against solo-opus (Opus-equivalent units from F137's fields; Haiku 1/6
+    measured, Sonnet 1/2 assumed), and writes `~/.neuromesh/routing/laya-labels.jsonl` for offline calibration. It
+    reads history only. Labels are derived and may be unknown (null): cheap_will_resolve is the run's own hidden
+    result; has_implied_invariants is yes only when the run's checks passed and the hidden check failed;
+    is_mechanical_or_localized comes from the smallest passing change any run made on the task. The eval runner now
+    claims each task per machine and warns when another eval runs it (shared prompt cache), or waits with
+    `--sequential-by-task`; `evals/bench.ts --rollup` and SWE-bench-Live's RESULTS.md show all27 next to all21.
+    Not run on the owner's history yet: it needs laya-serve running locally.
 
 ## Next steps
 
